@@ -213,7 +213,7 @@ namespace :site do
   task :web do
     # Requires the 'webgem' gem
     sh "cd site; webgen; webgen; curl 'http://feed43.com/mongrel.xml' > output/rss.xml; rsync -azv --no-perms --no-times output/* rubyforge.org:/var/www/gforge-projects/mongrel/"
-    puts "Make sure to re-run the site update 6 hours later if you updated the news. This delay is required for Feed43 to pick up the site changes."
+    puts "\nMake sure to re-run the site update 6 hours later if you updated the news. This delay is required for Feed43 to pick up the site changes."
   end
 
   desc "Upload the rdocs"
