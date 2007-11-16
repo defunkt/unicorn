@@ -69,6 +69,9 @@ module Mongrel
 
     MONGREL_TMP_BASE="mongrel".freeze
 
+    # A standard 400 response for a request which generates a http parse exception
+    ERROR_400_RESPONSE="HTTP/1.1 400 Bad Request\r\nConnection: close\r\nServer: Mongrel #{MONGREL_VERSION}\r\n\r\nBAD REQUEST".freeze
+
     # The standard empty 404 response for bad requests.  Use Error4040Handler for custom stuff.
     ERROR_404_RESPONSE="HTTP/1.1 404 Not Found\r\nConnection: close\r\nServer: Mongrel #{MONGREL_VERSION}\r\n\r\nNOT FOUND".freeze
 
