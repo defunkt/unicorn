@@ -220,7 +220,7 @@ module Cluster
     end
 
     def log(message)
-      puts message
+      puts("#{Time.now.httpdate}: #{message}")
     end   
   end
   class Start < GemPlugin::Plugin "/commands"

@@ -82,7 +82,7 @@ module Mongrel
           rescue Errno::EPIPE
             response.socket.close
           rescue Object => rails_error
-            STDERR.puts "#{Time.now}: Error calling Dispatcher.dispatch #{rails_error.inspect}"
+            STDERR.puts "#{Time.now.httpdate}: Error calling Dispatcher.dispatch #{rails_error.inspect}"
             STDERR.puts rails_error.backtrace.join("\n")
           end
         end

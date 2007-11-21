@@ -180,14 +180,14 @@ module Mongrel
       rescue EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF
         client.close rescue nil
       rescue HttpParserError => e
-        STDERR.puts "#{Time.now}: HTTP parse error, malformed request (#{params[Const::HTTP_X_FORWARDED_FOR] || client.peeraddr.last}): #{e.inspect}"
-        STDERR.puts "#{Time.now}: REQUEST DATA: #{data.inspect}\n---\nPARAMS: #{params.inspect}\n---\n"
+        STDERR.puts "#{Time.now.httpdate}: HTTP parse error, malformed request (#{params[Const::HTTP_X_FORWARDED_FOR] || client.peeraddr.last}): #{e.inspect}"
+        STDERR.puts "#{Time.now.httpdate}: REQUEST DATA: #{data.inspect}\n---\nPARAMS: #{params.inspect}\n---\n"
         # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4
         client.write(Const::ERROR_400_RESPONSE)
       rescue Errno::EMFILE
         reap_dead_workers('too many files')
       rescue Object => e
-        STDERR.puts "#{Time.now}: Read error: #{e.inspect}"
+        STDERR.puts "#{Time.now.httpdate}: Read error: #{e.inspect}"
         STDERR.puts e.backtrace.join("\n")
       ensure
         begin
@@ -195,7 +195,7 @@ module Mongrel
         rescue IOError
           # Already closed
         rescue Object => e
-          STDERR.puts "#{Time.now}: Client error: #{e.inspect}"
+          STDERR.puts "#{Time.now.httpdate}: Client error: #{e.inspect}"
           STDERR.puts e.backtrace.join("\n")
         end
         request.body.delete if request and request.body.class == Tempfile
@@ -208,14 +208,14 @@ module Mongrel
     # after the reap is done.  It only runs if there are workers to reap.
     def reap_dead_workers(reason='unknown')
       if @workers.list.length > 0
-        STDERR.puts "#{Time.now}: Reaping #{@workers.list.length} threads for slow workers because of '#{reason}'"
-        error_msg = "Mongrel timed out this thread: #{reason}"
+        STDERR.puts "#{Time.now.httpdate}: Reaping #{@workers.list.length} threads for slow workers because of '#{reason}'"
+        error_msg = "#{Time.now.httpdate}: Mongrel timed out this thread: #{reason}"
         mark = Time.now
         @workers.list.each do |worker|
           worker[:started_on] = Time.now if not worker[:started_on]
 
           if mark - worker[:started_on] > @timeout + @throttle
-            STDERR.puts "Thread #{worker.inspect} is too old, killing."
+            STDERR.puts "#{Time.now.httpdate}: Thread #{worker.inspect} is too old, killing."
             worker.raise(TimeoutError.new(error_msg))
           end
         end
@@ -230,7 +230,7 @@ module Mongrel
     # that much longer.
     def graceful_shutdown
       while reap_dead_workers("shutdown") > 0
-        STDERR.puts "Waiting for #{@workers.list.length} requests to finish, could take #{@timeout + @throttle} seconds."
+        STDERR.puts "#{Time.now.httpdate}: Waiting for #{@workers.list.length} requests to finish, could take #{@timeout + @throttle} seconds."
         sleep @timeout / 10
       end
     end
@@ -276,7 +276,7 @@ module Mongrel
               worker_list = @workers.list
   
               if worker_list.length >= @num_processors
-                STDERR.puts "Server overloaded with #{worker_list.length} processors (#@num_processors max). Dropping connection."
+                STDERR.puts "#{Time.now.httpdate}: Server overloaded with #{worker_list.length} processors (#@num_processors max). Dropping connection."
                 client.close rescue nil
                 reap_dead_workers("max processors")
               else
@@ -295,14 +295,14 @@ module Mongrel
               # client closed the socket even before accept
               client.close rescue nil
             rescue Object => e
-              STDERR.puts "#{Time.now}: Unhandled listen loop exception #{e.inspect}."
+              STDERR.puts "#{Time.now.httpdate}: Unhandled listen loop exception #{e.inspect}."
               STDERR.puts e.backtrace.join("\n")
             end
           end
           graceful_shutdown
         ensure
           @socket.close
-          # STDERR.puts "#{Time.now}: Closed socket."
+          # STDERR.puts "#{Time.now.httpdate}: Closed socket."
         end
       end
 

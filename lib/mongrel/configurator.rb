@@ -381,7 +381,7 @@ module Mongrel
 
     # Logs a simple message to STDERR (or the mongrel log if in daemon mode).
     def log(msg)
-      STDERR.print "** ", msg, "\n"
+      STDERR.print "#{Time.now.httpdate}: #{msg}\n"
     end
 
   end

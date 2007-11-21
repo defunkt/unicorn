@@ -266,7 +266,7 @@ module Mongrel
             response.start(403) {|head,out| out.write(ONLY_HEAD_GET) }
           end
         rescue => details
-          STDERR.puts "Error sending file #{req_path}: #{details}"
+          STDERR.puts "#{Time.now.httpdate}: Error sending file #{req_path}: #{details}"
         end
       end
     end
