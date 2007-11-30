@@ -173,7 +173,7 @@ module Mongrel
         ops = resolve_defaults(options)
         setup_signals(options)
 
-        if RUBY_PLATFORM !~ /mswin/
+        unless RUBY_PLATFORM =~ /djgpp|(cyg|ms|bcc)win|mingw/
           # rails reload
           trap("HUP") { log "HUP signal received."; reload!          }
 

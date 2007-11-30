@@ -137,7 +137,7 @@ module Mongrel
       config.join
 
       if config.needs_restart
-        if RUBY_PLATFORM !~ /mswin/
+        unless RUBY_PLATFORM =~ /djgpp|(cyg|ms|bcc)win|mingw/
           cmd = "ruby #{__FILE__} start #{original_args.join(' ')}"
           config.log "Restarting with arguments:  #{cmd}"
           config.stop(false, true)
