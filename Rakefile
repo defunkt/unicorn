@@ -61,12 +61,23 @@ task :ragel do
   end
 end
 
-#### XXX Hack around JRuby test/unit interaction problems
+#### XXX Hack around JRuby in-process launching problem
+
+require 'rake/testtask'
+Rake::TestTask.new(:test_local) do |t|
+  t.libs << "lib" << "test" << "projects/gem_plugin/lib"
+  t.test_files = e.test_pattern
+end
 
 desc "Run each test suite in isolation on JRuby"
 task :test_java do
-  e.test_pattern.each do |f|
-    sh "/opt/local/jruby/bin/jruby -w -Ilib:ext:bin:test -e 'require \"#{f}\"'" rescue nil
+  require 'jruby'
+  save = JRuby.runtime.instance_config.run_ruby_in_process
+  begin
+    JRuby.runtime.instance_config.run_ruby_in_process = false
+    Rake::Task[:test_local].invoke
+  ensure
+    JRuby.runtime.instance_config.run_ruby_in_process = save
   end
 end
 
