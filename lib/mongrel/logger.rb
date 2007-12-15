@@ -1,3 +1,6 @@
+# Note: Logger concepts are from a combination of:
+#       AlogR: http://alogr.rubyforge.org
+#       Merb:  http://merbivore.com
 module Mongrel
 
   class Log
@@ -13,8 +16,10 @@ module Mongrel
       @logger    = initialize_io(log)
       @log_level = Levels[:name][log_level]
 
-      if !RUBY_PLATFORM.match(/java|mswin/) &&
-        !(@log == STDOUT) && @log.respond_to?(:write_nonblock)
+      if !RUBY_PLATFORM.match(/java|mswin/) && 
+         !(@log == STDOUT) && 
+        @log.respond_to?(:write_nonblock)
+        
         @aio = true
       end
     end
@@ -43,10 +48,15 @@ module Mongrel
       else
         @log = open(log, (File::WRONLY | File::APPEND | File::CREAT))
         @log.sync = true
-        @log.write("#{Time.now.rfc822} Logfile created")
+        @log.write("#{Time.now.httpdate} Logfile created")
       end
     end
 
-  end  
+  end
+  
+  # Convenience wrapper for logging, allows us to use Mongrel.log
+  def self.log(level, string)
+    Mongrel::Logger.log(level,string)
+  end
   
 end
