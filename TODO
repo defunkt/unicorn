@@ -1,8 +1,6 @@
 
 * Rewrite and merge mongrel cluster and mongrel_rails into something small and maintainable.
-
 * Refactor logging to include timestamps.
-
 * See if Java is setting the server version string in the request properly.
-
 * Figure out why Java writes to STDERR instead of the file in the middle of one of the tests.
+* Remove cgi_multipart_eof_fix and fastthread permanently (for 1.2).
