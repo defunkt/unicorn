@@ -86,20 +86,18 @@ module Kernel
     end
     MongrelDbg::trace(:files, open_counts.to_yaml)
   end
-end  
-
+end
 
 
 module RequestLog
 
-  # Just logs whatever requests it gets to STDERR (which ends up in the mongrel
-  # log when daemonized).
   class Access < GemPlugin::Plugin "/handlers"
     include Mongrel::HttpHandlerPlugin
     
     def process(request,response)
       p = request.params
-      STDERR.puts "#{p['REMOTE_ADDR']} - [#{Time.now.httpdate}] \"#{p['REQUEST_METHOD']} #{p["REQUEST_URI"]} HTTP/1.1\""
+      #STDERR.puts "#{p['REMOTE_ADDR']} - [#{Time.now.httpdate}] \"#{p['REQUEST_METHOD']} #{p["REQUEST_URI"]} HTTP/1.1\""
+      log(:info, "#{p['REMOTE_ADDR']} \"#{p['REQUEST_METHOD']} #{p["REQUEST_URI"]} HTTP/1.1\"")
     end
   end
   
@@ -114,6 +112,7 @@ module RequestLog
     
   end
 
+
   # stolen from Robert Klemme
   class Objects < GemPlugin::Plugin "/handlers"
     include Mongrel::HttpHandlerPlugin
@@ -125,7 +124,7 @@ module RequestLog
         begin
           ObjectSpace.each_object do |o| 
             begin
-              if o.respond_to? :length
+              if o.respond_to?(:length)
                 len = o.length
                 lengths[o.class] ||= Mongrel::Stats.new(o.class)
                 lengths[o.class].sample(len)
@@ -159,6 +158,7 @@ module RequestLog
     end
   end
 
+
   class Params < GemPlugin::Plugin "/handlers"
     include Mongrel::HttpHandlerPlugin
 
@@ -168,6 +168,7 @@ module RequestLog
     end
 
   end
+
 
   class Threads < GemPlugin::Plugin "/handlers"
     include Mongrel::HttpHandlerPlugin

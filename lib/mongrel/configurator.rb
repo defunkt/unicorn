@@ -59,18 +59,18 @@ module Mongrel
         target_gid = Etc.getgrnam(group).gid if group
 
         if uid != target_uid or gid != target_gid
-          log "Initiating groups for #{user.inspect}:#{group.inspect}."
+          log(:info, "Initiating groups for #{user.inspect}:#{group.inspect}.")
           Process.initgroups(user, target_gid)
         
-          log "Changing group to #{group.inspect}."
+          log(:info, "Changing group to #{group.inspect}.")
           Process::GID.change_privilege(target_gid)
 
-          log "Changing user to #{user.inspect}." 
+          log(:info, "Changing user to #{user.inspect}." )
           Process::UID.change_privilege(target_uid)
         end
       rescue Errno::EPERM => e
-        log "Couldn't change user and group to #{user.inspect}:#{group.inspect}: #{e.to_s}."
-        log "Mongrel failed to start."
+        log(:critical, "Couldn't change user and group to #{user.inspect}:#{group.inspect}: #{e.to_s}.")
+        log(:critical, "Mongrel failed to start.")
         exit 1
       end
     end
@@ -82,7 +82,7 @@ module Mongrel
     # Writes the PID file if we're not on Windows.
     def write_pid_file
       unless RUBY_PLATFORM =~ /djgpp|(cyg|ms|bcc)win|mingw/
-        log "Writing PID file to #{@pid_file}"
+        log(:info, "Writing PID file to #{@pid_file}")
         open(@pid_file,"w") {|f| f.write(Process.pid) }
         open(@pid_file,"w") do |f|
           f.write(Process.pid)
@@ -192,7 +192,7 @@ module Mongrel
         if logfile[0].chr != "/"
           logfile = File.join(ops[:cwd],logfile)
           if not File.exist?(File.dirname(logfile))
-            log "!!! Log file directory not found at full path #{File.dirname(logfile)}.  Update your configuration to use a full path."
+            log(:critical, "!!! Log file directory not found at full path #{File.dirname(logfile)}.  Update your configuration to use a full path.")
             exit 1
           end
         end
@@ -203,7 +203,7 @@ module Mongrel
         Dir.chdir(ops[:cwd])
 
       else
-        log "WARNING: Win32 does not support daemon mode."
+        log(:warning, "WARNING: Win32 does not support daemon mode.")
       end
     end
 
@@ -249,7 +249,7 @@ module Mongrel
       mime = load_yaml(file, mime)
 
       # check all the mime types to make sure they are the right format
-      mime.each {|k,v| log "WARNING: MIME type #{k} must start with '.'" if k.index(".") != 0 }
+      mime.each {|k,v| log(, "WARNING: MIME type #{k} must start with '.'") if k.index(".") != 0 }
 
       return mime
     end
@@ -361,28 +361,25 @@ module Mongrel
       ops = resolve_defaults(options)
 
       # forced shutdown, even if previously restarted (actually just like TERM but for CTRL-C)
-      trap("INT") { log "INT signal received."; stop(false) }
+      trap("INT") { log(:notice, "INT signal received."; stop(false) }
 
-      # clean up the pid file always
+      # always clean up the pid file
       at_exit { remove_pid_file }
 
       unless RUBY_PLATFORM =~ /djgpp|(cyg|ms|bcc)win|mingw/
         # graceful shutdown
-        trap("TERM") { log "TERM signal received."; stop }
-        trap("USR1") { log "USR1 received, toggling $mongrel_debug_client to #{!$mongrel_debug_client}"; $mongrel_debug_client = !$mongrel_debug_client }
+        trap("TERM") { log(:notice, "TERM signal received."; stop) }
+        # debug mode
+        trap("USR1") { log(:notice, "USR1 received, toggling $mongrel_debug_client to #{!$mongrel_debug_client}"; $mongrel_debug_client = !$mongrel_debug_client) }
         # restart
-        trap("USR2") { log "USR2 signal received."; stop(true) }
+        trap("USR2") { log(:notice, "USR2 signal received."; stop(true)) }
 
-        log "Signals ready.  TERM => stop.  USR2 => restart.  INT => stop (no restart)."
+        log(:notice, "Signals ready.  TERM => stop.  USR2 => restart.  INT => stop (no restart).")
       else
-        log "Signals ready.  INT => stop (no restart)."
+        log(:notice, "Signals ready.  INT => stop (no restart).")
       end
     end
 
-    # Logs a simple message to STDERR (or the mongrel log if in daemon mode).
-    def log(msg)
-      STDERR.print "#{Time.now.httpdate}: #{msg}\n"
-    end
-
   end
+
 end

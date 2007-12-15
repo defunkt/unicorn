@@ -1,4 +1,3 @@
-
 require 'socket'
 require 'tempfile'
 require 'yaml'
@@ -14,6 +13,7 @@ Mongrel::Gems.require 'fastthread'
 require 'thread'
 
 require 'http11'
+require 'mongrel/log'
 require 'mongrel/cgi'
 require 'mongrel/handlers'
 require 'mongrel/command'
@@ -40,7 +40,6 @@ module Mongrel
   class HttpParams < Hash
     attr_accessor :http_body
   end
-
 
   # This is the main driver of Mongrel, while the Mongrel::HttpParser and Mongrel::URIClassifier
   # make up the majority of how the server functions.  It's a very simple class that just
@@ -83,7 +82,7 @@ module Mongrel
     # The throttle parameter is a sleep timeout (in hundredths of a second) that is placed between 
     # socket.accept calls in order to give the server a cheap throttle time.  It defaults to 0 and
     # actually if it is 0 then the sleep is not done at all.
-    def initialize(host, port, num_processors=950, throttle=0, timeout=60)
+    def initialize(host, port, num_processors=950, throttle=0, timeout=60, log=nil)
       
       tries = 0
       @socket = TCPServer.new(host, port) 
@@ -95,6 +94,7 @@ module Mongrel
       @throttle = throttle
       @num_processors = num_processors
       @timeout = timeout
+      Mongrel::Logger = Mongrel::Log.new(log || "mongrel-#{port}.log")
     end
 
     # Does the majority of the IO processing.  It has been written in Ruby using
@@ -180,23 +180,23 @@ module Mongrel
       rescue EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF
         client.close rescue nil
       rescue HttpParserError => e
-        STDERR.puts "#{Time.now.httpdate}: HTTP parse error, malformed request (#{params[Const::HTTP_X_FORWARDED_FOR] || client.peeraddr.last}): #{e.inspect}"
-        STDERR.puts "#{Time.now.httpdate}: REQUEST DATA: #{data.inspect}\n---\nPARAMS: #{params.inspect}\n---\n"
+        log(:error, "#{Time.now.httpdate}: HTTP parse error, malformed request (#{params[Const::HTTP_X_FORWARDED_FOR] || client.peeraddr.last}): #{e.inspect}")
+        log(:error, "#{Time.now.httpdate}: REQUEST DATA: #{data.inspect}\n---\nPARAMS: #{params.inspect}\n---\n")
         # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4
         client.write(Const::ERROR_400_RESPONSE)
       rescue Errno::EMFILE
         reap_dead_workers('too many files')
       rescue Object => e
-        STDERR.puts "#{Time.now.httpdate}: Read error: #{e.inspect}"
-        STDERR.puts e.backtrace.join("\n")
+        log(:error, "#{Time.now.httpdate}: Read error: #{e.inspect}")
+        log(:error, e.backtrace.join("\n"))
       ensure
         begin
           client.close
         rescue IOError
           # Already closed
         rescue Object => e
-          STDERR.puts "#{Time.now.httpdate}: Client error: #{e.inspect}"
-          STDERR.puts e.backtrace.join("\n")
+          log(:error, "#{Time.now.httpdate}: Client error: #{e.inspect}")
+          log(:error, e.backtrace.join("\n"))
         end
         request.body.delete if request and request.body.class == Tempfile
       end
@@ -208,14 +208,14 @@ module Mongrel
     # after the reap is done.  It only runs if there are workers to reap.
     def reap_dead_workers(reason='unknown')
       if @workers.list.length > 0
-        STDERR.puts "#{Time.now.httpdate}: Reaping #{@workers.list.length} threads for slow workers because of '#{reason}'"
+        log(:error, "#{Time.now.httpdate}: Reaping #{@workers.list.length} threads for slow workers because of '#{reason}'")
         error_msg = "#{Time.now.httpdate}: Mongrel timed out this thread: #{reason}"
         mark = Time.now
         @workers.list.each do |worker|
           worker[:started_on] = Time.now if not worker[:started_on]
 
           if mark - worker[:started_on] > @timeout + @throttle
-            STDERR.puts "#{Time.now.httpdate}: Thread #{worker.inspect} is too old, killing."
+            log(:error, "#{Time.now.httpdate}: Thread #{worker.inspect} is too old, killing.")
             worker.raise(TimeoutError.new(error_msg))
           end
         end
@@ -230,7 +230,7 @@ module Mongrel
     # that much longer.
     def graceful_shutdown
       while reap_dead_workers("shutdown") > 0
-        STDERR.puts "#{Time.now.httpdate}: Waiting for #{@workers.list.length} requests to finish, could take #{@timeout + @throttle} seconds."
+        log(:error, "#{Time.now.httpdate}: Waiting for #{@workers.list.length} requests to finish, could take #{@timeout + @throttle} seconds.")
         sleep @timeout / 10
       end
     end
@@ -276,7 +276,7 @@ module Mongrel
               worker_list = @workers.list
   
               if worker_list.length >= @num_processors
-                STDERR.puts "#{Time.now.httpdate}: Server overloaded with #{worker_list.length} processors (#@num_processors max). Dropping connection."
+                log(:error, "#{Time.now.httpdate}: Server overloaded with #{worker_list.length} processors (#@num_processors max). Dropping connection.")
                 client.close rescue nil
                 reap_dead_workers("max processors")
               else
@@ -295,14 +295,14 @@ module Mongrel
               # client closed the socket even before accept
               client.close rescue nil
             rescue Object => e
-              STDERR.puts "#{Time.now.httpdate}: Unhandled listen loop exception #{e.inspect}."
-              STDERR.puts e.backtrace.join("\n")
+              log(:error, "#{Time.now.httpdate}: Unhandled listen loop exception #{e.inspect}.")
+              log(:error, e.backtrace.join("\n"))
             end
           end
           graceful_shutdown
         ensure
           @socket.close
-          # STDERR.puts "#{Time.now.httpdate}: Closed socket."
+          # log(:error, "#{Time.now.httpdate}: Closed socket.")
         end
       end
 

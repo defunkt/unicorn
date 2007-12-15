@@ -4,9 +4,9 @@ class TestPlugin < GemPlugin::Plugin "/handlers"
   include Mongrel::HttpHandlerPlugin
 
   def process(request, response)
-    STDERR.puts "My options are: #{options.inspect}"
-    STDERR.puts "Request Was:"
-    STDERR.puts request.params.to_yaml
+    log(:error, "My options are: #{options.inspect}")
+    log(:error, "Request Was:")
+    log(:error, request.params.to_yaml)
   end
 end
 

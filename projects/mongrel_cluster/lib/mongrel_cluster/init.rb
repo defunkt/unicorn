@@ -13,7 +13,7 @@ module Cluster
       valid_exists?(@config_file, "Configuration file does not exist. Run mongrel_rails cluster::configure.")
       @valid
     end
-      
+    
     def read_options
       @options = { 
         "environment" => ENV['RAILS_ENV'] || "development",
@@ -96,7 +96,7 @@ module Cluster
         log "starting port #{port}"          
         log_verbose exec_cmd
         output = `#{exec_cmd}`
-        log_error output unless $?.success?
+        log(:error, output) unless $?.success?
       end
     end
       
@@ -125,7 +125,7 @@ module Cluster
         log "stopping port #{port}"          
         log_verbose exec_cmd
         output = `#{exec_cmd}`
-        log_error output unless $?.success?
+        log(:error, output) unless $?.success?
         
       end
     end
@@ -138,18 +138,18 @@ module Cluster
       @ports.each do |port|
         pid = check_process(port)        
         unless pid_file_exists?(port)        
-          log "missing pid_file: #{port_pid_file(port)}"  
+          log(:error, "missing pid_file: #{port_pid_file(port)}")
           status = STATUS_ERROR
         else
-          log "found pid_file: #{port_pid_file(port)}"
+          log(:info, "found pid_file: #{port_pid_file(port)}")
         end    
         if pid
-          log "found mongrel_rails: port #{port}, pid #{pid}"
+          log(:info, "found mongrel_rails: port #{port}, pid #{pid}")
         else
-          log "missing mongrel_rails: port #{port}"
+          log(:error, "missing mongrel_rails: port #{port}")
           status = STATUS_ERROR
         end
-        puts ""
+        log(:info, "")
       end
 
       status
@@ -211,18 +211,12 @@ module Cluster
       nil
     end
     
-    def log_error(message)
-      log(message)
-    end
-
     def log_verbose(message)
-      log(message) if @verbose
+      log(:info, message) if @verbose
     end
 
-    def log(message)
-      puts("#{Time.now.httpdate}: #{message}")
-    end   
   end
+
   class Start < GemPlugin::Plugin "/commands"
     include ExecBase
     
