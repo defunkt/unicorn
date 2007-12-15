@@ -12,6 +12,11 @@ module Mongrel
     def initialize(log, log_level)
       @logger    = initialize_io(log)
       @log_level = Levels[:name][log_level]
+
+      if !RUBY_PLATFORM.match(/java|mswin/) &&
+        !(@log == STDOUT) && @log.respond_to?(:write_nonblock)
+        @aio = true
+      end
     end
     
     # Writes a string to the logger. Writing of the string is skipped if the string's log level is
@@ -19,7 +24,6 @@ module Mongrel
     # the java or windows platforms then the logger will use non-blocking asynchronous writes.
     def log(level, string)
       return if (Levels[:name][level] > @log_level)
-      @aio ||= !RUBY_PLATFORM.match(/java|mswin/) && @log.respond_to?(:write_nonblock)
       if @aio
         @log.write_nonblock("#{Time.now.httpdate}: #{string}\n")
       else

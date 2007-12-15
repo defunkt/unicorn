@@ -13,7 +13,7 @@ Mongrel::Gems.require 'fastthread'
 require 'thread'
 
 require 'http11'
-require 'mongrel/log'
+require 'mongrel/logger'
 require 'mongrel/cgi'
 require 'mongrel/handlers'
 require 'mongrel/command'
