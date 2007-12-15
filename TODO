@@ -4,3 +4,5 @@
 * Refactor logging to include timestamps.
 
 * See if Java is setting the server version string in the request properly.
+
+* Figure out why Java writes to STDERR instead of the file in the middle of one of the tests.
