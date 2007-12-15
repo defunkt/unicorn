@@ -69,7 +69,7 @@ task :test_java do
   save = JRuby.runtime.instance_config.run_ruby_in_process
   begin
     JRuby.runtime.instance_config.run_ruby_in_process = false
-    Rake::Task[:test_local].invoke
+    Rake::Task[:test].invoke
   ensure
     JRuby.runtime.instance_config.run_ruby_in_process = save
   end
