@@ -16,14 +16,14 @@ e = Echoe.new("mongrel") do |p|
   p.need_tar_gz = false
   p.need_tgz = true
 
-  #  case RUBY_PLATFORM
-  #  when /mswin/
-  #    p.certificate_chain = ['~/gem_certificates/mongrel-public_cert.pem',
-  #      '~/gem_certificates/luislavena-mongrel-public_cert.pem']
-  #  else
-  p.certificate_chain = ['~/p/configuration/gem_certificates/mongrel/mongrel-public_cert.pem',
-  '~/p/configuration/gem_certificates/evan_weaver-mongrel-public_cert.pem']
-  #  end
+  case RUBY_PLATFORM
+    when /mswin/
+      p.certificate_chain = ['~/gem_certificates/mongrel-public_cert.pem',
+        '~/gem_certificates/luislavena-mongrel-public_cert.pem']
+    else
+    p.certificate_chain = ['~/p/configuration/gem_certificates/mongrel/mongrel-public_cert.pem',
+    '~/p/configuration/gem_certificates/evan_weaver-mongrel-public_cert.pem']
+  end
 
   p.eval = proc do
     case RUBY_PLATFORM
@@ -62,12 +62,6 @@ task :ragel do
 end
 
 #### XXX Hack around JRuby in-process launching problem
-
-require 'rake/testtask'
-Rake::TestTask.new(:test_local) do |t|
-  t.libs << "lib" << "test" << "projects/gem_plugin/lib"
-  t.test_files = e.test_pattern
-end
 
 desc "Run each test suite in isolation on JRuby"
 task :test_java do
