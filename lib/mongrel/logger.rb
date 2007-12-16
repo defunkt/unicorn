@@ -3,10 +3,6 @@
 #       Merb:  http://merbivore.com
 module Mongrel
 
-  #class << self
-  #  attr_accessor :logger
-  #end
-
   class Log
     attr_accessor :logger
     attr_accessor :log_level
@@ -20,12 +16,11 @@ module Mongrel
       @logger    = initialize_io(log)
       @log_level = Levels[:name][log_level]
 
-      if !RUBY_PLATFORM.match(/java|mswin/) && 
-         !(@log == STDOUT) && 
-        @log.respond_to?(:write_nonblock)
-        
+      if !RUBY_PLATFORM.match(/java|mswin/) && !(@log == STDOUT) && 
+           @log.respond_to?(:write_nonblock)
         @aio = true
       end
+      $MongrelLogger = self
     end
     
     # Writes a string to the logger. Writing of the string is skipped if the string's log level is
@@ -52,7 +47,7 @@ module Mongrel
       else
         @log = open(log, (File::WRONLY | File::APPEND | File::CREAT))
         @log.sync = true
-        @log.write("#{Time.now.httpdate} Logfile created")
+        @log.write("#{Time.now.httpdate} Logfile created\n")
       end
     end
 
@@ -60,7 +55,9 @@ module Mongrel
   
   # Convenience wrapper for logging, allows us to use Mongrel.log
   def self.log(level, string)
-    logger.log(level,string)
+    # If no logger was defined, log to STDOUT.
+    $MongrelLogger ||= Mongrel::Log.new(STDOUT, :debug)
+    $MongrelLogger.log(level,string)
   end
   
 end

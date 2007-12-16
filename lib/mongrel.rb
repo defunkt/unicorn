@@ -1,3 +1,4 @@
+# Ruby
 require 'socket'
 require 'tempfile'
 require 'yaml'
@@ -6,10 +7,15 @@ require 'etc'
 require 'uri'
 require 'stringio'
 
+# Ensure working require
 require 'mongrel/gems'
 
+# TODO: Only require these for RUBY_VERSION <= 1.8.6 
+#       and only for platforms that require it, exclusive matching
+if !RUBY_PLATFORM.match(/java|mswin/) && !RUBY_VERSION.match(/1\.8\.\d/)
 Mongrel::Gems.require 'cgi_multipart_eof_fix'
 Mongrel::Gems.require 'fastthread'
+end
 require 'thread'
 
 require 'http11'
@@ -183,23 +189,23 @@ module Mongrel
       rescue EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF
         client.close rescue nil
       rescue HttpParserError => e
-        log(:error, "#{Time.now.httpdate}: HTTP parse error, malformed request (#{params[Const::HTTP_X_FORWARDED_FOR] || client.peeraddr.last}): #{e.inspect}")
-        log(:error, "#{Time.now.httpdate}: REQUEST DATA: #{data.inspect}\n---\nPARAMS: #{params.inspect}\n---\n")
+        Mongrel.log(:error, "#{Time.now.httpdate}: HTTP parse error, malformed request (#{params[Const::HTTP_X_FORWARDED_FOR] || client.peeraddr.last}): #{e.inspect}")
+        Mongrel.log(:error, "#{Time.now.httpdate}: REQUEST DATA: #{data.inspect}\n---\nPARAMS: #{params.inspect}\n---\n")
         # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4
         client.write(Const::ERROR_400_RESPONSE)
       rescue Errno::EMFILE
         reap_dead_workers('too many files')
       rescue Object => e
-        log(:error, "#{Time.now.httpdate}: Read error: #{e.inspect}")
-        log(:error, e.backtrace.join("\n"))
+        Mongrel.log(:error, "#{Time.now.httpdate}: Read error: #{e.inspect}")
+        Mongrel.log(:error, e.backtrace.join("\n"))
       ensure
         begin
           client.close
         rescue IOError
           # Already closed
         rescue Object => e
-          log(:error, "#{Time.now.httpdate}: Client error: #{e.inspect}")
-          log(:error, e.backtrace.join("\n"))
+          Mongrel.log(:error, "#{Time.now.httpdate}: Client error: #{e.inspect}")
+          Mongrel.log(:error, e.backtrace.join("\n"))
         end
         request.body.delete if request and request.body.class == Tempfile
       end
@@ -211,14 +217,14 @@ module Mongrel
     # after the reap is done.  It only runs if there are workers to reap.
     def reap_dead_workers(reason='unknown')
       if @workers.list.length > 0
-        log(:error, "#{Time.now.httpdate}: Reaping #{@workers.list.length} threads for slow workers because of '#{reason}'")
+        Mongrel.log(:error, "#{Time.now.httpdate}: Reaping #{@workers.list.length} threads for slow workers because of '#{reason}'")
         error_msg = "#{Time.now.httpdate}: Mongrel timed out this thread: #{reason}"
         mark = Time.now
         @workers.list.each do |worker|
           worker[:started_on] = Time.now if not worker[:started_on]
 
           if mark - worker[:started_on] > @timeout + @throttle
-            log(:error, "#{Time.now.httpdate}: Thread #{worker.inspect} is too old, killing.")
+            Mongrel.log(:error, "#{Time.now.httpdate}: Thread #{worker.inspect} is too old, killing.")
             worker.raise(TimeoutError.new(error_msg))
           end
         end
@@ -233,7 +239,7 @@ module Mongrel
     # that much longer.
     def graceful_shutdown
       while reap_dead_workers("shutdown") > 0
-        log(:error, "#{Time.now.httpdate}: Waiting for #{@workers.list.length} requests to finish, could take #{@timeout + @throttle} seconds.")
+        Mongrel.log(:error, "#{Time.now.httpdate}: Waiting for #{@workers.list.length} requests to finish, could take #{@timeout + @throttle} seconds.")
         sleep @timeout / 10
       end
     end
@@ -279,7 +285,7 @@ module Mongrel
               worker_list = @workers.list
   
               if worker_list.length >= @num_processors
-                log(:error, "#{Time.now.httpdate}: Server overloaded with #{worker_list.length} processors (#@num_processors max). Dropping connection.")
+                Mongrel.log(:error, "#{Time.now.httpdate}: Server overloaded with #{worker_list.length} processors (#@num_processors max). Dropping connection.")
                 client.close rescue nil
                 reap_dead_workers("max processors")
               else
@@ -298,14 +304,14 @@ module Mongrel
               # client closed the socket even before accept
               client.close rescue nil
             rescue Object => e
-              log(:error, "#{Time.now.httpdate}: Unhandled listen loop exception #{e.inspect}.")
-              log(:error, e.backtrace.join("\n"))
+              Mongrel.log(:error, "#{Time.now.httpdate}: Unhandled listen loop exception #{e.inspect}.")
+              Mongrel.log(:error, e.backtrace.join("\n"))
             end
           end
           graceful_shutdown
         ensure
           @socket.close
-          # log(:error, "#{Time.now.httpdate}: Closed socket.")
+          # Mongrel.log(:error, "#{Time.now.httpdate}: Closed socket.")
         end
       end
 

@@ -161,9 +161,9 @@ module Mongrel
           raise "Rails was not configured.  Read the docs for RailsConfigurator."
         end
 
-        log "Reloading Rails..."
+        Mongrel.log(:info, "Reloading Rails...")
         @rails_handler.reload!
-        log "Done reloading Rails."
+        Mongrel.log(:info, "Done reloading Rails.")
 
       end
 
@@ -175,9 +175,9 @@ module Mongrel
 
         unless RUBY_PLATFORM =~ /djgpp|(cyg|ms|bcc)win|mingw/
           # rails reload
-          trap("HUP") { log "HUP signal received."; reload!          }
+          trap("HUP") { Mongrel.log(:info, "HUP signal received."); reload! }
 
-          log "Rails signals registered.  HUP => reload (without restart).  It might not work well."
+          Mongrel.log(:info, "Rails signals registered.  HUP => reload (without restart).  It might not work well.")
         end
       end
     end

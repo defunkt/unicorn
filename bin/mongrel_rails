@@ -75,49 +75,49 @@ module Mongrel
     def run
       if @generate
 	@generate = File.expand_path(@generate)
-        log(:error, "** Writing config to \"#@generate\".")
+        Mongrel.log(:error, "** Writing config to \"#@generate\".")
         open(@generate, "w") {|f| f.write(settings.to_yaml) }
-        log(:error, "** Finished.  Run \"mongrel_rails start -C #@generate\" to use the config file.")
+        Mongrel.log(:error, "** Finished.  Run \"mongrel_rails start -C #@generate\" to use the config file.")
         exit 0
       end
 
       config = Mongrel::Rails::RailsConfigurator.new(settings) do
         if defaults[:daemon]
           if File.exist? defaults[:pid_file]
-            log "!!! PID file #{defaults[:pid_file]} already exists.  Mongrel could be running already.  Check your #{defaults[:log_file]} for errors."
-            log "!!! Exiting with error.  You must stop mongrel and clear the .pid before I'll attempt a start."
+            Mongrel.error(:info, "!!! PID file #{defaults[:pid_file]} already exists.  Mongrel could be running already.  Check your #{defaults[:log_file]} for errors.")
+            Mongrel.log(:error, "!!! Exiting with error.  You must stop mongrel and clear the .pid before I'll attempt a start.")
             exit 1
           end
 
           daemonize
-          log "Daemonized, any open files are closed.  Look at #{defaults[:pid_file]} and #{defaults[:log_file]} for info."
-          log "Settings loaded from #{@config_file} (they override command line)." if @config_file
+          Mongrel.log(:info, "Daemonized, any open files are closed.  Look at #{defaults[:pid_file]} and #{defaults[:log_file]} for info.")
+          Mongrel.log(:info, "Settings loaded from #{@config_file} (they override command line).") if @config_file
         end
 
-        log "Starting Mongrel listening at #{defaults[:host]}:#{defaults[:port]}"
+        Mongrel.log(:info, "Starting Mongrel listening at #{defaults[:host]}:#{defaults[:port]}")
 
         listener do
           mime = {}
           if defaults[:mime_map]
-            log "Loading additional MIME types from #{defaults[:mime_map]}"
+            Mongrel.log(:info, "Loading additional MIME types from #{defaults[:mime_map]}")
             mime = load_mime_map(defaults[:mime_map], mime)
           end
 
           if defaults[:debug]
-            log "Installing debugging prefixed filters. Look in log/mongrel_debug for the files."
+            Mongrel.log(:info, "Installing debugging prefixed filters. Look in log/mongrel_debug for the files.")
             debug "/"
           end
 
-          log "Starting Rails with #{defaults[:environment]} environment..."
-          log "Mounting Rails at #{defaults[:prefix]}..." if defaults[:prefix]
+          Mongrel.log(:info, "Starting Rails with #{defaults[:environment]} environment...")
+          Mongrel.log(:info, "Mounting Rails at #{defaults[:prefix]}...") if defaults[:prefix]
           uri defaults[:prefix] || "/", :handler => rails(:mime => mime, :prefix => defaults[:prefix])
-          log "Rails loaded."
+          Mongrel.log(:info, "Rails loaded.")
 
-          log "Loading any Rails specific GemPlugins"
+          Mongrel.log(:info, "Loading any Rails specific GemPlugins" )
           load_plugins
 
           if defaults[:config_script]
-            log "Loading #{defaults[:config_script]} external config script"
+            Mongrel.log(:info, "Loading #{defaults[:config_script]} external config script")
             run_config(defaults[:config_script])
           end
 
@@ -126,12 +126,12 @@ module Mongrel
       end
 
       config.run
-      config.log "Mongrel #{Mongrel::Const::MONGREL_VERSION} available at #{@address}:#{@port}"
+      Mongrel.log(:info, "Mongrel #{Mongrel::Const::MONGREL_VERSION} available at #{@address}:#{@port}")
 
       if config.defaults[:daemon]
         config.write_pid_file
       else
-        config.log "Use CTRL-C to stop." 
+        Mongrel.log(:info, "Use CTRL-C to stop.")
       end
 
       config.join
@@ -139,18 +139,18 @@ module Mongrel
       if config.needs_restart
         unless RUBY_PLATFORM =~ /djgpp|(cyg|ms|bcc)win|mingw/
           cmd = "ruby #{__FILE__} start #{original_args.join(' ')}"
-          config.log "Restarting with arguments:  #{cmd}"
+          Mongrel.log(:info, "Restarting with arguments:  #{cmd}")
           config.stop(false, true)
           config.remove_pid_file
 
           if config.defaults[:daemon]
             system cmd
           else
-            log(:error, "Can't restart unless in daemon mode.")
+            Mongrel.log(:error, "Can't restart unless in daemon mode.")
             exit 1
           end
         else
-          config.log "Win32 does not support restarts. Exiting."
+          Mongrel.log(:info, "Win32 does not support restarts. Exiting.")
         end
       end
     end
@@ -160,7 +160,7 @@ module Mongrel
       begin
         settings = YAML.load_file(@config_file)
       ensure
-        log(:error, "** Loading settings from #{@config_file} (they override command line)." unless @daemon || settings[:daemon] )
+        Mongrel.log(:error, "** Loading settings from #{@config_file} (they override command line).") unless @daemon || settings[:daemon]
       end
 
       settings[:includes] ||= ["mongrel"]
