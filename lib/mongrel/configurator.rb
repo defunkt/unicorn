@@ -249,7 +249,7 @@ module Mongrel
       mime = load_yaml(file, mime)
 
       # check all the mime types to make sure they are the right format
-      mime.each {|k,v| log(, "WARNING: MIME type #{k} must start with '.'") if k.index(".") != 0 }
+      mime.each {|k,v| log(:warning, "WARNING: MIME type #{k} must start with '.'") if k.index(".") != 0 }
 
       return mime
     end
@@ -361,18 +361,18 @@ module Mongrel
       ops = resolve_defaults(options)
 
       # forced shutdown, even if previously restarted (actually just like TERM but for CTRL-C)
-      trap("INT") { log(:notice, "INT signal received."; stop(false) }
+      trap("INT") { log(:notice, "INT signal received."); stop(false) }
 
       # always clean up the pid file
       at_exit { remove_pid_file }
 
       unless RUBY_PLATFORM =~ /djgpp|(cyg|ms|bcc)win|mingw/
         # graceful shutdown
-        trap("TERM") { log(:notice, "TERM signal received."; stop) }
+        trap("TERM") { log(:notice, "TERM signal received."); stop }
         # debug mode
-        trap("USR1") { log(:notice, "USR1 received, toggling $mongrel_debug_client to #{!$mongrel_debug_client}"; $mongrel_debug_client = !$mongrel_debug_client) }
+        trap("USR1") { log(:notice, "USR1 received, toggling $mongrel_debug_client to #{!$mongrel_debug_client}"); $mongrel_debug_client = !$mongrel_debug_client }
         # restart
-        trap("USR2") { log(:notice, "USR2 signal received."; stop(true)) }
+        trap("USR2") { log(:notice, "USR2 signal received."); stop(true) }
 
         log(:notice, "Signals ready.  TERM => stop.  USR2 => restart.  INT => stop (no restart).")
       else

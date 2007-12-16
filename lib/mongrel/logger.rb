@@ -3,6 +3,10 @@
 #       Merb:  http://merbivore.com
 module Mongrel
 
+  #class << self
+  #  attr_accessor :logger
+  #end
+
   class Log
     attr_accessor :logger
     attr_accessor :log_level
@@ -12,7 +16,7 @@ module Mongrel
       :id => { 0 => :emergency, 1 => :alert, 2 => :critical, 3 => :error, 4 => :warning, 5 => :notice, 6 => :info, 7 => :debug }
     }
     
-    def initialize(log, log_level)
+    def initialize(log, log_level = :debug)
       @logger    = initialize_io(log)
       @log_level = Levels[:name][log_level]
 
@@ -56,7 +60,7 @@ module Mongrel
   
   # Convenience wrapper for logging, allows us to use Mongrel.log
   def self.log(level, string)
-    Mongrel::Logger.log(level,string)
+    logger.log(level,string)
   end
   
 end

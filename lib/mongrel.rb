@@ -69,6 +69,8 @@ module Mongrel
     attr_reader :timeout
     attr_reader :num_processors
 
+    attr_accessor :logger
+
     # Creates a working server on host:port (strange things happen if port isn't a Number).
     # Use HttpServer::run to start the server and HttpServer.acceptor.join to 
     # join the thread that's processing incoming requests on the socket.
@@ -82,7 +84,7 @@ module Mongrel
     # The throttle parameter is a sleep timeout (in hundredths of a second) that is placed between 
     # socket.accept calls in order to give the server a cheap throttle time.  It defaults to 0 and
     # actually if it is 0 then the sleep is not done at all.
-    def initialize(host, port, num_processors=950, throttle=0, timeout=60, log=nil)
+    def initialize(host, port, num_processors=950, throttle=0, timeout=60, log=nil, log_level=:debug)
       
       tries = 0
       @socket = TCPServer.new(host, port) 
@@ -94,7 +96,8 @@ module Mongrel
       @throttle = throttle
       @num_processors = num_processors
       @timeout = timeout
-      Mongrel::Logger = Mongrel::Log.new(log || "mongrel-#{port}.log")
+      # Mongrel.logger = Mongrel::Log.new(log || "mongrel-#{port}.log")
+      @logger = Mongrel::Log.new(log || "mongrel-#{port}.log", log_level)
     end
 
     # Does the majority of the IO processing.  It has been written in Ruby using

@@ -37,6 +37,7 @@ lib/mongrel/header_out.rb
 lib/mongrel/http_request.rb
 lib/mongrel/http_response.rb
 lib/mongrel/init.rb
+lib/mongrel/logger.rb
 lib/mongrel/mime_types.yml
 lib/mongrel/rails.rb
 lib/mongrel/stats.rb
