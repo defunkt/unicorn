@@ -96,8 +96,7 @@ module RequestLog
     
     def process(request,response)
       p = request.params
-      #STDERR.puts "#{p['REMOTE_ADDR']} - [#{Time.now.httpdate}] \"#{p['REQUEST_METHOD']} #{p["REQUEST_URI"]} HTTP/1.1\""
-      Mongrel.log(:info, "#{p['REMOTE_ADDR']} \"#{p['REQUEST_METHOD']} #{p["REQUEST_URI"]} HTTP/1.1\"")
+      Mongrel.log("#{p['REMOTE_ADDR']} \"#{p['REQUEST_METHOD']} #{p["REQUEST_URI"]} HTTP/1.1\"")
     end
   end
   

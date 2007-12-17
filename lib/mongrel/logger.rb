@@ -65,10 +65,10 @@ module Mongrel
   end
   
   # Convenience wrapper for logging, allows us to use Mongrel.log
-  def self.log(level, string)
+  def self.log(*args)
     # If no logger has been defined yet at this point, log to STDOUT.
     $MongrelLogger ||= Mongrel::Log.new(STDOUT, :debug)
-    $MongrelLogger.log(level,string)
+    $MongrelLogger.log(*args)
   end
   
 end

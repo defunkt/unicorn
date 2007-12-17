@@ -80,20 +80,20 @@ module Cluster
       @ports.each do |port|              
         if @clean && pid_file_exists?(port) && !check_process(port)
           pid_file = port_pid_file(port)        
-          Mongrel.log(:info, "missing process: removing #{pid_file}")
+          Mongrel.log("missing process: removing #{pid_file}")
           chdir_cwd do
             File.unlink(pid_file) 
           end
         end
         
         if pid_file_exists?(port) && check_process(port)
-          Mongrel.log(:info, "already started port #{port}")
+          Mongrel.log("already started port #{port}")
           next
         end
 
         exec_cmd = cmd + " -p #{port} -P #{port_pid_file(port)}"
         exec_cmd += " -l #{port_log_file(port)}"
-        Mongrel.log(:info, "starting port #{port}")
+        Mongrel.log("starting port #{port}")
         log_verbose exec_cmd
         output = `#{exec_cmd}`
         Mongrel.log(:error, output) unless $?.success?
@@ -112,17 +112,17 @@ module Cluster
       @ports.each do |port|
         pid = check_process(port)        
         if @clean && pid && !pid_file_exists?(port)       
-          Mongrel.log(:info, "missing pid_file: killing mongrel_rails port #{port}, pid #{pid}")
+          Mongrel.log("missing pid_file: killing mongrel_rails port #{port}, pid #{pid}")
           Process.kill("KILL", pid.to_i)  
         end
         
         if !check_process(port)
-          Mongrel.log(:info, "already stopped port #{port}")
+          Mongrel.log("already stopped port #{port}")
           next       
         end
 
         exec_cmd = cmd + " -P #{port_pid_file(port)}"
-        Mongrel.log(:info, "stopping port #{port}")
+        Mongrel.log("stopping port #{port}")
         log_verbose exec_cmd
         output = `#{exec_cmd}`
         Mongrel.log(:error, output) unless $?.success?
@@ -141,15 +141,15 @@ module Cluster
           Mongrel.log(:error, "missing pid_file: #{port_pid_file(port)}")
           status = STATUS_ERROR
         else
-          Mongrel.log(:info, "found pid_file: #{port_pid_file(port)}")
+          Mongrel.log("found pid_file: #{port_pid_file(port)}")
         end    
         if pid
-          Mongrel.log(:info, "found mongrel_rails: port #{port}, pid #{pid}")
+          Mongrel.log("found mongrel_rails: port #{port}, pid #{pid}")
         else
           Mongrel.log(:error, "missing mongrel_rails: port #{port}")
           status = STATUS_ERROR
         end
-        Mongrel.log(:info, "")
+        Mongrel.log("")
       end
 
       status
@@ -212,7 +212,7 @@ module Cluster
     end
     
     def log_verbose(message)
-      Mongrel.log(:info, message) if @verbose
+      Mongrel.log(message) if @verbose
     end
 
   end
@@ -329,7 +329,7 @@ module Cluster
       @options["group"] = @group if @group
       @options["prefix"] = @prefix if @prefix
       
-      Mongrel.log(:info, "Writing configuration file to #{@config_file}.")
+      Mongrel.log("Writing configuration file to #{@config_file}.")
       File.open(@config_file,"w") {|f| f.write(@options.to_yaml)}
     end  
   end

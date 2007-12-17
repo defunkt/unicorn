@@ -398,7 +398,7 @@ You can use the -S configure script to add your own handlers
 with code like this:
 
  <pre><code>
- trap("USR1") { Mongrel.log(:info, "I'm doing stuff.") }
+ trap("USR1") { Mongrel.log("I'm doing stuff.") }
  </code></pre>
 
 

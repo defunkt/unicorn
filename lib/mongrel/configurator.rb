@@ -59,13 +59,13 @@ module Mongrel
         target_gid = Etc.getgrnam(group).gid if group
 
         if uid != target_uid or gid != target_gid
-          Mongrel.log(:info, "Initiating groups for #{user.inspect}:#{group.inspect}.")
+          Mongrel.log("Initiating groups for #{user.inspect}:#{group.inspect}.")
           Process.initgroups(user, target_gid)
         
-          Mongrel.log(:info, "Changing group to #{group.inspect}.")
+          Mongrel.log("Changing group to #{group.inspect}.")
           Process::GID.change_privilege(target_gid)
 
-          Mongrel.log(:info, "Changing user to #{user.inspect}." )
+          Mongrel.log("Changing user to #{user.inspect}." )
           Process::UID.change_privilege(target_uid)
         end
       rescue Errno::EPERM => e
@@ -82,7 +82,7 @@ module Mongrel
     # Writes the PID file if we're not on Windows.
     def write_pid_file
       unless RUBY_PLATFORM =~ /djgpp|(cyg|ms|bcc)win|mingw/
-        Mongrel.log(:info, "Writing PID file to #{@pid_file}")
+        Mongrel.log("Writing PID file to #{@pid_file}")
         open(@pid_file,"w") {|f| f.write(Process.pid) }
         open(@pid_file,"w") do |f|
           f.write(Process.pid)
