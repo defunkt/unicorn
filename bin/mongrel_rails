@@ -74,7 +74,7 @@ module Mongrel
 
     def run
       if @generate
-	@generate = File.expand_path(@generate)
+        @generate = File.expand_path(@generate)
         Mongrel.log(:error, "** Writing config to \"#@generate\".")
         open(@generate, "w") {|f| f.write(settings.to_yaml) }
         Mongrel.log(:error, "** Finished.  Run \"mongrel_rails start -C #@generate\" to use the config file.")
@@ -84,7 +84,7 @@ module Mongrel
       config = Mongrel::Rails::RailsConfigurator.new(settings) do
         if defaults[:daemon]
           if File.exist? defaults[:pid_file]
-            Mongrel.error(:info, "!!! PID file #{defaults[:pid_file]} already exists.  Mongrel could be running already.  Check your #{defaults[:log_file]} for errors.")
+            Mongrel.log(:error, "!!! PID file #{defaults[:pid_file]} already exists.  Mongrel could be running already.  Check your #{defaults[:log_file]} for errors.")
             Mongrel.log(:error, "!!! Exiting with error.  You must stop mongrel and clear the .pid before I'll attempt a start.")
             exit 1
           end
@@ -94,7 +94,7 @@ module Mongrel
           Mongrel.log(:info, "Settings loaded from #{@config_file} (they override command line).") if @config_file
         end
 
-        Mongrel.log(:info, "Starting Mongrel listening at #{defaults[:host]}:#{defaults[:port]}")
+        Mongrel.log(:info, "Starting Mongrel listening at #{defaults[:host]}:#{defaults[:port]}, further information can be found in log/mongrel-#{defaults[:host]}-#{defaults[:port]}.log")
 
         listener do
           mime = {}

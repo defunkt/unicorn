@@ -8,13 +8,15 @@ module Mongrel
     attr_accessor :log_level
 
     Levels = { 
-      :name => { :emergency => 0, :alert => 1, :critical => 2, :error => 3, :warning => 4, :notice => 5, :info => 6, :debug => 7 },
-      :id => { 0 => :emergency, 1 => :alert, 2 => :critical, 3 => :error, 4 => :warning, 5 => :notice, 6 => :info, 7 => :debug }
+      :name   => { :emergency => 0, :alert => 1, :critical => 2, :error => 3, 
+                   :warning => 4, :notice => 5, :info => 6, :debug => 7 },
+      :id     => { 0 => :emergency, 1 => :alert, 2 => :critical, 3 => :error, 
+                   4 => :warning, 5 => :notice, 6 => :info, 7 => :debug }
     }
     
     def initialize(log, log_level = :debug)
       @logger    = initialize_io(log)
-      @log_level = Levels[:name][log_level]
+      @log_level = Levels[:name][log_level] || 7
 
       if !RUBY_PLATFORM.match(/java|mswin/) && !(@log == STDOUT) && 
            @log.respond_to?(:write_nonblock)
@@ -26,12 +28,20 @@ module Mongrel
     # Writes a string to the logger. Writing of the string is skipped if the string's log level is
     # higher than the logger's log level. If the logger responds to write_nonblock and is not on 
     # the java or windows platforms then the logger will use non-blocking asynchronous writes.
-    def log(level, string)
-      return if (Levels[:name][level] > @log_level)
-      if @aio
-        @log.write_nonblock("#{Time.now.httpdate}: #{string}\n")
+    def log(*args)
+      if args[0].is_a?(String)
+        level, string = 6, args[0]
       else
-        @log.write("#{Time.now.httpdate}: #{string}\n")
+        level = (args[0].is_a?(Fixnum) ? args[0] : Levels[:name][args[0]]) || 6
+        string = args[1]
+      end
+      
+      return if (level > log_level)
+
+      if @aio
+        @log.write_nonblock("#{Time.now.httpdate} | #{Levels[:id][level]} | #{string}\n")
+      else
+        @log.write("#{Time.now.httpdate} | #{Levels[:id][level]} | #{string}\n")
       end
     end
     
@@ -45,9 +55,10 @@ module Mongrel
         @log = open(log, (File::WRONLY | File::APPEND))
         @log.sync = true
       else
+        FileUtils.mkdir_p(File.dirname(log)) unless File.exists?(File.dirname(log))
         @log = open(log, (File::WRONLY | File::APPEND | File::CREAT))
         @log.sync = true
-        @log.write("#{Time.now.httpdate} Logfile created\n")
+        @log.write("#{Time.now.httpdate} | info | Logfile created\n")
       end
     end
 
@@ -55,7 +66,7 @@ module Mongrel
   
   # Convenience wrapper for logging, allows us to use Mongrel.log
   def self.log(level, string)
-    # If no logger was defined, log to STDOUT.
+    # If no logger has been defined yet at this point, log to STDOUT.
     $MongrelLogger ||= Mongrel::Log.new(STDOUT, :debug)
     $MongrelLogger.log(level,string)
   end

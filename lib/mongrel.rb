@@ -54,7 +54,7 @@ module Mongrel
   #
   # You use it by doing the following:
   #
-  #   server = HttpServer.new("0.0.0.0", 3000)
+  #   server = 2("0.0.0.0", 3000)
   #   server.register("/stuff", MyNiftyHandler.new)
   #   server.run.join
   #
@@ -102,10 +102,9 @@ module Mongrel
       @throttle = throttle
       @num_processors = num_processors
       @timeout = timeout
-      # Mongrel.logger = Mongrel::Log.new(log || "mongrel-#{port}.log")
-      @logger = Mongrel::Log.new(log || "mongrel-#{port}.log", log_level)
+      @logger = Mongrel::Log.new(log || "log/mongrel-#{host}-#{port}.log", log_level)
     end
-
+    
     # Does the majority of the IO processing.  It has been written in Ruby using
     # about 7 different IO processing strategies and no matter how it's done 
     # the performance just does not improve.  It is currently carefully constructed

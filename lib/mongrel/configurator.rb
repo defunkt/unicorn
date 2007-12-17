@@ -131,17 +131,21 @@ module Mongrel
     #
     def listener(options={},&block)
       raise "Cannot call listener inside another listener block." if (@listener or @listener_name)
-      ops = resolve_defaults(options)
-      ops[:num_processors] ||= 950
-      ops[:throttle] ||= 0
-      ops[:timeout] ||= 60
+      opts = resolve_defaults(options)
+      opts[:num_processors] ||= 950
+      opts[:throttle] ||= 0
+      opts[:timeout] ||= 60
 
-      @listener = Mongrel::HttpServer.new(ops[:host], ops[:port].to_i, ops[:num_processors].to_i, ops[:throttle].to_i, ops[:timeout].to_i)
-      @listener_name = "#{ops[:host]}:#{ops[:port]}"
+      @listener = Mongrel::HttpServer.new(
+      opts[:host], opts[:port].to_i, opts[:num_processors].to_i, 
+      opts[:throttle].to_i, opts[:timeout].to_i, 
+      opts[:log], opts[:log_level]
+      )
+      @listener_name = "#{opts[:host]}:#{opts[:port]}"
       @listeners[@listener_name] = @listener
 
-      if ops[:user] and ops[:group]
-        change_privilege(ops[:user], ops[:group])
+      if opts[:user] and opts[:group]
+        change_privilege(opts[:user], opts[:group])
       end
 
       # Does the actual cloaking operation to give the new implicit self.
@@ -163,8 +167,8 @@ module Mongrel
     # * :handler => HttpHandler -- Handler to use for this location.
     # * :in_front => true/false -- Rather than appending, it prepends this handler.
     def uri(location, options={})
-      ops = resolve_defaults(options)
-      @listener.register(location, ops[:handler], ops[:in_front])
+      opts = resolve_defaults(options)
+      @listener.register(location, opts[:handler], opts[:in_front])
     end
 
 
@@ -183,14 +187,14 @@ module Mongrel
     # It is safe to call this on win32 as it will only require the daemons
     # gem/library if NOT win32.
     def daemonize(options={})
-      ops = resolve_defaults(options)
+      opts = resolve_defaults(options)
       # save this for later since daemonize will hose it
       unless RUBY_PLATFORM =~ /djgpp|(cyg|ms|bcc)win|mingw/
         require 'daemons/daemonize'
 
-        logfile = ops[:log_file]
+        logfile = opts[:log_file]
         if logfile[0].chr != "/"
-          logfile = File.join(ops[:cwd],logfile)
+          logfile = File.join(opts[:cwd],logfile)
           if not File.exist?(File.dirname(logfile))
             Mongrel.log(:critical, "!!! Log file directory not found at full path #{File.dirname(logfile)}.  Update your configuration to use a full path.")
             exit 1
@@ -200,7 +204,7 @@ module Mongrel
         Daemonize.daemonize(logfile)
 
         # change back to the original starting directory
-        Dir.chdir(ops[:cwd])
+        Dir.chdir(opts[:cwd])
 
       else
         Mongrel.log(:warning, "WARNING: Win32 does not support daemon mode.")
@@ -213,17 +217,17 @@ module Mongrel
     # :excludes => [] setting listing the names of plugins to include
     # or exclude from the determining the dependencies.
     def load_plugins(options={})
-      ops = resolve_defaults(options)
+      opts = resolve_defaults(options)
 
       load_settings = {}
-      if ops[:includes]
-        ops[:includes].each do |plugin|
+      if opts[:includes]
+        opts[:includes].each do |plugin|
           load_settings[plugin] = GemPlugin::INCLUDE
         end
       end
 
-      if ops[:excludes]
-        ops[:excludes].each do |plugin|
+      if opts[:excludes]
+        opts[:excludes].each do |plugin|
           load_settings[plugin] = GemPlugin::EXCLUDE
         end
       end
@@ -259,8 +263,8 @@ module Mongrel
     # name and configured with the selected options.  The options
     # are merged with the defaults prior to passing them in.
     def plugin(name, options={})
-      ops = resolve_defaults(options)
-      GemPlugin::Manager.instance.create(name, ops)
+      opts = resolve_defaults(options)
+      GemPlugin::Manager.instance.create(name, opts)
     end
 
     # Lets you do redirects easily as described in Mongrel::RedirectHandler.
@@ -358,7 +362,7 @@ module Mongrel
     #
     # This command is safely ignored if the platform is win32 (with a warning)
     def setup_signals(options={})
-      ops = resolve_defaults(options)
+      opts = resolve_defaults(options)
 
       # forced shutdown, even if previously restarted (actually just like TERM but for CTRL-C)
       trap("INT") { Mongrel.log(:notice, "INT signal received."); stop(false) }
