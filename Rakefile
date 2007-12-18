@@ -17,12 +17,16 @@ e = Echoe.new("mongrel") do |p|
   p.need_tgz = true
 
   case RUBY_PLATFORM
-    when /mswin/
-      p.certificate_chain = ['~/gem_certificates/mongrel-public_cert.pem',
-        '~/gem_certificates/luislavena-mongrel-public_cert.pem']
-    else
-    p.certificate_chain = ['~/p/configuration/gem_certificates/mongrel/mongrel-public_cert.pem',
-    '~/p/configuration/gem_certificates/evan_weaver-mongrel-public_cert.pem']
+  when /mswin/
+    p.certificate_chain = [
+      '~/projects/gem_certificates/mongrel-public_cert.pem',
+      '~/projects/gem_certificates/luislavena-mongrel-public_cert.pem'
+    ]
+  else
+    p.certificate_chain = [
+      '~/p/configuration/gem_certificates/mongrel/mongrel-public_cert.pem',
+      '~/p/configuration/gem_certificates/evan_weaver-mongrel-public_cert.pem'
+    ]
   end
 
   p.eval = proc do
@@ -30,7 +34,7 @@ e = Echoe.new("mongrel") do |p|
     when /mswin/
       extensions.clear
       self.files += ['lib/http11.so']
-      self.platform = Gem::Platform::WIN32
+      self.platform = Gem::Platform::CURRENT
       add_dependency('cgi_multipart_eof_fix', '>= 2.4')
     when /java/
       extensions.clear

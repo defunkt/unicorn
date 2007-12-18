@@ -10,15 +10,17 @@ echoe_spec = Echoe.new("mongrel_service") do |p|
   p.summary += " (debug build)" unless ENV['RELEASE'] 
   p.description = "This plugin offer native win32 services for rails, powered by Mongrel."
   p.author = "Luis Lavena"
-  p.platform = Gem::Platform::WIN32
+  p.platform = Gem::Platform::CURRENT
   p.dependencies = ['gem_plugin >=0.2.3', 'mongrel >=1.0.2', 'win32-service >=0.5.0']
 
   p.executable_pattern = ""
   
   p.need_tar_gz = false
   p.need_zip = true
-  p.certificate_chain = ['~/gem_certificates/mongrel-public_cert.pem',
-    '~/gem_certificates/luislavena-mongrel-public_cert.pem']
+  p.certificate_chain = [
+    '~/gem_certificates/mongrel-public_cert.pem',
+    '~/gem_certificates/luislavena-mongrel-public_cert.pem'
+  ]
   p.require_signed = true
 end
 
