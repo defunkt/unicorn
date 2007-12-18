@@ -55,7 +55,7 @@ module Mongrel
         @log = open(log, (File::WRONLY | File::APPEND))
         @log.sync = true
       else
-        FileUtils.mkdir_p(File.dirname(log)) unless File.exists?(File.dirname(log))
+        FileUtils.mkdir_p(File.dirname(log)) unless File.exist?(File.dirname(log))
         @log = open(log, (File::WRONLY | File::APPEND | File::CREAT))
         @log.sync = true
         @log.write("#{Time.now.httpdate} | info | Logfile created\n")
