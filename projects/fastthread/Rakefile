@@ -23,8 +23,8 @@ Echoe.new("fastthread") do |p|
   p.eval = proc do  
     if RUBY_PLATFORM.match("win32")
       extensions.clear
-      self.platform = Gem::Platform::CURRENT
       self.files += ['lib/fastthread.so']
+      self.platform = Gem::Platform::CURRENT
       task :package => [:clean, :compile]
     end
   end
