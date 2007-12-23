@@ -1,6 +1,6 @@
 
 require 'rubygems'
-gem 'echoe', '>=2.7'
+gem 'echoe', '>=2.7.5'
 require 'echoe'
 
 e = Echoe.new("mongrel") do |p|
@@ -10,34 +10,30 @@ e = Echoe.new("mongrel") do |p|
   p.rdoc_pattern = ['README', 'LICENSE', 'CHANGELOG', 'COPYING', 'lib/**/*.rb', 'doc/**/*.rdoc']
   p.ignore_pattern = /^(pkg|site|projects|doc|log)|CVS|\.log/
   p.ruby_version = '>= 1.8.4'
-  p.dependencies = ['gem_plugin >=0.2.3']
-  (p.rdoc_template = `allison --path`.chomp) rescue nil
-
+  p.dependencies = ['gem_plugin >=0.2.3']  
+  p.extension_pattern = nil
+  p.certificate_chain = ['~/p/configuration/gem_certificates/mongrel/mongrel-public_cert.pem',
+    '~/p/configuration/gem_certificates/evan_weaver-mongrel-public_cert.pem']
+  
   p.need_tar_gz = false
   p.need_tgz = true
 
   case RUBY_PLATFORM
-  when /mswin/
-    p.certificate_chain = [
-      '~/projects/gem_certificates/mongrel-public_cert.pem',
-      '~/projects/gem_certificates/luislavena-mongrel-public_cert.pem'
-    ]
-  else
-    p.certificate_chain = [
-      '~/p/configuration/gem_certificates/mongrel/mongrel-public_cert.pem',
-      '~/p/configuration/gem_certificates/evan_weaver-mongrel-public_cert.pem'
-    ]
+    when /mswin/
+      # p.certificate_chain = ['~/gem_certificates/mongrel-public_cert.pem',
+      #  '~/gem_certificates/luislavena-mongrel-public_cert.pem']    
+    when /java/
+    else
+      p.extension_pattern = ["ext/**/extconf.rb"]
   end
 
   p.eval = proc do
     case RUBY_PLATFORM
     when /mswin/
-      extensions.clear
       self.files += ['lib/http11.so']
-      self.platform = Gem::Platform::CURRENT
+      self.platform = Gem::Platform::WIN32
       add_dependency('cgi_multipart_eof_fix', '>= 2.4')
     when /java/
-      extensions.clear
       self.files += ['lib/http11.jar']
       self.platform = 'jruby'
     else
@@ -67,21 +63,7 @@ task :ragel do
   end
 end
 
-#### XXX Hack around JRuby in-process launching problem
-
-desc "Run each test suite in isolation on JRuby"
-task :test_java do
-  require 'jruby'
-  save = JRuby.runtime.instance_config.run_ruby_in_process
-  begin
-    JRuby.runtime.instance_config.run_ruby_in_process = false
-    Rake::Task[:test].invoke
-  ensure
-    JRuby.runtime.instance_config.run_ruby_in_process = save
-  end
-end
-
-#### XXX Hack around RubyGems and Echoe for pre-compiled extensions.
+#### Pre-compiled extensions for alternative platforms
 
 def move_extensions
   Dir["ext/**/*.#{Config::CONFIG['DLEXT']}"].each { |file| mv file, "lib/" }
@@ -112,6 +94,14 @@ when /mswin/
   task :compile => [filename]
 
 when /java/
+
+  # Avoid JRuby in-process launching problem
+  begin
+    require 'jruby'
+    JRuby.runtime.instance_config.run_ruby_in_process = false 
+  rescue LoadError
+  end
+
   filename = "lib/http11.jar"
   file filename do
     build_dir = "ext/http11_java/classes"
@@ -147,8 +137,11 @@ task :package_all => [:package] do
   sub_project("mongrel_console", :package)
   sub_project("mongrel_cluster", :package)
   sub_project("mongrel_experimental", :package)
-  sub_project("mongrel_service", :package) if RUBY_PLATFORM =~ /mswin/
+
   sh("rake java package") unless RUBY_PLATFORM =~ /java/
+  
+  # XXX Broken by RubyGems 0.9.5
+  # sub_project("mongrel_service", :package) if RUBY_PLATFORM =~ /mswin/
   # sh("rake mswin package") unless RUBY_PLATFORM =~ /mswin/
 end
 
@@ -209,9 +202,6 @@ namespace :site do
     FileList["**/*.gem"].each { |gem| mv gem, "pkg/gems" }
     FileList["**/*.tgz"].each {|tgz| mv tgz, "pkg/tars" }
 
-    # XXX Hack, because only Luis can package for Win32 right now
-    sh "cp ~/Downloads/mongrel-#{e.version}-mswin32.gem pkg/gems/"
-    sh "cp ~/Downloads/mongrel_service-0.3.3-mswin32.gem pkg/gems/"
     sh "rm -rf pkg/mongrel*"
     sh "gem generate_index -d pkg"
     sh "scp -r CHANGELOG pkg/* rubyforge.org:/var/www/gforge-projects/mongrel/releases/"
