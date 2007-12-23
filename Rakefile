@@ -20,8 +20,8 @@ e = Echoe.new("mongrel") do |p|
 
   case RUBY_PLATFORM
     when /mswin/
-      # p.certificate_chain = ['~/gem_certificates/mongrel-public_cert.pem',
-      #  '~/gem_certificates/luislavena-mongrel-public_cert.pem']    
+       p.certificate_chain = ['~/gem_certificates/mongrel-public_cert.pem',
+        '~/gem_certificates/luislavena-mongrel-public_cert.pem']    
     when /java/
     else
       p.extension_pattern = ["ext/**/extconf.rb"]
@@ -31,7 +31,8 @@ e = Echoe.new("mongrel") do |p|
     case RUBY_PLATFORM
     when /mswin/
       self.files += ['lib/http11.so']
-      self.platform = Gem::Platform::WIN32
+      # We don't cross-package Windows so CURRENT is ok
+      self.platform = Gem::Platform::CURRENT 
       add_dependency('cgi_multipart_eof_fix', '>= 2.4')
     when /java/
       self.files += ['lib/http11.jar']
