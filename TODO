@@ -1,2 +1,4 @@
 
 * Rewrite and merge mongrel cluster and mongrel_rails into something small and maintainable.
+* Initial 1.9 compatibility.
+* 1.9 performance (requires removing the thread queue).
