@@ -2,8 +2,6 @@ require 'gem_plugin'
 require 'mongrel'
 require 'mongrel/rails'
 require 'rbconfig'
-gem 'win32-service', '>=0.5.2', '<0.6.0'
-require 'win32/service'
 require 'fileutils'
 
 module Service
@@ -35,6 +33,10 @@ module Service
     # of the rails application we wanted to serve, because later "as service" no error 
     # show to trace this.
     def validate
+      # TODO: investigate why Win32::Service interfere with gem_plugin
+      gem 'win32-service', '>= 0.5.2', '< 0.6.0'
+      require 'win32/service'
+
       @cwd = File.expand_path(@cwd)
       valid_dir? @cwd, "Invalid path to change to: #@cwd"
   
@@ -75,6 +77,9 @@ module Service
     end
     
     def run
+      gem 'win32-service', '>= 0.5.2', '< 0.6.0'
+      require 'win32/service'
+
       # check if mongrel_service.exe is in ruby bindir.
       gem_root = File.join(File.dirname(__FILE__), "..", "..")
       gem_executable = File.join(gem_root, "bin/mongrel_service.exe")
@@ -165,6 +170,9 @@ module Service
     
     def validate
       valid? @svc_name != nil, "A service name is mandatory."
+
+      gem 'win32-service', '>= 0.5.2', '< 0.6.0'
+      require 'win32/service'
       
       # Validate that the service exists
       begin
@@ -184,6 +192,9 @@ module Service
     include ServiceValidation
     
     def run
+      gem 'win32-service', '>= 0.5.2', '< 0.6.0'
+      require 'win32/service'
+
       display_name = Win32::Service.getdisplayname(@svc_name)
       
       begin
