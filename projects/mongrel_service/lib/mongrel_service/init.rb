@@ -2,6 +2,7 @@ require 'gem_plugin'
 require 'mongrel'
 require 'mongrel/rails'
 require 'rbconfig'
+gem 'win32-service', '>=0.5.2', '<0.6.0'
 require 'win32/service'
 require 'fileutils'
 
