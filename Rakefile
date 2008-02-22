@@ -36,14 +36,11 @@ e = Echoe.new("mongrel") do |p|
     when /mswin/
       self.files += ['lib/http11.so']
       self.platform = Gem::Platform::WIN32
-      add_dependency('cgi_multipart_eof_fix', '>= 2.4')
     when /java/
       self.files += ['lib/http11.jar']
       self.platform = 'jruby' # XXX Is this right?
     else
       add_dependency('daemons', '>= 1.0.3')
-      add_dependency('fastthread', '>= 1.0.1')
-      add_dependency('cgi_multipart_eof_fix', '>= 2.4')
     end
   end
 
