@@ -276,18 +276,16 @@ module Mongrel
           while true
             begin
               client = @socket.accept
-  
-              if defined?($tcp_cork_opts) and $tcp_cork_opts
-                client.setsockopt(*$tcp_cork_opts) rescue nil
-              end
-  
-              worker_list = @workers.list
-  
-              if worker_list.length >= @num_processors
-                Mongrel.log(:error, "#{Time.now.httpdate}: Server overloaded with #{worker_list.length} processors (#@num_processors max). Dropping connection.")
+
+              num_workers = @workers.list.length
+              if num_workers >= @num_processors
+                Mongrel.log(:error, "#{Time.now.httpdate}: Server overloaded with #{num_workers} processors (#@num_processors max). Dropping connection.")
                 client.close rescue nil
                 reap_dead_workers("max processors")
               else
+                if defined?($tcp_cork_opts) and $tcp_cork_opts
+                  client.setsockopt(*$tcp_cork_opts) rescue nil
+                end
                 thread = Thread.new(client) {|c| process_client(c) }
                 thread[:started_on] = Time.now
                 @workers.add(thread)
