@@ -7,7 +7,6 @@
 #include <assert.h>
 #include <string.h>
 #include "http11_parser.h"
-#include <ctype.h>
 
 #ifndef RSTRING_PTR
 #define RSTRING_PTR(s) (RSTRING(s)->ptr)
@@ -69,7 +68,8 @@ DEF_MAX_LENGTH(HEADER, (1024 * (80 + 32)));
 
 void http_field(void *data, const char *field, size_t flen, const char *value, size_t vlen)
 {
-  char *ch, *end;
+  char *ch;
+  const char *fch;
   VALUE req = (VALUE)data;
   VALUE v = Qnil;
   VALUE f = Qnil;
@@ -78,15 +78,24 @@ void http_field(void *data, const char *field, size_t flen, const char *value, s
   VALIDATE_MAX_LENGTH(vlen, FIELD_VALUE);
 
   v = rb_str_new(value, vlen);
-  f = rb_str_dup(global_http_prefix);
-  f = rb_str_buf_cat(f, field, flen); 
 
-  for(ch = RSTRING_PTR(f), end = ch + RSTRING_LEN(f); ch < end; ch++) {
-    if(*ch == '-') {
-      *ch = '_';
-    } else {
-      *ch = toupper(*ch);
-    }
+  /*
+   * using rb_str_new(NULL, len) here is faster than rb_str_buf_new(len)
+   * in my testing, because: there's no minimum allocation length (and
+   * no check for it, either), RSTRING_LEN(f) does not need to be
+   * written twice, and and RSTRING_PTR(f) will already be
+   * null-terminated for us.
+   */
+  f = rb_str_new(NULL, RSTRING_LEN(global_http_prefix) + flen);
+  memcpy(RSTRING_PTR(f),
+         RSTRING_PTR(global_http_prefix),
+         RSTRING_LEN(global_http_prefix));
+
+  ch = RSTRING_PTR(f) + RSTRING_LEN(global_http_prefix);
+  for(fch = field; flen-- != 0; ++fch) {
+    *ch++ = (*fch >= 'a' && *fch <= 'z') ?
+            ASCII_UPCASE_CHAR(*fch) :
+            (*fch == '-' ? '_' : *fch);
   }
 
   rb_hash_aset(req, f, v);
