@@ -130,6 +130,43 @@ class HttpParserTest < Test::Unit::TestCase
     end
   end
 
+  def test_host_port_parsing
+    parser = HttpParser.new
+    req = {}
+    should_be_good = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
+    nread = parser.execute(req, should_be_good, 0)
+    assert_equal should_be_good.length, nread
+    assert parser.finished?
+    assert !parser.error?
+    assert_equal "example.com", req["HTTP_HOST"]
+    assert_equal "example.com", req["SERVER_NAME"]
+    assert_equal "80", req["SERVER_PORT"]
+
+    parser = HttpParser.new
+    req = {}
+    should_be_good = "GET / HTTP/1.1\r\nHost: example.com:123\r\n\r\n"
+    nread = parser.execute(req, should_be_good, 0)
+    assert_equal should_be_good.length, nread
+    assert parser.finished?
+    assert !parser.error?
+    assert_equal "example.com:123", req["HTTP_HOST"]
+    assert_equal "example.com", req["SERVER_NAME"]
+    assert_equal "123", req["SERVER_PORT"]
+
+    # null character in domain name is never actually valid, but if it
+    # becomes valid in Web 3.0, we'll be ready for it.
+    parser = HttpParser.new
+    req = {}
+    should_be_good = "GET / HTTP/1.1\r\nHost: example.com\0:123\r\n\r\n"
+    nread = parser.execute(req, should_be_good, 0)
+    assert_equal should_be_good.length, nread
+    assert parser.finished?
+    assert !parser.error?
+    assert_equal "example.com\0:123", req["HTTP_HOST"]
+    assert_equal "example.com\0", req["SERVER_NAME"]
+    assert_equal "123", req["SERVER_PORT"]
+  end
+
   def test_fragment_in_uri
     parser = HttpParser.new
     req = {}

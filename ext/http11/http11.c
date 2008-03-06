@@ -292,8 +292,7 @@ void header_done(void *data, const char *at, size_t length)
 
   rb_hash_aset(req, global_gateway_interface, global_gateway_interface_value);
   if((temp = rb_hash_aref(req, global_http_host)) != Qnil) {
-    /* ruby better close strings off with a '\0' dammit */
-    colon = strchr(RSTRING_PTR(temp), ':');
+    colon = memchr(RSTRING_PTR(temp), ':', RSTRING_LEN(temp));
     if(colon != NULL) {
       rb_hash_aset(req, global_server_name, rb_str_substr(temp, 0, colon - RSTRING_PTR(temp)));
       rb_hash_aset(req, global_server_port, 
