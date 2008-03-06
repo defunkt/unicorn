@@ -21,8 +21,9 @@ static VALUE eHttpParserError;
 
 #define id_handler_map rb_intern("@handler_map")
 #define id_http_body rb_intern("@http_body")
+#define HTTP_PREFIX "HTTP_"
+#define HTTP_PREFIX_LEN (sizeof(HTTP_PREFIX) - 1)
 
-static VALUE global_http_prefix;
 static VALUE global_request_method;
 static VALUE global_request_uri;
 static VALUE global_fragment;
@@ -84,11 +85,9 @@ void http_field(void *data, const char *field, size_t flen, const char *value, s
    * written twice, and and RSTRING_PTR(f) will already be
    * null-terminated for us.
    */
-  f = rb_str_new(NULL, RSTRING_LEN(global_http_prefix) + flen);
-  memcpy(RSTRING_PTR(f),
-         RSTRING_PTR(global_http_prefix),
-         RSTRING_LEN(global_http_prefix));
-  memcpy(RSTRING_PTR(f) + RSTRING_LEN(global_http_prefix), field, flen);
+  f = rb_str_new(NULL, HTTP_PREFIX_LEN + flen);
+  memcpy(RSTRING_PTR(f), HTTP_PREFIX, HTTP_PREFIX_LEN);
+  memcpy(RSTRING_PTR(f) + HTTP_PREFIX_LEN, field, flen);
 
   rb_hash_aset(req, f, v);
 }
@@ -374,7 +373,6 @@ void Init_http11()
 
   mMongrel = rb_define_module("Mongrel");
 
-  DEF_GLOBAL(http_prefix, "HTTP_");
   DEF_GLOBAL(request_method, "REQUEST_METHOD");
   DEF_GLOBAL(request_uri, "REQUEST_URI");
   DEF_GLOBAL(fragment, "FRAGMENT");
