@@ -68,8 +68,6 @@ DEF_MAX_LENGTH(HEADER, (1024 * (80 + 32)));
 
 void http_field(void *data, const char *field, size_t flen, const char *value, size_t vlen)
 {
-  char *ch;
-  const char *fch;
   VALUE req = (VALUE)data;
   VALUE v = Qnil;
   VALUE f = Qnil;
@@ -90,13 +88,7 @@ void http_field(void *data, const char *field, size_t flen, const char *value, s
   memcpy(RSTRING_PTR(f),
          RSTRING_PTR(global_http_prefix),
          RSTRING_LEN(global_http_prefix));
-
-  ch = RSTRING_PTR(f) + RSTRING_LEN(global_http_prefix);
-  for(fch = field; flen-- != 0; ++fch) {
-    *ch++ = (*fch >= 'a' && *fch <= 'z') ?
-            ASCII_UPCASE_CHAR(*fch) :
-            (*fch == '-' ? '_' : *fch);
-  }
+  memcpy(RSTRING_PTR(f) + RSTRING_LEN(global_http_prefix), field, flen);
 
   rb_hash_aset(req, f, v);
 }
