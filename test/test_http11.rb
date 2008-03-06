@@ -70,6 +70,66 @@ class HttpParserTest < Test::Unit::TestCase
     assert parser.error?, "Parser SHOULD have error"
   end
 
+  def test_parse_like_optimized_header
+    parser = HttpParser.new
+    req = {}
+    should_be_good = "GET / HTTP/1.1\r\nAuthorizationn: zz\r\n\r\n"
+    nread = parser.execute(req, should_be_good, 0)
+    assert_equal should_be_good.length, nread
+    assert parser.finished?
+    assert !parser.error?
+    assert_equal "zz", req["HTTP_AUTHORIZATIONN"]
+    assert ! req["HTTP_AUTHORIZATION"]
+  end
+
+  def test_parse_twin_lookalike_optimized_headers
+    parser = HttpParser.new
+    req = {}
+    should_be_good = "GET / HTTP/1.1\r\n" \
+                     "Accept-Encoding: abcdef\r\n" \
+                     "Accept-Language: zyxvut\r\n" \
+                     "\r\n"
+    nread = parser.execute(req, should_be_good, 0)
+    assert_equal should_be_good.length, nread
+    assert parser.finished?
+    assert !parser.error?
+    assert_equal "abcdef", req["HTTP_ACCEPT_ENCODING"]
+    assert_equal "zyxvut", req["HTTP_ACCEPT_LANGUAGE"]
+  end
+
+  if RUBY_PLATFORM !~ /java/
+    # as of now, the Java version does not have the same global-object
+    # reuse optimization the C version does
+
+    def test_parse_optimized_headers_global_objects_used
+      parser = HttpParser.new
+      req = {}
+      should_be_good = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
+      nread = parser.execute(req, should_be_good, 0)
+      assert_equal should_be_good.length, nread
+      assert parser.finished?
+      assert !parser.error?
+      assert_equal "example.com", req["HTTP_HOST"]
+
+      frozen_host_a = nil
+      req.each { |k,v| k == "HTTP_HOST" && frozen_host_a = k }
+
+      parser = HttpParser.new
+      req = {}
+      should_be_good = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
+      nread = parser.execute(req, should_be_good, 0)
+      assert_equal should_be_good.length, nread
+      assert parser.finished?
+      assert !parser.error?
+
+      frozen_host_b = nil
+      req.each { |k,v| k == "HTTP_HOST" && frozen_host_b = k }
+      assert_equal "HTTP_HOST", frozen_host_a
+      assert_equal "HTTP_HOST", frozen_host_b
+      assert_equal frozen_host_a.object_id, frozen_host_b.object_id
+    end
+  end
+
   def test_fragment_in_uri
     parser = HttpParser.new
     req = {}

@@ -66,6 +66,114 @@ DEF_MAX_LENGTH(REQUEST_PATH, 1024);
 DEF_MAX_LENGTH(QUERY_STRING, (1024 * 10));
 DEF_MAX_LENGTH(HEADER, (1024 * (80 + 32)));
 
+struct common_field {
+	const signed long len;
+	const char *name;
+	VALUE value;
+};
+
+/*
+ * A list of common HTTP headers we expect to receive.
+ * This allows us to avoid repeatedly creating identical string
+ * objects to be used with rb_hash_aset().
+ */
+static struct common_field common_http_fields[] = {
+# define f(N) { (sizeof(N) - 1), N, Qnil }
+	f("ACCEPT"),
+	f("ACCEPT_CHARSET"),
+	f("ACCEPT_ENCODING"),
+	f("ACCEPT_LANGUAGE"),
+	f("ALLOW"),
+	f("AUTHORIZATION"),
+	f("CACHE_CONTROL"),
+	f("CONNECTION"),
+	f("CONTENT_ENCODING"),
+	f("CONTENT_LENGTH"),
+	f("CONTENT_TYPE"),
+	f("COOKIE"),
+	f("DATE"),
+	f("EXPECT"),
+	f("FROM"),
+	f("HOST"),
+	f("IF_MATCH"),
+	f("IF_MODIFIED_SINCE"),
+	f("IF_NONE_MATCH"),
+	f("IF_RANGE"),
+	f("IF_UNMODIFIED_SINCE"),
+	f("KEEP_ALIVE"), /* Firefox sends this */
+	f("MAX_FORWARDS"),
+	f("PRAGMA"),
+	f("PROXY_AUTHORIZATION"),
+	f("RANGE"),
+	f("REFERER"),
+	f("TE"),
+	f("TRAILER"),
+	f("TRANSFER_ENCODING"),
+	f("UPGRADE"),
+	f("USER_AGENT"),
+	f("VIA"),
+	f("WARNING")
+# undef f
+};
+
+/*
+ * qsort(3) and bsearch(3) improve average performance slightly, but may
+ * not be worth it for lack of portability to certain platforms...
+ */
+#if defined(HAVE_QSORT_BSEARCH)
+/* sort by length, then by name if there's a tie */
+static int common_field_cmp(const void *a, const void *b)
+{
+  struct common_field *cfa = (struct common_field *)a;
+  struct common_field *cfb = (struct common_field *)b;
+  signed long diff = cfa->len - cfb->len;
+  return diff ? diff : memcmp(cfa->name, cfb->name, cfa->len);
+}
+#endif /* HAVE_QSORT_BSEARCH */
+
+static void init_common_fields(void)
+{
+  int i;
+  struct common_field *cf = common_http_fields;
+  char tmp[256]; /* MAX_FIELD_NAME_LENGTH */
+  memcpy(tmp, HTTP_PREFIX, HTTP_PREFIX_LEN);
+
+  for(i = 0; i < ARRAY_SIZE(common_http_fields); cf++, i++) {
+    memcpy(tmp + HTTP_PREFIX_LEN, cf->name, cf->len + 1);
+    cf->value = rb_obj_freeze(rb_str_new(tmp, HTTP_PREFIX_LEN + cf->len));
+    rb_global_variable(&cf->value);
+  }
+
+#if defined(HAVE_QSORT_BSEARCH)
+  qsort(common_http_fields,
+        ARRAY_SIZE(common_http_fields),
+        sizeof(struct common_field),
+        common_field_cmp);
+#endif /* HAVE_QSORT_BSEARCH */
+}
+
+static VALUE find_common_field_value(const char *field, size_t flen)
+{
+#if defined(HAVE_QSORT_BSEARCH)
+  struct common_field key;
+  struct common_field *found;
+  key.name = field;
+  key.len = (signed long)flen;
+  found = (struct common_field *)bsearch(&key, common_http_fields,
+                                         ARRAY_SIZE(common_http_fields),
+                                         sizeof(struct common_field),
+                                         common_field_cmp);
+  return found ? found->value : Qnil;
+#else /* !HAVE_QSORT_BSEARCH */
+  int i;
+  struct common_field *cf = common_http_fields;
+  for(i = 0; i < ARRAY_SIZE(common_http_fields); i++, cf++) {
+    if (cf->len == flen && !memcmp(cf->name, field, flen))
+      return cf->value;
+  }
+  return Qnil;
+#endif /* !HAVE_QSORT_BSEARCH */
+}
 
 void http_field(void *data, const char *field, size_t flen, const char *value, size_t vlen)
 {
@@ -78,16 +186,25 @@ void http_field(void *data, const char *field, size_t flen, const char *value, s
 
   v = rb_str_new(value, vlen);
 
-  /*
-   * using rb_str_new(NULL, len) here is faster than rb_str_buf_new(len)
-   * in my testing, because: there's no minimum allocation length (and
-   * no check for it, either), RSTRING_LEN(f) does not need to be
-   * written twice, and and RSTRING_PTR(f) will already be
-   * null-terminated for us.
-   */
-  f = rb_str_new(NULL, HTTP_PREFIX_LEN + flen);
-  memcpy(RSTRING_PTR(f), HTTP_PREFIX, HTTP_PREFIX_LEN);
-  memcpy(RSTRING_PTR(f) + HTTP_PREFIX_LEN, field, flen);
+  f = find_common_field_value(field, flen);
+
+  if (f == Qnil) {
+    /*
+     * We got a strange header that we don't have a memoized value for.
+     * Fallback to creating a new string to use as a hash key.
+     *
+     * using rb_str_new(NULL, len) here is faster than rb_str_buf_new(len)
+     * in my testing, because: there's no minimum allocation length (and
+     * no check for it, either), RSTRING_LEN(f) does not need to be
+     * written twice, and and RSTRING_PTR(f) will already be
+     * null-terminated for us.
+     */
+    f = rb_str_new(NULL, HTTP_PREFIX_LEN + flen);
+    memcpy(RSTRING_PTR(f), HTTP_PREFIX, HTTP_PREFIX_LEN);
+    memcpy(RSTRING_PTR(f) + HTTP_PREFIX_LEN, field, flen);
+    assert(*(RSTRING_PTR(f) + RSTRING_LEN(f)) == '\0'); /* paranoia */
+    /* fprintf(stderr, "UNKNOWN HEADER <%s>\n", RSTRING_PTR(f)); */
+  }
 
   rb_hash_aset(req, f, v);
 }
@@ -405,4 +522,5 @@ void Init_http11()
   rb_define_method(cHttpParser, "error?", HttpParser_has_error,0);
   rb_define_method(cHttpParser, "finished?", HttpParser_is_finished,0);
   rb_define_method(cHttpParser, "nread", HttpParser_nread,0);
+  init_common_fields();
 }
