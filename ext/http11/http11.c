@@ -112,6 +112,8 @@ static struct common_field common_http_fields[] = {
 	f("UPGRADE"),
 	f("USER_AGENT"),
 	f("VIA"),
+	f("X_FORWARDED_FOR"), /* common for proxies */
+	f("X_REAL_IP"), /* common for proxies */
 	f("WARNING")
 # undef f
 };
