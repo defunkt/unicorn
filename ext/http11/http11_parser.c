@@ -484,15 +484,11 @@ case 20:
 #line 485 "http11_parser.c"
 	switch( (*p) ) {
 		case 32: goto tr30;
+		case 35: goto st0;
 		case 37: goto tr31;
-		case 60: goto st0;
-		case 62: goto st0;
 		case 127: goto st0;
 	}
-	if ( (*p) > 31 ) {
-		if ( 34 <= (*p) && (*p) <= 35 )
-			goto st0;
-	} else if ( (*p) >= 0 )
+	if ( 0 <= (*p) && (*p) <= 31 )
 		goto st0;
 	goto tr29;
 tr29:
@@ -503,18 +499,14 @@ st21:
 	if ( ++p == pe )
 		goto _out21;
 case 21:
-#line 507 "http11_parser.c"
+#line 503 "http11_parser.c"
 	switch( (*p) ) {
 		case 32: goto tr30;
+		case 35: goto st0;
 		case 37: goto st22;
-		case 60: goto st0;
-		case 62: goto st0;
 		case 127: goto st0;
 	}
-	if ( (*p) > 31 ) {
-		if ( 34 <= (*p) && (*p) <= 35 )
-			goto st0;
-	} else if ( (*p) >= 0 )
+	if ( 0 <= (*p) && (*p) <= 31 )
 		goto st0;
 	goto st21;
 tr31:
@@ -525,7 +517,7 @@ st22:
 	if ( ++p == pe )
 		goto _out22;
 case 22:
-#line 529 "http11_parser.c"
+#line 521 "http11_parser.c"
 	if ( (*p) < 65 ) {
 		if ( 48 <= (*p) && (*p) <= 57 )
 			goto st23;
@@ -556,7 +548,7 @@ st24:
 	if ( ++p == pe )
 		goto _out24;
 case 24:
-#line 560 "http11_parser.c"
+#line 552 "http11_parser.c"
 	switch( (*p) ) {
 		case 43: goto st24;
 		case 58: goto st25;
@@ -581,14 +573,11 @@ st25:
 	if ( ++p == pe )
 		goto _out25;
 case 25:
-#line 585 "http11_parser.c"
+#line 577 "http11_parser.c"
 	switch( (*p) ) {
 		case 32: goto tr8;
-		case 34: goto st0;
 		case 35: goto tr9;
 		case 37: goto st26;
-		case 60: goto st0;
-		case 62: goto st0;
 		case 127: goto st0;
 	}
 	if ( 0 <= (*p) && (*p) <= 31 )
@@ -628,15 +617,12 @@ st28:
 	if ( ++p == pe )
 		goto _out28;
 case 28:
-#line 632 "http11_parser.c"
+#line 621 "http11_parser.c"
 	switch( (*p) ) {
 		case 32: goto tr40;
-		case 34: goto st0;
 		case 35: goto tr41;
 		case 37: goto st29;
 		case 59: goto tr43;
-		case 60: goto st0;
-		case 62: goto st0;
 		case 63: goto tr44;
 		case 127: goto st0;
 	}
@@ -680,14 +666,11 @@ st31:
 	if ( ++p == pe )
 		goto _out31;
 case 31:
-#line 684 "http11_parser.c"
+#line 670 "http11_parser.c"
 	switch( (*p) ) {
 		case 32: goto tr8;
-		case 34: goto st0;
 		case 35: goto tr9;
 		case 37: goto st32;
-		case 60: goto st0;
-		case 62: goto st0;
 		case 63: goto st34;
 		case 127: goto st0;
 	}
@@ -731,14 +714,11 @@ st34:
 	if ( ++p == pe )
 		goto _out34;
 case 34:
-#line 735 "http11_parser.c"
+#line 718 "http11_parser.c"
 	switch( (*p) ) {
 		case 32: goto tr51;
-		case 34: goto st0;
 		case 35: goto tr52;
 		case 37: goto tr53;
-		case 60: goto st0;
-		case 62: goto st0;
 		case 127: goto st0;
 	}
 	if ( 0 <= (*p) && (*p) <= 31 )
@@ -752,14 +732,11 @@ st35:
 	if ( ++p == pe )
 		goto _out35;
 case 35:
-#line 756 "http11_parser.c"
+#line 736 "http11_parser.c"
 	switch( (*p) ) {
 		case 32: goto tr55;
-		case 34: goto st0;
 		case 35: goto tr56;
 		case 37: goto st36;
-		case 60: goto st0;
-		case 62: goto st0;
 		case 127: goto st0;
 	}
 	if ( 0 <= (*p) && (*p) <= 31 )
@@ -773,7 +750,7 @@ st36:
 	if ( ++p == pe )
 		goto _out36;
 case 36:
-#line 777 "http11_parser.c"
+#line 754 "http11_parser.c"
 	if ( (*p) < 65 ) {
 		if ( 48 <= (*p) && (*p) <= 57 )
 			goto st37;
@@ -1203,7 +1180,7 @@ case 56:
   if(parser->body_start) {
     /* final \r\n combo encountered so stop right here */
     
-#line 1207 "http11_parser.c"
+#line 1184 "http11_parser.c"
 #line 136 "http11_parser.rl"
     parser->nread++;
   }
@@ -1216,7 +1193,7 @@ int http_parser_finish(http_parser *parser)
   int cs = parser->cs;
 
   
-#line 1220 "http11_parser.c"
+#line 1197 "http11_parser.c"
 #line 147 "http11_parser.rl"
 
   parser->cs = cs;
