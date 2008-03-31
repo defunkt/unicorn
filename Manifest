@@ -44,7 +44,6 @@ lib/mongrel/stats.rb
 lib/mongrel/tcphack.rb
 lib/mongrel/uri_classifier.rb
 lib/mongrel.rb
-lib/mongrel.rb.rej
 LICENSE
 Manifest
 mongrel-public_cert.pem
@@ -63,7 +62,7 @@ test/unit/test_conditional.rb
 test/unit/test_configurator.rb
 test/unit/test_debug.rb
 test/unit/test_handlers.rb
-test/unit/test_http11.rb
+test/unit/test_http_parser.rb
 test/unit/test_redirect_handler.rb
 test/unit/test_request_progress.rb
 test/unit/test_response.rb

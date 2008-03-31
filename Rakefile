@@ -1,11 +1,12 @@
 
 require 'rubygems'
-gem 'echoe', '>=2.7.5'
+gem 'echoe', '>=2.7.11'
 require 'echoe'
 
 e = Echoe.new("mongrel") do |p|
   p.summary = "A small fast HTTP library and server that runs Rails, Camping, Nitro and Iowa apps."
-  p.author ="Zed A. Shaw"
+  p.author = "Zed A. Shaw"
+  p.email = "mongrel-development@rubyforge.org"
   p.clean_pattern = ['ext/http11/*.{bundle,so,o,obj,pdb,lib,def,exp}', 'lib/*.{bundle,so,o,obj,pdb,lib,def,exp}', 'ext/http11/Makefile', 'pkg', 'lib/*.bundle', '*.gem', 'site/output', '.config', 'lib/http11.jar', 'ext/http11_java/classes', 'coverage', 'test_*.log', 'log', 'doc']
   p.url = "http://mongrel.rubyforge.org"
   p.rdoc_pattern = ['README', 'LICENSE', 'CONTRIBUTORS', 'CHANGELOG', 'COPYING', 'lib/**/*.rb', 'doc/**/*.rdoc']
@@ -15,28 +16,27 @@ e = Echoe.new("mongrel") do |p|
   p.dependencies = ['gem_plugin >=0.2.3']  
   p.extension_pattern = nil
   
-  p.certificate_chain = case ENV['USER']
+  p.certificate_chain = case (ENV['USER'] || ENV['USERNAME']).downcase
     when 'eweaver' 
       ['~/p/configuration/gem_certificates/mongrel/mongrel-public_cert.pem',
        '~/p/configuration/gem_certificates/evan_weaver-mongrel-public_cert.pem']
-    when 'luislavena'
-      ['~/gem_certificates/mongrel-public_cert.pem',
-        '~/gem_certificates/luislavena-mongrel-public_cert.pem']    
+    when 'luislavena', 'luis'
+      ['~/projects/gem_certificates/mongrel-public_cert.pem',
+        '~/projects/gem_certificates/luislavena-mongrel-public_cert.pem']    
   end
   
   p.need_tar_gz = false
   p.need_tgz = true
 
-  if RUBY_PLATFORM !~ /mswin|java/
+  unless Platform.windows? or Platform.java?
     p.extension_pattern = ["ext/**/extconf.rb"]
   end
 
   p.eval = proc do
-    case RUBY_PLATFORM
-    when /mswin/
+    if Platform.windows?
       self.files += ['lib/http11.so']
       self.platform = Gem::Platform::CURRENT
-    when /java/
+    elsif Platform.java?
       self.files += ['lib/http11.jar']
       self.platform = 'jruby' # XXX Is this right?
     else
@@ -82,19 +82,18 @@ def java_classpath_arg
   classpath ? "-cp #{classpath}" : ""
 end
 
-case RUBY_PLATFORM
-when /mswin/
+if Platform.windows?
   filename = "lib/http11.so"
   file filename do
     Dir.chdir("ext/http11") do
       ruby "extconf.rb"
-      system(PLATFORM =~ /mswin/ ? 'nmake' : 'make')
+      system(Platform.make)
     end
     move_extensions
   end
   task :compile => [filename]
 
-when /java/
+elsif Platform.java?
 
   # Avoid JRuby in-process launching problem
   begin
@@ -121,11 +120,15 @@ end
 def sub_project(project, *targets)
   targets.each do |target|
     Dir.chdir "projects/#{project}" do
-      unless RUBY_PLATFORM =~ /mswin/
-        sh("rake #{target.to_s}") # --trace 
-      end
+      sh("#{Platform.rake} #{target.to_s}") # --trace 
     end
   end
+end
+
+desc "Compile all the projects"
+task :compile_all => [:compile] do
+  sub_project("fastthread", :compile)
+  sub_project("mongrel_service", :compile)
 end
 
 desc "Package Mongrel and all subprojects"
@@ -139,11 +142,9 @@ task :package_all => [:package] do
   sub_project("mongrel_cluster", :package)
   sub_project("mongrel_experimental", :package)
 
-  sh("rake java package") unless RUBY_PLATFORM =~ /java/
+  sh("rake java package") unless Platform.windows?
   
-  # XXX Broken by RubyGems 0.9.5
-  # sub_project("mongrel_service", :package) if RUBY_PLATFORM =~ /mswin/
-  # sh("rake mswin package") unless RUBY_PLATFORM =~ /mswin/
+  sub_project("mongrel_service", :package) if Platform.windows?
 end
 
 task :install_requirements do
@@ -161,7 +162,7 @@ task :install => [:install_requirements] do
   sub_project("mongrel_console", :install)
   sub_project("mongrel_cluster", :install)
   # sub_project("mongrel_experimental", :install)
-  sub_project("mongrel_service", :install) if RUBY_PLATFORM =~ /mswin/
+  sub_project("mongrel_service", :install) if Platform.windows?
 end
 
 desc "for Mongrel and all its subprojects"
@@ -173,11 +174,11 @@ task :uninstall => [:clean] do
   sub_project("gem_plugin", :uninstall)
   sub_project("fastthread", :uninstall)
   # sub_project("mongrel_experimental", :uninstall)
-  sub_project("mongrel_service", :uninstall) if RUBY_PLATFORM =~ /mswin/
+  sub_project("mongrel_service", :uninstall) if Platform.windows?
 end
 
 desc "for Mongrel and all its subprojects"
-task :clean do
+task :clean_all => [:clean] do
   sub_project("gem_plugin", :clean)
   sub_project("cgi_multipart_eof_fix", :clean)
   sub_project("fastthread", :clean)
@@ -186,7 +187,7 @@ task :clean do
   sub_project("mongrel_console", :clean)
   sub_project("mongrel_cluster", :clean)
   sub_project("mongrel_experimental", :clean)
-  sub_project("mongrel_service", :clean) if RUBY_PLATFORM =~ /mswin/
+  sub_project("mongrel_service", :clean) if Platform.windows?
 end
 
 #### Site upload tasks

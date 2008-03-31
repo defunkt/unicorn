@@ -1,8 +1,11 @@
 
+require 'rubygems'
+gem 'echoe', '>=2.7.11'
 require 'echoe'
 
 Echoe.new("gem_plugin") do |p|
-  p.author="Zed A. Shaw"
+  p.author= "Zed A. Shaw"
+  p.email = "mongrel-development@rubyforge.org"
   p.project = "mongrel"
   p.summary = "A plugin system based on rubygems that uses dependencies only"
 
@@ -15,7 +18,7 @@ Echoe.new("gem_plugin") do |p|
   p.test_pattern = "test/test_plugins.rb"
   p.clean_pattern += ["pkg", "lib/*.bundle", "*.gem", ".config"]
   p.rdoc_pattern = ['README', 'LICENSE', 'COPYING', 'lib/**/*.rb', 'doc/**/*.rdoc']
-  p.rdoc_template = `allison --path`.chomp  
+  p.rdoc_template = `#{Platform.windows? ? 'allison.bat' : 'allison'} --path`.chomp  
 end
 
 namespace :site do
