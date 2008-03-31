@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+#
 # Copyright (c) 2005 Zed A. Shaw
 # You can redistribute it and/or modify it under the same terms as Ruby.
 #
@@ -137,7 +139,7 @@ module Mongrel
       config.join
 
       if config.needs_restart
-        if RUBY_PLATFORM !~ /mswin/
+        if RUBY_PLATFORM !~ /djgpp|(cyg|ms|bcc)win|mingw/
           cmd = "ruby #{__FILE__} start #{original_args.join(' ')}"
           config.log "Restarting with arguments:  #{cmd}"
           config.stop(false, true)
