@@ -35,8 +35,9 @@ class HandlersTest < Test::Unit::TestCase
 
   def setup
     stats = Mongrel::StatisticsFilter.new(:sample_rate => 1)
-
-    @config = Mongrel::Configurator.new :host => '127.0.0.1', :port => 9998 do
+    @port = process_based_port
+    
+    @config = Mongrel::Configurator.new :host => '127.0.0.1', :port => @port do
       listener do
         uri "/", :handler => SimpleHandler.new
         uri "/", :handler => stats
@@ -57,14 +58,14 @@ class HandlersTest < Test::Unit::TestCase
   end
 
   def test_more_web_server
-    res = hit([ "http://localhost:9998/test",
-          "http://localhost:9998/dumb",
-          "http://localhost:9998/404",
-          "http://localhost:9998/files/rdoc/index.html",
-          "http://localhost:9998/files/rdoc/nothere.html",
-          "http://localhost:9998/files/rdoc/",
-          "http://localhost:9998/files_nodir/rdoc/",
-          "http://localhost:9998/status",
+    res = hit([ "http://localhost:#{@port}/test",
+          "http://localhost:#{@port}/dumb",
+          "http://localhost:#{@port}/404",
+          "http://localhost:#{@port}/files/rdoc/index.html",
+          "http://localhost:#{@port}/files/rdoc/nothere.html",
+          "http://localhost:#{@port}/files/rdoc/",
+          "http://localhost:#{@port}/files_nodir/rdoc/",
+          "http://localhost:#{@port}/status",
     ])
 
     # XXX This can't possibly have good coverage.
@@ -72,7 +73,7 @@ class HandlersTest < Test::Unit::TestCase
   end
 
   def test_deflate
-    Net::HTTP.start("localhost", 9998) do |h|
+    Net::HTTP.start("localhost", @port) do |h|
       # test that no accept-encoding returns a non-deflated response
       req = h.get("/dumb")
       assert(
@@ -97,7 +98,7 @@ class HandlersTest < Test::Unit::TestCase
   #end
 
   def test_unregister
-    @config.listeners["127.0.0.1:9998"].unregister("/")
+    @config.listeners["127.0.0.1:#{@port}"].unregister("/")
   end
 end
 

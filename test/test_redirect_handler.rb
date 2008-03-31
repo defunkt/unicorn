@@ -10,10 +10,10 @@ class RedirectHandlerTest < Test::Unit::TestCase
 
   def setup
     redirect_test_io do
-      @server = Mongrel::HttpServer.new('127.0.0.1', 9998)
+      @server = Mongrel::HttpServer.new('127.0.0.1', process_based_port)
     end
     @server.run
-    @client = Net::HTTP.new('127.0.0.1', 9998)
+    @client = Net::HTTP.new('127.0.0.1', process_based_port)
   end
 
   def teardown

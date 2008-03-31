@@ -29,11 +29,12 @@ end
 class ConfiguratorTest < Test::Unit::TestCase
 
   def test_base_handler_config
+    port = process_based_port
     @config = nil
 
     redirect_test_io do
       @config = Mongrel::Configurator.new :host => "localhost" do
-        listener :port => 4501 do
+        listener :port => port do
           # 2 in front should run, but the sentinel shouldn't since dirhandler processes the request
           uri "/", :handler => plugin("/handlers/testplugin")
           uri "/", :handler => plugin("/handlers/testplugin")
@@ -64,12 +65,12 @@ class ConfiguratorTest < Test::Unit::TestCase
       assert listener.classifier.uris.include?("/test"), "/test not registered"
     end
 
-    res = Net::HTTP.get(URI.parse('http://localhost:4501/test'))
+    res = Net::HTTP.get(URI.parse("http://localhost:#{port}/test"))
     assert res != nil, "Didn't get a response"
     assert $test_plugin_fired == 3, "Test filter plugin didn't run 3 times."
 
     redirect_test_io do
-      res = Net::HTTP.get(URI.parse('http://localhost:4501/'))
+      res = Net::HTTP.get(URI.parse("http://localhost:#{port}/"))
 
       assert res != nil, "Didn't get a response"
       assert $test_plugin_fired == 6, "Test filter plugin didn't run 6 times."
@@ -80,7 +81,7 @@ class ConfiguratorTest < Test::Unit::TestCase
     end
 
     assert_raise Errno::EBADF, Errno::ECONNREFUSED do
-      res = Net::HTTP.get(URI.parse("http://localhost:4501/"))
+      res = Net::HTTP.get(URI.parse("http://localhost:#{port}/"))
     end
   end
 
