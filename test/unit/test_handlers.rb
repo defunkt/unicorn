@@ -34,10 +34,11 @@ end
 class HandlersTest < Test::Unit::TestCase
 
   def setup
+    @port = process_based_port
     stats = Mongrel::StatisticsFilter.new(:sample_rate => 1)
 
-    @config = Mongrel::Configurator.new :host => '127.0.0.1', :port => 9998 do
-      listener do
+    @config = Mongrel::Configurator.new :host => '127.0.0.1' do
+      listener :port => process_based_port do
         uri "/", :handler => SimpleHandler.new
         uri "/", :handler => stats
         uri "/404", :handler => Mongrel::Error404Handler.new("Not found")
@@ -50,8 +51,10 @@ class HandlersTest < Test::Unit::TestCase
       end
     end
     
-    File.open("/tmp/testfile", 'w') do
-      # Do nothing
+    unless windows?
+      File.open('/tmp/testfile', 'w') do
+        # Do nothing
+      end
     end
     
     @config.run
@@ -59,7 +62,7 @@ class HandlersTest < Test::Unit::TestCase
 
   def teardown
     @config.stop(false, true)
-    File.delete "/tmp/testfile"
+    File.delete '/tmp/testfile' unless windows?
   end
   
   def test_registration_exception_is_not_lost
@@ -73,19 +76,20 @@ class HandlersTest < Test::Unit::TestCase
   end
 
   def test_more_web_server
-    res = hit([ "http://localhost:9998/test",
-          "http://localhost:9998/dumb",
-          "http://localhost:9998/404",
-          "http://localhost:9998/files/rdoc/index.html",
-          "http://localhost:9998/files/rdoc/nothere.html",
-          "http://localhost:9998/files/rdoc/",
-          "http://localhost:9998/files_nodir/rdoc/",
-          "http://localhost:9998/status",
+    res = hit([ "http://localhost:#{@port}/test",
+          "http://localhost:#{@port}/dumb",
+          "http://localhost:#{@port}/404",
+          "http://localhost:#{@port}/files/rdoc/index.html",
+          "http://localhost:#{@port}/files/rdoc/nothere.html",
+          "http://localhost:#{@port}/files/rdoc/",
+          "http://localhost:#{@port}/files_nodir/rdoc/",
+          "http://localhost:#{@port}/status",
     ])
     check_status res, String
   end
   
   def test_nil_dirhandler
+    return if windows?
     # Camping uses this internally
     handler = Mongrel::DirHandler.new(nil, false)  
     assert handler.can_serve("/tmp/testfile")
@@ -102,7 +106,7 @@ class HandlersTest < Test::Unit::TestCase
   end
 
   def test_deflate
-    Net::HTTP.start("localhost", 9998) do |h|
+    Net::HTTP.start("localhost", @port) do |h|
       # Test that no accept-encoding returns a non-deflated response
       req = h.get("/dumb")
       assert(
@@ -120,14 +124,13 @@ class HandlersTest < Test::Unit::TestCase
 
   # TODO: find out why this fails on win32 but nowhere else
   #def test_posting_fails_dirhandler
-  #  req = Net::HTTP::Post.new("http://localhost:9998/files/rdoc/")
+  #  req = Net::HTTP::Post.new("http://localhost:#{@port}/files/rdoc/")
   #  req.set_form_data({'from'=>'2005-01-01', 'to'=>'2005-03-31'}, ';')
-  #  res = hit [["http://localhost:9998/files/rdoc/",req]]
+  #  res = hit [["http://localhost:#{@port}/files/rdoc/",req]]
   #  check_status res, Net::HTTPNotFound
   #end
 
   def test_unregister
-    @config.listeners["127.0.0.1:9998"].unregister("/")
+    @config.listeners["127.0.0.1:#{@port}"].unregister("/")
   end
 end
-

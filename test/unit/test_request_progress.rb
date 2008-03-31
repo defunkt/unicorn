@@ -38,8 +38,9 @@ end
 
 class RequestProgressTest < Test::Unit::TestCase
   def setup
+    @port = process_based_port
     redirect_test_io do
-      @server = Mongrel::HttpServer.new("127.0.0.1", 9998)
+      @server = Mongrel::HttpServer.new("127.0.0.1", @port)
     end
     @handler = UploadBeginHandler.new
     @server.register("/upload", @handler)
@@ -51,7 +52,7 @@ class RequestProgressTest < Test::Unit::TestCase
   end
 
   def test_begin_end_progress
-    Net::HTTP.get("localhost", "/upload", 9998)
+    Net::HTTP.get("localhost", "/upload", @port)
     assert @handler.request_began
     assert @handler.request_progressed
     assert @handler.request_processed
@@ -62,7 +63,7 @@ class RequestProgressTest < Test::Unit::TestCase
     handlers.each { |h| h.reset }
 
     # make the call
-    Net::HTTP.get("localhost", "/upload", 9998)
+    Net::HTTP.get("localhost", "/upload", @port)
 
     # assert that each one was fired
     handlers.each { |h|
@@ -88,7 +89,7 @@ class RequestProgressTest < Test::Unit::TestCase
     # remove handlers to make sure they've all gone away
     @server.unregister("/upload")
     handlers.each { |h| h.reset }
-    Net::HTTP.get("localhost", "/upload", 9998)
+    Net::HTTP.get("localhost", "/upload", @port)
     handlers.each { |h|
       assert !h.request_began && !h.request_progressed && !h.request_processed
     }
