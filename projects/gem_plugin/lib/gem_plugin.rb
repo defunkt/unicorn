@@ -131,11 +131,14 @@ module GemPlugin
           gem_dir = ""
           Gem.path.each do |gem_path|
             gem_dir = File.join(gem_path, "gems", path)
-            break if File.exists?(gem_dir)
+            break if File.exist?(gem_dir)
           end
           
-          require File.join(gem_dir, "lib", gem.name, "init.rb")
-          @gems[gem.name] = gem_dir
+          gem_init = File.join(gem_dir, "lib", gem.name, "init.rb")
+          if File.exist?(gem_init)
+            require gem_init
+            @gems[gem.name] = gem_dir
+          end
         end
       end
 
