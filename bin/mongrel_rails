@@ -215,7 +215,7 @@ module Mongrel
         ['-c', '--chdir PATH', "Change to dir before starting (will be expanded).", :@cwd, "."],
         ['-f', '--force', "Force the shutdown (kill -9).", :@force, false],
         ['-w', '--wait SECONDS', "Wait SECONDS before forcing shutdown", :@wait, "0"], 
-        ['-P', '--pid FILE', "Where the PID file is located.", :@pid_file, "log/mongrel.pid"]
+        ['-P', '--pid FILE', "Where the PID file is located (cannot be changed via soft restart).", :@pid_file, "log/mongrel.pid"]
       ]
     end
 
