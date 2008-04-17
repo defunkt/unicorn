@@ -15,6 +15,8 @@ namespace svc
 namespace utils   '# fb.svc.utils
     '# private (internals) for ServiceProcess.Console()
     dim shared _svc_stop_signal as any ptr
+    dim shared _svc_stop_mutex as any ptr
+    dim shared _svc_stopped as BOOL
     dim shared _svc_in_console as ServiceProcess ptr
     dim shared _svc_in_console_stop_flag as BOOL
     
@@ -168,6 +170,7 @@ namespace utils   '# fb.svc.utils
                 
                 '# create the signal used to stop the service thread.
                 _svc_stop_signal = condcreate()
+                _svc_stop_mutex = mutexcreate()
                 
                 '# register the Console Handler
                 SetConsoleCtrlHandler(@_console_handler, TRUE)
@@ -189,6 +192,9 @@ namespace utils   '# fb.svc.utils
                     if not (service->onStart = 0) then
                         '# create the thread
                         working_thread = threadcreate(@ServiceProcess.call_onStart, service)
+                        if (working_thread = 0) then
+                            print "Failed to create working thread."
+                        end if
                     end if
                     
                     print "Service is in running state."
@@ -197,7 +203,11 @@ namespace utils   '# fb.svc.utils
                     '# now that onStart is running, must monitor the stop_signal
                     '# in case it arrives, the service state must change to exit the
                     '# working thread.
-                    condwait(_svc_stop_signal)
+                    mutexlock(_svc_stop_mutex)
+                    do while (_svc_stopped = FALSE)
+                        condwait(_svc_stop_signal, _svc_stop_mutex)
+                    loop
+                    mutexunlock(_svc_stop_mutex)
                     
                     print "Stop signal received, stopping..."
                     
@@ -222,7 +232,7 @@ namespace utils   '# fb.svc.utils
                 
                 '# now that service was stopped, destroy the references.
                 conddestroy(_svc_stop_signal)
-                
+                mutexdestroy(_svc_stop_mutex)
                 print "Done."
             end if
         else
@@ -287,9 +297,12 @@ namespace utils   '# fb.svc.utils
                     
                     '# now fire the signal
                     _dprint("fire stop signal")
+                    mutexlock(_svc_stop_mutex)
                     condsignal(_svc_stop_signal)
                     result = TRUE
                     _svc_in_console_stop_flag = FALSE
+                    _svc_stopped = TRUE
+                    mutexunlock(_svc_stop_mutex)
                     
                 case else:
                     _dprint("unsupported CTRL EVENT")
