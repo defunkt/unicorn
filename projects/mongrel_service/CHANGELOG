@@ -1,6 +1,12 @@
 
-* SVN *
-
+* 0.3.4 *
+    
+    * Strict Gem dependencies for mongrel_service. This version is compatible
+      only with mongrel 1.0.x, 1.1.x and with win32-service 0.5.x.
+    
+    * Fixed issues realted to Win32::Service and gem_plugin being registered with
+      different names due win32-service changes.
+    
 * 0.3.3 *
     
     * Properly display package/gem version for mongrel_service. Closes #13823.
