@@ -63,7 +63,7 @@ module FreeBASIC
       @libraries_path = []
       @options = {}
       
-      instance_eval &block
+      instance_eval(&block) if block_given?
       
       do_cleanup
       
@@ -90,7 +90,7 @@ module FreeBASIC
       # as output_name for the project
       def lib(lib_name)
         @type = :lib
-        @output_name = lib_name
+        @output_name = "#{lib_name}"
         @real_file_name = "lib#{lib_name}.a"
       end
       
@@ -197,7 +197,9 @@ module FreeBASIC
       # return the compiled name version of the passed source file (src)
       # compiled_form("test.bas") => "test.o"
       def compiled_form(src)
-        src.ext({ ".bas" => "o", ".rc" => "obj" }[File.extname(src)])
+        unless src.nil?
+          src.ext({ ".bas" => "o", ".rc" => "obj" }[File.extname(src)])
+        end
       end
       
       def compiled_project_file
@@ -207,11 +209,11 @@ module FreeBASIC
       def fbc_compile(source, target, main = nil)
         cmdline = []
         cmdline << "fbc"
+        cmdline << "-w pedantic" if (@options.has_key?(:pedantic) && @options[:pedantic] == true)
         cmdline << "-g" if (@options.has_key?(:debug) && @options[:debug] == true)
         cmdline << "-#{@options[:errorchecking].to_s}" if @options.has_key?(:errorchecking)
-        cmdline << "-profile" if (@options.has_key?(:profile) && @options[:profile] == true)
         cmdline << "-mt" if (@options.has_key?(:mt) && @options[:mt] == true)
-        cmdline << "-w pedantic" if (@options.has_key?(:pedantic) && @options[:pedantic] == true)
+        cmdline << "-profile" if (@options.has_key?(:profile) && @options[:profile] == true)
         cmdline << "-c #{source}"
         cmdline << "-o #{target}"
         cmdline << "-m #{main}" unless main.nil?
@@ -224,8 +226,8 @@ module FreeBASIC
         cmdline = []
         cmdline << "fbc"
         cmdline << "-g" if (@options.has_key?(:debug) && @options[:debug] == true)
-        cmdline << "-profile" if (@options.has_key?(:profile) && @options[:profile] == true)
         cmdline << "-mt" if (@options.has_key?(:mt) && @options[:mt] == true)
+        cmdline << "-profile" if (@options.has_key?(:profile) && @options[:profile] == true)
         cmdline << "-#{@type.to_s}" unless @type == :executable
         cmdline << "-x #{target}"
         cmdline << files << extra_files
@@ -241,11 +243,15 @@ module FreeBASIC
         desc "Remove all compiled files for #{@name}"
         task :clobber do
           # remove compiled and linked file
-          rm compiled_project_file rescue nil #unless @type == :lib
-          rm File.join(@build_path, @complement_file) rescue nil if @type == :dylib
+          rm compiled_project_file rescue nil if File.exist?(compiled_project_file)
+          if @type == :dylib
+            rm File.join(@build_path, @complement_file) rescue nil if File.exist?(File.join(@build_path, @complement_file))
+          end
           
           # remove main file
-          rm compiled_form(@main_file) rescue nil
+          unless @main_file.nil? || !File.exists?(compiled_form(@main_file))
+            rm compiled_form(@main_file) rescue nil
+          end
           
           # now the sources files
           # avoid attempt to remove the file two times (this is a bug in Rake)
@@ -255,7 +261,7 @@ module FreeBASIC
               target = compiled_form(src)
               unless CLOBBER.include?(target)
                 CLOBBER.include(target)
-                rm target rescue nil
+                rm target rescue nil if File.exist?(target)
               end
             end
           end
