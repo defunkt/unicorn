@@ -81,6 +81,7 @@ property ConsoleProcess.pid() as uinteger
 end property
 
 property ConsoleProcess.exit_code() as uinteger
+    static previous_code as uinteger
     dim result as uinteger
     
     result = 0
@@ -90,9 +91,16 @@ property ConsoleProcess.exit_code() as uinteger
         if not (_process_info.hProcess = NULL) then
             '# the process reference is valid, get the exit_code
             if not (GetExitCodeProcess(_process_info.hProcess, @result) = 0) then
+                previous_code = result
                 '# OK
                 '# no error in the query, get result
+                if not (result = STILL_ACTIVE) then
+                    CloseHandle(_process_info.hProcess)
+                    _process_info.hProcess = NULL
+                end if '# (result = STILL_ACTIVE)
             end if '# not (GetExitCodeProcess() = 0)
+        else
+            result = previous_code
         end if '# not (proc = NULL)
     end if '# not (_pid = 0)
     
@@ -228,7 +236,7 @@ function ConsoleProcess.start() as boolean
             else
                 '# use pipes instead
                 '# StdOut
-                if (CreatePipe(@StdErrRd, @StdErrWr, @proc_sa, 0) = 0) then 
+                if (CreatePipe(@StdErrRd, @StdErrWr, @proc_sa, 0) = 0) then
                     success = false
                 end if
                 
@@ -283,10 +291,10 @@ function ConsoleProcess.start() as boolean
                 CloseHandle(StdErrRd)
                 CloseHandle(StdErrWr)
                 
-                '# close children main Thread handle
-                'CloseHandle(proc.hThread)
-                'CloseHandle(proc.hProcess)
-                
+                '# close children main Thread handle and
+                '# NULLify to avoid issues
+                CloseHandle(_process_info.hThread)
+                _process_info.hThread = NULL
             end if '# (CreateProcess() = 0)
         else
             result = false
@@ -322,7 +330,7 @@ function ConsoleProcess.terminate(byval force as boolean = false) as boolean
                     '# send CTRL_C_EVENT and wait for result
                     if not (GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0) = 0) then
                         '# it worked, wait 5 seconds terminates.
-                        wait_code = WaitForSingleObject(proc, 5000)
+                        wait_code = WaitForSingleObject(proc, 10000)
                         if not (wait_code = WAIT_TIMEOUT) then
                             success = true
                         end if
@@ -335,7 +343,7 @@ function ConsoleProcess.terminate(byval force as boolean = false) as boolean
                         '# send CTRL_BREAK_EVENT and wait for result
                         if not (GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, 0) = 0) then
                             '# it worked, wait 5 seconds terminates.
-                            wait_code = WaitForSingleObject(proc, 5000) 
+                            wait_code = WaitForSingleObject(proc, 10000) 
                             if not (wait_code = WAIT_TIMEOUT) then
                                 success = true
                             end if

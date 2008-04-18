@@ -1,3 +1,8 @@
+* 0.3.5 *
+
+    * Wait longer for child process terminate properly (max 20 seconds). Imported
+    tests from RubyServices project. (Closes #18).
+    * Updated ServiceFB to work with FB > 0.18.
 
 * 0.3.4 *
     

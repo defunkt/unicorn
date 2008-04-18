@@ -33,5 +33,3 @@ function content_of_file(byref filename as string) as string
     
     return result
 end function
-
-print content_of_file("testing.log")

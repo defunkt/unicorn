@@ -30,7 +30,7 @@ namespace Suite_Test_Console_Process
     
     sub test_process_create()
         child = new ConsoleProcess()
-        assert_not_equal_error(0, child)
+        assert_not_equal(0, child)
         assert_equal("", child->filename)
         assert_equal("", child->arguments)
         assert_false(child->running)
@@ -64,7 +64,7 @@ namespace Suite_Test_Console_Process
         '# start() should return true since it started, no matter if was terminated
         '# improperly
         assert_true(child->start())
-        sleep 150
+        sleep 500
         
         '# should not be running, but pid should be != than 0
         assert_not_equal(0, child->pid)
@@ -80,6 +80,9 @@ namespace Suite_Test_Console_Process
     end sub
     
     sub test_redirected_output()
+        assert_false(fileexists("out.log"))
+        assert_false(fileexists("err.log"))
+        
         '# redirected output is used with logging files.
         child = new ConsoleProcess("mock_process.exe")
         
@@ -93,13 +96,15 @@ namespace Suite_Test_Console_Process
         
         '# start() will be true since process terminated nicely
         assert_true(child->start())
-        sleep 150
+        sleep 500
         
         '# running should be false
         assert_false(child->running)
         
         '# exit_code should be 0
         assert_equal(0, child->exit_code)
+        
+        delete child
         
         '# now out.log and err.log must exist and content must be valid.
         assert_true(fileexists("out.log"))
@@ -108,14 +113,8 @@ namespace Suite_Test_Console_Process
         assert_true(fileexists("err.log"))
         assert_string_equal("err: error", content_of_file("err.log"))
         
-        '# cleanup
-        process_cleanup()
-        assert_equal_error(0, kill("out.log"))
-        assert_equal_error(0, kill("err.log"))
-        
-        assert_true_error(fileexists("err.log"))
-        
-        delete child
+        assert_equal(0, kill("out.log"))
+        assert_equal(0, kill("err.log"))
     end sub
     
     sub test_redirected_merged_output()
@@ -131,13 +130,15 @@ namespace Suite_Test_Console_Process
         
         '# start() will be true since process terminated nicely
         assert_true(child->start())
-        sleep 150
+        sleep 500
         
         '# running should be false
         assert_false(child->running)
         
         '# exit_code should be 0
         assert_equal(0, child->exit_code)
+        
+        delete child
         
         '# file must exists
         assert_true(fileexists("both.log"))
@@ -148,11 +149,7 @@ namespace Suite_Test_Console_Process
         assert_not_equal(0, instr(content, "out: message"))
         assert_not_equal(0, instr(content, "err: error"))
         
-        '# cleanup
-        process_cleanup()
-        assert_equal_error(0, kill("both.log"))
-        
-        delete child
+        assert_equal(0, kill("both.log"))
     end sub
     
     sub test_redirected_output_append()
@@ -165,21 +162,19 @@ namespace Suite_Test_Console_Process
         
         '# start() will be true since process terminated nicely
         assert_true(child->start())
-        sleep 150
+        sleep 500
         
         content = content_of_file("both.log")
         
         '# start() again
         assert_true(child->start())
-        sleep 150
+        sleep 500
+        
+        delete child
         
         assert_not_equal(len(content), len(content_of_file("both.log")))
         
-        '# cleanup
-        process_cleanup()
-        assert_equal_error(0, kill("both.log"))
-        
-        delete child
+        assert_equal(0, kill("both.log"))
     end sub
     
     sub test_process_terminate()
@@ -191,7 +186,7 @@ namespace Suite_Test_Console_Process
         
         '# start
         assert_true(child->start())
-        sleep 150
+        sleep 500
         
         '# validate if running
         assert_true(child->running)
@@ -201,12 +196,14 @@ namespace Suite_Test_Console_Process
         
         '# now terminates it
         assert_true(child->terminate())
-        sleep 150
+        sleep 500
         
         assert_equal(9, child->exit_code)
         
         '# it should be done
         assert_false(child->running)
+        
+        delete child
         
         '# validate output
         '# file must exists
@@ -219,23 +216,19 @@ namespace Suite_Test_Console_Process
         assert_not_equal(0, instr(content, "err: error"))
         assert_not_equal(0, instr(content, "interrupted"))
         
-        '# cleanup
-        process_cleanup()
-        assert_equal_error(0, kill("both.log"))
-        
-        delete child
+        assert_equal(0, kill("both.log"))
     end sub
     
-    sub test_process_terminate_slow()
+    sub test_process_terminate_slow1()
         dim content as string
         
         '# redirected output is used with logging files.
-        child = new ConsoleProcess("mock_process.exe", "slow")
-        child->redirect(ProcessStdBoth, "both_slow.log")
+        child = new ConsoleProcess("mock_process.exe", "slow1")
+        child->redirect(ProcessStdBoth, "both_slow1.log")
         
         '# start
         assert_true(child->start())
-        sleep 150
+        sleep 500
         
         '# validate if running
         assert_true(child->running)
@@ -245,34 +238,74 @@ namespace Suite_Test_Console_Process
         
         '# now terminates it
         assert_true(child->terminate())
-        sleep 150
+        sleep 500
         
-        '# it should be done now
-        assert_false(child->running)
         assert_equal(10, child->exit_code)
+        
+        '# it should be done
+        assert_false(child->running)
+        
+        delete child
         
         '# validate output
         '# file must exists
-        assert_true(fileexists("both_slow.log"))
+        assert_true(fileexists("both_slow1.log"))
         
         '# contents must match
-        content = content_of_file("both_slow.log")
+        content = content_of_file("both_slow1.log")
         
-        assert_not_equal(0, instr(content, "out: message"))
-        assert_not_equal(0, instr(content, "err: error"))
-        assert_not_equal(0, instr(content, "out: slow stop"))
         assert_equal(0, instr(content, "interrupted"))
+        assert_not_equal(0, instr(content, "out: CTRL-C received"))
+        assert_equal(0, instr(content, "out: CTRL-BREAK received"))
         
-        '# cleanup
-        process_cleanup()
-        assert_equal_error(0, kill("both_slow.log"))
-        
-        delete child
+        assert_equal(0, kill("both_slow1.log"))
     end sub
     
+    sub test_process_terminate_slow2()
+        dim content as string
+        
+        '# redirected output is used with logging files.
+        child = new ConsoleProcess("mock_process.exe", "slow2")
+        child->redirect(ProcessStdBoth, "both_slow2.log")
+        
+        '# start
+        assert_true(child->start())
+        sleep 500
+        
+        '# validate if running
+        assert_true(child->running)
+        
+        '# validate PID
+        assert_not_equal(0, child->pid)
+        
+        '# now terminates it
+        assert_true(child->terminate())
+        sleep 500
+        
+        assert_equal(20, child->exit_code)
+        
+        '# it should be done
+        assert_false(child->running)
+        
+        delete child
+        
+        '# validate output
+        '# file must exists
+        assert_true(fileexists("both_slow2.log"))
+        
+        '# contents must match
+        content = content_of_file("both_slow2.log")
+        
+        assert_equal(0, instr(content, "interrupted"))
+        assert_not_equal(0, instr(content, "out: CTRL-C received"))
+        assert_not_equal(0, instr(content, "out: CTRL-BREAK received"))
+        
+        '# cleanup
+        assert_equal(0, kill("both_slow2.log"))
+    end sub
+
     sub test_process_terminate_forced()
         dim content as string
-        dim x as integer
         
         '# redirected output is used with logging files.
         child = new ConsoleProcess("mock_process.exe", "wait")
@@ -280,7 +313,7 @@ namespace Suite_Test_Console_Process
         
         '# start
         assert_true(child->start())
-        sleep 150
+        sleep 500
         
         '# validate if running
         assert_true(child->running)
@@ -290,13 +323,15 @@ namespace Suite_Test_Console_Process
         
         '# now terminates it
         assert_true(child->terminate(true))
-        sleep 150
+        sleep 500
         
         '# it should be done
         assert_false(child->running)
         
         '# look for termination code
         assert_equal(0, child->exit_code)
+        
+        delete child
         
         '# validate output
         '# file must exists
@@ -309,11 +344,7 @@ namespace Suite_Test_Console_Process
         assert_equal(0, instr(content, "err: error"))
         assert_equal(0, instr(content, "interrupted"))
         
-        '# cleanup
-        process_cleanup()
-        assert_equal_error(0, kill("both_forced.log"))
-        
-        delete child
+        assert_equal(0, kill("both_forced.log"))
     end sub
     
     sub test_reuse_object_instance()
@@ -323,7 +354,7 @@ namespace Suite_Test_Console_Process
         
         '# start
         assert_true(child->start())
-        sleep 150
+        sleep 500
         
         '# validate not running
         assert_false(child->running)
@@ -336,15 +367,12 @@ namespace Suite_Test_Console_Process
         
         '# start it again
         assert_true(child->start())
-        sleep 150
+        sleep 500
         
         '# it should have stopped by now
         assert_false(child->running)
         assert_not_equal(0, child->pid)
         assert_not_equal(first_pid, child->pid)
-        
-        '# cleanup
-        process_cleanup()
         
         delete child
     end sub
@@ -360,7 +388,8 @@ namespace Suite_Test_Console_Process
         add_test(test_redirected_merged_output)
         add_test(test_redirected_output_append)
         add_test(test_process_terminate)
-        add_test(test_process_terminate_slow)
+        add_test(test_process_terminate_slow1)
+        add_test(test_process_terminate_slow2)
         add_test(test_process_terminate_forced)
         add_test(test_reuse_object_instance)
     end sub
