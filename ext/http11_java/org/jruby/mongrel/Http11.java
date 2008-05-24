@@ -215,7 +215,7 @@ public class Http11 extends RubyObject {
 
                 req.setInstanceVariable("@http_body", RubyString.newString(runtime, new ByteList(hp.parser.buffer, at, length)));
                 req.aset(runtime.newString("SERVER_PROTOCOL"),runtime.newString("HTTP/1.1"));
-                req.aset(runtime.newString("SERVER_SOFTWARE"),runtime.newString("Mongrel 1.2"));
+                req.aset(runtime.newString("SERVER_SOFTWARE"),runtime.newString("Mongrel 1.2.0"));
             }
         };
 
@@ -247,7 +247,7 @@ public class Http11 extends RubyObject {
             if(this.hp.has_error()) {
                 throw new RaiseException(runtime, eHttpParserError, "Invalid HTTP format, parsing fails.", true);
             } else {
-                return runtime.newFixnum(this.hp.parser.nread);
+                return runtime.newFixnum((long)this.hp.parser.nread);
             }
         }
     }

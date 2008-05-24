@@ -55,13 +55,15 @@ module Mongrel
         # I need to add my own -h definition to prevent the -h by default from exiting.
         @opt.on_tail("-h", "--help", "Show this message") do
           @done_validating = true
-          Mongrel.log(@opt)
+          puts @opt
         end
 
         # I need to add my own -v definition to prevent the -v from exiting by default as well.
         @opt.on_tail("--version", "Show version") do
           @done_validating = true
-          Mongrel.log("Version #{Mongrel::Const::MONGREL_VERSION}")
+          if VERSION
+            puts "Version #{Mongrel::Const::MONGREL_VERSION}"
+          end
         end
 
         @opt.parse! argv
@@ -153,17 +155,17 @@ module Mongrel
 
       # Prints a list of available commands.
       def print_command_list
-        Mongrel.log("#{Mongrel::Command::BANNER}\nAvailable commands are:\n\n")
+        puts "#{Mongrel::Command::BANNER}\nAvailable commands are:\n\n"
 
         self.commands.each do |name|
           if /mongrel::/ =~ name
             name = name[9 .. -1]
           end
 
-          Mongrel.log(" - #{name[1 .. -1]}\n")
+          puts " - #{name[1 .. -1]}\n"
         end
 
-        Mongrel.log("\nEach command takes -h as an option to get help.")
+        puts "\nEach command takes -h as an option to get help."
 
       end
 
@@ -178,7 +180,7 @@ module Mongrel
           print_command_list
           return true
         elsif cmd_name == "--version"
-          Mongrel.log("Mongrel Web Server #{Mongrel::Const::MONGREL_VERSION}")
+          puts "Mongrel Web Server #{Mongrel::Const::MONGREL_VERSION}"
           return true
         end
 

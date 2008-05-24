@@ -71,11 +71,14 @@ module Mongrel
     # sent the header or the body.  This is pretty catastrophic actually.
     def reset
       if @body_sent
-        raise "#{Time.now.httpdate}: You have already sent the request body."
+        raise "You have already sent the request body."
       elsif @header_sent
-        raise "#{Time.now.httpdate}: You have already sent the request headers."
+        raise "You have already sent the request headers."
       else
-        @header.out.truncate(0)
+        # XXX Dubious ( http://mongrel.rubyforge.org/ticket/19 )
+        @header.out.close
+        @header = HeaderOut.new(StringIO.new) 
+        
         @body.close
         @body = StringIO.new
       end

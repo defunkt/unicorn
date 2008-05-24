@@ -59,18 +59,18 @@ module Mongrel
         target_gid = Etc.getgrnam(group).gid if group
 
         if uid != target_uid or gid != target_gid
-          Mongrel.log("Initiating groups for #{user.inspect}:#{group.inspect}.")
+          log "Initiating groups for #{user.inspect}:#{group.inspect}."
           Process.initgroups(user, target_gid)
         
-          Mongrel.log("Changing group to #{group.inspect}.")
+          log "Changing group to #{group.inspect}."
           Process::GID.change_privilege(target_gid)
 
-          Mongrel.log("Changing user to #{user.inspect}." )
+          log "Changing user to #{user.inspect}." 
           Process::UID.change_privilege(target_uid)
         end
       rescue Errno::EPERM => e
-        Mongrel.log(:critical, "Couldn't change user and group to #{user.inspect}:#{group.inspect}: #{e.to_s}.")
-        Mongrel.log(:critical, "Mongrel failed to start.")
+        log "Couldn't change user and group to #{user.inspect}:#{group.inspect}: #{e.to_s}."
+        log "Mongrel failed to start."
         exit 1
       end
     end
@@ -81,13 +81,13 @@ module Mongrel
 
     # Writes the PID file if we're not on Windows.
     def write_pid_file
-      unless RUBY_PLATFORM =~ /djgpp|(cyg|ms|bcc)win|mingw/
-        Mongrel.log("Writing PID file to #{@pid_file}")
+      if RUBY_PLATFORM !~ /djgpp|(cyg|ms|bcc)win|mingw/
+        log "Writing PID file to #{@pid_file}"
         open(@pid_file,"w") {|f| f.write(Process.pid) }
         open(@pid_file,"w") do |f|
           f.write(Process.pid)
           File.chmod(0644, @pid_file)
-        end
+        end      
       end
     end
 
@@ -131,21 +131,17 @@ module Mongrel
     #
     def listener(options={},&block)
       raise "Cannot call listener inside another listener block." if (@listener or @listener_name)
-      opts = resolve_defaults(options)
-      opts[:num_processors] ||= 950
-      opts[:throttle] ||= 0
-      opts[:timeout] ||= 60
+      ops = resolve_defaults(options)
+      ops[:num_processors] ||= 950
+      ops[:throttle] ||= 0
+      ops[:timeout] ||= 60
 
-      @listener = Mongrel::HttpServer.new(
-      opts[:host], opts[:port].to_i, opts[:num_processors].to_i, 
-      opts[:throttle].to_i, opts[:timeout].to_i, 
-      opts[:log], opts[:log_level]
-      )
-      @listener_name = "#{opts[:host]}:#{opts[:port]}"
+      @listener = Mongrel::HttpServer.new(ops[:host], ops[:port].to_i, ops[:num_processors].to_i, ops[:throttle].to_i, ops[:timeout].to_i)
+      @listener_name = "#{ops[:host]}:#{ops[:port]}"
       @listeners[@listener_name] = @listener
 
-      if opts[:user] and opts[:group]
-        change_privilege(opts[:user], opts[:group])
+      if ops[:user] and ops[:group]
+        change_privilege(ops[:user], ops[:group])
       end
 
       # Does the actual cloaking operation to give the new implicit self.
@@ -167,8 +163,8 @@ module Mongrel
     # * :handler => HttpHandler -- Handler to use for this location.
     # * :in_front => true/false -- Rather than appending, it prepends this handler.
     def uri(location, options={})
-      opts = resolve_defaults(options)
-      @listener.register(location, opts[:handler], opts[:in_front])
+      ops = resolve_defaults(options)
+      @listener.register(location, ops[:handler], ops[:in_front])
     end
 
 
@@ -187,16 +183,16 @@ module Mongrel
     # It is safe to call this on win32 as it will only require the daemons
     # gem/library if NOT win32.
     def daemonize(options={})
-      opts = resolve_defaults(options)
+      ops = resolve_defaults(options)
       # save this for later since daemonize will hose it
-      unless RUBY_PLATFORM =~ /djgpp|(cyg|ms|bcc)win|mingw/
+      if RUBY_PLATFORM !~ /djgpp|(cyg|ms|bcc)win|mingw/
         require 'daemons/daemonize'
 
-        logfile = opts[:log_file]
+        logfile = ops[:log_file]
         if logfile[0].chr != "/"
-          logfile = File.join(opts[:cwd],logfile)
+          logfile = File.join(ops[:cwd],logfile)
           if not File.exist?(File.dirname(logfile))
-            Mongrel.log(:critical, "!!! Log file directory not found at full path #{File.dirname(logfile)}.  Update your configuration to use a full path.")
+            log "!!! Log file directory not found at full path #{File.dirname(logfile)}.  Update your configuration to use a full path."
             exit 1
           end
         end
@@ -204,10 +200,10 @@ module Mongrel
         Daemonize.daemonize(logfile)
 
         # change back to the original starting directory
-        Dir.chdir(opts[:cwd])
+        Dir.chdir(ops[:cwd])
 
       else
-        Mongrel.log(:warning, "WARNING: Win32 does not support daemon mode.")
+        log "WARNING: Win32 does not support daemon mode."
       end
     end
 
@@ -217,17 +213,17 @@ module Mongrel
     # :excludes => [] setting listing the names of plugins to include
     # or exclude from the determining the dependencies.
     def load_plugins(options={})
-      opts = resolve_defaults(options)
+      ops = resolve_defaults(options)
 
       load_settings = {}
-      if opts[:includes]
-        opts[:includes].each do |plugin|
+      if ops[:includes]
+        ops[:includes].each do |plugin|
           load_settings[plugin] = GemPlugin::INCLUDE
         end
       end
 
-      if opts[:excludes]
-        opts[:excludes].each do |plugin|
+      if ops[:excludes]
+        ops[:excludes].each do |plugin|
           load_settings[plugin] = GemPlugin::EXCLUDE
         end
       end
@@ -253,7 +249,7 @@ module Mongrel
       mime = load_yaml(file, mime)
 
       # check all the mime types to make sure they are the right format
-      mime.each {|k,v| Mongrel.log(:warning, "WARNING: MIME type #{k} must start with '.'") if k.index(".") != 0 }
+      mime.each {|k,v| log "WARNING: MIME type #{k} must start with '.'" if k.index(".") != 0 }
 
       return mime
     end
@@ -263,8 +259,8 @@ module Mongrel
     # name and configured with the selected options.  The options
     # are merged with the defaults prior to passing them in.
     def plugin(name, options={})
-      opts = resolve_defaults(options)
-      GemPlugin::Manager.instance.create(name, opts)
+      ops = resolve_defaults(options)
+      GemPlugin::Manager.instance.create(name, ops)
     end
 
     # Lets you do redirects easily as described in Mongrel::RedirectHandler.
@@ -348,7 +344,7 @@ module Mongrel
     # it reads it in and does an eval on the contents passing in the right
     # binding so they can put their own Configurator statements.
     def run_config(script)
-      open(script) {|f| eval(f.read, proc {self}.binding) }
+      open(script) {|f| eval(f.read, proc {self}) }
     end
 
     # Sets up the standard signal handlers that are used on most Ruby
@@ -362,28 +358,31 @@ module Mongrel
     #
     # This command is safely ignored if the platform is win32 (with a warning)
     def setup_signals(options={})
-      opts = resolve_defaults(options)
+      ops = resolve_defaults(options)
 
       # forced shutdown, even if previously restarted (actually just like TERM but for CTRL-C)
-      trap("INT") { Mongrel.log(:notice, "INT signal received."); stop(false) }
+      trap("INT") { log "INT signal received."; stop(false) }
 
-      # always clean up the pid file
+      # clean up the pid file always
       at_exit { remove_pid_file }
 
-      unless RUBY_PLATFORM =~ /djgpp|(cyg|ms|bcc)win|mingw/
+      if RUBY_PLATFORM !~ /djgpp|(cyg|ms|bcc)win|mingw/
         # graceful shutdown
-        trap("TERM") { Mongrel.log(:notice, "TERM signal received."); stop }
-        # debug mode
-        trap("USR1") { Mongrel.log(:notice, "USR1 received, toggling $mongrel_debug_client to #{!$mongrel_debug_client}"); $mongrel_debug_client = !$mongrel_debug_client }
+        trap("TERM") { log "TERM signal received."; stop }
+        trap("USR1") { log "USR1 received, toggling $mongrel_debug_client to #{!$mongrel_debug_client}"; $mongrel_debug_client = !$mongrel_debug_client }
         # restart
-        trap("USR2") { Mongrel.log(:notice, "USR2 signal received."); stop(true) }
+        trap("USR2") { log "USR2 signal received."; stop(true) }
 
-        Mongrel.log(:notice, "Signals ready.  TERM => stop.  USR2 => restart.  INT => stop (no restart).")
+        log "Signals ready.  TERM => stop.  USR2 => restart.  INT => stop (no restart)."
       else
-        Mongrel.log(:notice, "Signals ready.  INT => stop (no restart).")
+        log "Signals ready.  INT => stop (no restart)."
       end
     end
 
-  end
+    # Logs a simple message to STDERR (or the mongrel log if in daemon mode).
+    def log(msg)
+      STDERR.print "** ", msg, "\n"
+    end
 
+  end
 end

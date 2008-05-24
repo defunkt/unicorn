@@ -11,12 +11,11 @@
   safe = ("$" | "-" | "_" | ".");
   extra = ("!" | "*" | "'" | "(" | ")" | ",");
   reserved = (";" | "/" | "?" | ":" | "@" | "&" | "=" | "+");
-  sorta_safe = ("\"" | "<" | ">");
-  unsafe = (CTL | " " | "#" | "%" | sorta_safe);
+  unsafe = (CTL | " " | "\"" | "#" | "%" | "<" | ">");
   national = any -- (alpha | digit | reserved | extra | safe | unsafe);
   unreserved = (alpha | digit | safe | extra | national);
   escape = ("%" xdigit xdigit);
-  uchar = (unreserved | escape | sorta_safe);
+  uchar = (unreserved | escape);
   pchar = (uchar | ":" | "@" | "&" | "=" | "+");
   tspecials = ("(" | ")" | "<" | ">" | "@" | "," | ";" | ":" | "\\" | "\"" | "/" | "[" | "]" | "?" | "=" | "{" | "}" | " " | "\t");
 

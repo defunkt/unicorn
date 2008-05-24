@@ -82,7 +82,7 @@ module Mongrel
           rescue Errno::EPIPE
             response.socket.close
           rescue Object => rails_error
-            STDERR.puts "#{Time.now.httpdate}: Error calling Dispatcher.dispatch #{rails_error.inspect}"
+            STDERR.puts "#{Time.now}: Error calling Dispatcher.dispatch #{rails_error.inspect}"
             STDERR.puts rails_error.backtrace.join("\n")
           end
         end
@@ -161,9 +161,9 @@ module Mongrel
           raise "Rails was not configured.  Read the docs for RailsConfigurator."
         end
 
-        Mongrel.log("Reloading Rails...")
+        log "Reloading Rails..."
         @rails_handler.reload!
-        Mongrel.log("Done reloading Rails.")
+        log "Done reloading Rails."
 
       end
 
@@ -173,11 +173,11 @@ module Mongrel
         ops = resolve_defaults(options)
         setup_signals(options)
 
-        unless RUBY_PLATFORM =~ /djgpp|(cyg|ms|bcc)win|mingw/
+        if RUBY_PLATFORM !~ /djgpp|(cyg|ms|bcc)win|mingw/
           # rails reload
-          trap("HUP") { Mongrel.log("HUP signal received."); reload! }
+          trap("HUP") { log "HUP signal received."; reload!          }
 
-          Mongrel.log("Rails signals registered.  HUP => reload (without restart).  It might not work well.")
+          log "Rails signals registered.  HUP => reload (without restart).  It might not work well."
         end
       end
     end

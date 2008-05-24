@@ -4,7 +4,7 @@
 # Additional work donated by contributors.  See http://mongrel.rubyforge.org/attributions.html 
 # for more information.
 
-require 'test/testhelp'
+require 'test/test_helper'
 
 class SimpleHandler < Mongrel::HttpHandler
   def process(request, response)
@@ -34,11 +34,11 @@ end
 class HandlersTest < Test::Unit::TestCase
 
   def setup
-    stats = Mongrel::StatisticsFilter.new(:sample_rate => 1)
     @port = process_based_port
-    
-    @config = Mongrel::Configurator.new :host => '127.0.0.1', :port => @port do
-      listener do
+    stats = Mongrel::StatisticsFilter.new(:sample_rate => 1)
+
+    @config = Mongrel::Configurator.new :host => '127.0.0.1' do
+      listener :port => process_based_port do
         uri "/", :handler => SimpleHandler.new
         uri "/", :handler => stats
         uri "/404", :handler => Mongrel::Error404Handler.new("Not found")
@@ -50,11 +50,29 @@ class HandlersTest < Test::Unit::TestCase
         uri "/relative", :handler => Mongrel::DirHandler.new(nil, listing_allowed=false, index_html="none")
       end
     end
+    
+    unless windows?
+      File.open('/tmp/testfile', 'w') do
+        # Do nothing
+      end
+    end
+    
     @config.run
   end
 
   def teardown
     @config.stop(false, true)
+    File.delete '/tmp/testfile' unless windows?
+  end
+  
+  def test_registration_exception_is_not_lost
+    assert_raises(Mongrel::URIClassifier::RegistrationError) do      
+      @config = Mongrel::Configurator.new do
+        listener do
+          uri "bogus", :handler => SimpleHandler.new
+        end
+      end
+    end
   end
 
   def test_more_web_server
@@ -67,14 +85,29 @@ class HandlersTest < Test::Unit::TestCase
           "http://localhost:#{@port}/files_nodir/rdoc/",
           "http://localhost:#{@port}/status",
     ])
-
-    # XXX This can't possibly have good coverage.
     check_status res, String
+  end
+  
+  def test_nil_dirhandler
+    return if windows?
+    # Camping uses this internally
+    handler = Mongrel::DirHandler.new(nil, false)  
+    assert handler.can_serve("/tmp/testfile")
+    # Not a bug! A nil @file parameter is the only circumstance under which
+    # we are allowed to serve any existing file
+    assert handler.can_serve("../../../../../../../../../../tmp/testfile")
+  end
+  
+  def test_non_nil_dirhandler_is_not_vulnerable_to_path_traversal
+    # The famous security bug of Mongrel 1.1.2
+    handler = Mongrel::DirHandler.new("/doc", false)
+    assert_nil handler.can_serve("/tmp/testfile")
+    assert_nil handler.can_serve("../../../../../../../../../../tmp/testfile")
   end
 
   def test_deflate
     Net::HTTP.start("localhost", @port) do |h|
-      # test that no accept-encoding returns a non-deflated response
+      # Test that no accept-encoding returns a non-deflated response
       req = h.get("/dumb")
       assert(
         !req['Content-Encoding'] ||
@@ -91,9 +124,9 @@ class HandlersTest < Test::Unit::TestCase
 
   # TODO: find out why this fails on win32 but nowhere else
   #def test_posting_fails_dirhandler
-  #  req = Net::HTTP::Post.new("http://localhost:9998/files/rdoc/")
+  #  req = Net::HTTP::Post.new("http://localhost:#{@port}/files/rdoc/")
   #  req.set_form_data({'from'=>'2005-01-01', 'to'=>'2005-03-31'}, ';')
-  #  res = hit [["http://localhost:9998/files/rdoc/",req]]
+  #  res = hit [["http://localhost:#{@port}/files/rdoc/",req]]
   #  check_status res, Net::HTTPNotFound
   #end
 
@@ -101,4 +134,3 @@ class HandlersTest < Test::Unit::TestCase
     @config.listeners["127.0.0.1:#{@port}"].unregister("/")
   end
 end
-

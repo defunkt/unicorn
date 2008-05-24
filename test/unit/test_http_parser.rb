@@ -4,7 +4,7 @@
 # Additional work donated by contributors.  See http://mongrel.rubyforge.org/attributions.html 
 # for more information.
 
-require 'test/testhelp'
+require 'test/test_helper'
 
 include Mongrel
 
@@ -34,7 +34,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert parser.nread == 0, "Number read after reset should be 0"
   end
  
-  def test_parse_dumbfuck_headers
+  def test_parse_strange_headers
     parser = HttpParser.new
     req = {}
     should_be_good = "GET / HTTP/1.1\r\naaaaaaaaaaaaa:++++++++++\r\n\r\n"
@@ -42,33 +42,14 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal should_be_good.length, nread
     assert parser.finished?
     assert !parser.error?
-    assert_equal "++++++++++", req["HTTP_AAAAAAAAAAAAA"]
 
     nasty_pound_header = "GET / HTTP/1.1\r\nX-SSL-Bullshit:   -----BEGIN CERTIFICATE-----\r\n\tMIIFbTCCBFWgAwIBAgICH4cwDQYJKoZIhvcNAQEFBQAwcDELMAkGA1UEBhMCVUsx\r\n\tETAPBgNVBAoTCGVTY2llbmNlMRIwEAYDVQQLEwlBdXRob3JpdHkxCzAJBgNVBAMT\r\n\tAkNBMS0wKwYJKoZIhvcNAQkBFh5jYS1vcGVyYXRvckBncmlkLXN1cHBvcnQuYWMu\r\n\tdWswHhcNMDYwNzI3MTQxMzI4WhcNMDcwNzI3MTQxMzI4WjBbMQswCQYDVQQGEwJV\r\n\tSzERMA8GA1UEChMIZVNjaWVuY2UxEzARBgNVBAsTCk1hbmNoZXN0ZXIxCzAJBgNV\r\n\tBAcTmrsogriqMWLAk1DMRcwFQYDVQQDEw5taWNoYWVsIHBhcmQYJKoZIhvcNAQEB\r\n\tBQADggEPADCCAQoCggEBANPEQBgl1IaKdSS1TbhF3hEXSl72G9J+WC/1R64fAcEF\r\n\tW51rEyFYiIeZGx/BVzwXbeBoNUK41OK65sxGuflMo5gLflbwJtHBRIEKAfVVp3YR\r\n\tgW7cMA/s/XKgL1GEC7rQw8lIZT8RApukCGqOVHSi/F1SiFlPDxuDfmdiNzL31+sL\r\n\t0iwHDdNkGjy5pyBSB8Y79dsSJtCW/iaLB0/n8Sj7HgvvZJ7x0fr+RQjYOUUfrePP\r\n\tu2MSpFyf+9BbC/aXgaZuiCvSR+8Snv3xApQY+fULK/xY8h8Ua51iXoQ5jrgu2SqR\r\n\twgA7BUi3G8LFzMBl8FRCDYGUDy7M6QaHXx1ZWIPWNKsCAwEAAaOCAiQwggIgMAwG\r\n\tA1UdEwEB/wQCMAAwEQYJYIZIAYb4QgEBBAQDAgWgMA4GA1UdDwEB/wQEAwID6DAs\r\n\tBglghkgBhvhCAQ0EHxYdVUsgZS1TY2llbmNlIFVzZXIgQ2VydGlmaWNhdGUwHQYD\r\n\tVR0OBBYEFDTt/sf9PeMaZDHkUIldrDYMNTBZMIGaBgNVHSMEgZIwgY+AFAI4qxGj\r\n\tloCLDdMVKwiljjDastqooXSkcjBwMQswCQYDVQQGEwJVSzERMA8GA1UEChMIZVNj\r\n\taWVuY2UxEjAQBgNVBAsTCUF1dGhvcml0eTELMAkGA1UEAxMCQ0ExLTArBgkqhkiG\r\n\t9w0BCQEWHmNhLW9wZXJhdG9yQGdyaWQtc3VwcG9ydC5hYy51a4IBADApBgNVHRIE\r\n\tIjAggR5jYS1vcGVyYXRvckBncmlkLXN1cHBvcnQuYWMudWswGQYDVR0gBBIwEDAO\r\n\tBgwrBgEEAdkvAQEBAQYwPQYJYIZIAYb4QgEEBDAWLmh0dHA6Ly9jYS5ncmlkLXN1\r\n\tcHBvcnQuYWMudmT4sopwqlBWsvcHViL2NybC9jYWNybC5jcmwwPQYJYIZIAYb4QgEDBDAWLmh0\r\n\tdHA6Ly9jYS5ncmlkLXN1cHBvcnQuYWMudWsvcHViL2NybC9jYWNybC5jcmwwPwYD\r\n\tVR0fBDgwNjA0oDKgMIYuaHR0cDovL2NhLmdyaWQt5hYy51ay9wdWIv\r\n\tY3JsL2NhY3JsLmNybDANBgkqhkiG9w0BAQUFAAOCAQEAS/U4iiooBENGW/Hwmmd3\r\n\tXCy6Zrt08YjKCzGNjorT98g8uGsqYjSxv/hmi0qlnlHs+k/3Iobc3LjS5AMYr5L8\r\n\tUO7OSkgFFlLHQyC9JzPfmLCAugvzEbyv4Olnsr8hbxF1MbKZoQxUZtMVu29wjfXk\r\n\thTeApBv7eaKCWpSp7MCbvgzm74izKhu3vlDk9w6qVrxePfGgpKPqfHiOoGhFnbTK\r\n\twTC6o2xq5y0qZ03JonF7OJspEd3I5zKY3E+ov7/ZhW6DqT8UFvsAdjvQbXyhV8Eu\r\n\tYhixw1aKEPzNjNowuIseVogKOLXxWI5vAi5HgXdS0/ES5gDGsABo4fqovUKlgop3\r\n\tRA==\r\n\t-----END CERTIFICATE-----\r\n\r\n"
     parser = HttpParser.new
     req = {}
-    #nread = parser.execute(req, nasty_pound_header, 0)
-    #assert_equal nasty_pound_header.length, nread
-    #assert parser.finished?
-    #assert !parser.error?
-  end
-
-  def test_parse_ie6_urls
-    %w(/some/random/path"
-       /some/random/path>
-       /some/random/path<
-       /we/love/you/ie6?q=<"">
-       /url?<="&>="
-       /mal"formed"?
-    ).each do |path|
-      parser = HttpParser.new
-      req = {}
-      sorta_safe = %(GET #{path} HTTP/1.1\r\n\r\n)
-      nread = parser.execute(req, sorta_safe, 0)
-      assert_equal sorta_safe.length, nread
-      assert parser.finished?
-      assert !parser.error?
-    end
+    nread = parser.execute(req, nasty_pound_header, 0)
+    assert_equal nasty_pound_header.length, nread
+    assert parser.finished?
+    assert !parser.error?
   end
   
   def test_parse_error
@@ -86,103 +67,6 @@ class HttpParserTest < Test::Unit::TestCase
     assert error, "failed to throw exception"
     assert !parser.finished?, "Parser shouldn't be finished"
     assert parser.error?, "Parser SHOULD have error"
-  end
-
-  def test_parse_like_optimized_header
-    parser = HttpParser.new
-    req = {}
-    should_be_good = "GET / HTTP/1.1\r\nAuthorizationn: zz\r\n\r\n"
-    nread = parser.execute(req, should_be_good, 0)
-    assert_equal should_be_good.length, nread
-    assert parser.finished?
-    assert !parser.error?
-    assert_equal "zz", req["HTTP_AUTHORIZATIONN"]
-    assert ! req["HTTP_AUTHORIZATION"]
-  end
-
-  def test_parse_twin_lookalike_optimized_headers
-    parser = HttpParser.new
-    req = {}
-    should_be_good = "GET / HTTP/1.1\r\n" \
-                     "Accept-Encoding: abcdef\r\n" \
-                     "Accept-Language: zyxvut\r\n" \
-                     "\r\n"
-    nread = parser.execute(req, should_be_good, 0)
-    assert_equal should_be_good.length, nread
-    assert parser.finished?
-    assert !parser.error?
-    assert_equal "abcdef", req["HTTP_ACCEPT_ENCODING"]
-    assert_equal "zyxvut", req["HTTP_ACCEPT_LANGUAGE"]
-  end
-
-  if RUBY_PLATFORM !~ /java/
-    # as of now, the Java version does not have the same global-object
-    # reuse optimization the C version does
-
-    def test_parse_optimized_headers_global_objects_used
-      parser = HttpParser.new
-      req = {}
-      should_be_good = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
-      nread = parser.execute(req, should_be_good, 0)
-      assert_equal should_be_good.length, nread
-      assert parser.finished?
-      assert !parser.error?
-      assert_equal "example.com", req["HTTP_HOST"]
-
-      frozen_host_a = nil
-      req.each { |k,v| k == "HTTP_HOST" && frozen_host_a = k }
-
-      parser = HttpParser.new
-      req = {}
-      should_be_good = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
-      nread = parser.execute(req, should_be_good, 0)
-      assert_equal should_be_good.length, nread
-      assert parser.finished?
-      assert !parser.error?
-
-      frozen_host_b = nil
-      req.each { |k,v| k == "HTTP_HOST" && frozen_host_b = k }
-      assert_equal "HTTP_HOST", frozen_host_a
-      assert_equal "HTTP_HOST", frozen_host_b
-      assert_equal frozen_host_a.object_id, frozen_host_b.object_id
-    end
-  end
-
-  def test_host_port_parsing
-    parser = HttpParser.new
-    req = {}
-    should_be_good = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
-    nread = parser.execute(req, should_be_good, 0)
-    assert_equal should_be_good.length, nread
-    assert parser.finished?
-    assert !parser.error?
-    assert_equal "example.com", req["HTTP_HOST"]
-    assert_equal "example.com", req["SERVER_NAME"]
-    assert_equal "80", req["SERVER_PORT"]
-
-    parser = HttpParser.new
-    req = {}
-    should_be_good = "GET / HTTP/1.1\r\nHost: example.com:123\r\n\r\n"
-    nread = parser.execute(req, should_be_good, 0)
-    assert_equal should_be_good.length, nread
-    assert parser.finished?
-    assert !parser.error?
-    assert_equal "example.com:123", req["HTTP_HOST"]
-    assert_equal "example.com", req["SERVER_NAME"]
-    assert_equal "123", req["SERVER_PORT"]
-
-    # null character in domain name is never actually valid, but if it
-    # becomes valid in Web 3.0, we'll be ready for it.
-    parser = HttpParser.new
-    req = {}
-    should_be_good = "GET / HTTP/1.1\r\nHost: example.com\0:123\r\n\r\n"
-    nread = parser.execute(req, should_be_good, 0)
-    assert_equal should_be_good.length, nread
-    assert parser.finished?
-    assert !parser.error?
-    assert_equal "example.com\0:123", req["HTTP_HOST"]
-    assert_equal "example.com\0", req["SERVER_NAME"]
-    assert_equal "123", req["SERVER_PORT"]
   end
 
   def test_fragment_in_uri

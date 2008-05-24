@@ -89,11 +89,11 @@ module Mongrel
           update_request_progress(remain, total)
         end
       rescue Object => e
-        STDERR.puts "#{Time.now.httpdate}: Error reading HTTP body: #{e.inspect}"
+        STDERR.puts "#{Time.now}: Error reading HTTP body: #{e.inspect}"
         STDERR.puts e.backtrace.join("\n")
         # any errors means we should delete the file, including if the file is dumped
         @socket.close rescue nil
-        @body.delete if @body.class == Tempfile
+        @body.close! if @body.class == Tempfile
         @body = nil # signals that there was a problem
       end
     end
@@ -102,14 +102,14 @@ module Mongrel
       if !@socket.closed?
         data = @socket.read(len)
         if !data
-          raise "#{Time.now.httpdate}: Socket read return nil"
+          raise "Socket read return nil"
         elsif data.length != len
-          raise "#{Time.now.httpdate}: Socket read returned insufficient data: #{data.length}"
+          raise "Socket read returned insufficient data: #{data.length}"
         else
           data
         end
       else
-        raise "#{Time.now.httpdate}: Socket already closed when reading."
+        raise "Socket already closed when reading."
       end
     end
 

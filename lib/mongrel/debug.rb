@@ -16,7 +16,7 @@ module MongrelDbg
   def MongrelDbg::configure(log_dir = File.join("log","mongrel_debug"))
     FileUtils.mkdir_p(log_dir)
     @log_dir = log_dir
-    $objects_out = open(File.join("log","mongrel_debug","objects.log"),"w")
+    $objects_out=open(File.join("log","mongrel_debug","objects.log"),"w")
     $objects_out.puts "run,classname,last,count,delta,lenmean,lensd,lenmax"
     $objects_out.sync = true
     $last_stat = nil
@@ -35,12 +35,12 @@ module MongrelDbg
     if not LOGGING[target]
       LOGGING[target] = Logger.new(File.join(@log_dir, "#{target.to_s}.log"))
     end                          
-    MongrelDbg::trace(target, "#{Time.now.httpdate}: TRACING ON")
+    MongrelDbg::trace(target, "TRACING ON #{Time.now}")
   end
 
   def MongrelDbg::end_trace(target)
     SETTINGS[:tracing][target] = false
-    MongrelDbg::trace(target, "#{Time.now.httpdate}: TRACING OFF")
+    MongrelDbg::trace(target, "TRACING OFF #{Time.now}")
     LOGGING[target].close
     LOGGING[target] = nil
   end
@@ -86,17 +86,20 @@ module Kernel
     end
     MongrelDbg::trace(:files, open_counts.to_yaml)
   end
-end
+end  
+
 
 
 module RequestLog
 
+  # Just logs whatever requests it gets to STDERR (which ends up in the mongrel
+  # log when daemonized).
   class Access < GemPlugin::Plugin "/handlers"
     include Mongrel::HttpHandlerPlugin
     
     def process(request,response)
       p = request.params
-      Mongrel.log("#{p['REMOTE_ADDR']} \"#{p['REQUEST_METHOD']} #{p["REQUEST_URI"]} HTTP/1.1\"")
+      STDERR.puts "#{p['REMOTE_ADDR']} - [#{Time.now.httpdate}] \"#{p['REQUEST_METHOD']} #{p["REQUEST_URI"]} HTTP/1.1\""
     end
   end
   
@@ -105,12 +108,11 @@ module RequestLog
     include Mongrel::HttpHandlerPlugin
     
     def process(request, response)
-      MongrelDbg::trace(:files, "#{Time.now.httpdate}: FILES OPEN BEFORE REQUEST #{request.params['PATH_INFO']}")
+      MongrelDbg::trace(:files, "#{Time.now} FILES OPEN BEFORE REQUEST #{request.params['PATH_INFO']}")
       log_open_files
     end
     
   end
-
 
   # stolen from Robert Klemme
   class Objects < GemPlugin::Plugin "/handlers"
@@ -123,7 +125,7 @@ module RequestLog
         begin
           ObjectSpace.each_object do |o| 
             begin
-              if o.respond_to?(:length)
+              if o.respond_to? :length
                 len = o.length
                 lengths[o.class] ||= Mongrel::Stats.new(o.class)
                 lengths[o.class].sample(len)
@@ -152,28 +154,26 @@ module RequestLog
         $run_count += 1
         $last_stat = stats
       rescue Object
-        STDERR.puts "#{Time.now.httpdate}: object.log ERROR: #$!"
+        STDERR.puts "object.log ERROR: #$!"
       end
     end
   end
-
 
   class Params < GemPlugin::Plugin "/handlers"
     include Mongrel::HttpHandlerPlugin
 
     def process(request, response)
-      MongrelDbg::trace(:rails, "#{Time.now.httpdate}: REQUEST #{request.params['PATH_INFO']}")
+      MongrelDbg::trace(:rails, "#{Time.now} REQUEST #{request.params['PATH_INFO']}")
       MongrelDbg::trace(:rails, request.params.to_yaml)
     end
 
   end
 
-
   class Threads < GemPlugin::Plugin "/handlers"
     include Mongrel::HttpHandlerPlugin
 
     def process(request, response)
-      MongrelDbg::trace(:threads, "#{Time.now.httpdate}: REQUEST #{request.params['PATH_INFO']}")
+      MongrelDbg::trace(:threads, "#{Time.now} REQUEST #{request.params['PATH_INFO']}")
       begin
         ObjectSpace.each_object do |obj|
           begin
@@ -185,7 +185,7 @@ module RequestLog
                 worker_list.each {|t| keys << "\n\t\t-- #{t}: #{t.keys.inspect}" }
               end
   
-              MongrelDbg::trace(:threads, "#{Time.now.httpdate}: #{obj.host}:#{obj.port} -- THREADS: #{worker_list.length} #{keys}")
+              MongrelDbg::trace(:threads, "#{obj.host}:#{obj.port} -- THREADS: #{worker_list.length} #{keys}")
             end
           rescue Object # Ignore since obj.class can sometimes take parameters            
           end
@@ -198,6 +198,6 @@ end
 
 
 END {
-  MongrelDbg::trace(:files, "#{Time.now.httpdate}: FILES OPEN AT EXIT")
+  MongrelDbg::trace(:files, "FILES OPEN AT EXIT")
   log_open_files
 }

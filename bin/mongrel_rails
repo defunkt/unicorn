@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+#
 # Copyright (c) 2005 Zed A. Shaw
 # You can redistribute it and/or modify it under the same terms as Ruby.
 #
@@ -28,7 +30,7 @@ module Mongrel
         ['-a', '--address ADDR', "Address to bind to", :@address, "0.0.0.0"],
         ['-l', '--log FILE', "Where to write log messages", :@log_file, "log/mongrel.log"],
         ['-P', '--pid FILE', "Where to write the PID", :@pid_file, "log/mongrel.pid"],
-        ['-n', '--num-procs INT', "Number of processors active before clients denied", :@num_processors, 1024],
+        ['-n', '--num-processors INT', "Number of processors active before clients denied", :@num_processors, 1024],
         ['-o', '--timeout TIME', "Time to wait (in seconds) before killing a stalled thread", :@timeout, 60],
         ['-t', '--throttle TIME', "Time to pause (in hundredths of a second) between accepting clients", :@throttle, 0],
         ['-m', '--mime PATH', "A YAML file that lists additional MIME types", :@mime_map, nil],
@@ -74,51 +76,51 @@ module Mongrel
 
     def run
       if @generate
-        @generate = File.expand_path(@generate)
-        Mongrel.log(:error, "** Writing config to \"#@generate\".")
+	@generate = File.expand_path(@generate)
+        STDERR.puts "** Writing config to \"#@generate\"."
         open(@generate, "w") {|f| f.write(settings.to_yaml) }
-        Mongrel.log(:error, "** Finished.  Run \"mongrel_rails start -C #@generate\" to use the config file.")
+        STDERR.puts "** Finished.  Run \"mongrel_rails start -C #@generate\" to use the config file."
         exit 0
       end
 
       config = Mongrel::Rails::RailsConfigurator.new(settings) do
         if defaults[:daemon]
           if File.exist? defaults[:pid_file]
-            Mongrel.log(:error, "!!! PID file #{defaults[:pid_file]} already exists.  Mongrel could be running already.  Check your #{defaults[:log_file]} for errors.")
-            Mongrel.log(:error, "!!! Exiting with error.  You must stop mongrel and clear the .pid before I'll attempt a start.")
+            log "!!! PID file #{defaults[:pid_file]} already exists.  Mongrel could be running already.  Check your #{defaults[:log_file]} for errors."
+            log "!!! Exiting with error.  You must stop mongrel and clear the .pid before I'll attempt a start."
             exit 1
           end
 
           daemonize
           write_pid_file
-          Mongrel.log("Daemonized, any open files are closed.  Look at #{defaults[:pid_file]} and #{defaults[:log_file]} for info.")
-          Mongrel.log("Settings loaded from #{@config_file} (they override command line).") if @config_file
+          log "Daemonized, any open files are closed.  Look at #{defaults[:pid_file]} and #{defaults[:log_file]} for info."
+          log "Settings loaded from #{@config_file} (they override command line)." if @config_file
         end
 
-        Mongrel.log("Starting Mongrel listening at #{defaults[:host]}:#{defaults[:port]}, further information can be found in log/mongrel-#{defaults[:host]}-#{defaults[:port]}.log")
+        log "Starting Mongrel listening at #{defaults[:host]}:#{defaults[:port]}"
 
         listener do
           mime = {}
           if defaults[:mime_map]
-            Mongrel.log("Loading additional MIME types from #{defaults[:mime_map]}")
+            log "Loading additional MIME types from #{defaults[:mime_map]}"
             mime = load_mime_map(defaults[:mime_map], mime)
           end
 
           if defaults[:debug]
-            Mongrel.log("Installing debugging prefixed filters. Look in log/mongrel_debug for the files.")
+            log "Installing debugging prefixed filters. Look in log/mongrel_debug for the files."
             debug "/"
           end
 
-          Mongrel.log("Starting Rails with #{defaults[:environment]} environment...")
-          Mongrel.log("Mounting Rails at #{defaults[:prefix]}...") if defaults[:prefix]
+          log "Starting Rails with #{defaults[:environment]} environment..."
+          log "Mounting Rails at #{defaults[:prefix]}..." if defaults[:prefix]
           uri defaults[:prefix] || "/", :handler => rails(:mime => mime, :prefix => defaults[:prefix])
-          Mongrel.log("Rails loaded.")
+          log "Rails loaded."
 
-          Mongrel.log("Loading any Rails specific GemPlugins" )
+          log "Loading any Rails specific GemPlugins"
           load_plugins
 
           if defaults[:config_script]
-            Mongrel.log("Loading #{defaults[:config_script]} external config script")
+            log "Loading #{defaults[:config_script]} external config script"
             run_config(defaults[:config_script])
           end
 
@@ -127,29 +129,29 @@ module Mongrel
       end
 
       config.run
-      Mongrel.log("Mongrel #{Mongrel::Const::MONGREL_VERSION} available at #{@address}:#{@port}")
+      config.log "Mongrel #{Mongrel::Const::MONGREL_VERSION} available at #{@address}:#{@port}"
 
       unless config.defaults[:daemon]
-        Mongrel.log("Use CTRL-C to stop.")
+        config.log "Use CTRL-C to stop." 
       end
 
       config.join
 
       if config.needs_restart
-        unless RUBY_PLATFORM =~ /djgpp|(cyg|ms|bcc)win|mingw/
+        if RUBY_PLATFORM !~ /djgpp|(cyg|ms|bcc)win|mingw/
           cmd = "ruby #{__FILE__} start #{original_args.join(' ')}"
-          Mongrel.log("Restarting with arguments:  #{cmd}")
+          config.log "Restarting with arguments:  #{cmd}"
           config.stop(false, true)
           config.remove_pid_file
 
           if config.defaults[:daemon]
             system cmd
           else
-            Mongrel.log(:error, "Can't restart unless in daemon mode.")
+            STDERR.puts "Can't restart unless in daemon mode."
             exit 1
           end
         else
-          Mongrel.log("Win32 does not support restarts. Exiting.")
+          config.log "Win32 does not support restarts. Exiting."
         end
       end
     end
@@ -159,7 +161,7 @@ module Mongrel
       begin
         settings = YAML.load_file(@config_file)
       ensure
-        Mongrel.log(:error, "** Loading settings from #{@config_file} (they override command line).") unless @daemon || settings[:daemon]
+        STDERR.puts "** Loading settings from #{@config_file} (they override command line)." unless @daemon || settings[:daemon] 
       end
 
       settings[:includes] ||= ["mongrel"]
@@ -169,7 +171,6 @@ module Mongrel
         key = key.to_s
         if config_keys.include?(key)
           key = 'address' if key == 'host'
-          key = 'num_processors' if key == 'num_procs'
           self.instance_variable_set("@#{key}", value)
         else
           failure "Unknown configuration setting: #{key}"  
@@ -180,14 +181,13 @@ module Mongrel
 
     def config_keys
       @config_keys ||=
-        %w(address host port cwd log_file pid_file environment docroot mime_map daemon debug includes config_script num_processors num_procs timeout throttle user group prefix)
+        %w(address host port cwd log_file pid_file environment docroot mime_map daemon debug includes config_script num_processors timeout throttle user group prefix)
     end
 
     def settings
       config_keys.inject({}) do |hash, key|
         value = self.instance_variable_get("@#{key}")
         key = 'host' if key == 'address'
-        key = 'num_processors' if key == 'num_procs'
         hash[key.to_sym] ||= value
         hash
       end
@@ -195,7 +195,7 @@ module Mongrel
   end
 
   def Mongrel::send_signal(signal, pid_file)
-    pid = open(pid_file).read.to_i
+    pid = File.read(pid_file).to_i 
     print "Sending #{signal} to Mongrel at PID #{pid}..."
     begin
       Process.kill(signal, pid)
@@ -215,7 +215,7 @@ module Mongrel
         ['-c', '--chdir PATH', "Change to dir before starting (will be expanded).", :@cwd, "."],
         ['-f', '--force', "Force the shutdown (kill -9).", :@force, false],
         ['-w', '--wait SECONDS', "Wait SECONDS before forcing shutdown", :@wait, "0"], 
-        ['-P', '--pid FILE', "Where the PID file is located.", :@pid_file, "log/mongrel.pid"]
+        ['-P', '--pid FILE', "Where the PID file is located (cannot be changed via soft restart).", :@pid_file, "log/mongrel.pid"]
       ]
     end
 

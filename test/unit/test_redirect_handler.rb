@@ -4,16 +4,17 @@
 # Additional work donated by contributors.  See http://mongrel.rubyforge.org/attributions.html 
 # for more information.
 
-require 'test/testhelp'
+require 'test/test_helper'
 
 class RedirectHandlerTest < Test::Unit::TestCase
 
   def setup
+    @port = process_based_port
     redirect_test_io do
-      @server = Mongrel::HttpServer.new('127.0.0.1', process_based_port)
+      @server = Mongrel::HttpServer.new('127.0.0.1', @port)
     end
     @server.run
-    @client = Net::HTTP.new('127.0.0.1', process_based_port)
+    @client = Net::HTTP.new('127.0.0.1', @port)
   end
 
   def teardown

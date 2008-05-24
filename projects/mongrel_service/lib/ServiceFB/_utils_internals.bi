@@ -42,6 +42,8 @@ namespace utils   '# fb.svc.utils
     '# will raise in case Ctrl+C / Ctrl+Break or other events are
     '# received.
     extern _svc_stop_signal as any ptr
+    extern _svc_stop_mutex as any ptr
+    extern _svc_stopped as BOOL
     extern _svc_in_console as ServiceProcess ptr
     extern _svc_in_console_stop_flag as BOOL
 end namespace     '# fb.svc.utils

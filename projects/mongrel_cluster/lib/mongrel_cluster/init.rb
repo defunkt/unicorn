@@ -13,7 +13,7 @@ module Cluster
       valid_exists?(@config_file, "Configuration file does not exist. Run mongrel_rails cluster::configure.")
       @valid
     end
-    
+      
     def read_options
       @options = { 
         "environment" => ENV['RAILS_ENV'] || "development",
@@ -59,7 +59,7 @@ module Cluster
     def start
       read_options
       
-      argv = [ "mongrel_rails" ]
+      argv = @options['mongrel_rails']
       argv << "start"
       argv << "-d"
       argv << "-e #{@options['environment']}" if @options['environment']
@@ -80,30 +80,30 @@ module Cluster
       @ports.each do |port|              
         if @clean && pid_file_exists?(port) && !check_process(port)
           pid_file = port_pid_file(port)        
-          Mongrel.log("missing process: removing #{pid_file}")
+          log "missing process: removing #{pid_file}"
           chdir_cwd do
             File.unlink(pid_file) 
           end
         end
         
         if pid_file_exists?(port) && check_process(port)
-          Mongrel.log("already started port #{port}")
+          log "already started port #{port}"         
           next
         end
 
         exec_cmd = cmd + " -p #{port} -P #{port_pid_file(port)}"
         exec_cmd += " -l #{port_log_file(port)}"
-        Mongrel.log("starting port #{port}")
+        log "starting port #{port}"          
         log_verbose exec_cmd
         output = `#{exec_cmd}`
-        Mongrel.log(:error, output) unless $?.success?
+        log_error output unless $?.success?
       end
     end
       
     def stop
       read_options
     
-      argv = [ "mongrel_rails" ]
+      argv = @options['mongrel_rails']
       argv << "stop"
       argv << "-c #{@options["cwd"]}" if @options["cwd"]
       argv << "-f" if @force
@@ -112,20 +112,20 @@ module Cluster
       @ports.each do |port|
         pid = check_process(port)        
         if @clean && pid && !pid_file_exists?(port)       
-          Mongrel.log("missing pid_file: killing mongrel_rails port #{port}, pid #{pid}")
+          log "missing pid_file: killing mongrel_rails port #{port}, pid #{pid}"
           Process.kill("KILL", pid.to_i)  
         end
         
         if !check_process(port)
-          Mongrel.log("already stopped port #{port}")
+          log "already stopped port #{port}"                   
           next       
         end
 
         exec_cmd = cmd + " -P #{port_pid_file(port)}"
-        Mongrel.log("stopping port #{port}")
+        log "stopping port #{port}"          
         log_verbose exec_cmd
         output = `#{exec_cmd}`
-        Mongrel.log(:error, output) unless $?.success?
+        log_error output unless $?.success?
         
       end
     end
@@ -138,18 +138,18 @@ module Cluster
       @ports.each do |port|
         pid = check_process(port)        
         unless pid_file_exists?(port)        
-          Mongrel.log(:error, "missing pid_file: #{port_pid_file(port)}")
+          log "missing pid_file: #{port_pid_file(port)}"  
           status = STATUS_ERROR
         else
-          Mongrel.log("found pid_file: #{port_pid_file(port)}")
+          log "found pid_file: #{port_pid_file(port)}"
         end    
         if pid
-          Mongrel.log("found mongrel_rails: port #{port}, pid #{pid}")
+          log "found mongrel_rails: port #{port}, pid #{pid}"
         else
-          Mongrel.log(:error, "missing mongrel_rails: port #{port}")
+          log "missing mongrel_rails: port #{port}"
           status = STATUS_ERROR
         end
-        Mongrel.log("")
+        puts ""
       end
 
       status
@@ -211,12 +211,18 @@ module Cluster
       nil
     end
     
-    def log_verbose(message)
-      Mongrel.log(message) if @verbose
+    def log_error(message)
+      log(message)
     end
 
-  end
+    def log_verbose(message)
+      log(message) if @verbose
+    end
 
+    def log(message)
+      puts message
+    end   
+  end
   class Start < GemPlugin::Plugin "/commands"
     include ExecBase
     
@@ -294,6 +300,7 @@ module Cluster
         ['-C', '--config PATH', "Path to cluster configuration file", :@config_file, "config/mongrel_cluster.yml"],
         ['', '--user USER', "User to run as", :@user, nil],
         ['', '--group GROUP', "Group to run as", :@group, nil],
+        ['', '--mongrel_rails PATH', "Full path to mongrel_rails script", :@mongrel_rails, "mongrel_rails"],
         ['', '--prefix PREFIX', "Rails prefix to use", :@prefix, nil]
       ]
     end
@@ -328,8 +335,9 @@ module Cluster
       @options["user"] = @user if @user
       @options["group"] = @group if @group
       @options["prefix"] = @prefix if @prefix
+      @options["mongrel_rails"] = @mongrel_rails if @mongrel_rails 
       
-      Mongrel.log("Writing configuration file to #{@config_file}.")
+      log "Writing configuration file to #{@config_file}."
       File.open(@config_file,"w") {|f| f.write(@options.to_yaml)}
     end  
   end

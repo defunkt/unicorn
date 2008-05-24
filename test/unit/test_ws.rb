@@ -4,7 +4,7 @@
 # Additional work donated by contributors.  See http://mongrel.rubyforge.org/attributions.html 
 # for more information.
 
-require 'test/testhelp'
+require 'test/test_helper'
 
 include Mongrel
 
@@ -21,8 +21,8 @@ end
 class WebServerTest < Test::Unit::TestCase
 
   def setup
-    @port = process_based_port
     @valid_request = "GET / HTTP/1.1\r\nHost: www.zedshaw.com\r\nContent-Type: text/plain\r\n\r\n"
+    @port = process_based_port
     
     redirect_test_io do
       # We set num_processors=1 so that we can test the reaping code
@@ -95,7 +95,7 @@ class WebServerTest < Test::Unit::TestCase
 
   def test_num_processors_overload
     redirect_test_io do
-      assert_raises Errno::ECONNRESET, Errno::EPIPE, Errno::ECONNABORTED, Errno::EINVAL do
+      assert_raises Errno::ECONNRESET, Errno::EPIPE, Errno::ECONNABORTED, Errno::EINVAL, IOError do
         tests = [
           Thread.new { do_test(@valid_request, 1) },
           Thread.new { do_test(@valid_request, 10) },

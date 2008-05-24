@@ -4,7 +4,7 @@
 # Additional work donated by contributors.  See http://mongrel.rubyforge.org/attributions.html 
 # for more information.
 
-require 'test/testhelp'
+require 'test/test_helper'
 
 $test_plugin_fired = 0
 
@@ -29,12 +29,12 @@ end
 class ConfiguratorTest < Test::Unit::TestCase
 
   def test_base_handler_config
-    port = process_based_port
+    @port = process_based_port
     @config = nil
 
     redirect_test_io do
       @config = Mongrel::Configurator.new :host => "localhost" do
-        listener :port => port do
+        listener :port => process_based_port do
           # 2 in front should run, but the sentinel shouldn't since dirhandler processes the request
           uri "/", :handler => plugin("/handlers/testplugin")
           uri "/", :handler => plugin("/handlers/testplugin")
@@ -49,14 +49,14 @@ class ConfiguratorTest < Test::Unit::TestCase
           debug "/"
           setup_signals
 
-          run_config(File.dirname(__FILE__) + "/../test/mongrel.conf")
-          load_mime_map(File.dirname(__FILE__) + "/../test/mime.yaml")
+          run_config(HERE + "/mongrel.conf")
+          load_mime_map(HERE + "/mime.yaml")
 
           run
         end
       end
     end
-
+    
     # pp @config.listeners.values.first.classifier.routes
 
     @config.listeners.each do |host,listener| 
@@ -65,12 +65,12 @@ class ConfiguratorTest < Test::Unit::TestCase
       assert listener.classifier.uris.include?("/test"), "/test not registered"
     end
 
-    res = Net::HTTP.get(URI.parse("http://localhost:#{port}/test"))
+    res = Net::HTTP.get(URI.parse("http://localhost:#{@port}/test"))
     assert res != nil, "Didn't get a response"
     assert $test_plugin_fired == 3, "Test filter plugin didn't run 3 times."
 
     redirect_test_io do
-      res = Net::HTTP.get(URI.parse("http://localhost:#{port}/"))
+      res = Net::HTTP.get(URI.parse("http://localhost:#{@port}/"))
 
       assert res != nil, "Didn't get a response"
       assert $test_plugin_fired == 6, "Test filter plugin didn't run 6 times."
@@ -81,7 +81,7 @@ class ConfiguratorTest < Test::Unit::TestCase
     end
 
     assert_raise Errno::EBADF, Errno::ECONNREFUSED do
-      res = Net::HTTP.get(URI.parse("http://localhost:#{port}/"))
+      res = Net::HTTP.get(URI.parse("http://localhost:#{@port}/"))
     end
   end
 
