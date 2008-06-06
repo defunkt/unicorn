@@ -1,4 +1,4 @@
-  v1.0.2. Merged stale wait entries fixes from ruby_1_8
+  v1.0.2. Merged stale wait entries fixes from ruby_1_8, fixed SizedQueue#enq
 
   v1.0.1. Signed gem.
   
