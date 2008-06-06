@@ -192,10 +192,18 @@ array_from_list(List const *list)
     return ary;
 }
 
+static VALUE return_value(VALUE value) {
+    return value;
+}
+
 static VALUE
 wake_thread(VALUE thread)
 {
+#if RUBY_VERSION_MINOR == 8 && RUBY_VERSION_TEENY >= 6 && RUBY_PATCHLEVEL > 31
     return rb_thread_wakeup_alive(thread);
+#else
+    return rb_rescue2(rb_thread_wakeup, thread, return_value, Qnil, private_eThreadError, (VALUE)0);
+#endif
 }
 
 static VALUE
