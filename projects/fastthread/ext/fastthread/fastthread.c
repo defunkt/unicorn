@@ -1168,6 +1168,7 @@ setup_classes(VALUE unused)
     rb_define_method(rb_cSizedQueue, "push", rb_queue_push, 1);
     rb_define_method(rb_cSizedQueue, "max", rb_sized_queue_max, 0);
     rb_define_method(rb_cSizedQueue, "max=", rb_sized_queue_max_set, 1);
+    rb_alias(rb_cSizedQueue, rb_intern("enq"), rb_intern("push"));
     rb_alias(rb_cSizedQueue, rb_intern("<<"), rb_intern("push"));
     rb_alias(rb_cSizedQueue, rb_intern("deq"), rb_intern("pop"));
     rb_alias(rb_cSizedQueue, rb_intern("shift"), rb_intern("pop"));
