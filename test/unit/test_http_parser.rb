@@ -55,6 +55,24 @@ class HttpParserTest < Test::Unit::TestCase
     # assert parser.finished?
     # assert !parser.error?
   end
+
+  def test_parse_ie6_urls
+    %w(/some/random/path"
+       /some/random/path>
+       /some/random/path<
+       /we/love/you/ie6?q=<"">
+       /url?<="&>="
+       /mal"formed"?
+    ).each do |path|
+      parser = HttpParser.new
+      req = {}
+      sorta_safe = %(GET #{path} HTTP/1.1\r\n\r\n)
+      nread = parser.execute(req, sorta_safe, 0)
+      assert_equal sorta_safe.length, nread
+      assert parser.finished?
+      assert !parser.error?
+    end
+  end
   
   def test_parse_error
     parser = HttpParser.new
