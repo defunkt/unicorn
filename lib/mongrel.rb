@@ -91,6 +91,9 @@ module Mongrel
       
       tries = 0
       @socket = TCPServer.new(host, port) 
+      if defined?(Fcntl::FD_CLOEXEC)
+        @socket.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+      end
       
       @classifier = URIClassifier.new
       @host = host
