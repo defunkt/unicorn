@@ -7,6 +7,7 @@ require 'time'
 require 'etc'
 require 'uri'
 require 'stringio'
+require 'fcntl'
 
 # Compiled Mongrel extension
 require 'http11'
