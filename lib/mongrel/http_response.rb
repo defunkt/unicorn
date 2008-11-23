@@ -39,14 +39,15 @@ module Mongrel
     attr_reader :header_sent
     attr_reader :status_sent
 
-    def initialize(socket, app_responce)
+    def initialize(socket, app_response)
       @socket = socket
-      @app_responce = app_responce
-      @body = app_responce[2] 
-      @status = app_responce[0]
+      @app_response = app_response
+      @body = StringIO.new(app_response[2].join('')) 
+      @status = app_response[0]
       @reason = nil
-      @header = HeaderOut.new(app_responce[1])
+      @header = HeaderOut.new
       @header[Const::DATE] = Time.now.httpdate
+      @header.merge!(app_response[1])
       @body_sent = false
       @header_sent = false
       @status_sent = false
@@ -62,9 +63,7 @@ module Mongrel
     # all done.
     # TODO: docs
     def start #(status=200, finalize=false, reason=nil)
-      @reason = nil # TODO take this out 
-      out.write(@body)
-      finished if finalize
+      finished 
     end
 
     # Primarily used in exception handling to reset the response output in order to write
