@@ -1,19 +1,18 @@
 
 require 'rubygems'
-gem 'echoe', '>=2.7.11'
 require 'echoe'
 
-e = Echoe.new("mongrel") do |p|
-  p.summary = "A small fast HTTP library and server that runs Rails, Camping, Nitro and Iowa apps."
-  p.author = "Zed A. Shaw"
-  p.email = "mongrel-development@rubyforge.org"
+Echoe.new("mongrel") do |p|
+  p.summary = "A small fast HTTP library and server for Rack applications."
+  p.author = "Evan Weaver"
+  p.email = "evan@cloudbur.st"
   p.clean_pattern = ['ext/http11/*.{bundle,so,o,obj,pdb,lib,def,exp}', 'lib/*.{bundle,so,o,obj,pdb,lib,def,exp}', 'ext/http11/Makefile', 'pkg', 'lib/*.bundle', '*.gem', 'site/output', '.config', 'lib/http11.jar', 'ext/http11_java/classes', 'coverage', 'test_*.log', 'log', 'doc']
   p.url = "http://mongrel.rubyforge.org"
   p.rdoc_pattern = ['README', 'LICENSE', 'CONTRIBUTORS', 'CHANGELOG', 'COPYING', 'lib/**/*.rb', 'doc/**/*.rdoc']
   p.docs_host = 'mongrel.cloudbur.st:/home/eweaver/www/mongrel/htdocs/web'
   p.ignore_pattern = /^(pkg|site|projects|doc|log)|CVS|\.log/
-  p.ruby_version = '>=1.8.4'
-    p.extension_pattern = nil
+  p.extension_pattern = nil
+  p.dependencies = ['daemons', 'rack']
   
   p.certificate_chain = case (ENV['USER'] || ENV['USERNAME']).downcase
     when 'eweaver' 
