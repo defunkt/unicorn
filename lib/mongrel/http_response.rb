@@ -39,12 +39,13 @@ module Mongrel
     attr_reader :header_sent
     attr_reader :status_sent
 
-    def initialize(socket)
+    def initialize(socket, app_responce)
       @socket = socket
-      @body = StringIO.new
-      @status = 404
+      @app_responce = app_responce
+      @body = app_responce[2] 
+      @status = app_responce[0]
       @reason = nil
-      @header = HeaderOut.new(StringIO.new)
+      @header = HeaderOut.new(app_responce[1])
       @header[Const::DATE] = Time.now.httpdate
       @body_sent = false
       @header_sent = false
@@ -59,10 +60,10 @@ module Mongrel
     # by simple passing "finalize=true" to the start method.  By default
     # all handlers run and then mongrel finalizes the request when they're
     # all done.
-    def start(status=200, finalize=false, reason=nil)
-      @status = status.to_i
-      @reason = reason
-      yield @header, @body
+    # TODO: docs
+    def start #(status=200, finalize=false, reason=nil)
+      @reason = nil # TODO take this out 
+      out.write(@body)
       finished if finalize
     end
 
@@ -78,7 +79,7 @@ module Mongrel
         # XXX Dubious ( http://mongrel.rubyforge.org/ticket/19 )
         @header.out.close
         @header = HeaderOut.new(StringIO.new) 
-        
+
         @body.close
         @body = StringIO.new
       end

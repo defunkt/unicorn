@@ -58,6 +58,25 @@ module Mongrel
       @body.rewind if @body
     end
 
+    # returns an environment which is rackable
+    # http://rack.rubyforge.org/doc/files/SPEC.html
+    def env
+      env = params.clone
+      env.delete "HTTP_CONTENT_TYPE"
+      env.delete "HTTP_CONTENT_LENGTH"
+      env["SCRIPT_NAME"] = "" if env["SCRIPT_NAME"] == "/"
+      env.update({"rack.version" => [0,1],
+              "rack.input" => @body,
+              "rack.errors" => STDERR,
+
+              "rack.multithread" => true,
+              "rack.multiprocess" => false, # ???
+              "rack.run_once" => false,
+
+              "rack.url_scheme" => "http",
+            }) 
+    end
+
     # updates all dispatchers about our progress
     def update_request_progress(clen, total)
       return if @dispatchers.nil? || @dispatchers.empty?

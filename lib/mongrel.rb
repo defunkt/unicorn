@@ -17,6 +17,7 @@ require 'mongrel/gems'
 Mongrel::Gems.require 'cgi_multipart_eof_fix'
 Mongrel::Gems.require 'fastthread'
 require 'thread'
+require 'rack'
 
 # Ruby Mongrel
 require 'mongrel/cgi'
@@ -88,21 +89,21 @@ module Mongrel
     # The throttle parameter is a sleep timeout (in hundredths of a second) that is placed between 
     # socket.accept calls in order to give the server a cheap throttle time.  It defaults to 0 and
     # actually if it is 0 then the sleep is not done at all.
-    def initialize(host, port, num_processors=950, throttle=0, timeout=60)
-      
+    def initialize(host, port, app, opts = {})
       tries = 0
       @socket = TCPServer.new(host, port) 
       if defined?(Fcntl::FD_CLOEXEC)
         @socket.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       end
-      
       @classifier = URIClassifier.new
       @host = host
       @port = port
       @workers = ThreadGroup.new
-      @throttle = throttle / 100.0
-      @num_processors = num_processors
-      @timeout = timeout
+      # Set default opts
+      @app = app
+      @num_processors = opts.delete(:num_processors)
+      @throttle       = (opts.delete(:throttle) || 0) / 100
+      @timeout        = opts.delete(:timeout) || 60
     end
 
     # Does the majority of the IO processing.  It has been written in Ruby using
@@ -134,6 +135,7 @@ module Mongrel
 
             raise "No REQUEST PATH" if not params[Const::REQUEST_PATH]
 
+
             script_name, path_info, handlers = @classifier.resolve(params[Const::REQUEST_PATH])
 
             if handlers
@@ -154,20 +156,23 @@ module Mongrel
 
               # in the case of large file uploads the user could close the socket, so skip those requests
               break if request.body == nil  # nil signals from HttpRequest::initialize that the request was aborted
+              raise "CALLING APPPPPPP"
+              app_responce = @app.call(request.env)
+              response = HttpResponse.new(client, app_response).start
 
               # request is good so far, continue processing the response
-              response = HttpResponse.new(client)
+              # response = HttpResponse.new(client)
 
-              # Process each handler in registered order until we run out or one finalizes the response.
-              handlers.each do |handler|
-                handler.process(request, response)
-                break if response.done or client.closed?
-              end
+              # # Process each handler in registered order until we run out or one finalizes the response.
+              # handlers.each do |handler|
+              #   handler.process(request, response)
+              #   break if response.done or client.closed?
+              # end
 
-              # And finally, if nobody closed the response off, we finalize it.
-              unless response.done or client.closed? 
-                response.finished
-              end
+              # # And finally, if nobody closed the response off, we finalize it.
+              # unless response.done or client.closed? 
+              #   response.finished
+              # end
             else
               # Didn't find it, return a stock 404 response.
               client.write(Const::ERROR_404_RESPONSE)
@@ -260,7 +265,8 @@ module Mongrel
     
     # Runs the thing.  It returns the thread used so you can "join" it.  You can also
     # access the HttpServer::acceptor attribute to get the thread later.
-    def run
+    def start!
+      p @num_processors
       BasicSocket.do_not_reverse_lookup=true
 
       configure_socket_options
