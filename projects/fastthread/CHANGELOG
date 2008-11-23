@@ -1,7 +1,0 @@
-
-  v1.0.3. Make native build a noop on Rubies that have no real need for fastthread
-
-  v1.0.2. Merged stale wait entries fixes from ruby_1_8, fixed SizedQueue#enq
-
-  v1.0.1. Signed gem.
-  

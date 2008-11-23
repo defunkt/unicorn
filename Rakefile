@@ -1,20 +1,18 @@
 
 require 'rubygems'
-gem 'echoe', '>=2.7.11'
 require 'echoe'
 
-e = Echoe.new("mongrel") do |p|
-  p.summary = "A small fast HTTP library and server that runs Rails, Camping, Nitro and Iowa apps."
-  p.author = "Zed A. Shaw"
-  p.email = "mongrel-development@rubyforge.org"
+Echoe.new("mongrel") do |p|
+  p.summary = "A small fast HTTP library and server for Rack applications."
+  p.author = "Evan Weaver"
+  p.email = "evan@cloudbur.st"
   p.clean_pattern = ['ext/http11/*.{bundle,so,o,obj,pdb,lib,def,exp}', 'lib/*.{bundle,so,o,obj,pdb,lib,def,exp}', 'ext/http11/Makefile', 'pkg', 'lib/*.bundle', '*.gem', 'site/output', '.config', 'lib/http11.jar', 'ext/http11_java/classes', 'coverage', 'test_*.log', 'log', 'doc']
   p.url = "http://mongrel.rubyforge.org"
   p.rdoc_pattern = ['README', 'LICENSE', 'CONTRIBUTORS', 'CHANGELOG', 'COPYING', 'lib/**/*.rb', 'doc/**/*.rdoc']
   p.docs_host = 'mongrel.cloudbur.st:/home/eweaver/www/mongrel/htdocs/web'
   p.ignore_pattern = /^(pkg|site|projects|doc|log)|CVS|\.log/
-  p.ruby_version = '>=1.8.4'
-  p.dependencies = ['gem_plugin >=0.2.3']  
   p.extension_pattern = nil
+  p.dependencies = ['daemons', 'rack']
   
   p.certificate_chain = case (ENV['USER'] || ENV['USERNAME']).downcase
     when 'eweaver' 
@@ -113,88 +111,4 @@ elsif Platform.java?
   end
   task :compile => [filename]
 
-end
-
-#### Project-wide install and uninstall tasks
-
-def sub_project(project, *targets)
-  targets.each do |target|
-    Dir.chdir "projects/#{project}" do
-      sh("#{Platform.rake} #{target.to_s}") # --trace 
-    end
-  end
-end
-
-desc "Compile all the projects"
-task :compile_all => [:compile] do
-  sub_project("fastthread", :compile)
-  sub_project("mongrel_service", :compile)
-end
-
-desc "Package Mongrel and all subprojects"
-task :package_all => [:package] do
-  sub_project("gem_plugin", :package)
-  sub_project("cgi_multipart_eof_fix", :package)
-  sub_project("fastthread", :package)
-  sub_project("mongrel_status", :package)
-  sub_project("mongrel_upload_progress", :package)
-  sub_project("mongrel_console", :package)
-  sub_project("mongrel_cluster", :package)
-  sub_project("mongrel_experimental", :package)
-
-  sh("rake java package") unless Platform.windows?
-  
-  sub_project("mongrel_service", :package) if Platform.windows?
-end
-
-task :install_requirements do
-  # These run before Mongrel is installed
-  sub_project("gem_plugin", :install)
-  sub_project("cgi_multipart_eof_fix", :install)
-  sub_project("fastthread", :install)
-end
-
-desc "for Mongrel and all subprojects"
-task :install => [:install_requirements] do
-  # These run after Mongrel is installed
-  sub_project("mongrel_status", :install)
-  sub_project("mongrel_upload_progress", :install)
-  sub_project("mongrel_console", :install)
-  sub_project("mongrel_cluster", :install)
-  # sub_project("mongrel_experimental", :install)
-  sub_project("mongrel_service", :install) if Platform.windows?
-end
-
-desc "for Mongrel and all its subprojects"
-task :uninstall => [:clean] do
-  sub_project("mongrel_status", :uninstall)
-  sub_project("cgi_multipart_eof_fix", :uninstall)
-  sub_project("mongrel_upload_progress", :uninstall)
-  sub_project("mongrel_console", :uninstall)
-  sub_project("gem_plugin", :uninstall)
-  sub_project("fastthread", :uninstall)
-  # sub_project("mongrel_experimental", :uninstall)
-  sub_project("mongrel_service", :uninstall) if Platform.windows?
-end
-
-desc "for Mongrel and all its subprojects"
-task :clean_all => [:clean] do
-  sub_project("gem_plugin", :clean)
-  sub_project("cgi_multipart_eof_fix", :clean)
-  sub_project("fastthread", :clean)
-  sub_project("mongrel_status", :clean)
-  sub_project("mongrel_upload_progress", :clean)
-  sub_project("mongrel_console", :clean)
-  sub_project("mongrel_cluster", :clean)
-  sub_project("mongrel_experimental", :clean)
-  sub_project("mongrel_service", :clean) if Platform.windows?
-end
-
-#### Site upload tasks
-
-namespace :site do
-  desc "Upload the coverage report"
-  task :coverage => [:rcov] do
-    sh "rsync -azv --no-perms --no-times test/coverage/* mongrel.cloudbur.st:/home/eweaver/www/mongrel/htdocs/web/coverage" rescue nil
-  end
 end
