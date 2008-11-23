@@ -101,7 +101,7 @@ module Mongrel
       @workers = ThreadGroup.new
       # Set default opts
       @app = app
-      @num_processors = opts.delete(:num_processors)
+      @num_processors = opts.delete(:num_processors) || 950
       @throttle       = (opts.delete(:throttle) || 0) / 100
       @timeout        = opts.delete(:timeout) || 60
     end
@@ -244,7 +244,6 @@ module Mongrel
     # Runs the thing.  It returns the thread used so you can "join" it.  You can also
     # access the HttpServer::acceptor attribute to get the thread later.
     def start!
-      p @num_processors
       BasicSocket.do_not_reverse_lookup=true
 
       configure_socket_options
@@ -264,7 +263,6 @@ module Mongrel
               end
   
               worker_list = @workers.list
-  
               if worker_list.length >= @num_processors
                 STDERR.puts "Server overloaded with #{worker_list.length} processors (#@num_processors max). Dropping connection."
                 client.close rescue nil
@@ -296,7 +294,7 @@ module Mongrel
         end
       end
 
-      return @acceptor
+      return @acceptor.join
     end
 
     # Simply registers a handler with the internal URIClassifier.  When the URI is
