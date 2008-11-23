@@ -22,17 +22,11 @@ module Mongrel
     # You don't really call this.  It's made for you.
     # Main thing it does is hook up the params, and store any remaining
     # body data into the HttpRequest.body attribute.
-    def initialize(params, socket, dispatchers)
+    def initialize(params, socket)
       @params = params
       @socket = socket
-      @dispatchers = dispatchers
       content_length = @params[Const::CONTENT_LENGTH].to_i
       remain = content_length - @params.http_body.length
-      
-      # tell all dispatchers the request has begun
-      @dispatchers.each do |dispatcher|
-        dispatcher.request_begins(@params) 
-      end unless @dispatchers.nil? || @dispatchers.empty?
 
       # Some clients (like FF1.0) report 0 for body and then send a body.  This will probably truncate them but at least the request goes through usually.
       if remain <= 0

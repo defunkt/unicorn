@@ -138,47 +138,25 @@ module Mongrel
 
             script_name, path_info, handlers = @classifier.resolve(params[Const::REQUEST_PATH])
 
-            if handlers
-              params[Const::PATH_INFO] = path_info
-              params[Const::SCRIPT_NAME] = script_name
+            params[Const::PATH_INFO] = path_info
+            params[Const::SCRIPT_NAME] = script_name
 
-              # From http://www.ietf.org/rfc/rfc3875 :
-              # "Script authors should be aware that the REMOTE_ADDR and REMOTE_HOST
-              #  meta-variables (see sections 4.1.8 and 4.1.9) may not identify the
-              #  ultimate source of the request.  They identify the client for the
-              #  immediate request to the server; that client may be a proxy, gateway,
-              #  or other intermediary acting on behalf of the actual source client."
-              params[Const::REMOTE_ADDR] = client.peeraddr.last
+            # From http://www.ietf.org/rfc/rfc3875 :
+            # "Script authors should be aware that the REMOTE_ADDR and REMOTE_HOST
+            #  meta-variables (see sections 4.1.8 and 4.1.9) may not identify the
+            #  ultimate source of the request.  They identify the client for the
+            #  immediate request to the server; that client may be a proxy, gateway,
+            #  or other intermediary acting on behalf of the actual source client."
+            params[Const::REMOTE_ADDR] = client.peeraddr.last
 
-              # select handlers that want more detailed request notification
-              notifiers = handlers.select { |h| h.request_notify }
-              request = HttpRequest.new(params, client, notifiers)
+            # select handlers that want more detailed request notification
+            request = HttpRequest.new(params, client)
 
-              # in the case of large file uploads the user could close the socket, so skip those requests
-              break if request.body == nil  # nil signals from HttpRequest::initialize that the request was aborted
-              raise "CALLING APPPPPPP"
-              app_responce = @app.call(request.env)
-              response = HttpResponse.new(client, app_response).start
-
-              # request is good so far, continue processing the response
-              # response = HttpResponse.new(client)
-
-              # # Process each handler in registered order until we run out or one finalizes the response.
-              # handlers.each do |handler|
-              #   handler.process(request, response)
-              #   break if response.done or client.closed?
-              # end
-
-              # # And finally, if nobody closed the response off, we finalize it.
-              # unless response.done or client.closed? 
-              #   response.finished
-              # end
-            else
-              # Didn't find it, return a stock 404 response.
-              client.write(Const::ERROR_404_RESPONSE)
-            end
-
-            break #done
+            # in the case of large file uploads the user could close the socket, so skip those requests
+            break if request.body == nil  # nil signals from HttpRequest::initialize that the request was aborted
+            app_response = @app.call(request.env)
+            response = HttpResponse.new(client, app_response).start
+          break #done
           else
             # Parser is not done, queue up more data to read and continue parsing
             chunk = client.readpartial(Const::CHUNK_SIZE)
