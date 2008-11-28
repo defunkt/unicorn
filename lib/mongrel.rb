@@ -294,7 +294,7 @@ module Mongrel
         end
       end
 
-      return @acceptor.join
+      return @acceptor
     end
 
     # Simply registers a handler with the internal URIClassifier.  When the URI is
