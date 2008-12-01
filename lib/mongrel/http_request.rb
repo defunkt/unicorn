@@ -33,7 +33,6 @@ module Mongrel
         # we've got everything, pack it up
         @body = StringIO.new
         @body.write @params.http_body
-        update_request_progress(0, content_length)
       elsif remain > 0
         # must read more data to complete body
         if remain > Const::MAX_BODY
@@ -71,15 +70,6 @@ module Mongrel
             }) 
     end
 
-    # updates all dispatchers about our progress
-    def update_request_progress(clen, total)
-      return if @dispatchers.nil? || @dispatchers.empty?
-      @dispatchers.each do |dispatcher|
-        dispatcher.request_progress(@params, clen, total) 
-      end 
-    end
-    private :update_request_progress
-
     # Does the heavy lifting of properly reading the larger body requests in 
     # small chunks.  It expects @body to be an IO object, @socket to be valid,
     # and will set @body = nil if the request fails.  It also expects any initial
@@ -91,15 +81,11 @@ module Mongrel
 
         remain -= @body.write(@params.http_body)
 
-        update_request_progress(remain, total)
-
         # then stream out nothing but perfectly sized chunks
         until remain <= 0 or @socket.closed?
           # ASSUME: we are writing to a disk and these writes always write the requested amount
           @params.http_body = read_socket(Const::CHUNK_SIZE)
           remain -= @body.write(@params.http_body)
-
-          update_request_progress(remain, total)
         end
       rescue Object => e
         STDERR.puts "#{Time.now}: Error reading HTTP body: #{e.inspect}"
