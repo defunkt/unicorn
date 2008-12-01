@@ -1,21 +1,10 @@
 
 module Mongrel
   #
-  # When a handler is found for a registered URI then this class is constructed
-  # and passed to your HttpHandler::process method.  You should assume that 
-  # *one* handler processes all requests.  Included in the HttpRequest is a
-  # HttpRequest.params Hash that matches common CGI params, and a HttpRequest.body
-  # which is a string containing the request body (raw for now).
-  #
   # The HttpRequest.initialize method will convert any request that is larger than
   # Const::MAX_BODY into a Tempfile and use that as the body.  Otherwise it uses 
   # a StringIO object.  To be safe, you should assume it works like a file.
-  #
-  # The HttpHandler.request_notify system is implemented by having HttpRequest call
-  # HttpHandler.request_begins, HttpHandler.request_progress, HttpHandler.process during
-  # the IO processing.  This adds a small amount of overhead but lets you implement
-  # finer controlled handlers and filters.
-  #
+  # 
   class HttpRequest
     attr_reader :body, :params
 
@@ -53,6 +42,7 @@ module Mongrel
 
     # returns an environment which is rackable
     # http://rack.rubyforge.org/doc/files/SPEC.html
+    # copied directly from racks mongrel handler
     def env
       env = params.clone
       env.delete "HTTP_CONTENT_TYPE"
