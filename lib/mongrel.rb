@@ -24,7 +24,6 @@ require 'mongrel/cgi'
 require 'mongrel/handlers'
 require 'mongrel/command'
 require 'mongrel/tcphack'
-require 'mongrel/uri_classifier'
 require 'mongrel/const'
 require 'mongrel/http_request'
 require 'mongrel/header_out'
@@ -94,7 +93,6 @@ module Mongrel
       if defined?(Fcntl::FD_CLOEXEC)
         @socket.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       end
-      @classifier = URIClassifier.new
       @host = host
       @port = port
       @workers = ThreadGroup.new
@@ -134,11 +132,8 @@ module Mongrel
 
             raise "No REQUEST PATH" if not params[Const::REQUEST_PATH]
 
-
-            script_name, path_info, handlers = @classifier.resolve(params[Const::REQUEST_PATH])
-
-            params[Const::PATH_INFO] = path_info
-            params[Const::SCRIPT_NAME] = script_name
+            params[Const::PATH_INFO] = params[Const::REQUEST_PATH]
+            params[Const::SCRIPT_NAME] = Const::SLASH
 
             # From http://www.ietf.org/rfc/rfc3875 :
             # "Script authors should be aware that the REMOTE_ADDR and REMOTE_HOST
