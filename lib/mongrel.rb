@@ -8,6 +8,7 @@ require 'etc'
 require 'uri'
 require 'stringio'
 require 'fcntl'
+require 'logger'
 
 # Compiled Mongrel extension
 require 'http11'
@@ -25,11 +26,21 @@ require 'mongrel/const'
 require 'mongrel/http_request'
 require 'mongrel/header_out'
 require 'mongrel/http_response'
+require 'mongrel/semaphore'
 
 # Mongrel module containing all of the classes (include C extensions) for running
 # a Mongrel web server.  It contains a minimalist HTTP server with just enough
 # functionality to service web application requests fast as possible.
 module Mongrel
+  class << self
+    # A logger instance that conforms to the API of stdlib's Logger.
+    attr_accessor :logger
+    
+    # By default, will return an instance of stdlib's Logger logging to STDERR
+    def logger
+      @logger ||= Logger.new STDERR
+    end
+  end
 
   # Used to stop the HttpServer via Thread.raise.
   class StopServer < Exception; end
@@ -69,13 +80,20 @@ module Mongrel
     attr_reader :port
     attr_reader :throttle
     attr_reader :timeout
-    attr_reader :num_processors
+    attr_reader :max_queued_threads
+    
+    DEFAULTS = {
+      :max_queued_threads => 20, 
+      :max_concurrent_threads => 20,
+      :throttle => 0, 
+      :timeout => 60
+    }
 
     # Creates a working server on host:port (strange things happen if port isn't a Number).
     # Use HttpServer::run to start the server and HttpServer.acceptor.join to 
     # join the thread that's processing incoming requests on the socket.
     #
-    # The num_processors optional argument is the maximum number of concurrent
+    # The max_queued_threads optional argument is the maximum number of concurrent
     # processors to accept, anything over this is closed immediately to maintain
     # server processing performance.  This may seem mean but it is the most efficient
     # way to deal with overload.  Other schemes involve still parsing the client's request
@@ -84,20 +102,21 @@ module Mongrel
     # The throttle parameter is a sleep timeout (in hundredths of a second) that is placed between 
     # socket.accept calls in order to give the server a cheap throttle time.  It defaults to 0 and
     # actually if it is 0 then the sleep is not done at all.
-    def initialize(host, port, app, opts = {})
+    def initialize(host, port, app, options = {})
+      options = DEFAULTS.merge(options)
+
       tries = 0
       @socket = TCPServer.new(host, port) 
       if defined?(Fcntl::FD_CLOEXEC)
         @socket.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       end
-      @host = host
-      @port = port
+      @host, @port, @app = host, port, app
       @workers = ThreadGroup.new
-      # Set default opts
-      @app = app
-      @num_processors = opts.delete(:num_processors) || 950
-      @throttle       = (opts.delete(:throttle) || 0) / 100
-      @timeout        = opts.delete(:timeout) || 60
+
+      @throttle = options[:throttle] / 100.0
+      @timeout = options[:timeout]
+      @max_queued_threads = options[:max_queued_threads]
+      @max_concurrent_threads = options[:max_concurrent_threads]
     end
 
     # Does the majority of the IO processing.  It has been written in Ruby using
@@ -162,21 +181,21 @@ module Mongrel
       rescue EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF
         client.close rescue nil
       rescue HttpParserError => e
-        STDERR.puts "#{Time.now}: HTTP parse error, malformed request (#{params[Const::HTTP_X_FORWARDED_FOR] || client.peeraddr.last}): #{e.inspect}"
-        STDERR.puts "#{Time.now}: REQUEST DATA: #{data.inspect}\n---\nPARAMS: #{params.inspect}\n---\n"
+        Mongrel.logger.error "#{Time.now}: HTTP parse error, malformed request (#{params[Const::HTTP_X_FORWARDED_FOR] || client.peeraddr.last}): #{e.inspect}"
+        Mongrel.logger.error "#{Time.now}: REQUEST DATA: #{data.inspect}\n---\nPARAMS: #{params.inspect}\n---\n"
       rescue Errno::EMFILE
         reap_dead_workers('too many files')
       rescue Object => e
-        STDERR.puts "#{Time.now}: Read error: #{e.inspect}"
-        STDERR.puts e.backtrace.join("\n")
+        Mongrel.logger.error "#{Time.now}: Read error: #{e.inspect}"
+        Mongrel.logger.error e.backtrace.join("\n")
       ensure
         begin
           client.close
         rescue IOError
           # Already closed
         rescue Object => e
-          STDERR.puts "#{Time.now}: Client error: #{e.inspect}"
-          STDERR.puts e.backtrace.join("\n")
+          Mongrel.logger.error "#{Time.now}: Client error: #{e.inspect}"
+          Mongrel.logger.error e.backtrace.join("\n")
         end
         request.body.close! if request and request.body.class == Tempfile
       end
@@ -188,14 +207,14 @@ module Mongrel
     # after the reap is done.  It only runs if there are workers to reap.
     def reap_dead_workers(reason='unknown')
       if @workers.list.length > 0
-        STDERR.puts "#{Time.now}: Reaping #{@workers.list.length} threads for slow workers because of '#{reason}'"
+        Mongrel.logger.info "#{Time.now}: Reaping #{@workers.list.length} threads for slow workers because of '#{reason}'"
         error_msg = "Mongrel timed out this thread: #{reason}"
         mark = Time.now
         @workers.list.each do |worker|
           worker[:started_on] = Time.now if not worker[:started_on]
 
           if mark - worker[:started_on] > @timeout + @throttle
-            STDERR.puts "Thread #{worker.inspect} is too old, killing."
+            Mongrel.logger.info "Thread #{worker.inspect} is too old, killing."
             worker.raise(TimeoutError.new(error_msg))
           end
         end
@@ -210,7 +229,7 @@ module Mongrel
     # that much longer.
     def graceful_shutdown
       while reap_dead_workers("shutdown") > 0
-        STDERR.puts "Waiting for #{@workers.list.length} requests to finish, could take #{@timeout + @throttle} seconds."
+        Mongrel.logger.info "Waiting for #{@workers.list.length} requests to finish, could take #{@timeout + @throttle} seconds."
         sleep @timeout / 10
       end
     end
@@ -235,6 +254,7 @@ module Mongrel
     # Runs the thing.  It returns the thread used so you can "join" it.  You can also
     # access the HttpServer::acceptor attribute to get the thread later.
     def start!
+      semaphore = Semaphore.new(@max_concurrent_threads)
       BasicSocket.do_not_reverse_lookup=true
 
       configure_socket_options
@@ -254,12 +274,12 @@ module Mongrel
               end
   
               worker_list = @workers.list
-              if worker_list.length >= @num_processors
-                STDERR.puts "Server overloaded with #{worker_list.length} processors (#@num_processors max). Dropping connection."
+              if worker_list.length >= @max_queued_threads
+                Mongrel.logger.error "Server overloaded with #{worker_list.length} processors (#@max_queued_threads max). Dropping connection."
                 client.close rescue nil
                 reap_dead_workers("max processors")
               else
-                thread = Thread.new(client) {|c| process_client(c) }
+                thread = Thread.new(client) {|c| semaphore.synchronize { process_client(c) } }
                 thread[:started_on] = Time.now
                 @workers.add(thread)
   
@@ -274,63 +294,25 @@ module Mongrel
               # client closed the socket even before accept
               client.close rescue nil
             rescue Object => e
-              STDERR.puts "#{Time.now}: Unhandled listen loop exception #{e.inspect}."
-              STDERR.puts e.backtrace.join("\n")
+              Mongrel.logger.error "#{Time.now}: Unhandled listen loop exception #{e.inspect}."
+              Mongrel.logger.error e.backtrace.join("\n")
             end
           end
           graceful_shutdown
         ensure
           @socket.close
-          # STDERR.puts "#{Time.now}: Closed socket."
+          # Mongrel.logger.info "#{Time.now}: Closed socket."
         end
       end
 
       return @acceptor
     end
 
-    # Simply registers a handler with the internal URIClassifier.  When the URI is
-    # found in the prefix of a request then your handler's HttpHandler::process method
-    # is called.  See Mongrel::URIClassifier#register for more information.
-    #
-    # If you set in_front=true then the passed in handler will be put in the front of the list
-    # for that particular URI. Otherwise it's placed at the end of the list.
-    def register(uri, handler, in_front=false)
-      begin
-        @classifier.register(uri, [handler])
-      rescue URIClassifier::RegistrationError => e
-        handlers = @classifier.resolve(uri)[2]
-        if handlers
-          # Already registered
-          method_name = in_front ? 'unshift' : 'push'
-          handlers.send(method_name, handler)
-        else
-          raise
-        end
-      end
-      handler.listener = self
-    end
-
-    # Removes any handlers registered at the given URI.  See Mongrel::URIClassifier#unregister
-    # for more information.  Remember this removes them *all* so the entire
-    # processing chain goes away.
-    def unregister(uri)
-      @classifier.unregister(uri)
-    end
-
     # Stops the acceptor thread and then causes the worker threads to finish
     # off the request queue before finally exiting.
     def stop(synchronous=false)
       @acceptor.raise(StopServer.new)
-
-      if synchronous
-        sleep(0.5) while @acceptor.alive?
-      end
+      (sleep(0.5) while @acceptor.alive?) if synchronous
     end
-
   end
 end
-
-# Load experimental library, if present. We put it here so it can override anything
-# in regular Mongrel.
-
-$LOAD_PATH.unshift 'projects/mongrel_experimental/lib/'

@@ -27,9 +27,8 @@ class WebServerTest < Test::Unit::TestCase
     @tester = TestHandler.new 
     @app = Rack::URLMap.new('/test' => @tester)
     redirect_test_io do
-      # We set num_processors=1 so that we can test the reaping code
-      @server = HttpServer.new("127.0.0.1", @port, @app, :num_processors => 1)
-      @server.start!
+      # We set max_queued_threads=1 so that we can test the reaping code
+      @server = HttpServer.new("127.0.0.1", @port, @app, :max_queued_threads => 1)
     end
   end
 
@@ -90,7 +89,7 @@ class WebServerTest < Test::Unit::TestCase
     end
   end
 
-  def test_num_processors_overload
+  def test_max_queued_threads_overload
     redirect_test_io do
       assert_raises Errno::ECONNRESET, Errno::EPIPE, Errno::ECONNABORTED, Errno::EINVAL, IOError do
         tests = [

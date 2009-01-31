@@ -78,8 +78,8 @@ module Mongrel
           remain -= @body.write(@params.http_body)
         end
       rescue Object => e
-        STDERR.puts "#{Time.now}: Error reading HTTP body: #{e.inspect}"
-        STDERR.puts e.backtrace.join("\n")
+        Mongrel.logger.error "#{Time.now}: Error reading HTTP body: #{e.inspect}"
+        Mongrel.logger.error e.backtrace.join("\n")
         # any errors means we should delete the file, including if the file is dumped
         @socket.close rescue nil
         @body.close! if @body.class == Tempfile

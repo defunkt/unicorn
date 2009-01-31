@@ -31,6 +31,7 @@ module Mongrel
         ['-l', '--log FILE', "Where to write log messages", :@log_file, "log/mongrel.log"],
         ['-P', '--pid FILE', "Where to write the PID", :@pid_file, "log/mongrel.pid"],
         ['-n', '--num-processors INT', "Number of processors active before clients denied", :@num_processors, 1024],
+        ['-N', '--num-threads INT', "Maximum number of requests to process concurrently", :@max_concurrent_threads, 1024],
         ['-o', '--timeout TIME', "Time to wait (in seconds) before killing a stalled thread", :@timeout, 60],
         ['-t', '--throttle TIME', "Time to pause (in hundredths of a second) between accepting clients", :@throttle, 0],
         ['-m', '--mime PATH', "A YAML file that lists additional MIME types", :@mime_map, nil],
@@ -181,7 +182,7 @@ module Mongrel
 
     def config_keys
       @config_keys ||=
-        %w(address host port cwd log_file pid_file environment docroot mime_map daemon debug includes config_script num_processors timeout throttle user group prefix)
+        %w(address host port cwd log_file pid_file environment docroot mime_map daemon debug includes config_script num_processors timeout throttle user group prefix max_concurrent_threads)
     end
 
     def settings
