@@ -10,11 +10,17 @@ module Mongrel
     attr_reader :out
     attr_accessor :allowed_duplicates
 
-    def initialize(out)
+    def initialize(out = StringIO.new)
       @sent = {}
       @allowed_duplicates = {"Set-Cookie" => true, "Set-Cookie2" => true,
         "Warning" => true, "WWW-Authenticate" => true}
       @out = out
+    end
+
+    def merge!(hash)
+      hash.each do |key, value|
+        self[key] = value
+      end
     end
 
     # Simply writes "#{key}: #{value}" to an output buffer.

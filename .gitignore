@@ -1,0 +1,9 @@
+ext/http11/Makefile
+ext/http11/http11.bundle
+ext/http11/http11.o
+ext/http11/http11_parser.o
+ext/http11/mkmf.log
+lib/http11.bundle
+log/
+test_stderr.log
+test_stdout.log

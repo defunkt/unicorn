@@ -17,14 +17,13 @@ require 'mongrel/gems'
 Mongrel::Gems.require 'cgi_multipart_eof_fix'
 Mongrel::Gems.require 'fastthread'
 require 'thread'
+require 'rack'
 
 # Ruby Mongrel
 require 'mongrel/cgi'
 require 'mongrel/handlers'
 require 'mongrel/command'
 require 'mongrel/tcphack'
-require 'mongrel/configurator'
-require 'mongrel/uri_classifier'
 require 'mongrel/const'
 require 'mongrel/http_request'
 require 'mongrel/header_out'
@@ -88,21 +87,20 @@ module Mongrel
     # The throttle parameter is a sleep timeout (in hundredths of a second) that is placed between 
     # socket.accept calls in order to give the server a cheap throttle time.  It defaults to 0 and
     # actually if it is 0 then the sleep is not done at all.
-    def initialize(host, port, num_processors=950, throttle=0, timeout=60)
-      
+    def initialize(host, port, app, opts = {})
       tries = 0
       @socket = TCPServer.new(host, port) 
       if defined?(Fcntl::FD_CLOEXEC)
         @socket.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       end
-      
-      @classifier = URIClassifier.new
       @host = host
       @port = port
       @workers = ThreadGroup.new
-      @throttle = throttle / 100.0
-      @num_processors = num_processors
-      @timeout = timeout
+      # Set default opts
+      @app = app
+      @num_processors = opts.delete(:num_processors) || 950
+      @throttle       = (opts.delete(:throttle) || 0) / 100
+      @timeout        = opts.delete(:timeout) || 60
     end
 
     # Does the majority of the IO processing.  It has been written in Ruby using
@@ -134,46 +132,25 @@ module Mongrel
 
             raise "No REQUEST PATH" if not params[Const::REQUEST_PATH]
 
-            script_name, path_info, handlers = @classifier.resolve(params[Const::REQUEST_PATH])
+            params[Const::PATH_INFO] = params[Const::REQUEST_PATH]
+            params[Const::SCRIPT_NAME] = Const::SLASH
 
-            if handlers
-              params[Const::PATH_INFO] = path_info
-              params[Const::SCRIPT_NAME] = script_name
+            # From http://www.ietf.org/rfc/rfc3875 :
+            # "Script authors should be aware that the REMOTE_ADDR and REMOTE_HOST
+            #  meta-variables (see sections 4.1.8 and 4.1.9) may not identify the
+            #  ultimate source of the request.  They identify the client for the
+            #  immediate request to the server; that client may be a proxy, gateway,
+            #  or other intermediary acting on behalf of the actual source client."
+            params[Const::REMOTE_ADDR] = client.peeraddr.last
 
-              # From http://www.ietf.org/rfc/rfc3875 :
-              # "Script authors should be aware that the REMOTE_ADDR and REMOTE_HOST
-              #  meta-variables (see sections 4.1.8 and 4.1.9) may not identify the
-              #  ultimate source of the request.  They identify the client for the
-              #  immediate request to the server; that client may be a proxy, gateway,
-              #  or other intermediary acting on behalf of the actual source client."
-              params[Const::REMOTE_ADDR] = client.peeraddr.last
+            # select handlers that want more detailed request notification
+            request = HttpRequest.new(params, client)
 
-              # select handlers that want more detailed request notification
-              notifiers = handlers.select { |h| h.request_notify }
-              request = HttpRequest.new(params, client, notifiers)
-
-              # in the case of large file uploads the user could close the socket, so skip those requests
-              break if request.body == nil  # nil signals from HttpRequest::initialize that the request was aborted
-
-              # request is good so far, continue processing the response
-              response = HttpResponse.new(client)
-
-              # Process each handler in registered order until we run out or one finalizes the response.
-              handlers.each do |handler|
-                handler.process(request, response)
-                break if response.done or client.closed?
-              end
-
-              # And finally, if nobody closed the response off, we finalize it.
-              unless response.done or client.closed? 
-                response.finished
-              end
-            else
-              # Didn't find it, return a stock 404 response.
-              client.write(Const::ERROR_404_RESPONSE)
-            end
-
-            break #done
+            # in the case of large file uploads the user could close the socket, so skip those requests
+            break if request.body == nil  # nil signals from HttpRequest::initialize that the request was aborted
+            app_response = @app.call(request.env)
+            response = HttpResponse.new(client, app_response).start
+          break #done
           else
             # Parser is not done, queue up more data to read and continue parsing
             chunk = client.readpartial(Const::CHUNK_SIZE)
@@ -260,7 +237,7 @@ module Mongrel
     
     # Runs the thing.  It returns the thread used so you can "join" it.  You can also
     # access the HttpServer::acceptor attribute to get the thread later.
-    def run
+    def start!
       BasicSocket.do_not_reverse_lookup=true
 
       configure_socket_options
@@ -280,7 +257,6 @@ module Mongrel
               end
   
               worker_list = @workers.list
-  
               if worker_list.length >= @num_processors
                 STDERR.puts "Server overloaded with #{worker_list.length} processors (#@num_processors max). Dropping connection."
                 client.close rescue nil

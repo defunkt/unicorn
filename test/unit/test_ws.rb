@@ -8,13 +8,14 @@ require 'test/test_helper'
 
 include Mongrel
 
-class TestHandler < Mongrel::HttpHandler
+class TestHandler 
   attr_reader :ran_test
 
-  def process(request, response)
+  def call(env) 
     @ran_test = true
-    response.socket.write("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nhello!\n")
-  end
+  #   response.socket.write("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nhello!\n")
+    [200, { 'Content-Type' => 'text/plain' }, ['hello!\n']]
+   end
 end
 
 
@@ -23,16 +24,12 @@ class WebServerTest < Test::Unit::TestCase
   def setup
     @valid_request = "GET / HTTP/1.1\r\nHost: www.zedshaw.com\r\nContent-Type: text/plain\r\n\r\n"
     @port = process_based_port
-    
+    @tester = TestHandler.new 
+    @app = Rack::URLMap.new('/test' => @tester)
     redirect_test_io do
       # We set num_processors=1 so that we can test the reaping code
-      @server = HttpServer.new("127.0.0.1", @port, num_processors=1)
-    end
-    
-    @tester = TestHandler.new
-    @server.register("/test", @tester)
-    redirect_test_io do
-      @server.run 
+      @server = HttpServer.new("127.0.0.1", @port, @app, :num_processors => 1)
+      @server.start!
     end
   end
 

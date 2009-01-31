@@ -39,13 +39,15 @@ module Mongrel
     attr_reader :header_sent
     attr_reader :status_sent
 
-    def initialize(socket)
+    def initialize(socket, app_response)
       @socket = socket
-      @body = StringIO.new
-      @status = 404
+      @app_response = app_response
+      @body = StringIO.new(app_response[2].join('')) 
+      @status = app_response[0]
       @reason = nil
-      @header = HeaderOut.new(StringIO.new)
+      @header = HeaderOut.new
       @header[Const::DATE] = Time.now.httpdate
+      @header.merge!(app_response[1])
       @body_sent = false
       @header_sent = false
       @status_sent = false
@@ -59,11 +61,9 @@ module Mongrel
     # by simple passing "finalize=true" to the start method.  By default
     # all handlers run and then mongrel finalizes the request when they're
     # all done.
-    def start(status=200, finalize=false, reason=nil)
-      @status = status.to_i
-      @reason = reason
-      yield @header, @body
-      finished if finalize
+    # TODO: docs
+    def start #(status=200, finalize=false, reason=nil)
+      finished 
     end
 
     # Primarily used in exception handling to reset the response output in order to write
@@ -78,7 +78,7 @@ module Mongrel
         # XXX Dubious ( http://mongrel.rubyforge.org/ticket/19 )
         @header.out.close
         @header = HeaderOut.new(StringIO.new) 
-        
+
         @body.close
         @body = StringIO.new
       end
@@ -87,7 +87,7 @@ module Mongrel
     def send_status(content_length=@body.length)
       if not @status_sent
         @header['Content-Length'] = content_length if content_length and @status != 304
-        write(Const::STATUS_FORMAT % [@status, @reason || HTTP_STATUS_CODES[@status]])
+        write(Const::STATUS_FORMAT % [@status, HTTP_STATUS_CODES[@status]])
         @status_sent = true
       end
     end
