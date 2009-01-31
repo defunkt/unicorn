@@ -113,6 +113,6 @@ class TestSemaphore < Test::Unit::TestCase
   private 
   
   def give_up_my_time_slice
-    sleep(0)
+    sleep(1)
   end
 end
