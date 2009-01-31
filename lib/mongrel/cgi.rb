@@ -173,9 +173,8 @@ module Mongrel
     
     # The stdoutput should be completely bypassed but we'll drop a warning just in case
     def stdoutput
-      STDERR.puts "WARNING: Your program is doing something not expected.  Please tell Zed that stdoutput was used and what software you are running.  Thanks."
+      Mongrel.logger.warn "WARNING: Your program is doing something not expected.  Please tell Zed that stdoutput was used and what software you are running.  Thanks."
       @response.body
-    end    
-
+    end
   end
 end

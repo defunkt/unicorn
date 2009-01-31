@@ -8,6 +8,7 @@ require 'etc'
 require 'uri'
 require 'stringio'
 require 'fcntl'
+require 'logger'
 
 # Compiled Mongrel extension
 require 'http11'
@@ -30,6 +31,15 @@ require 'mongrel/http_response'
 # a Mongrel web server.  It contains a minimalist HTTP server with just enough
 # functionality to service web application requests fast as possible.
 module Mongrel
+  class << self
+    # A logger instance that conforms to the API of stdlib's Logger.
+    attr_accessor :logger
+    
+    # By default, will return an instance of stdlib's Logger logging to STDERR
+    def logger
+      @logger ||= Logger.new STDERR
+    end
+  end
 
   # Used to stop the HttpServer via Thread.raise.
   class StopServer < Exception; end
@@ -162,21 +172,21 @@ module Mongrel
       rescue EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF
         client.close rescue nil
       rescue HttpParserError => e
-        STDERR.puts "#{Time.now}: HTTP parse error, malformed request (#{params[Const::HTTP_X_FORWARDED_FOR] || client.peeraddr.last}): #{e.inspect}"
-        STDERR.puts "#{Time.now}: REQUEST DATA: #{data.inspect}\n---\nPARAMS: #{params.inspect}\n---\n"
+        Mongrel.logger.error "#{Time.now}: HTTP parse error, malformed request (#{params[Const::HTTP_X_FORWARDED_FOR] || client.peeraddr.last}): #{e.inspect}"
+        Mongrel.logger.error "#{Time.now}: REQUEST DATA: #{data.inspect}\n---\nPARAMS: #{params.inspect}\n---\n"
       rescue Errno::EMFILE
         reap_dead_workers('too many files')
       rescue Object => e
-        STDERR.puts "#{Time.now}: Read error: #{e.inspect}"
-        STDERR.puts e.backtrace.join("\n")
+        Mongrel.logger.error "#{Time.now}: Read error: #{e.inspect}"
+        Mongrel.logger.error e.backtrace.join("\n")
       ensure
         begin
           client.close
         rescue IOError
           # Already closed
         rescue Object => e
-          STDERR.puts "#{Time.now}: Client error: #{e.inspect}"
-          STDERR.puts e.backtrace.join("\n")
+          Mongrel.logger.error "#{Time.now}: Client error: #{e.inspect}"
+          Mongrel.logger.error e.backtrace.join("\n")
         end
         request.body.close! if request and request.body.class == Tempfile
       end
@@ -188,14 +198,14 @@ module Mongrel
     # after the reap is done.  It only runs if there are workers to reap.
     def reap_dead_workers(reason='unknown')
       if @workers.list.length > 0
-        STDERR.puts "#{Time.now}: Reaping #{@workers.list.length} threads for slow workers because of '#{reason}'"
+        Mongrel.logger.info "#{Time.now}: Reaping #{@workers.list.length} threads for slow workers because of '#{reason}'"
         error_msg = "Mongrel timed out this thread: #{reason}"
         mark = Time.now
         @workers.list.each do |worker|
           worker[:started_on] = Time.now if not worker[:started_on]
 
           if mark - worker[:started_on] > @timeout + @throttle
-            STDERR.puts "Thread #{worker.inspect} is too old, killing."
+            Mongrel.logger.info "Thread #{worker.inspect} is too old, killing."
             worker.raise(TimeoutError.new(error_msg))
           end
         end
@@ -210,7 +220,7 @@ module Mongrel
     # that much longer.
     def graceful_shutdown
       while reap_dead_workers("shutdown") > 0
-        STDERR.puts "Waiting for #{@workers.list.length} requests to finish, could take #{@timeout + @throttle} seconds."
+        Mongrel.logger.info "Waiting for #{@workers.list.length} requests to finish, could take #{@timeout + @throttle} seconds."
         sleep @timeout / 10
       end
     end
@@ -255,7 +265,7 @@ module Mongrel
   
               worker_list = @workers.list
               if worker_list.length >= @num_processors
-                STDERR.puts "Server overloaded with #{worker_list.length} processors (#@num_processors max). Dropping connection."
+                Mongrel.logger.error "Server overloaded with #{worker_list.length} processors (#@num_processors max). Dropping connection."
                 client.close rescue nil
                 reap_dead_workers("max processors")
               else
@@ -274,14 +284,14 @@ module Mongrel
               # client closed the socket even before accept
               client.close rescue nil
             rescue Object => e
-              STDERR.puts "#{Time.now}: Unhandled listen loop exception #{e.inspect}."
-              STDERR.puts e.backtrace.join("\n")
+              Mongrel.logger.error "#{Time.now}: Unhandled listen loop exception #{e.inspect}."
+              Mongrel.logger.error e.backtrace.join("\n")
             end
           end
           graceful_shutdown
         ensure
           @socket.close
-          # STDERR.puts "#{Time.now}: Closed socket."
+          # Mongrel.logger.info "#{Time.now}: Closed socket."
         end
       end
 
