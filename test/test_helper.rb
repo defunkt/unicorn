@@ -71,8 +71,3 @@ end
 def process_based_port 
   5000 + $$ % 1000 
 end
-
-# Platform check helper ;-)
-def windows?
-  result = RUBY_PLATFORM =~ /djgpp|(cyg|ms|bcc)win|mingw/
-end
