@@ -1,5 +1,6 @@
 Ruby 1.9 compat
 QA Rack compat
+- put Mongrel.run somewhere
 PID-aware mongrel binary (like thin)
 Timestamped logger
 QA thread behaviour on 1.9
