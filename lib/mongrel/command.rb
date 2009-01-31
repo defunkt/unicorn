@@ -7,9 +7,6 @@
 require 'singleton'
 require 'optparse'
 
-require 'mongrel/gems'
-Mongrel::Gems.require 'gem_plugin'
-
 module Mongrel
 
   # Contains all of the various commands that are used with 

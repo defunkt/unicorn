@@ -5,7 +5,7 @@
 # for more information.
 
 
-HERE = File.dirname(__FILE__)
+HERE = File.dirname(__FILE__) unless defined?(HERE)
 %w(lib ext bin test).each do |dir| 
   $LOAD_PATH.unshift "#{HERE}/../#{dir}"
 end

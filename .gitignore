@@ -7,3 +7,4 @@ lib/http11.bundle
 log/
 test_stderr.log
 test_stdout.log
+.DS_Store

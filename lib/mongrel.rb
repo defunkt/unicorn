@@ -13,9 +13,6 @@ require 'fcntl'
 require 'http11'
 
 # Gem conditional loader
-require 'mongrel/gems'
-Mongrel::Gems.require 'cgi_multipart_eof_fix'
-Mongrel::Gems.require 'fastthread'
 require 'thread'
 require 'rack'
 
@@ -337,4 +334,3 @@ end
 # in regular Mongrel.
 
 $LOAD_PATH.unshift 'projects/mongrel_experimental/lib/'
-Mongrel::Gems.require 'mongrel_experimental', ">=#{Mongrel::Const::MONGREL_VERSION}"
