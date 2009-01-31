@@ -1,5 +1,5 @@
 
-Ruby 1.9 compat
+X Ruby 1.9 compat
 QA Rack compat
 PID-aware mongrel binary (like thin)
 Timestamped logger
