@@ -90,7 +90,6 @@ module Mongrel
     def initialize(host, port, app, options = {})
       options = DEFAULTS.merge(options)
 
-      tries = 0
       @socket = TCPServer.new(host, port) 
       if defined?(Fcntl::FD_CLOEXEC)
         @socket.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
