@@ -35,22 +35,15 @@ class ThreadingTest < Test::Unit::TestCase
     @port = process_based_port
     @app = Rack::URLMap.new('/test' => FakeHandler.new)
     @max_concurrent_threads = 4
-    redirect_test_io do
-      @server = HttpServer.new("127.0.0.1", @port, @app, :max_concurrent_threads => @max_concurrent_threads)
-    end
-    
-    redirect_test_io do
-      @server.start!
-    end
+    redirect_test_io { @server = HttpServer.new("127.0.0.1", @port, @app, :max_concurrent_threads => @max_concurrent_threads) }    
+    redirect_test_io { @server.start! }
   end
 
   def teardown
-    redirect_test_io do
-      @server.stop(true)
-    end
+    redirect_test_io { @server.stop(true) }
   end
 
-  def test_server_respects_max_current_threads_option
+  def test_server_respects_max_concurrent_threads_option
     threads = []
     (@max_concurrent_threads * 3).times do
       threads << Thread.new do
