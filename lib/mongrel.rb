@@ -20,7 +20,6 @@ require 'rack'
 # Ruby Mongrel
 require 'mongrel/cgi'
 require 'mongrel/handlers'
-require 'mongrel/command'
 require 'mongrel/tcphack'
 require 'mongrel/const'
 require 'mongrel/http_request'

@@ -23,7 +23,6 @@ require 'stringio'
 require 'pp'
 
 require 'mongrel'
-require 'mongrel/stats'
 
 if ENV['DEBUG']
   require 'ruby-debug'
