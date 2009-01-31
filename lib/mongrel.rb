@@ -37,7 +37,7 @@ module Mongrel
     
     # By default, will return an instance of stdlib's Logger logging to STDERR
     def logger
-      @logger ||= Logger.new STDERR
+      @logger ||= Logger.new(STDERR)
     end
   end
 
@@ -52,29 +52,15 @@ module Mongrel
     attr_accessor :http_body
   end
 
-
+  #
   # This is the main driver of Mongrel, while the Mongrel::HttpParser and Mongrel::URIClassifier
   # make up the majority of how the server functions.  It's a very simple class that just
   # has a thread accepting connections and a simple HttpServer.process_client function
   # to do the heavy lifting with the IO and Ruby.  
   #
-  # You use it by doing the following:
-  #
-  #   server = HttpServer.new("0.0.0.0", 3000)
-  #   server.register("/stuff", MyNiftyHandler.new)
-  #   server.run.join
-  #
-  # The last line can be just server.run if you don't want to join the thread used.
-  # If you don't though Ruby will mysteriously just exit on you.
-  #
-  # Ruby's thread implementation is "interesting" to say the least.  Experiments with
-  # *many* different types of IO processing simply cannot make a dent in it.  Future
-  # releases of Mongrel will find other creative ways to make threads faster, but don't
-  # hold your breath until Ruby 1.9 is actually finally useful.
   class HttpServer
     attr_reader :acceptor
     attr_reader :workers
-    attr_reader :classifier
     attr_reader :host
     attr_reader :port
     attr_reader :throttle
@@ -104,7 +90,6 @@ module Mongrel
     def initialize(host, port, app, options = {})
       options = DEFAULTS.merge(options)
 
-      tries = 0
       @socket = TCPServer.new(host, port) 
       if defined?(Fcntl::FD_CLOEXEC)
         @socket.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
