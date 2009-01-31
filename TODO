@@ -5,3 +5,4 @@ PID-aware mongrel binary (like thin)
 Timestamped logger
 QA thread behaviour on 1.9
 QA Jruby compat
+X Make sure Echoe doesn't activate itself in packaged gems
