@@ -3,7 +3,7 @@ require File.join(root_dir, "test/test_helper")
 
 include Mongrel
 
-class FakeHandler < Mongrel::HttpHandler
+class FakeHandler
   @@concurrent_threads = 0
   @@max_concurrent_threads = 0
   
@@ -16,14 +16,14 @@ class FakeHandler < Mongrel::HttpHandler
     @@mutex = Mutex.new
   end
   
-  def process(request, response)
+  def call(env)
     @@mutex.synchronize do
       @@concurrent_threads += 1 # !!! same for += and -=
       @@max_concurrent_threads = [@@concurrent_threads, @@max_concurrent_threads].max
     end
     
     sleep(0.1)
-    response.socket.write("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nhello!\n")
+    [200, {'Content-Type' => 'text/plain'}, ['hello!']]
   ensure
     @@mutex.synchronize { @@concurrent_threads -= 1 }
   end
@@ -33,15 +33,14 @@ class ThreadingTest < Test::Unit::TestCase
   def setup
     @valid_request = "GET / HTTP/1.1\r\nHost: www.google.com\r\nContent-Type: text/plain\r\n\r\n"
     @port = process_based_port
-    
+    @app = Rack::URLMap.new('/test' => FakeHandler.new)
     @max_concurrent_threads = 4
     redirect_test_io do
-      @server = HttpServer.new("127.0.0.1", @port, :max_concurrent_threads => @max_concurrent_threads)
+      @server = HttpServer.new("127.0.0.1", @port, @app, :max_concurrent_threads => @max_concurrent_threads)
     end
     
-    @server.register("/test", FakeHandler.new)
     redirect_test_io do
-      @server.run 
+      @server.start!
     end
   end
 
