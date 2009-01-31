@@ -1,0 +1,7 @@
+
+Ruby 1.9 compat
+QA Rack compat
+PID-aware mongrel binary (like thin)
+Timestamped logger
+QA thread behaviour on 1.9
+QA Jruby compat
