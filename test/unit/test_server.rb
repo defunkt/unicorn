@@ -30,6 +30,7 @@ class WebServerTest < Test::Unit::TestCase
       # We set max_queued_threads=1 so that we can test the reaping code
       @server = HttpServer.new("127.0.0.1", @port, @app, :max_queued_threads => 1)
     end
+    @server.start!
   end
 
   def teardown
