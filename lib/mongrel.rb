@@ -47,6 +47,9 @@ module Mongrel
   # Thrown at a thread when it is timed out.
   class TimeoutError < Exception; end
 
+  # Thrown by HttpServer#stop if the server is not started.
+  class AcceptorError < StandardError; end
+
   # A Hash with one extra parameter for the HTTP body, used internally.
   class HttpParams < Hash
     attr_accessor :http_body
@@ -294,9 +297,11 @@ module Mongrel
 
     # Stops the acceptor thread and then causes the worker threads to finish
     # off the request queue before finally exiting.
-    def stop(synchronous=false)
+    def stop(synchronous = false)
+      raise AcceptorError, "Server was not started." unless @acceptor
       @acceptor.raise(StopServer.new)
       (sleep(0.5) while @acceptor.alive?) if synchronous
+      @acceptor = nil
     end
   end
 end
