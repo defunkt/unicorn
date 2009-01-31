@@ -254,7 +254,7 @@ module Mongrel
     # access the HttpServer::acceptor attribute to get the thread later.
     def start!
       semaphore = Semaphore.new(@max_concurrent_threads)
-      BasicSocket.do_not_reverse_lookup=true
+      BasicSocket.do_not_reverse_lookup = true
 
       configure_socket_options
 
@@ -304,7 +304,7 @@ module Mongrel
         end
       end
 
-      return @acceptor
+      @acceptor
     end
 
     # Stops the acceptor thread and then causes the worker threads to finish
