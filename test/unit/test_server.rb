@@ -28,9 +28,9 @@ class WebServerTest < Test::Unit::TestCase
     @app = Rack::URLMap.new('/test' => @tester)
     redirect_test_io do
       # We set max_queued_threads=1 so that we can test the reaping code
-      @server = HttpServer.new("127.0.0.1", @port, @app, :max_queued_threads => 1)
+      @server = HttpServer.new(@app, :Host => "127.0.0.1", :Port => @port, :Max_queued_threads => 1)
     end
-    @server.start!
+    @server.start
   end
 
   def teardown

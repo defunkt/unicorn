@@ -39,6 +39,10 @@ module Mongrel
     def logger
       @logger ||= Logger.new(STDERR)
     end
+    
+    def run(app, options = {})
+      HttpServer.new(app, options).start.join
+    end
   end
 
   # Used to stop the HttpServer via Thread.raise.
@@ -71,9 +75,11 @@ module Mongrel
     attr_reader :max_concurrent_threads
     
     DEFAULTS = {
-      :max_queued_threads => 20, 
-      :max_concurrent_threads => 20,
-      :timeout => 60
+      :Max_queued_threads => 20, 
+      :Max_concurrent_threads => 20,
+      :Timeout => 60,
+      :Host => '0.0.0.0',
+      :Port => 8080
     }
 
     # Creates a working server on host:port (strange things happen if port isn't a Number).
@@ -86,19 +92,16 @@ module Mongrel
     # way to deal with overload.  Other schemes involve still parsing the client's request
     # which defeats the point of an overload handling system.
     # 
-    def initialize(host, port, app, options = {})
-      options = DEFAULTS.merge(options)
-
-      @socket = TCPServer.new(host, port) 
-      if defined?(Fcntl::FD_CLOEXEC)
-        @socket.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
-      end
-      @host, @port, @app = host, port, app
+    def initialize(app, options = {})
+      @app = app      
       @workers = ThreadGroup.new
+      
+      (DEFAULTS.to_a + options.to_a).each do |key, value|
+        instance_variable_set("@#{key.to_s.downcase}", value)
+      end
 
-      @timeout = options[:timeout]
-      @max_queued_threads = options[:max_queued_threads]
-      @max_concurrent_threads = options[:max_concurrent_threads]
+      @socket = TCPServer.new(@host, @port)       
+      @socket.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) if defined?(Fcntl::FD_CLOEXEC)
     end
 
     # Does the majority of the IO processing.  It has been written in Ruby using
@@ -234,7 +237,7 @@ module Mongrel
     
     # Runs the thing.  It returns the thread used so you can "join" it.  You can also
     # access the HttpServer::acceptor attribute to get the thread later.
-    def start!
+    def start
       semaphore = Semaphore.new(@max_concurrent_threads)
       BasicSocket.do_not_reverse_lookup = true
 
