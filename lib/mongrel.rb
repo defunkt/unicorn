@@ -18,8 +18,6 @@ require 'thread'
 require 'rack'
 
 # Ruby Mongrel
-require 'mongrel/cgi'
-require 'mongrel/handlers'
 require 'mongrel/tcphack'
 require 'mongrel/const'
 require 'mongrel/http_request'
