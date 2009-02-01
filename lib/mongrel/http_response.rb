@@ -42,7 +42,8 @@ module Mongrel
     def initialize(socket, app_response)
       @socket = socket
       @app_response = app_response
-      @body = StringIO.new(app_response[2].join('')) 
+      @body = StringIO.new
+      app_response[2].each {|x| @body << x}
       @status = app_response[0]
       @reason = nil
       @header = HeaderOut.new
