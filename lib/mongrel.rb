@@ -115,7 +115,7 @@ module Mongrel
             end
 
             raise "No REQUEST PATH" if !params[Const::REQUEST_PATH]
-
+ 
             params[Const::PATH_INFO] = params[Const::REQUEST_PATH]
             params[Const::SCRIPT_NAME] = Const::SLASH
 
@@ -149,12 +149,12 @@ module Mongrel
       rescue EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF
         client.close rescue nil
       rescue HttpParserError => e
-        logger.error "#HTTP parse error, malformed request (#{params[Const::HTTP_X_FORWARDED_FOR] || client.peeraddr.last}): #{e.inspect}"
-        logger.error "#REQUEST DATA: #{data.inspect}\n---\nPARAMS: #{params.inspect}\n---\n"
+        logger.error "HTTP parse error, malformed request (#{params[Const::HTTP_X_FORWARDED_FOR] || client.peeraddr.last}): #{e.inspect}"
+        logger.error "REQUEST DATA: #{data.inspect}\n---\nPARAMS: #{params.inspect}\n---\n"
       rescue Errno::EMFILE
         reap_dead_workers('too many files')
       rescue Object => e
-        logger.error "#Read error: #{e.inspect}"
+        logger.error "Read error: #{e.inspect}"
         logger.error e.backtrace.join("\n")
       ensure
         begin
@@ -162,7 +162,7 @@ module Mongrel
         rescue IOError
           # Already closed
         rescue Object => e
-          logger.error "#Client error: #{e.inspect}"
+          logger.error "Client error: #{e.inspect}"
           logger.error e.backtrace.join("\n")
         end
         request.body.close! if request and request.body.class == Tempfile
@@ -175,7 +175,7 @@ module Mongrel
     # after the reap is done.  It only runs if there are workers to reap.
     def reap_dead_workers(reason='unknown')
       if @workers.list.length > 0
-        logger.info "#Reaping #{@workers.list.length} threads for slow workers because of '#{reason}'"
+        logger.info "Reaping #{@workers.list.length} threads for slow workers because of '#{reason}'"
         error_msg = "Mongrel timed out this thread: #{reason}"
         mark = Time.now
         @workers.list.each do |worker|
