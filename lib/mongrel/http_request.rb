@@ -47,6 +47,7 @@ module Mongrel
     # copied directly from racks mongrel handler
     def env
       env = params.clone
+      env["QUERY_STRING"] ||= ''
       env.delete "HTTP_CONTENT_TYPE"
       env.delete "HTTP_CONTENT_LENGTH"
       env["SCRIPT_NAME"] = "" if env["SCRIPT_NAME"] == "/"
