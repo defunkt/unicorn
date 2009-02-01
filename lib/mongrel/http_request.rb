@@ -42,9 +42,8 @@ module Mongrel
       @body.rewind if @body
     end
 
-    # returns an environment which is rackable
-    # http://rack.rubyforge.org/doc/files/SPEC.html
-    # copied directly from racks mongrel handler
+    # Returns an environment which is rackable: http://rack.rubyforge.org/doc/files/SPEC.html
+    # Copied directly from Rack's old Mongrel handler.
     def env
       env = params.clone
       env.delete "HTTP_CONTENT_TYPE"
