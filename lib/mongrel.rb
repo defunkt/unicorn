@@ -66,14 +66,13 @@ module Mongrel
     attr_reader :workers
     attr_reader :host
     attr_reader :port
-    attr_reader :throttle
     attr_reader :timeout
     attr_reader :max_queued_threads
+    attr_reader :max_concurrent_threads
     
     DEFAULTS = {
       :max_queued_threads => 20, 
       :max_concurrent_threads => 20,
-      :throttle => 0, 
       :timeout => 60
     }
 
@@ -87,9 +86,6 @@ module Mongrel
     # way to deal with overload.  Other schemes involve still parsing the client's request
     # which defeats the point of an overload handling system.
     # 
-    # The throttle parameter is a sleep timeout (in hundredths of a second) that is placed between 
-    # socket.accept calls in order to give the server a cheap throttle time.  It defaults to 0 and
-    # actually if it is 0 then the sleep is not done at all.
     def initialize(host, port, app, options = {})
       options = DEFAULTS.merge(options)
 
@@ -100,7 +96,6 @@ module Mongrel
       @host, @port, @app = host, port, app
       @workers = ThreadGroup.new
 
-      @throttle = options[:throttle] / 100.0
       @timeout = options[:timeout]
       @max_queued_threads = options[:max_queued_threads]
       @max_concurrent_threads = options[:max_concurrent_threads]
@@ -200,7 +195,7 @@ module Mongrel
         @workers.list.each do |worker|
           worker[:started_on] = Time.now if not worker[:started_on]
 
-          if mark - worker[:started_on] > @timeout + @throttle
+          if mark - worker[:started_on] > @timeout
             Mongrel.logger.info "Thread #{worker.inspect} is too old, killing."
             worker.raise(TimeoutError.new(error_msg))
           end
@@ -212,11 +207,10 @@ module Mongrel
 
     # Performs a wait on all the currently running threads and kills any that take
     # too long.  It waits by @timeout seconds, which can be set in .initialize or
-    # via mongrel_rails. The @throttle setting does extend this waiting period by
-    # that much longer.
+    # via mongrel_rails.
     def graceful_shutdown
       while reap_dead_workers("shutdown") > 0
-        Mongrel.logger.info "Waiting for #{@workers.list.length} requests to finish, could take #{@timeout + @throttle} seconds."
+        Mongrel.logger.info "Waiting for #{@workers.list.length} requests to finish, could take #{@timeout} seconds."
         sleep @timeout / 10
       end
     end
@@ -269,8 +263,6 @@ module Mongrel
                 thread = Thread.new(client) {|c| semaphore.synchronize { process_client(c) } }
                 thread[:started_on] = Time.now
                 @workers.add(thread)
-  
-                sleep @throttle if @throttle > 0
               end
             rescue StopServer
               break
