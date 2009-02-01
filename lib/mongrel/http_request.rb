@@ -6,22 +6,24 @@ module Mongrel
   # a StringIO object.  To be safe, you should assume it works like a file.
   # 
   class HttpRequest
-    attr_reader :body, :params
+    attr_reader :body, :params, :logger
 
     # You don't really call this.  It's made for you.
     # Main thing it does is hook up the params, and store any remaining
     # body data into the HttpRequest.body attribute.
-    def initialize(params, socket)
+    def initialize(params, socket, logger)
       @params = params
       @socket = socket
+      @logger = logger
+      
       content_length = @params[Const::CONTENT_LENGTH].to_i
-      remain = content_length - @params.http_body.length
+      remain = content_length - @params[Const::HTTP_BODY].length
 
       # Some clients (like FF1.0) report 0 for body and then send a body.  This will probably truncate them but at least the request goes through usually.
       if remain <= 0
         # we've got everything, pack it up
         @body = StringIO.new
-        @body.write @params.http_body
+        @body.write @params[Const::HTTP_BODY]
       elsif remain > 0
         # must read more data to complete body
         if remain > Const::MAX_BODY
@@ -33,7 +35,7 @@ module Mongrel
           @body = StringIO.new 
         end
 
-        @body.write @params.http_body
+        @body.write @params[Const::HTTP_BODY]
         read_body(remain, content_length)
       end
 
@@ -66,21 +68,20 @@ module Mongrel
     # part of the body that has been read to be in the @body already.
     def read_body(remain, total)
       begin
-        # write the odd sized chunk first
-        @params.http_body = read_socket(remain % Const::CHUNK_SIZE)
+        # Write the odd sized chunk first
+        @params[Const::HTTP_BODY] = read_socket(remain % Const::CHUNK_SIZE)
 
-        remain -= @body.write(@params.http_body)
+        remain -= @body.write(@params[Const::HTTP_BODY])
 
-        # then stream out nothing but perfectly sized chunks
+        # Then stream out nothing but perfectly sized chunks
         until remain <= 0 or @socket.closed?
           # ASSUME: we are writing to a disk and these writes always write the requested amount
-          @params.http_body = read_socket(Const::CHUNK_SIZE)
-          remain -= @body.write(@params.http_body)
+          @params[Const::HTTP_BODY] = read_socket(Const::CHUNK_SIZE)
+          remain -= @body.write(@params[Const::HTTP_BODY])
         end
       rescue Object => e
-        Mongrel.logger.error "#{Time.now}: Error reading HTTP body: #{e.inspect}"
-        Mongrel.logger.error e.backtrace.join("\n")
-        # any errors means we should delete the file, including if the file is dumped
+        logger.error "Error reading HTTP body: #{e.inspect}"
+        # Any errors means we should delete the file, including if the file is dumped
         @socket.close rescue nil
         @body.close! if @body.class == Tempfile
         @body = nil # signals that there was a problem
@@ -100,45 +101,6 @@ module Mongrel
       else
         raise "Socket already closed when reading."
       end
-    end
-
-    # Performs URI escaping so that you can construct proper
-    # query strings faster.  Use this rather than the cgi.rb
-    # version since it's faster.  (Stolen from Camping).
-    def self.escape(s)
-      s.to_s.gsub(/([^ a-zA-Z0-9_.-]+)/n) {
-        '%'+$1.unpack('H2'*$1.size).join('%').upcase
-      }.tr(' ', '+') 
-    end
-
-
-    # Unescapes a URI escaped string. (Stolen from Camping).
-    def self.unescape(s)
-      s.tr('+', ' ').gsub(/((?:%[0-9a-fA-F]{2})+)/n){
-        [$1.delete('%')].pack('H*')
-      } 
-    end
-
-    # Parses a query string by breaking it up at the '&' 
-    # and ';' characters.  You can also use this to parse
-    # cookies by changing the characters used in the second
-    # parameter (which defaults to '&;'.
-    def self.query_parse(qs, d = '&;')
-      params = {}
-      (qs||'').split(/[#{d}] */n).inject(params) { |h,p|
-        k, v=unescape(p).split('=',2)
-        if cur = params[k]
-          if cur.class == Array
-            params[k] << v
-          else
-            params[k] = [cur, v]
-          end
-        else
-          params[k] = v
-        end
-      }
-
-      return params
     end
   end
 end

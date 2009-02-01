@@ -20,7 +20,6 @@ static VALUE cHttpParser;
 static VALUE eHttpParserError;
 
 #define id_handler_map rb_intern("@handler_map")
-#define id_http_body rb_intern("@http_body")
 #define HTTP_PREFIX "HTTP_"
 #define HTTP_PREFIX_LEN (sizeof(HTTP_PREFIX) - 1)
 
@@ -34,6 +33,7 @@ static VALUE global_http_content_length;
 static VALUE global_request_path;
 static VALUE global_content_type;
 static VALUE global_http_content_type;
+static VALUE global_http_body;
 static VALUE global_gateway_interface;
 static VALUE global_gateway_interface_value;
 static VALUE global_server_name;
@@ -306,8 +306,8 @@ void header_done(void *data, const char *at, size_t length)
     }
   }
 
-  /* grab the initial body and stuff it into an ivar */
-  rb_ivar_set(req, id_http_body, rb_str_new(at, length));
+  /* grab the initial body and stuff it into the hash */
+  rb_hash_aset(req, global_http_body, rb_str_new(at, length));
   rb_hash_aset(req, global_server_protocol, global_server_protocol_value);
   rb_hash_aset(req, global_server_software, global_mongrel_version);
 }
@@ -499,6 +499,7 @@ void Init_http11()
   DEF_GLOBAL(request_path, "REQUEST_PATH");
   DEF_GLOBAL(content_length, "CONTENT_LENGTH");
   DEF_GLOBAL(http_content_length, "HTTP_CONTENT_LENGTH");
+  DEF_GLOBAL(http_body, "HTTP_BODY");
   DEF_GLOBAL(content_type, "CONTENT_TYPE");
   DEF_GLOBAL(http_content_type, "HTTP_CONTENT_TYPE");
   DEF_GLOBAL(gateway_interface, "GATEWAY_INTERFACE");

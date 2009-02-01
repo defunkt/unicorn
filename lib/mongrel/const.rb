@@ -53,10 +53,13 @@ module Mongrel
   # REMOTE_USER, or REMOTE_HOST parameters since those are either a security problem or 
   # too taxing on performance.
   module Const
-    DATE = "Date".freeze
+    DATE="Date".freeze
 
-    # This is the part of the path after the SCRIPT_NAME.  URIClassifier will determine this.
+    # This is the part of the path after the SCRIPT_NAME.
     PATH_INFO="PATH_INFO".freeze
+    
+    # Request body
+    HTTP_BODY="HTTP_BODY".freeze
 
     # This is the initial part that your handler is identified as by URIClassifier.
     SCRIPT_NAME="SCRIPT_NAME".freeze
@@ -64,8 +67,8 @@ module Mongrel
     # The original URI requested by the client.  Passed to URIClassifier to build PATH_INFO and SCRIPT_NAME.
     REQUEST_URI='REQUEST_URI'.freeze
     REQUEST_PATH='REQUEST_PATH'.freeze
-
-    MONGREL_VERSION="1.2.0".freeze
+    
+    MONGREL_VERSION="2.0".freeze
 
     MONGREL_TMP_BASE="mongrel".freeze
 
