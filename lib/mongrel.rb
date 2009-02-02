@@ -61,8 +61,8 @@ module Mongrel
       :host => '0.0.0.0',
       :port => 8080,
       :logger => Logger.new(STDERR),
-      :max_queued_threads => 20, 
-      :max_concurrent_threads => 20      
+      :max_queued_threads => 12, 
+      :max_concurrent_threads => 4
     }
 
     # Creates a working server on host:port (strange things happen if port isn't a Number).
