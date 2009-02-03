@@ -10,7 +10,6 @@ HERE = File.dirname(__FILE__) unless defined?(HERE)
   $LOAD_PATH.unshift "#{HERE}/../#{dir}"
 end
 
-require 'rubygems'
 require 'test/unit'
 require 'net/http'
 require 'timeout'
@@ -21,6 +20,7 @@ require 'digest/sha1'
 require 'uri'
 require 'stringio'
 require 'pp'
+require 'rubygems'
 
 require 'mongrel'
 
@@ -32,8 +32,13 @@ end
 def redirect_test_io
   orig_err = STDERR.dup
   orig_out = STDOUT.dup
-  STDERR.reopen("test_stderr.log")
-  STDOUT.reopen("test_stdout.log")
+  STDERR.reopen("test_stderr.#{$$}.log")
+  STDOUT.reopen("test_stdout.#{$$}.log")
+
+  at_exit do
+    File.unlink("test_stderr.#{$$}.log") rescue nil
+    File.unlink("test_stdout.#{$$}.log") rescue nil
+  end
 
   begin
     yield
