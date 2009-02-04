@@ -7,12 +7,8 @@ ext/http11/extconf.rb
 ext/http11/http11.c
 ext/http11/http11_parser.c
 ext/http11/http11_parser.h
-ext/http11/http11_parser.java.rl
 ext/http11/http11_parser.rl
 ext/http11/http11_parser_common.rl
-ext/http11_java/Http11Service.java
-ext/http11_java/org/jruby/mongrel/Http11.java
-ext/http11_java/org/jruby/mongrel/Http11Parser.java
 lib/mongrel/cgi.rb
 lib/mongrel/const.rb
 lib/mongrel/handlers.rb
