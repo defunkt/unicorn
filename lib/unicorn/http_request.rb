@@ -1,5 +1,5 @@
 
-module Mongrel
+module Unicorn
   #
   # The HttpRequest.initialize method will convert any request that is larger than
   # Const::MAX_BODY into a Tempfile and use that as the body.  Otherwise it uses 
@@ -28,7 +28,7 @@ module Mongrel
         # must read more data to complete body
         if remain > Const::MAX_BODY
           # huge body, put it in a tempfile
-          @body = Tempfile.new(Const::MONGREL_TMP_BASE)
+          @body = Tempfile.new(Const::UNICORN_TMP_BASE)
           @body.binmode
         else
           # small body, just use that
@@ -43,7 +43,7 @@ module Mongrel
     end
 
     # Returns an environment which is rackable: http://rack.rubyforge.org/doc/files/SPEC.html
-    # Copied directly from Rack's old Mongrel handler.
+    # Copied directly from Rack's old Unicorn handler.
     def env
       env = params.clone
       env["QUERY_STRING"] ||= ''

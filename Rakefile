@@ -2,27 +2,17 @@
 require 'rubygems'
 require 'echoe'
 
-Echoe.new("mongrel") do |p|
+Echoe.new("unicorn") do |p|
   p.summary = "A small fast HTTP library and server for Rack applications."
-  p.author = "Evan Weaver"
-  p.email = "evan@cloudbur.st"
+  p.author = "Eric Wong"
+  p.email = "normalperson@yhbt.net"
   p.clean_pattern = ['ext/http11/*.{bundle,so,o,obj,pdb,lib,def,exp}', 'lib/*.{bundle,so,o,obj,pdb,lib,def,exp}', 'ext/http11/Makefile', 'pkg', 'lib/*.bundle', '*.gem', 'site/output', '.config', 'coverage', 'test_*.log', 'log', 'doc']
-  p.url = "http://mongrel.rubyforge.org"
+  p.url = "http://unicorn.bogomips.org"
   p.rdoc_pattern = ['README', 'LICENSE', 'CONTRIBUTORS', 'CHANGELOG', 'COPYING', 'lib/**/*.rb', 'doc/**/*.rdoc']
-  p.docs_host = 'mongrel.cloudbur.st:/home/eweaver/www/mongrel/htdocs/web'
   p.ignore_pattern = /^(pkg|site|projects|doc|log)|CVS|\.log/
   p.extension_pattern = nil
   p.dependencies = ['daemons', 'rack']
-  
-  p.certificate_chain = case (ENV['USER'] || ENV['USERNAME']).downcase
-    when 'eweaver' 
-      ['~/p/configuration/gem_certificates/mongrel/mongrel-public_cert.pem',
-       '~/p/configuration/gem_certificates/evan_weaver-mongrel-public_cert.pem']
-    when 'luislavena', 'luis'
-      ['~/projects/gem_certificates/mongrel-public_cert.pem',
-        '~/projects/gem_certificates/luislavena-mongrel-public_cert.pem']    
-  end
-  
+
   p.need_tar_gz = false
   p.need_tgz = true
 

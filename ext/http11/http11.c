@@ -15,7 +15,7 @@
 #define RSTRING_LEN(s) (RSTRING(s)->len)
 #endif
 
-static VALUE mMongrel;
+static VALUE mUnicorn;
 static VALUE cHttpParser;
 static VALUE eHttpParserError;
 
@@ -41,7 +41,7 @@ static VALUE global_server_port;
 static VALUE global_server_protocol;
 static VALUE global_server_protocol_value;
 static VALUE global_http_host;
-static VALUE global_mongrel_version;
+static VALUE global_unicorn_version;
 static VALUE global_server_software;
 static VALUE global_port_80;
 
@@ -309,7 +309,7 @@ void header_done(void *data, const char *at, size_t length)
   /* grab the initial body and stuff it into the hash */
   rb_hash_aset(req, global_http_body, rb_str_new(at, length));
   rb_hash_aset(req, global_server_protocol, global_server_protocol_value);
-  rb_hash_aset(req, global_server_software, global_mongrel_version);
+  rb_hash_aset(req, global_server_software, global_unicorn_version);
 }
 
 
@@ -489,7 +489,7 @@ VALUE HttpParser_nread(VALUE self)
 void Init_http11()
 {
 
-  mMongrel = rb_define_module("Mongrel");
+  mUnicorn = rb_define_module("Unicorn");
 
   DEF_GLOBAL(request_method, "REQUEST_METHOD");
   DEF_GLOBAL(request_uri, "REQUEST_URI");
@@ -509,13 +509,12 @@ void Init_http11()
   DEF_GLOBAL(server_protocol, "SERVER_PROTOCOL");
   DEF_GLOBAL(server_protocol_value, "HTTP/1.1");
   DEF_GLOBAL(http_host, "HTTP_HOST");
-  DEF_GLOBAL(mongrel_version, "Mongrel 1.2"); /* XXX Why is this defined here? */
   DEF_GLOBAL(server_software, "SERVER_SOFTWARE");
   DEF_GLOBAL(port_80, "80");
 
-  eHttpParserError = rb_define_class_under(mMongrel, "HttpParserError", rb_eIOError);
+  eHttpParserError = rb_define_class_under(mUnicorn, "HttpParserError", rb_eIOError);
 
-  cHttpParser = rb_define_class_under(mMongrel, "HttpParser", rb_cObject);
+  cHttpParser = rb_define_class_under(mUnicorn, "HttpParser", rb_cObject);
   rb_define_alloc_func(cHttpParser, HttpParser_alloc);
   rb_define_method(cHttpParser, "initialize", HttpParser_init,0);
   rb_define_method(cHttpParser, "reset", HttpParser_reset,0);

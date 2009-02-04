@@ -1,6 +1,6 @@
 root_dir = File.join(File.dirname(__FILE__), "../..")
 require File.join(root_dir, "test/test_helper")
-require File.join(root_dir, "lib/mongrel/semaphore")
+require File.join(root_dir, "lib/unicorn/semaphore")
 
 class TestSemaphore < Test::Unit::TestCase
   def setup

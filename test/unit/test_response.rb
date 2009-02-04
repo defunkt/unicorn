@@ -6,7 +6,7 @@
 
 require 'test/test_helper'
 
-include Mongrel
+include Unicorn
 
 class ResponseTest < Test::Unit::TestCase
   

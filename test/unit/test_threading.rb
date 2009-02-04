@@ -1,7 +1,7 @@
 root_dir = File.join(File.dirname(__FILE__), "../..")
 require File.join(root_dir, "test/test_helper")
 
-include Mongrel
+include Unicorn
 
 class FakeHandler
   @@concurrent_threads = 0

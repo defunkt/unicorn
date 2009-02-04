@@ -10,25 +10,24 @@ require 'stringio'
 require 'fcntl'
 require 'logger'
 
-# Compiled Mongrel extension
+# Compiled extension
 require 'http11'
 
 # Gem conditional loader
 require 'thread'
 require 'rack'
 
-# Ruby Mongrel
-require 'mongrel/tcphack'
-require 'mongrel/const'
-require 'mongrel/http_request'
-require 'mongrel/header_out'
-require 'mongrel/http_response'
-require 'mongrel/semaphore'
+require 'unicorn/tcphack'
+require 'unicorn/const'
+require 'unicorn/http_request'
+require 'unicorn/header_out'
+require 'unicorn/http_response'
+require 'unicorn/semaphore'
 
-# Mongrel module containing all of the classes (include C extensions) for running
-# a Mongrel web server.  It contains a minimalist HTTP server with just enough
+# Unicorn module containing all of the classes (include C extensions) for running
+# a Unicorn web server.  It contains a minimalist HTTP server with just enough
 # functionality to service web application requests fast as possible.
-module Mongrel
+module Unicorn
   class << self
     # A logger instance that conforms to the API of stdlib's Logger.
     attr_accessor :logger
@@ -48,7 +47,7 @@ module Mongrel
   class AcceptorError < StandardError; end
 
   #
-  # This is the main driver of Mongrel, while the Mongrel::HttpParser and Mongrel::URIClassifier
+  # This is the main driver of Unicorn, while the Unicorn::HttpParser and Unicorn::URIClassifier
   # make up the majority of how the server functions.  It's a very simple class that just
   # has a thread accepting connections and a simple HttpServer.process_client function
   # to do the heavy lifting with the IO and Ruby.  
@@ -176,7 +175,7 @@ module Mongrel
     def reap_dead_workers(reason='unknown')
       if @workers.list.length > 0
         logger.info "Reaping #{@workers.list.length} threads for slow workers because of '#{reason}'"
-        error_msg = "Mongrel timed out this thread: #{reason}"
+        error_msg = "Unicorn timed out this thread: #{reason}"
         mark = Time.now
         @workers.list.each do |worker|
           worker[:started_on] = Time.now if not worker[:started_on]

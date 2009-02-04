@@ -22,7 +22,7 @@ require 'stringio'
 require 'pp'
 require 'rubygems'
 
-require 'mongrel'
+require 'unicorn'
 
 if ENV['DEBUG']
   require 'ruby-debug'
@@ -71,7 +71,7 @@ end
 
 # process_based_port provides a port number, usable for TCP and UDP  
 # connections based on $$ and with a 5000 as base. 
-# this is required if you perform several builds of mongrel in parallel 
+# this is required if you perform several builds of unicorn in parallel
 # (like continuous integration systems) 
 def process_based_port 
   5000 + $$ % 1000 

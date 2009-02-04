@@ -1,12 +1,12 @@
 # Copyright (c) 2005 Zed A. Shaw 
 # You can redistribute it and/or modify it under the same terms as Ruby.
 #
-# Additional work donated by contributors.  See http://mongrel.rubyforge.org/attributions.html 
+# Additional work donated by contributors.  See http://mongrel.rubyforge.org/attributions.html
 # for more information.
 
 require 'test/test_helper'
 
-include Mongrel
+include Unicorn
 
 class TestHandler 
   attr_reader :ran_test
@@ -104,9 +104,9 @@ class WebServerTest < Test::Unit::TestCase
   end
 
   def test_file_streamed_request
-    body = "a" * (Mongrel::Const::MAX_BODY * 2)
+    body = "a" * (Unicorn::Const::MAX_BODY * 2)
     long = "GET /test HTTP/1.1\r\nContent-length: #{body.length}\r\n\r\n" + body
-    do_test(long, Mongrel::Const::CHUNK_SIZE * 2 -400)
+    do_test(long, Unicorn::Const::CHUNK_SIZE * 2 -400)
   end
 
 end
