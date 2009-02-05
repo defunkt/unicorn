@@ -15,27 +15,26 @@ module Unicorn
       @params = params
       @socket = socket
       @logger = logger
-      
+      http_body = @params[Const::HTTP_BODY]
       content_length = @params[Const::CONTENT_LENGTH].to_i
-      remain = content_length - @params[Const::HTTP_BODY].length
+      remain = content_length - http_body.length
 
       # Some clients (like FF1.0) report 0 for body and then send a body.  This will probably truncate them but at least the request goes through usually.
       if remain <= 0
         # we've got everything, pack it up
-        @body = StringIO.new
-        @body.write @params[Const::HTTP_BODY]
+        @body = StringIO.new(http_body)
       elsif remain > 0
         # must read more data to complete body
         if remain > Const::MAX_BODY
           # huge body, put it in a tempfile
           @body = Tempfile.new(Const::UNICORN_TMP_BASE)
           @body.binmode
+          @body.write(http_body)
         else
           # small body, just use that
-          @body = StringIO.new 
+          @body = StringIO.new(http_body)
         end
 
-        @body.write @params[Const::HTTP_BODY]
         read_body(remain, content_length)
       end
 
@@ -69,15 +68,14 @@ module Unicorn
     def read_body(remain, total)
       begin
         # Write the odd sized chunk first
-        @params[Const::HTTP_BODY] = read_socket(remain % Const::CHUNK_SIZE)
-
-        remain -= @body.write(@params[Const::HTTP_BODY])
+        buffer = read_socket(remain % Const::CHUNK_SIZE)
+        remain -= @body.write(buffer)
 
         # Then stream out nothing but perfectly sized chunks
         until remain <= 0 or @socket.closed?
           # ASSUME: we are writing to a disk and these writes always write the requested amount
-          @params[Const::HTTP_BODY] = read_socket(Const::CHUNK_SIZE)
-          remain -= @body.write(@params[Const::HTTP_BODY])
+          buffer = read_socket(Const::CHUNK_SIZE)
+          remain -= @body.write(buffer)
         end
       rescue Object => e
         logger.error "Error reading HTTP body: #{e.inspect}"
