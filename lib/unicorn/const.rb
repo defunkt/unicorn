@@ -44,6 +44,12 @@ module Unicorn
     505  => 'HTTP Version not supported'
   }
 
+  HTTP_STATUS_HEADERS = HTTP_STATUS_CODES.inject({}) do |hash, (code, text)|
+    text.freeze
+    hash[code] = "HTTP/1.1 #{code} #{text}\r\nConnection: close\r\n".freeze
+    hash
+  end
+
   # Frequently used constants when constructing requests or responses.  Many times
   # the constant just refers to a string with the same contents.  Using these constants
   # gave about a 3% to 10% performance improvement over using the strings directly.
@@ -91,7 +97,6 @@ module Unicorn
     MAX_BODY=MAX_HEADER
 
     # A frozen format for this is about 15% faster
-    STATUS_FORMAT = "HTTP/1.1 %d %s\r\nConnection: close\r\n".freeze
     CONTENT_TYPE = "Content-Type".freeze
     LAST_MODIFIED = "Last-Modified".freeze
     ETAG = "ETag".freeze
@@ -109,4 +114,5 @@ module Unicorn
     REDIRECT = "HTTP/1.1 302 Found\r\nLocation: %s\r\nConnection: close\r\n\r\n".freeze
     HOST = "HOST".freeze
   end
+
 end
