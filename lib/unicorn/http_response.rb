@@ -107,27 +107,6 @@ module Unicorn
       end
     end 
 
-    # Appends the contents of +path+ to the response stream.  The file is opened for binary
-    # reading and written in chunks to the socket.
-    #
-    # Sendfile API support has been removed in 0.3.13.4 due to stability problems.
-    def send_file(path, small_file = false)
-      if small_file
-        File.open(path, "rb") {|f| @socket << f.read }
-      else
-        File.open(path, "rb") do |f|
-          while chunk = f.read(Const::CHUNK_SIZE) and chunk.length > 0
-            begin
-              write(chunk)
-            rescue Object => exc
-              break
-            end
-          end
-        end
-      end
-      @body_sent = true
-    end
-
     def socket_error(details)
       # ignore these since it means the client closed off early
       @socket.close rescue nil
