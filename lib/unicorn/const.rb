@@ -101,7 +101,6 @@ module Unicorn
     HEAD="HEAD".freeze
     # ETag is based on the apache standard of hex mtime-size-inode (inode is 0 on win32)
     ETAG_FORMAT="\"%x-%x-%x\"".freeze
-    HEADER_FORMAT="%s: %s\r\n".freeze
     LINE_END="\r\n".freeze
     REMOTE_ADDR="REMOTE_ADDR".freeze
     HTTP_X_FORWARDED_FOR="HTTP_X_FORWARDED_FOR".freeze

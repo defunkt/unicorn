@@ -7,14 +7,21 @@ module Unicorn
   # by just doing them twice (which is sometimes needed in HTTP), but that the normal
   # semantics for Hash (where doing an insert replaces) is not there.
   class HeaderOut
-    attr_reader :out
-    attr_accessor :allowed_duplicates
+    ALLOWED_DUPLICATES = {
+      'Set-Cookie' => true,
+      'Set-Cookie2' => true,
+      'Warning' => true,
+      'WWW-Authenticate' => true,
+    }.freeze
 
-    def initialize(out = StringIO.new)
+    def initialize
       @sent = {}
-      @allowed_duplicates = {"Set-Cookie" => true, "Set-Cookie2" => true,
-        "Warning" => true, "WWW-Authenticate" => true}
-      @out = out
+      @out = []
+    end
+
+    def reset!
+      @sent.clear
+      @out.clear
     end
 
     def merge!(hash)
@@ -25,10 +32,15 @@ module Unicorn
 
     # Simply writes "#{key}: #{value}" to an output buffer.
     def[]=(key,value)
-      if not @sent.has_key?(key) or @allowed_duplicates.has_key?(key)
+      if not @sent.has_key?(key) or ALLOWED_DUPLICATES.has_key?(key)
         @sent[key] = true
-        @out.write(Const::HEADER_FORMAT % [key, value])
+        @out << "#{key}: #{value}\r\n"
       end
     end
+
+    def to_s
+      @out.join
+    end
+
   end
 end

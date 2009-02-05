@@ -77,8 +77,7 @@ module Unicorn
         raise "You have already sent the request headers."
       else
         # XXX Dubious ( http://mongrel.rubyforge.org/ticket/19 )
-        @header.out.close
-        @header = HeaderOut.new(StringIO.new) 
+        @header.reset!
 
         @body.close
         @body = StringIO.new
@@ -95,8 +94,7 @@ module Unicorn
 
     def send_header
       if not @header_sent
-        @header.out.rewind
-        write(@header.out.read + Const::LINE_END)
+        write("#{@header.to_s}#{Const::LINE_END}")
         @header_sent = true
       end
     end
