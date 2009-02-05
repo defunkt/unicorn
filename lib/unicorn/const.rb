@@ -100,7 +100,6 @@ module Unicorn
     CONTENT_TYPE = "Content-Type".freeze
     LAST_MODIFIED = "Last-Modified".freeze
     ETAG = "ETag".freeze
-    SLASH = "/".freeze
     REQUEST_METHOD="REQUEST_METHOD".freeze
     GET="GET".freeze
     HEAD="HEAD".freeze

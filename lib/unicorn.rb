@@ -109,7 +109,7 @@ module Unicorn
             raise "No REQUEST PATH" if !params[Const::REQUEST_PATH]
  
             params[Const::PATH_INFO] = params[Const::REQUEST_PATH]
-            params[Const::SCRIPT_NAME] = Const::SLASH
+            params[Const::SCRIPT_NAME] = ""
 
             # From http://www.ietf.org/rfc/rfc3875 :
             # "Script authors should be aware that the REMOTE_ADDR and REMOTE_HOST
