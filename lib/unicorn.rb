@@ -196,7 +196,8 @@ module Unicorn
           while alive
             begin
               client = @socket.accept
-  
+              client.sync = true
+
               if defined?($tcp_cork_opts) and $tcp_cork_opts
                 client.setsockopt(*$tcp_cork_opts) rescue nil
               end
