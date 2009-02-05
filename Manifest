@@ -20,7 +20,6 @@ lib/unicorn/const.rb
 lib/unicorn/header_out.rb
 lib/unicorn/http_request.rb
 lib/unicorn/http_response.rb
-lib/unicorn/semaphore.rb
 lib/unicorn/tcphack.rb
 setup.rb
 test/benchmark/previous.rb
@@ -33,6 +32,4 @@ test/test_suite.rb
 test/tools/trickletest.rb
 test/unit/test_http_parser.rb
 test/unit/test_response.rb
-test/unit/test_semaphore.rb
 test/unit/test_server.rb
-test/unit/test_threading.rb

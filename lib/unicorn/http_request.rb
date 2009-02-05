@@ -54,8 +54,8 @@ module Unicorn
               "rack.input" => @body,
               "rack.errors" => STDERR,
 
-              "rack.multithread" => true,
-              "rack.multiprocess" => false, # ???
+              "rack.multithread" => false,
+              "rack.multiprocess" => true,
               "rack.run_once" => false,
 
               "rack.url_scheme" => "http",

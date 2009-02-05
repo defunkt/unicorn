@@ -9,10 +9,8 @@ require 'test/test_helper'
 include Unicorn
 
 class TestHandler 
-  attr_reader :ran_test
 
   def call(env) 
-    @ran_test = true
   #   response.socket.write("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nhello!\n")
     [200, { 'Content-Type' => 'text/plain' }, ['hello!\n']]
    end
@@ -27,8 +25,7 @@ class WebServerTest < Test::Unit::TestCase
     @tester = TestHandler.new 
     @app = Rack::URLMap.new('/test' => @tester)
     redirect_test_io do
-      # We set max_queued_threads=1 so that we can test the reaping code
-      @server = HttpServer.new(@app, :Host => "127.0.0.1", :Port => @port, :Max_queued_threads => 1)
+      @server = HttpServer.new(@app, :Host => "127.0.0.1", :Port => @port)
     end
     @server.start
   end
@@ -40,8 +37,8 @@ class WebServerTest < Test::Unit::TestCase
   end
 
   def test_simple_server
-    hit(["http://localhost:#{@port}/test"])
-    assert @tester.ran_test, "Handler didn't really run"
+    results = hit(["http://localhost:#{@port}/test"])
+    assert_equal 'hello!\n', results[0], "Handler didn't really run"
   end
 
 
@@ -86,19 +83,6 @@ class WebServerTest < Test::Unit::TestCase
       long = "GET /test HTTP/1.1\r\n" + ("X-Big: stuff\r\n" * 15000) + "\r\n"
       assert_raises Errno::ECONNRESET, Errno::EPIPE, Errno::ECONNABORTED, Errno::EINVAL, IOError do
         do_test(long, long.length/2, 10)
-      end
-    end
-  end
-
-  def test_max_queued_threads_overload
-    redirect_test_io do
-      assert_raises Errno::ECONNRESET, Errno::EPIPE, Errno::ECONNABORTED, Errno::EINVAL, IOError do
-        tests = [
-          Thread.new { do_test(@valid_request, 1) },
-          Thread.new { do_test(@valid_request, 10) },
-        ]
-
-        tests.each {|t| t.join}
       end
     end
   end
