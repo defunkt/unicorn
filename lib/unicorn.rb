@@ -125,7 +125,7 @@ module Unicorn
             # in the case of large file uploads the user could close the socket, so skip those requests
             break if request.body == nil  # nil signals from HttpRequest::initialize that the request was aborted
             app_response = @app.call(request.env)
-            response = HttpResponse.new(client, app_response).start
+            HttpResponse.send(client, app_response)
           break #done
           else
             # Parser is not done, queue up more data to read and continue parsing

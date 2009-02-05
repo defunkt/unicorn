@@ -15,13 +15,14 @@ module Unicorn
     }.freeze
 
     def initialize
-      @sent = {}
+      @sent = { Const::CONNECTION => true }
       @out = []
     end
 
     def reset!
       @sent.clear
       @out.clear
+      @sent[Const::CONNECTION] = true
     end
 
     def merge!(hash)

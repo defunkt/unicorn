@@ -113,6 +113,7 @@ module Unicorn
     HTTP_IF_NONE_MATCH="HTTP_IF_NONE_MATCH".freeze
     REDIRECT = "HTTP/1.1 302 Found\r\nLocation: %s\r\nConnection: close\r\n\r\n".freeze
     HOST = "HOST".freeze
+    CONNECTION = "Connection".freeze
   end
 
 end
