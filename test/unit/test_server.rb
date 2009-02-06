@@ -25,7 +25,7 @@ class WebServerTest < Test::Unit::TestCase
     @tester = TestHandler.new 
     @app = Rack::URLMap.new('/test' => @tester)
     redirect_test_io do
-      @server = HttpServer.new(@app, :Host => "127.0.0.1", :Port => @port)
+      @server = HttpServer.new(@app, :listeners => [ "127.0.0.1:#{@port}" ] )
     end
     @server.start
   end

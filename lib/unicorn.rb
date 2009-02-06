@@ -52,12 +52,11 @@ module Unicorn
   # socket and a simple HttpServer.process_client function to
   # do the heavy lifting with the IO and Ruby.
   class HttpServer
-    attr_reader :workers, :logger, :host, :port, :timeout, :nr_workers
+    attr_reader :workers, :logger, :listeners, :timeout, :nr_workers
     
     DEFAULTS = {
       :timeout => 60,
-      :host => '0.0.0.0',
-      :port => 8080,
+      :listeners => %w(0.0.0.0:8080),
       :logger => Logger.new(STDERR),
       :nr_workers => 1
     }
@@ -74,7 +73,7 @@ module Unicorn
         instance_variable_set("@#{key.to_s.downcase}", value)
       end
 
-      @socket = Socket.unicorn_server_new("#{@host}:#{@port}", 1024)
+      @listeners.map! { |address| Socket.unicorn_server_new(address, 1024) }
     end
 
     # Does the majority of the IO processing.  It has been written in Ruby using
@@ -162,24 +161,53 @@ module Unicorn
     # to get this hash later.
     def start
       BasicSocket.do_not_reverse_lookup = true
-      @socket.unicorn_server_init if @socket.respond_to?(:unicorn_server_init)
+      @listeners.each do |sock|
+        sock.unicorn_server_init if sock.respond_to?(:unicorn_server_init)
+      end
 
       (1..@nr_workers).each do |worker_nr|
         pid = fork do
-          alive = true
+          nr, alive, listeners = 0, true, @listeners
           trap('TERM') { exit 0 }
-          trap('QUIT') { alive = false; @socket.close rescue nil }
+          trap('QUIT') do
+            alive = false
+            @listeners.each { |sock| sock.close rescue nil }
+          end
+
           while alive
             begin
-              client, addr = @socket.accept
-              client.unicorn_client_init
-              process_client(client)
-            rescue Errno::EMFILE
-              logger.error "too many open files"
-              sleep 0.5
-            rescue Errno::ECONNABORTED
-              # client closed the socket even before accept
-              client.close rescue nil
+              nr_before = nr
+              listeners.each do |sock|
+                begin
+                  client, addr = begin
+                    sock.accept_nonblock
+                  rescue Errno::EAGAIN
+                    next
+                  end
+                  nr += 1
+                  client.unicorn_client_init
+                  process_client(client)
+                rescue Errno::ECONNABORTED
+                  # client closed the socket even before accept
+                  client.close rescue nil
+                end
+                alive or exit(0)
+              end
+
+              # make the following bet: if we accepted clients this round,
+              # we're probably reasonably busy, so avoid calling select(2)
+              # and try to do a blind non-blocking accept(2) on everything
+              # before we sleep again in select
+              if nr > nr_before
+                listeners = @listeners
+              else
+                begin
+                  ret = IO.select(@listeners, nil, nil, nil) or next
+                  listeners = ret[0]
+                rescue Errno::EBADF
+                  exit(alive ? 1 : 0)
+                end
+              end
             rescue Object => e
               if alive
                 logger.error "Unhandled listen loop exception #{e.inspect}."
@@ -224,7 +252,7 @@ module Unicorn
 
     ensure
       trap('CHLD', old_chld_handler)
-      @socket.close rescue nil
+      @listeners.each { |sock| sock.close rescue nil }
     end
 
   end
