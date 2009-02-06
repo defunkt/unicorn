@@ -6,98 +6,93 @@ module Unicorn
   # a StringIO object.  To be safe, you should assume it works like a file.
   # 
   class HttpRequest
-    attr_reader :body, :params, :logger
+    attr_reader :logger
 
     # You don't really call this.  It's made for you.
-    # Main thing it does is hook up the params, and store any remaining
-    # body data into the HttpRequest.body attribute.
-    def initialize(params, socket, logger)
-      @params = params
-      @socket = socket
+    def initialize(logger)
       @logger = logger
-      http_body = @params[Const::HTTP_BODY]
-      content_length = @params[Const::CONTENT_LENGTH].to_i
+      @tempfile = @body = nil
+    end
+
+    def reset!
+      @body.truncate(0) rescue nil
+      @body.close rescue nil
+      @body = nil
+    end
+
+    # returns an environment hash suitable for Rack if successful
+    # returns nil if the socket closed prematurely (e.g. user aborted upload)
+    def consume(params, socket)
+      http_body = params[Const::HTTP_BODY]
+      content_length = params[Const::CONTENT_LENGTH].to_i
       remain = content_length - http_body.length
 
-      # Some clients (like FF1.0) report 0 for body and then send a body.  This will probably truncate them but at least the request goes through usually.
-      if remain <= 0
-        # we've got everything, pack it up
+      # must read more data to complete body
+      if remain < Const::MAX_BODY
+        # small body, just use that
         @body = StringIO.new(http_body)
-      elsif remain > 0
-        # must read more data to complete body
-        if remain > Const::MAX_BODY
-          # huge body, put it in a tempfile
-          @body = Tempfile.new(Const::UNICORN_TMP_BASE)
-          @body.binmode
-          @body.write(http_body)
-        else
-          # small body, just use that
-          @body = StringIO.new(http_body)
-        end
-
-        read_body(remain, content_length)
+      else # huge body, put it in a tempfile
+        @tempfile ||= Tempfile.new(Const::UNICORN_TMP_BASE)
+        @body = File.open(@tempfile.path, "wb+")
+        @body.sync = true
+        @body.syswrite(http_body)
+        @body
       end
 
-      @body.rewind if @body
-    end
-
-    # Returns an environment which is rackable: http://rack.rubyforge.org/doc/files/SPEC.html
-    # Copied directly from Rack's old Unicorn handler.
-    def env
-      env = params.clone
-      env["QUERY_STRING"] ||= ''
-      env.delete "HTTP_CONTENT_TYPE"
-      env.delete "HTTP_CONTENT_LENGTH"
-      env.update({"rack.version" => [0,1],
-              "rack.input" => @body,
-              "rack.errors" => STDERR,
-
-              "rack.multithread" => false,
-              "rack.multiprocess" => true,
-              "rack.run_once" => false,
-
-              "rack.url_scheme" => "http",
-            }) 
-    end
-
-    # Does the heavy lifting of properly reading the larger body requests in 
-    # small chunks.  It expects @body to be an IO object, @socket to be valid,
-    # and will set @body = nil if the request fails.  It also expects any initial
-    # part of the body that has been read to be in the @body already.
-    def read_body(remain, total)
-      begin
-        # Write the odd sized chunk first
-        buffer = read_socket(remain % Const::CHUNK_SIZE)
-        remain -= @body.write(buffer)
-
-        # Then stream out nothing but perfectly sized chunks
-        until remain <= 0 or @socket.closed?
-          # ASSUME: we are writing to a disk and these writes always write the requested amount
-          buffer = read_socket(Const::CHUNK_SIZE)
-          remain -= @body.write(buffer)
-        end
-      rescue Object => e
-        logger.error "Error reading HTTP body: #{e.inspect}"
-        # Any errors means we should delete the file, including if the file is dumped
-        @socket.close rescue nil
-        @body.close! if @body.class == Tempfile
-        @body = nil # signals that there was a problem
+      # Some clients (like FF1.0) report 0 for body and then send a body.
+      # This will probably truncate them but at least the request goes through
+      # usually.
+      if remain > 0
+        read_body(socket, remain) or return nil # fail!
       end
+      @body.rewind
+      @body.sysseek(0) if @body.respond_to?(:sysseek)
+      rack_env(params)
     end
- 
-    def read_socket(len)
-      if !@socket.closed?
-        data = @socket.read(len)
-        if !data
-          raise "Socket read return nil"
-        elsif data.length != len
-          raise "Socket read returned insufficient data: #{data.length}"
-        else
-          data
+
+    # Returns an environment which is rackable:
+    # http://rack.rubyforge.org/doc/files/SPEC.html
+    # Copied directly from Rack's old Mongrel handler.
+    def rack_env(params)
+      params["QUERY_STRING"] ||= ''
+      params.delete "HTTP_CONTENT_TYPE"
+      params.delete "HTTP_CONTENT_LENGTH"
+      params.update({ "rack.version" => [0,1],
+                      "rack.input" => @body,
+                      "rack.errors" => STDERR,
+                      "rack.multithread" => false,
+                      "rack.multiprocess" => true,
+                      "rack.run_once" => false,
+                      "rack.url_scheme" => "http",
+                    })
+    end
+
+    # Does the heavy lifting of properly reading the larger body requests in
+    # small chunks.  It expects @body to be an IO object, socket to be valid,
+    # It also expects any initial part of the body that has been read to be in
+    # the @body already.  It will return true if successful and false if not.
+    def read_body(socket, remain)
+      buf = ' ' # this string is reused for the lifetime of the loop
+      while remain > 0
+        begin
+          socket.sysread(remain, buf) # short read if it's a socket
+        rescue Errno::EINTR, Errno::EAGAIN
+          retry
         end
-      else
-        raise "Socket already closed when reading."
+
+        # ASSUME: we are writing to a disk and these writes always write the
+        # requested amount.  This is true on Linux.
+        remain -= @body.syswrite(buf)
       end
+      true # success!
+    rescue Object => e
+      logger.error "Error reading HTTP body: #{e.inspect}"
+      socket.close rescue nil
+
+      # Any errors means we should delete the file, including if the file
+      # is dumped.  Truncate it ASAP to help avoid page flushes to disk.
+      reset!
+      false
     end
   end
 end

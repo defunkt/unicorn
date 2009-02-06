@@ -120,11 +120,9 @@ module Unicorn
             params[Const::REMOTE_ADDR] = client.peeraddr.last
 
             # Select handlers that want more detailed request notification
-            request = HttpRequest.new(params, client, logger)
-
-            # in the case of large file uploads the user could close the socket, so skip those requests
-            break if request.body == nil  # nil signals from HttpRequest::initialize that the request was aborted
-            app_response = @app.call(request.env)
+            request = $http_request ||= HttpRequest.new(logger)
+            env = request.consume(params, client) or break
+            app_response = @app.call(env)
             HttpResponse.send(client, app_response)
           break #done
           else
@@ -157,7 +155,7 @@ module Unicorn
           logger.error "Client error: #{e.inspect}"
           logger.error e.backtrace.join("\n")
         end
-        request.body.close! if request and request.body.class == Tempfile
+        request.reset! if request
       end
     end
 
