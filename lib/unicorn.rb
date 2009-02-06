@@ -15,7 +15,7 @@ require 'http11'
 
 require 'rack'
 
-require 'unicorn/tcphack'
+require 'unicorn/socket'
 require 'unicorn/const'
 require 'unicorn/http_request'
 require 'unicorn/header_out'
@@ -74,9 +74,7 @@ module Unicorn
         instance_variable_set("@#{key.to_s.downcase}", value)
       end
 
-      @socket = TCPServer.new(@host, @port)       
-      @socket.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) if defined?(Fcntl::FD_CLOEXEC)
-
+      @socket = Socket.unicorn_tcp_server(@host, @port, 1024)
     end
 
     # Does the majority of the IO processing.  It has been written in Ruby using
@@ -117,7 +115,7 @@ module Unicorn
             #  ultimate source of the request.  They identify the client for the
             #  immediate request to the server; that client may be a proxy, gateway,
             #  or other intermediary acting on behalf of the actual source client."
-            params[Const::REMOTE_ADDR] = client.peeraddr.last
+            params[Const::REMOTE_ADDR] = client.unicorn_peeraddr.last
 
             # Select handlers that want more detailed request notification
             request = $http_request ||= HttpRequest.new(logger)
@@ -139,7 +137,7 @@ module Unicorn
       rescue EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF
         client.close rescue nil
       rescue HttpParserError => e
-        logger.error "HTTP parse error, malformed request (#{params[Const::HTTP_X_FORWARDED_FOR] || client.peeraddr.last}): #{e.inspect}"
+        logger.error "HTTP parse error, malformed request (#{params[Const::HTTP_X_FORWARDED_FOR] || client.unicorn_peeraddr.last}): #{e.inspect}"
         logger.error "REQUEST DATA: #{data.inspect}\n---\nPARAMS: #{params.inspect}\n---\n"
       rescue Errno::EMFILE
         logger.error "too many files"
@@ -159,32 +157,12 @@ module Unicorn
       end
     end
 
-    def configure_socket_options
-      case RUBY_PLATFORM
-      when /linux/
-        # 9 is currently TCP_DEFER_ACCEPT
-        $tcp_defer_accept_opts = [Socket::SOL_TCP, 9, 1]
-        $tcp_cork_opts = [Socket::SOL_TCP, 3, 1]
-      when /freebsd(([1-4]\..{1,2})|5\.[0-4])/
-        # Do nothing, just closing a bug when freebsd <= 5.4
-      when /freebsd/
-        # Use the HTTP accept filter if available.
-        # The struct made by pack() is defined in /usr/include/sys/socket.h as accept_filter_arg
-        unless `/sbin/sysctl -nq net.inet.accf.http`.empty?
-          $tcp_defer_accept_opts = [Socket::SOL_SOCKET, Socket::SO_ACCEPTFILTER, ['httpready', nil].pack('a16a240')]
-        end
-      end
-    end
-    
     # Runs the thing.  Returns a hash keyed by pid with worker number values
     # for which to wait on.  Access the HttpServer.workers attribute
     # to get this hash later.
     def start
       BasicSocket.do_not_reverse_lookup = true
-      configure_socket_options
-      if defined?($tcp_defer_accept_opts) and $tcp_defer_accept_opts
-        @socket.setsockopt(*$tcp_defer_accept_opts) rescue nil
-      end
+      @socket.unicorn_server_init if @socket.respond_to?(:unicorn_server_init)
 
       (1..@nr_workers).each do |worker_nr|
         pid = fork do
@@ -193,12 +171,8 @@ module Unicorn
           trap('QUIT') { alive = false; @socket.close rescue nil }
           while alive
             begin
-              client = @socket.accept
-              client.sync = true
-
-              if defined?($tcp_cork_opts) and $tcp_cork_opts
-                client.setsockopt(*$tcp_cork_opts) rescue nil
-              end
+              client, addr = @socket.accept
+              client.unicorn_client_init
               process_client(client)
             rescue Errno::EMFILE
               logger.error "too many open files"
