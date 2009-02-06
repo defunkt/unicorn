@@ -36,14 +36,44 @@ class Socket
     Socket.unpack_sockaddr_in(getpeername)
   end
 
+  # returns the config-friendly name of the current listener socket, this is
+  # useful for config reloads and even works across execs where the Unicorn
+  # binary is replaced
+  def unicorn_addr
+    @unicorn_addr ||= if respond_to?(:getsockname)
+      port, host = Socket.unpack_sockaddr_in(getsockname)
+      "#{host}:#{port}"
+    elsif respond_to?(:getsockname)
+      addr = Socket.unpack_sockaddr_un(getsockname)
+      # strip the pid from the temp socket path
+      addr.gsub!(/\.\d+$/, '') or
+        raise ArgumentError, "PID not found in path: #{addr}"
+    else
+      raise ArgumentError, "could not determine unicorn_addr for #{self}"
+    end
+  end
+
   class << self
 
-    def unicorn_tcp_server(host, port, backlog = 5)
-      s = new(AF_INET, SOCK_STREAM, 0)
-      s.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) if defined?(Fcntl::FD_CLOEXEC)
+    # creates a new server, address may be a HOST:PORT or
+    # an absolute path to a UNIX socket.  When creating a UNIX
+    # socket to listen on, we always add a PID suffix to it
+    # when binding and then rename it into its intended name to
+    # atomically replace and start listening for new connections.
+    def unicorn_server_new(address = '0.0.0.0:8080', backlog = 1024)
+      domain, bind_addr = if address[0..0] == "/"
+        [ AF_UNIX, pack_sockaddr_un("#{address}.#{$$}") ]
+      elsif address =~ /^(\d+\.\d+\.\d+\.\d+):(\d+)$/
+        [ AF_INET, pack_sockaddr_in($2.to_i, $1) ]
+      end
+      s = new(domain, SOCK_STREAM, 0)
       s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1) if defined?(SO_REUSEADDR)
-      s.bind(pack_sockaddr_in(port, host))
+      s.bind(bind_addr)
       s.listen(backlog)
+      s.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) if defined?(Fcntl::FD_CLOEXEC)
+
+      # atomically replace existing domain socket
+      File.rename("#{address}.#{$$}", address) if domain == AF_UNIX
       s
     end
 

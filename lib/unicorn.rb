@@ -74,7 +74,7 @@ module Unicorn
         instance_variable_set("@#{key.to_s.downcase}", value)
       end
 
-      @socket = Socket.unicorn_tcp_server(@host, @port, 1024)
+      @socket = Socket.unicorn_server_new("#{@host}:#{@port}", 1024)
     end
 
     # Does the majority of the IO processing.  It has been written in Ruby using
