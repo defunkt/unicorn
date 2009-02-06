@@ -14,7 +14,7 @@ module Unicorn
       @tempfile = @body = nil
     end
 
-    def reset!
+    def reset
       @body.truncate(0) rescue nil
       @body.close rescue nil
       @body = nil
@@ -91,7 +91,7 @@ module Unicorn
 
       # Any errors means we should delete the file, including if the file
       # is dumped.  Truncate it ASAP to help avoid page flushes to disk.
-      reset!
+      reset
       false
     end
   end

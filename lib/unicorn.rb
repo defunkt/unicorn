@@ -152,7 +152,7 @@ module Unicorn
           logger.error "Client error: #{e.inspect}"
           logger.error e.backtrace.join("\n")
         end
-        @request.reset!
+        @request.reset
       end
     end
 
