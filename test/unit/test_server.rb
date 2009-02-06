@@ -22,10 +22,9 @@ class WebServerTest < Test::Unit::TestCase
   def setup
     @valid_request = "GET / HTTP/1.1\r\nHost: www.zedshaw.com\r\nContent-Type: text/plain\r\n\r\n"
     @port = process_based_port
-    @tester = TestHandler.new 
-    @app = Rack::URLMap.new('/test' => @tester)
+    @tester = TestHandler.new
     redirect_test_io do
-      @server = HttpServer.new(@app, :listeners => [ "127.0.0.1:#{@port}" ] )
+      @server = HttpServer.new(@tester, :listeners => [ "127.0.0.1:#{@port}" ] )
     end
     @server.start
   end

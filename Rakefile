@@ -11,16 +11,11 @@ Echoe.new("unicorn") do |p|
   p.rdoc_pattern = ['README', 'LICENSE', 'CONTRIBUTORS', 'CHANGELOG', 'COPYING', 'lib/**/*.rb', 'doc/**/*.rdoc']
   p.ignore_pattern = /^(pkg|site|projects|doc|log)|CVS|\.log/
   p.extension_pattern = nil
-  p.dependencies = ['daemons', 'rack']
 
   p.need_tar_gz = false
   p.need_tgz = true
 
   p.extension_pattern = ["ext/**/extconf.rb"]
-
-  p.eval = proc do
-    add_dependency('daemons', '>= 1.0.3')
-  end
 
 end
 

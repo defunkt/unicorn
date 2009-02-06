@@ -20,8 +20,6 @@ require 'digest/sha1'
 require 'uri'
 require 'stringio'
 require 'pp'
-require 'rubygems'
-
 require 'unicorn'
 
 if ENV['DEBUG']

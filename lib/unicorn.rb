@@ -13,8 +13,6 @@ require 'logger'
 # Compiled extension
 require 'http11'
 
-require 'rack'
-
 require 'unicorn/socket'
 require 'unicorn/const'
 require 'unicorn/http_request'
