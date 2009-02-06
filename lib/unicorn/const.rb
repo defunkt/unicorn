@@ -44,12 +44,6 @@ module Unicorn
     505  => 'HTTP Version not supported'
   }
 
-  HTTP_STATUS_HEADERS = HTTP_STATUS_CODES.inject({}) do |hash, (code, text)|
-    text.freeze
-    hash[code] = "HTTP/1.1 #{code} #{text}\r\nConnection: close\r\n".freeze
-    hash
-  end
-
   # Frequently used constants when constructing requests or responses.  Many times
   # the constant just refers to a string with the same contents.  Using these constants
   # gave about a 3% to 10% performance improvement over using the strings directly.

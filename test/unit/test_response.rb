@@ -12,21 +12,21 @@ class ResponseTest < Test::Unit::TestCase
   
   def test_response_headers
     out = StringIO.new
-    HttpResponse.send(out,[200, {"X-Whatever" => "stuff"}, ["cool"]])
+    HttpResponse.write(out,[200, {"X-Whatever" => "stuff"}, ["cool"]])
 
     assert out.length > 0, "output didn't have data"
   end
 
   def test_response_200
     io = StringIO.new
-    HttpResponse.send(io, [200, {}, []])
+    HttpResponse.write(io, [200, {}, []])
     assert io.length > 0, "output didn't have data"
   end
 
   def test_response_with_default_reason
     code = 400
     io = StringIO.new
-    HttpResponse.send(io, [code, {}, []])
+    HttpResponse.write(io, [code, {}, []])
     io.rewind
     assert_match(/.* #{HTTP_STATUS_CODES[code]}$/, io.readline.chomp, "wrong default reason phrase")
   end

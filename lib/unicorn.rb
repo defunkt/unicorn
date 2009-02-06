@@ -18,7 +18,6 @@ require 'rack'
 require 'unicorn/socket'
 require 'unicorn/const'
 require 'unicorn/http_request'
-require 'unicorn/header_out'
 require 'unicorn/http_response'
 
 # Unicorn module containing all of the classes (include C extensions) for running
@@ -66,9 +65,11 @@ module Unicorn
     # HttpServer.workers.join to join the thread that's processing
     # incoming requests on the socket.
     def initialize(app, options = {})
-      @app = app      
+      @app = app
       @workers = WorkerTable.new
-      
+      @parser = HttpParser.new
+      @params = Hash.new
+
       (DEFAULTS.to_a + options.to_a).each do |key, value|
         instance_variable_set("@#{key.to_s.downcase}", value)
       end
@@ -83,9 +84,9 @@ module Unicorn
     # thinks they can make it faster is more than welcome to take a crack at it.
     def process_client(client)
       begin
-        parser = HttpParser.new
-        params = Hash.new
-        request = nil
+        parser, params = @parser, @params
+        parser.reset
+        params.clear
         data = client.readpartial(Const::CHUNK_SIZE)
         nparsed = 0
 
@@ -117,10 +118,9 @@ module Unicorn
             params[Const::REMOTE_ADDR] = client.unicorn_peeraddr.last
 
             # Select handlers that want more detailed request notification
-            request = $http_request ||= HttpRequest.new(logger)
-            env = request.consume(params, client) or break
+            env = @request.consume(params, client) or break
             app_response = @app.call(env)
-            HttpResponse.send(client, app_response)
+            HttpResponse.write(client, app_response)
           break #done
           else
             # Parser is not done, queue up more data to read and continue parsing
@@ -152,7 +152,7 @@ module Unicorn
           logger.error "Client error: #{e.inspect}"
           logger.error e.backtrace.join("\n")
         end
-        request.reset! if request
+        @request.reset!
       end
     end
 
@@ -167,7 +167,10 @@ module Unicorn
 
       (1..@nr_workers).each do |worker_nr|
         pid = fork do
-          nr, alive, listeners = 0, true, @listeners
+          nr = 0
+          alive = true
+          listeners = @listeners
+          @request = HttpRequest.new(logger)
           trap('TERM') { exit 0 }
           trap('QUIT') do
             alive = false

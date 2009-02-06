@@ -1,14 +1,13 @@
 module Unicorn
-
   # Writes a Rack response to your client using the HTTP/1.1 specification.
   # You use it by simply doing:
   #
   #   status, headers, body = rack_app.call(env)
-  #   HttpResponse.send(socket, [ status, headers, body ])
+  #   HttpResponse.write(socket, [ status, headers, body ])
   #
-  # Most header correctness (including Content-Length) is the job of
-  # Rack, with the exception of the "Connection: close" and "Date"
-  # headers.
+  # Most header correctness (including Content-Length and Content-Type)
+  # is the job of Rack, with the exception of the "Connection: close"
+  # and "Date" headers.
   #
   # A design decision was made to force the client to not pipeline or
   # keepalive requests.  HTTP/1.1 pipelining really kills the
@@ -20,19 +19,36 @@ module Unicorn
 
   class HttpResponse
 
-    # we'll have one of these per-process
-    HEADERS = HeaderOut.new unless defined?(HEADERS)
+    # enforce "Connection: close" usage on all our responses
+    HTTP_STATUS_HEADERS = HTTP_STATUS_CODES.inject({}) do |hash, (code, text)|
+      hash[code] = "HTTP/1.1 #{code} #{text}\r\nConnection: close".freeze
+      hash
+    end.freeze
 
-    def self.send(socket, rack_response)
+    # headers we allow duplicates for
+    ALLOWED_DUPLICATES = {
+      'Set-Cookie' => true,
+      'Set-Cookie2' => true,
+      'Warning' => true,
+      'WWW-Authenticate' => true,
+    }.freeze
+
+    def self.write(socket, rack_response)
       status, headers, body = rack_response
-      HEADERS.reset!
 
-      # Rack does not set Date, but don't worry about Content-Length,
-      # since Rack enforces that in Rack::Lint
-      HEADERS[Const::DATE] = Time.now.httpdate
-      HEADERS.merge!(headers)
+      # Rack does not set/require Date, but don't worry about Content-Length
+      # since Rack enforces that in Rack::Lint.
+      out = [ "#{Const::DATE}: #{Time.now.httpdate}\r\n" ]
+      sent = { Const::CONNECTION => true, Const::DATE => true }
 
-      socket.write("#{HTTP_STATUS_HEADERS[status]}#{HEADERS.to_s}\r\n")
+      headers.each_pair do |key, value|
+        if ! sent[key] || ALLOWED_DUPLICATES[key]
+          sent[key] = true
+          out << "#{key}: #{value}\r\n"
+        end
+      end
+
+      socket.write("#{HTTP_STATUS_HEADERS[status]}\r\n#{out.join}\r\n")
       body.each { |chunk| socket.write(chunk) }
     end
 
