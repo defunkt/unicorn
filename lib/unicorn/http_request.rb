@@ -74,11 +74,7 @@ module Unicorn
     def read_body(socket, remain)
       buf = @buffer
       while remain > 0
-        begin
-          socket.sysread(remain, buf) # short read if it's a socket
-        rescue Errno::EINTR, Errno::EAGAIN
-          retry
-        end
+        socket.sysread(remain, buf) # short read if it's a socket
 
         # ASSUME: we are writing to a disk and these writes always write the
         # requested amount.  This is true on Linux.
