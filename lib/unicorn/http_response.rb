@@ -48,9 +48,25 @@ module Unicorn
         end
       end
 
-      socket.write("#{HTTP_STATUS_HEADERS[status]}\r\n#{out.join}\r\n")
-      body.each { |chunk| socket.write(chunk) }
+      socket_write(socket, "#{HTTP_STATUS_HEADERS[status]}\r\n#{out.join}\r\n")
+      body.each { |chunk| socket_write(socket, chunk) }
     end
+
+    private
+
+      # write(2) can return short on slow devices like sockets as well
+      # as fail with EINTR if a signal was caught.
+      def self.socket_write(socket, buffer)
+        loop do
+          begin
+            written = socket.syswrite(buffer)
+            return written if written == buffer.length
+            buffer = buffer[written..-1]
+          rescue Errno::EINTR
+            retry
+          end
+        end
+      end
 
   end
 end
