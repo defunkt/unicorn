@@ -9,16 +9,24 @@ slow_tests := test/unit/test_server.rb
 awk_slow := awk '/def test_/{print FILENAME"--"$$2".n"}'
 T := $(filter-out $(slow_tests),$(wildcard test/unit/test*.rb))
 T_n := $(shell $(awk_slow) $(slow_tests))
+t_log := $(subst .rb,.log,$(T)) $(subst .n,.log,$(T_n))
 test: $(T) $(T_n)
+	@cat $(t_log) | ruby test/aggregate.rb
+	@$(RM) $(t_log)
 
 $(slow_tests):
 	@$(MAKE) $(shell $(awk_slow) $@)
 %.n: arg = $(subst .n,,$(subst --, -n ,$@))
 %.n: name = $(subst .n,,$(subst --, ,$@))
+%.n: t = $(subst .n,.log,$@)
 %.n: lib/http11.$(DLEXT)
-	@echo '**** $(name) ****'; ruby -I lib $(arg) $(TEST_OPTS)
+	@echo '**** $(name) ****'; ruby -I lib $(arg) $(TEST_OPTS) >$(t)+ 2>&1
+	@mv $(t)+ $(t)
+
+$(T): t = $(subst .rb,.log,$@)
 $(T): lib/http11.$(DLEXT)
-	@echo '**** $@ ****'; ruby -I lib $@ $(TEST_OPTS)
+	@echo '**** $@ ****'; ruby -I lib $@ $(TEST_OPTS) > $(t)+ 2>&1
+	@mv $(t)+ $(t)
 
 http11_deps := $(addprefix ext/http11/, \
                  ext_help.h http11.c http11_parser.c http11_parser.h \
