@@ -28,6 +28,7 @@ class Socket
 
   def unicorn_client_init
     self.sync = true
+    self.nonblock = false
     self.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1) if defined?(TCP_NODELAY)
     self.setsockopt(SOL_TCP, TCP_CORK, 1) if defined?(TCP_CORK)
   end

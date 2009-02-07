@@ -6,6 +6,7 @@ require 'uri'
 require 'stringio'
 require 'fcntl'
 require 'logger'
+require 'io/nonblock'
 
 # Compiled extension
 require 'http11'
@@ -82,7 +83,7 @@ module Unicorn
         parser, params = @parser, @params
         parser.reset
         params.clear
-        data = client.readpartial(Const::CHUNK_SIZE)
+        data = client.sysread(Const::CHUNK_SIZE)
         nparsed = 0
 
         # Assumption: nparsed will always be less since data will get filled with more
@@ -119,7 +120,7 @@ module Unicorn
           break #done
           else
             # Parser is not done, queue up more data to read and continue parsing
-            chunk = client.readpartial(Const::CHUNK_SIZE)
+            chunk = client.sysread(Const::CHUNK_SIZE)
             break if !chunk or chunk.length == 0  # read failed, stop processing
 
             data << chunk
