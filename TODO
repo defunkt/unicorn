@@ -1,10 +1,7 @@
-
-X Ruby 1.9 compat
 X Rack compat
 X put Mongrel.run somewhere
 X PID-aware mongrel binary (like thin)
 Timestamped logger
-QA thread behaviour on 1.9
-QA Jruby compat
+QA behaviour on 1.9
 X Make sure Echoe doesn't activate itself in packaged gems
 Optimize Rack's dispatcher http://github.com/chneukirchen/rack/blob/cf040ea68a6a60a11f484a2145d2e62c34e7487e/lib/rack/urlmap.rb
