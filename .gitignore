@@ -9,3 +9,4 @@ test_stderr.log
 test_stdout.log
 .DS_Store
 *.so
+/local.mk
