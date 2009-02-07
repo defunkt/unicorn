@@ -35,7 +35,7 @@ module Unicorn
     # This does minimal exception trapping and it is up to the caller
     # to handle any socket errors (e.g. user aborted upload).
     def read(socket)
-      data = String.new(socket.sysread(Const::CHUNK_SIZE, @buffer))
+      data = String.new(read_socket(socket))
       nparsed = 0
 
       # Assumption: nparsed will always be less since data will get
@@ -61,7 +61,7 @@ module Unicorn
         else
           # Parser is not done, queue up more data to read and continue
           # parsing
-          data << socket.sysread(Const::CHUNK_SIZE, @buffer)
+          data << read_socket(socket)
           if data.length >= Const::MAX_HEADER
             raise HttpParserError.new("HEADER is longer than allowed, " \
                                       "aborting client early.")
@@ -107,6 +107,11 @@ module Unicorn
       end
       @body.rewind
       @body.sysseek(0) if @body.respond_to?(:sysseek)
+
+      # in case read_body overread because the client tried to pipeline
+      # another request, we'll truncate it.  Again, we don't do pipelining
+      # or keepalive
+      @body.truncate(content_length)
       true
     end
 
@@ -139,13 +144,10 @@ module Unicorn
     # It also expects any initial part of the body that has been read to be in
     # the @body already.  It will return true if successful and false if not.
     def read_body(socket, remain)
-      buf = @buffer
       while remain > 0
-        socket.sysread(remain, buf) # short read if it's a socket
-
         # ASSUME: we are writing to a disk and these writes always write the
         # requested amount.  This is true on Linux.
-        remain -= @body.syswrite(buf)
+        remain -= @body.syswrite(read_socket(socket))
       end
       true # success!
     rescue Object => e
@@ -157,5 +159,15 @@ module Unicorn
       reset
       false
     end
+
+    # read(2) on "slow" devices like sockets can be interrupted by signals
+    def read_socket(socket)
+      begin
+        socket.sysread(Const::CHUNK_SIZE, @buffer)
+      rescue Errno::EINTR
+        retry
+      end
+    end
+
   end
 end
