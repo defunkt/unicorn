@@ -6,25 +6,86 @@ module Unicorn
   # a StringIO object.  To be safe, you should assume it works like a file.
   # 
   class HttpRequest
-    attr_reader :logger, :buffer
 
     def initialize(logger)
       @logger = logger
       @tempfile = @body = nil
       @buffer = ' ' * Const::CHUNK_SIZE # initial size, may grow
+      @parser = HttpParser.new
+      @params = Hash.new
     end
 
     def reset
+      @parser.reset
+      @params.clear
       @body.truncate(0) rescue nil
       @body.close rescue nil
       @body = nil
     end
 
+    #
+    # Does the majority of the IO processing.  It has been written in
+    # Ruby using about 7 different IO processing strategies and no
+    # matter how it's done the performance just does not improve.  It is
+    # currently carefully constructed to make sure that it gets the best
+    # possible performance, but anyone who thinks they can make it
+    # faster is more than welcome to take a crack at it.
+    #
     # returns an environment hash suitable for Rack if successful
-    # returns nil if the socket closed prematurely (e.g. user aborted upload)
-    def consume(params, socket)
-      http_body = params[Const::HTTP_BODY]
-      content_length = params[Const::CONTENT_LENGTH].to_i
+    # This does minimal exception trapping and it is up to the caller
+    # to handle any socket errors (e.g. user aborted upload).
+    def read(socket)
+      data = String.new(socket.sysread(Const::CHUNK_SIZE, @buffer))
+      nparsed = 0
+
+      # Assumption: nparsed will always be less since data will get
+      # filled with more after each parsing.  If it doesn't get more
+      # then there was a problem with the read operation on the client
+      # socket.  Effect is to stop processing when the socket can't
+      # fill the buffer for further parsing.
+      while nparsed < data.length
+        nparsed = @parser.execute(@params, data, nparsed)
+
+        if @parser.finished?
+          # From http://www.ietf.org/rfc/rfc3875:
+          # "Script authors should be aware that the REMOTE_ADDR and
+          #  REMOTE_HOST meta-variables (see sections 4.1.8 and 4.1.9)
+          #  may not identify the ultimate source of the request.  They
+          #  identify the client for the immediate request to the server;
+          #  that client may be a proxy, gateway, or other intermediary
+          #  acting on behalf of the actual source client."
+          @params[Const::REMOTE_ADDR] = socket.unicorn_peeraddr.last
+
+          handle_body(socket) and return rack_env # success!
+          return nil # fail
+        else
+          # Parser is not done, queue up more data to read and continue
+          # parsing
+          data << socket.sysread(Const::CHUNK_SIZE, @buffer)
+          if data.length >= Const::MAX_HEADER
+            raise HttpParserError.new("HEADER is longer than allowed, " \
+                                      "aborting client early.")
+          end
+        end
+      end
+      nil # XXX bug?
+      rescue HttpParserError => e
+        @logger.error "HTTP parse error, malformed request " \
+                      "(#{@params[Const::HTTP_X_FORWARDED_FOR] ||
+                          socket.unicorn_peeraddr.last}): #{e.inspect}"
+        @logger.error "REQUEST DATA: #{data.inspect}\n---\n" \
+                      "PARAMS: #{@params.inspect}\n---\n"
+        socket.close rescue nil
+        nil
+    end
+
+    private
+
+    # Handles dealing with the rest of the request
+    # returns true if successful, false if not
+    def handle_body(socket)
+      http_body = @params[Const::HTTP_BODY]
+      content_length = @params[Const::CONTENT_LENGTH].to_i
       remain = content_length - http_body.length
 
       # must read more data to complete body
@@ -36,34 +97,40 @@ module Unicorn
         @body = File.open(@tempfile.path, "wb+")
         @body.sync = true
         @body.syswrite(http_body)
-        @body
       end
 
       # Some clients (like FF1.0) report 0 for body and then send a body.
       # This will probably truncate them but at least the request goes through
       # usually.
       if remain > 0
-        read_body(socket, remain) or return nil # fail!
+        read_body(socket, remain) or return false # fail!
       end
       @body.rewind
       @body.sysseek(0) if @body.respond_to?(:sysseek)
-      rack_env(params)
+      true
     end
 
     # Returns an environment which is rackable:
     # http://rack.rubyforge.org/doc/files/SPEC.html
-    # Copied directly from Rack's old Mongrel handler.
-    def rack_env(params)
-      params["QUERY_STRING"] ||= ''
-      params.delete "HTTP_CONTENT_TYPE"
-      params.delete "HTTP_CONTENT_LENGTH"
-      params.update({ "rack.version" => [0,1],
+    # Based on Rack's old Mongrel handler.
+    def rack_env
+      # It might be a dumbass full host request header
+      @params[Const::REQUEST_PATH] ||=
+                           URI.parse(@params[Const::REQUEST_URI]).path
+      raise "No REQUEST PATH" unless @params[Const::REQUEST_PATH]
+
+      @params["QUERY_STRING"] ||= ''
+      @params.delete "HTTP_CONTENT_TYPE"
+      @params.delete "HTTP_CONTENT_LENGTH"
+      @params.update({ "rack.version" => [0,1],
                       "rack.input" => @body,
                       "rack.errors" => STDERR,
                       "rack.multithread" => false,
                       "rack.multiprocess" => true,
                       "rack.run_once" => false,
                       "rack.url_scheme" => "http",
+                      Const::PATH_INFO => @params[Const::REQUEST_PATH],
+                      Const::SCRIPT_NAME => "",
                     })
     end
 

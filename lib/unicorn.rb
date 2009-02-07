@@ -63,8 +63,6 @@ module Unicorn
     def initialize(app, options = {})
       @app = app
       @workers = WorkerTable.new
-      @parser = HttpParser.new
-      @params = Hash.new
 
       (DEFAULTS.to_a + options.to_a).each do |key, value|
         instance_variable_set("@#{key.to_s.downcase}", value)
@@ -73,81 +71,25 @@ module Unicorn
       @listeners.map! { |address| Socket.unicorn_server_new(address, 1024) }
     end
 
-    # Does the majority of the IO processing.  It has been written in Ruby using
-    # about 7 different IO processing strategies and no matter how it's done 
-    # the performance just does not improve.  It is currently carefully constructed
-    # to make sure that it gets the best possible performance, but anyone who
-    # thinks they can make it faster is more than welcome to take a crack at it.
     def process_client(client)
+      env = @request.read(client) or return
+      app_response = @app.call(env)
+      HttpResponse.write(client, app_response)
+    rescue EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF
+      client.close rescue nil
+    rescue Object => e
+      logger.error "Read error: #{e.inspect}"
+      logger.error e.backtrace.join("\n")
+    ensure
       begin
-        parser, params = @parser, @params
-        parser.reset
-        params.clear
-        buffer = @request.buffer
-        data = String.new(client.sysread(Const::CHUNK_SIZE, buffer))
-        nparsed = 0
-
-        # Assumption: nparsed will always be less since data will get filled with more
-        # after each parsing.  If it doesn't get more then there was a problem
-        # with the read operation on the client socket.  Effect is to stop processing when the
-        # socket can't fill the buffer for further parsing.
-        while nparsed < data.length
-          nparsed = parser.execute(params, data, nparsed)
-
-          if parser.finished?
-            if !params[Const::REQUEST_PATH]
-              # It might be a dumbass full host request header
-              uri = URI.parse(params[Const::REQUEST_URI])
-              params[Const::REQUEST_PATH] = uri.path
-            end
-
-            raise "No REQUEST PATH" if !params[Const::REQUEST_PATH]
-
-            params[Const::PATH_INFO] = params[Const::REQUEST_PATH]
-            params[Const::SCRIPT_NAME] = ""
-
-            # From http://www.ietf.org/rfc/rfc3875 :
-            # "Script authors should be aware that the REMOTE_ADDR and REMOTE_HOST
-            #  meta-variables (see sections 4.1.8 and 4.1.9) may not identify the
-            #  ultimate source of the request.  They identify the client for the
-            #  immediate request to the server; that client may be a proxy, gateway,
-            #  or other intermediary acting on behalf of the actual source client."
-            params[Const::REMOTE_ADDR] = client.unicorn_peeraddr.last
-
-            env = @request.consume(params, client) or break
-            app_response = @app.call(env)
-            HttpResponse.write(client, app_response)
-            break #done
-          else
-            # Parser is not done, queue up more data to read and continue
-            # parsing
-            data << client.sysread(Const::CHUNK_SIZE, buffer)
-            if data.length >= Const::MAX_HEADER
-              raise HttpParserError.new("HEADER is longer than allowed, aborting client early.")
-            end
-          end
-        end
-      rescue EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF
-        client.close rescue nil
-      rescue HttpParserError => e
-        logger.error "HTTP parse error, malformed request (#{params[Const::HTTP_X_FORWARDED_FOR] || client.unicorn_peeraddr.last}): #{e.inspect}"
-        logger.error "REQUEST DATA: #{data.inspect}\n---\nPARAMS: #{params.inspect}\n---\n"
-      rescue Errno::EMFILE
-        logger.error "too many files"
+        client.close
+      rescue IOError
+        # Already closed
       rescue Object => e
-        logger.error "Read error: #{e.inspect}"
+        logger.error "Client error: #{e.inspect}"
         logger.error e.backtrace.join("\n")
-      ensure
-        begin
-          client.close
-        rescue IOError
-          # Already closed
-        rescue Object => e
-          logger.error "Client error: #{e.inspect}"
-          logger.error e.backtrace.join("\n")
-        end
-        @request.reset
       end
+      @request.reset
     end
 
     # Runs the thing.  Returns a hash keyed by pid with worker number values
