@@ -83,7 +83,8 @@ module Unicorn
         parser, params = @parser, @params
         parser.reset
         params.clear
-        data = client.sysread(Const::CHUNK_SIZE)
+        buffer = @request.buffer
+        data = String.new(client.sysread(Const::CHUNK_SIZE, buffer))
         nparsed = 0
 
         # Assumption: nparsed will always be less since data will get filled with more
@@ -101,7 +102,7 @@ module Unicorn
             end
 
             raise "No REQUEST PATH" if !params[Const::REQUEST_PATH]
- 
+
             params[Const::PATH_INFO] = params[Const::REQUEST_PATH]
             params[Const::SCRIPT_NAME] = ""
 
@@ -113,17 +114,14 @@ module Unicorn
             #  or other intermediary acting on behalf of the actual source client."
             params[Const::REMOTE_ADDR] = client.unicorn_peeraddr.last
 
-            # Select handlers that want more detailed request notification
             env = @request.consume(params, client) or break
             app_response = @app.call(env)
             HttpResponse.write(client, app_response)
-          break #done
+            break #done
           else
-            # Parser is not done, queue up more data to read and continue parsing
-            chunk = client.sysread(Const::CHUNK_SIZE)
-            break if !chunk or chunk.length == 0  # read failed, stop processing
-
-            data << chunk
+            # Parser is not done, queue up more data to read and continue
+            # parsing
+            data << client.sysread(Const::CHUNK_SIZE, buffer)
             if data.length >= Const::MAX_HEADER
               raise HttpParserError.new("HEADER is longer than allowed, aborting client early.")
             end

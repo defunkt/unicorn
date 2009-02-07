@@ -6,12 +6,12 @@ module Unicorn
   # a StringIO object.  To be safe, you should assume it works like a file.
   # 
   class HttpRequest
-    attr_reader :logger
+    attr_reader :logger, :buffer
 
-    # You don't really call this.  It's made for you.
     def initialize(logger)
       @logger = logger
       @tempfile = @body = nil
+      @buffer = ' ' * Const::CHUNK_SIZE # initial size, may grow
     end
 
     def reset
@@ -72,7 +72,7 @@ module Unicorn
     # It also expects any initial part of the body that has been read to be in
     # the @body already.  It will return true if successful and false if not.
     def read_body(socket, remain)
-      buf = ' ' # this string is reused for the lifetime of the loop
+      buf = @buffer
       while remain > 0
         begin
           socket.sysread(remain, buf) # short read if it's a socket
