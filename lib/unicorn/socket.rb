@@ -46,7 +46,7 @@ class Socket
     elsif respond_to?(:getsockname)
       addr = Socket.unpack_sockaddr_un(getsockname)
       # strip the pid from the temp socket path
-      addr.gsub!(/\.\d+$/, '') or
+      addr.gsub!(/\.\d+\.tmp$/, '') or
         raise ArgumentError, "PID not found in path: #{addr}"
     else
       raise ArgumentError, "could not determine unicorn_addr for #{self}"
@@ -62,7 +62,7 @@ class Socket
     # atomically replace and start listening for new connections.
     def unicorn_server_new(address = '0.0.0.0:8080', backlog = 1024)
       domain, bind_addr = if address[0..0] == "/"
-        [ AF_UNIX, pack_sockaddr_un("#{address}.#{$$}") ]
+        [ AF_UNIX, pack_sockaddr_un("#{address}.#{$$}.tmp") ]
       elsif address =~ /^(\d+\.\d+\.\d+\.\d+):(\d+)$/
         [ AF_INET, pack_sockaddr_in($2.to_i, $1) ]
       end
@@ -73,7 +73,7 @@ class Socket
       s.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) if defined?(Fcntl::FD_CLOEXEC)
 
       # atomically replace existing domain socket
-      File.rename("#{address}.#{$$}", address) if domain == AF_UNIX
+      File.rename("#{address}.#{$$}.tmp", address) if domain == AF_UNIX
       s
     end
 
