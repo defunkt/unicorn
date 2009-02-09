@@ -48,6 +48,10 @@ module Unicorn
       sock.setsockopt(SOL_TCP, TCP_CORK, 1) if defined?(TCP_CORK)
     end
 
+    def set_cloexec(io)
+      io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) if defined?(Fcntl::FD_CLOEXEC)
+    end
+
     def set_server_sockopt(sock)
       if defined?(TCP_DEFER_ACCEPT)
         sock.setsockopt(SOL_TCP, TCP_DEFER_ACCEPT, 1) rescue nil

@@ -265,9 +265,7 @@ module Unicorn
       %w(USR1 USR2 HUP).each { |sig| trap(sig, 'IGNORE') }
       @after_fork.call(self, worker_nr) if @after_fork
 
-      if defined?(Fcntl::FD_CLOEXEC)
-        @listeners.each { |s| s.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
-      end
+      @listeners.each { |sock| set_cloexec(sock) }
       nr_before = nr = 0
       client = nil
       alive = true
