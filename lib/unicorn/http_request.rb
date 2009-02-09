@@ -1,3 +1,9 @@
+require 'tempfile'
+require 'uri'
+require 'stringio'
+
+# compiled extension
+require 'http11'
 
 module Unicorn
   #
@@ -54,7 +60,7 @@ module Unicorn
           #  identify the client for the immediate request to the server;
           #  that client may be a proxy, gateway, or other intermediary
           #  acting on behalf of the actual source client."
-          @params[Const::REMOTE_ADDR] = socket.unicorn_peeraddr.last
+          @params[Const::REMOTE_ADDR] = socket.unicorn_peeraddr
 
           handle_body(socket) and return rack_env # success!
           return nil # fail
@@ -72,10 +78,10 @@ module Unicorn
       rescue HttpParserError => e
         @logger.error "HTTP parse error, malformed request " \
                       "(#{@params[Const::HTTP_X_FORWARDED_FOR] ||
-                          socket.unicorn_peeraddr.last}): #{e.inspect}"
+                          socket.unicorn_peeraddr}): #{e.inspect}"
         @logger.error "REQUEST DATA: #{data.inspect}\n---\n" \
                       "PARAMS: #{@params.inspect}\n---\n"
-        socket.close rescue nil
+        socket.closed? or socket.close rescue nil
         nil
     end
 
@@ -152,7 +158,7 @@ module Unicorn
       true # success!
     rescue Object => e
       logger.error "Error reading HTTP body: #{e.inspect}"
-      socket.close rescue nil
+      socket.closed? or socket.close rescue nil
 
       # Any errors means we should delete the file, including if the file
       # is dumped.  Truncate it ASAP to help avoid page flushes to disk.

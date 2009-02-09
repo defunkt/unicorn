@@ -1,0 +1,17 @@
+#!/home/ew/bin/ruby
+STDIN.sync = STDOUT.sync = STDERR.sync = true
+usage = "Usage: #{File.basename($0)} <config_file>"
+require 'unicorn'
+exit 0 if ARGV.size == 2 && ARGV[-1] == 'check' # used for reexec_check
+ARGV.size == 1 or abort usage
+case ARGV[0]
+when 'check' then exit
+when '-h' then puts usage
+when '-v' then puts "unicorn v#{Unicorn::Const::UNICORN_VERSION}"
+else
+  File.readable?(ARGV[0]) && File.file?(ARGV[0]) or abort usage
+  config = eval(File.read(ARGV[0]))
+  config.kind_of?(Hash) or abort "config is not a hash: #{config.class}"
+  app = config.delete(:app) or abort "Missing :app key in config!"
+  Unicorn.run(app, config)
+end

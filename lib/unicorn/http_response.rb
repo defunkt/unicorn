@@ -1,3 +1,5 @@
+require 'time'
+
 module Unicorn
   # Writes a Rack response to your client using the HTTP/1.1 specification.
   # You use it by simply doing:
@@ -33,11 +35,12 @@ module Unicorn
       'WWW-Authenticate' => true,
     }.freeze
 
+    # writes the rack_response to socket as an HTTP response
     def self.write(socket, rack_response)
       status, headers, body = rack_response
 
       # Rack does not set/require Date, but don't worry about Content-Length
-      # since Rack enforces that in Rack::Lint.
+      # since Rack applications that conform to Rack::Lint enforce that
       out = [ "#{Const::DATE}: #{Time.now.httpdate}\r\n" ]
       sent = { Const::CONNECTION => true, Const::DATE => true }
 
