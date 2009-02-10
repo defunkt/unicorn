@@ -43,6 +43,7 @@ module Unicorn
       :before_fork => lambda { |server, worker_nr|
           server.logger.info("worker=#{worker_nr} spawning...")
         },
+      :pid_file => nil,
     }
 
     Worker = Struct.new(:nr, :tempfile) unless defined?(Worker)
@@ -91,6 +92,15 @@ module Unicorn
         set_server_sockopt(io)
         logger.info "inherited: #{io} fd=#{fd} addr=#{sock_name(io)}"
         io
+      end
+
+      if @pid_file
+        if pid = pid_file_valid?(@pid_file)
+          raise ArgumentError, "Already running on pid=#{pid} ",
+                               "(or pid_file=#{@pid_file} is stale)"
+        end
+        File.open(@pid_file, 'wb') { |fp| fp.syswrite("#{$$}\n") }
+        at_exit { unlink_pid_file_safe(@pid_file) }
       end
 
       # avoid binding inherited sockets, probably not perfect for TCPSockets
@@ -260,6 +270,19 @@ module Unicorn
     # reexecutes the @start_ctx with a new binary
     def reexec
       check_reexec or return false
+
+      if @pid_file # clear the path for a new pid file
+        old_pid_file = "#{@pid_file}.oldbin"
+        if old_pid = pid_file_valid?(old_pid_file)
+          logger.error "old pid=#{old_pid} running with " \
+                       "existing pid_file=#{old_pid_file}, refusing rexec"
+          return
+        end
+        File.open(old_pid_file, 'wb') { |fp| fp.syswrite("#{$$}\n") }
+        at_exit { unlink_pid_file_safe(old_pid_file) }
+        File.unlink(@pid_file) if File.exist?(@pid_file)
+      end
+
       pid = spawn_start_ctx
       if waitpid(pid, WNOHANG)
         logger.error "rexec pid=#{pid} died with #{$?.exitstatus}"
@@ -420,6 +443,25 @@ module Unicorn
     # delivers a signal to each worker
     def kill_each_worker(signal)
       @workers.keys.each { |pid| kill_worker(signal, pid) }
+    end
+
+    # unlinks a PID file at given +path+ if it contains the current PID
+    # useful as an at_exit handler.
+    def unlink_pid_file_safe(path)
+      (File.read(path).to_i == $$ and File.unlink(path)) rescue nil
+    end
+
+    # returns a PID if a given path contains a non-stale PID file,
+    # nil otherwise.
+    def pid_file_valid?(path)
+      if File.exist?(path) && (pid = File.read(path).to_i) > 1
+        begin
+          kill(0, pid)
+          return pid
+        rescue Errno::ESRCH
+        end
+      end
+      nil
     end
 
   end
