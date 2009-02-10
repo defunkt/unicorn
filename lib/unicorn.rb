@@ -152,10 +152,8 @@ module Unicorn
     def join
       # this pipe is used to wake us up from select(2) in #join when signals
       # are trapped.  See trap_deferred
-      @rd_sig, @wr_sig = IO.pipe.map do |io|
-        io.nonblock = true
-        io
-      end unless (@rd_sig && @wr_sig)
+      @rd_sig, @wr_sig = IO.pipe unless (@rd_sig && @wr_sig)
+      @rd_sig.nonblock = @wr_sig.nonblock = true
 
       %w(QUIT INT TERM USR1 USR2 HUP).each { |sig| trap_deferred(sig) }
 
@@ -204,11 +202,10 @@ module Unicorn
       rescue Object => e
         logger.error "Unhandled master loop exception #{e.inspect}."
         logger.error e.backtrace.join("\n")
-        sleep 1 rescue nil
         retry
       end
       stop # gracefully shutdown all workers on our way out
-      logger.info "master pid=#{$$} exit"
+      logger.info "master pid=#{$$} join complete"
     end
 
     # Terminates all workers, but does not exit master process
@@ -389,6 +386,7 @@ module Unicorn
       tempfile = worker.tempfile
       alive = true
       ready = @listeners
+      client = nil
       %w(TERM INT).each { |sig| trap(sig) { exit(0) } } # instant shutdown
       trap('QUIT') do
         alive = false
@@ -416,7 +414,7 @@ module Unicorn
               end
               accepted = client.sync = true
               client.nonblock = false
-              set_client_sockopt(client) if client.class == TCPSocket
+              set_client_sockopt(client) if TCPSocket === client
               process_client(client)
             rescue Errno::ECONNABORTED
               # client closed the socket even before accept
@@ -426,6 +424,7 @@ module Unicorn
             end
             tempfile.chmod(nr += 1)
           end
+          client = nil
 
           # make the following bet: if we accepted clients this round,
           # we're probably reasonably busy, so avoid calling select(2)
@@ -458,7 +457,7 @@ module Unicorn
     # is no longer running.
     def kill_worker(signal, pid)
       begin
-        Process.kill(signal, pid)
+        kill(signal, pid)
       rescue Errno::ESRCH
         worker = @workers.delete(pid) and worker.tempfile.close rescue nil
       end
