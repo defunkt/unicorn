@@ -13,5 +13,15 @@ else
   config = eval(File.read(ARGV[0]))
   config.kind_of?(Hash) or abort "config is not a hash: #{config.class}"
   app = config.delete(:app) or abort "Missing :app key in config!"
+
+  # only daemonize if we're not inheriting file descriptors from our parent
+  if ENV['UNICORN_DAEMONIZE'] && ! ENV['UNICORN_FD']
+    # don't set umask(0000), chdir("/") or redirect STDOUT/STDERR since
+    # it's more flexible to handle that in the config (which is just Ruby)
+    exit if fork
+    Process.setsid
+    exit if fork
+    STDIN.reopen("/dev/null")
+  end
   Unicorn.run(app, config)
 end
