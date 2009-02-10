@@ -37,6 +37,7 @@ module Unicorn
       :listeners => %w(0.0.0.0:8080),
       :logger => Logger.new(STDERR),
       :nr_workers => 1,
+      :hot_config_file => nil,
       :after_fork => lambda { |server, worker_nr|
           server.logger.info("worker=#{worker_nr} spawned pid=#{$$}")
 
@@ -76,6 +77,7 @@ module Unicorn
       @start_ctx.merge!(options[:start_ctx]) if options[:start_ctx]
       @purgatory = [] # prevents objects in here from being GC-ed
       @rd_sig = @wr_sig = nil
+      load_hot_config! if @hot_config_file
     end
 
     # Runs the thing.  Returns self so you can run join on it
@@ -179,9 +181,16 @@ module Unicorn
             reexec
             @mode = :idle
             trap_deferred('USR2')
-          when 'HUP' # exec binary and exit
-            reexec
-            break
+          when 'HUP'
+            if @hot_config_file
+              load_hot_config!
+              @mode = :idle
+              trap_deferred('HUP')
+              redo # immediate reaping since we may have QUIT workers
+            else # exec binary and exit
+              reexec
+              break
+            end
           else
             logger.error "master process in unknown mode: #{@mode}, resetting"
             @mode = :idle
@@ -486,6 +495,46 @@ module Unicorn
         end
       end
       nil
+    end
+
+    # only do minimal validation, assume the user knows what they're doing
+    def load_hot_config!
+      log_pfx = "hot_config_file=#{@hot_config_file}"
+      begin
+        unless File.readable?(@hot_config_file)
+          logger.error "#{log_pfx} not readable"
+          return
+        end
+        hot_config = File.read(@hot_config_file)
+        nr_workers, timeout = @nr_workers, @timeout
+        eval(hot_config)
+        if Numeric === @timeout
+          if timeout != @timeout
+            logger.info "#{log_pfx} set: timeout=#{@timeout}"
+            if timeout > @timeout # we don't want to have to KILL them later
+              logger.info "restarting all workers because timeout got lowered"
+              kill_each_worker('QUIT')
+            end
+          end
+        else
+          logger.info "#{log_pfx} invalid: timeout=#{@timeout.inspect}"
+          @timeout = timeout
+        end
+        if Integer === @nr_workers
+          to_kill = nr_workers - @nr_workers
+          if to_kill != 0
+            logger.info "#{log_pfx} set: nr_workers=#{@nr_workers}"
+            if to_kill > 0
+              @workers.keys[0...to_kill].each { |pid| kill_worker('QUIT', pid) }
+            end
+          end
+        else
+          logger.info "#{log_pfx} invalid: nr_workers=#{@nr_workers.inspect}"
+          @nr_workers = nr_workers
+        end
+      rescue Object => e
+        logger.error "#{log_pfx} error: #{e.message}"
+      end
     end
 
   end
