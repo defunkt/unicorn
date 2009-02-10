@@ -39,6 +39,9 @@ module Unicorn
       :nr_workers => 1,
       :after_fork => lambda { |server, worker_nr|
           server.logger.info("worker=#{worker_nr} spawned pid=#{$$}")
+
+          # per-process listener ports for debugging/admin:
+          # server.add_listener("127.0.0.1:#{8081 + worker_nr}")
         },
       :before_fork => lambda { |server, worker_nr|
           server.logger.info("worker=#{worker_nr} spawning...")
@@ -126,6 +129,20 @@ module Unicorn
       end
       spawn_missing_workers
       self
+    end
+
+    # Allows workers to add a private, per-process listener via the
+    # @after_fork hook.  Very useful for debugging and testing.
+    def add_listener(address)
+      if io = bind_listen(address, 1024)
+        @purgatory << io
+        io = server_cast(io)
+        logger.info "adding listener #{io} addr=#{sock_name(io)}"
+        @listeners << io
+      else
+        logger.error "adding listener failed addr=#{address} (in use)"
+        raise Errno::EADDRINUSE, address
+      end
     end
 
     # monitors children and receives signals forever
