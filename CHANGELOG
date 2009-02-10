@@ -1,5 +1,6 @@
+v0.1.0 - Unicorn - UNIX-only fork of Mongrel free of threading
 
-v2.0. Rack support.
+v2.0. (WIP) Rack support.
 
 v1.1.4. Fix camping handler. Correct treatment of @throttle parameter.
 

@@ -1,6 +1,5 @@
+X process management tests
 X Rack compat
-X put Mongrel.run somewhere
-X PID-aware mongrel binary (like thin)
 Timestamped logger
 QA behaviour on 1.9
 X Make sure Echoe doesn't activate itself in packaged gems
