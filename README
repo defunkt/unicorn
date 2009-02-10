@@ -2,6 +2,10 @@
 
 Experimental UNIX-only fork of Mongrel.  No threads.
 
+Only run this behind nginx (or another fully-buffering reverse proxy,
+I know of none) or to serve clients within the same datacenter.  This
+is absolutely not designed to deal with slow clients.
+
 See http://unicorn.bogomips.org for more information.
 
 == License
@@ -12,14 +16,6 @@ It is based on Mongrel:
 Mongrel is copyright 2007 Zed A. Shaw and contributors. It is licensed
 under the Ruby license and the GPL2. See the include LICENSE file for
 details.
-
-== Quick Start
-
-The easiest way to get started with Unicorn is to install it via
-RubyGems and then run a Ruby on Rails application. You can do this
-easily:
-
- $ gem install unicorn
 
 == Install
 
@@ -32,6 +28,6 @@ Finally, the source includes a setup.rb for those who hate RubyGems.
 
 == Contact
 
-Newsgroup and mailing list coming.
+Newsgroup and mailing list coming, or it'll be a part of the Mongrel project.
 
 Email Eric Wong at normalperson@yhbt.net for now.
