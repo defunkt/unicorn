@@ -8,6 +8,8 @@ Manifest
 README
 Rakefile
 TODO
+bin/unicorn
+bin/unicorn-hello-world
 ext/http11/ext_help.h
 ext/http11/extconf.rb
 ext/http11/http11.c
@@ -21,6 +23,7 @@ lib/unicorn/http_request.rb
 lib/unicorn/http_response.rb
 lib/unicorn/socket.rb
 setup.rb
+test/aggregate.rb
 test/benchmark/previous.rb
 test/benchmark/simple.rb
 test/benchmark/utils.rb

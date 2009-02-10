@@ -46,4 +46,9 @@ clean:
 	-$(MAKE) -C ext/http11 clean
 	$(RM) ext/http11/Makefile lib/http11.$(DLEXT)
 
-.PHONY: $(T) $(slow_tests)
+Manifest:
+	git ls-files > $@+
+	cmp $@+ $@ || mv $@+ $@
+	$(RM) -f $@+
+
+.PHONY: $(T) $(slow_tests) Manifest
