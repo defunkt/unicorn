@@ -47,6 +47,7 @@ module Unicorn
           server.logger.info("worker=#{worker_nr} spawning...")
         },
       :pid_file => nil,
+      :listen_backlog => 1024,
     }
 
     Worker = Struct.new(:nr, :tempfile) unless defined?(Worker)
@@ -105,7 +106,7 @@ module Unicorn
 
       # try binding new listeners
       @listeners.map! do |addr|
-        if sock = bind_listen(addr, 1024)
+        if sock = bind_listen(addr, @listen_backlog)
           sock
         elsif inherited.empty? || addr[0..0] == "/"
           raise Errno::EADDRINUSE, "couldn't bind #{addr}"
@@ -134,7 +135,7 @@ module Unicorn
     # Allows workers to add a private, per-process listener via the
     # @after_fork hook.  Very useful for debugging and testing.
     def add_listener(address)
-      if io = bind_listen(address, 1024)
+      if io = bind_listen(address, @listen_backlog)
         @purgatory << io
         io = server_cast(io)
         logger.info "adding listener #{io} addr=#{sock_name(io)}"
