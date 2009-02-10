@@ -331,7 +331,7 @@ module Unicorn
       return if @workers.size == @nr_workers
       (0...@nr_workers).each do |worker_nr|
         @workers.values.include?(worker_nr) and next
-        tempfile = Tempfile.new('unicorn_worker')
+        tempfile = Tempfile.new('') # as short as possible to save dir space
         tempfile.unlink # don't allow other processes to find or see it
         tempfile.sync = true
         worker = Worker.new(worker_nr, tempfile)
