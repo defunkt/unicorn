@@ -5,8 +5,8 @@ ext/http11/http11_parser.o
 ext/http11/mkmf.log
 lib/http11.bundle
 log/
-test_stderr.log
-test_stdout.log
+*.log
 .DS_Store
 *.so
 /local.mk
+pkg/
