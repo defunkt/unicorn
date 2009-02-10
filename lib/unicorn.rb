@@ -71,14 +71,7 @@ module Unicorn
       @start_ctx = DEFAULT_START_CTX.dup
       @start_ctx.merge!(options[:start_ctx]) if options[:start_ctx]
       @purgatory = [] # prevents objects in here from being GC-ed
-
-      # this pipe is used to wake us up from select(2) in #join when signals
-      # are trapped.  See trap_deferred
-      @rd_sig, @wr_sig = IO.pipe.map do |io|
-        set_cloexec(io)
-        io.nonblock = true
-        io
-      end
+      @rd_sig = @wr_sig = nil
     end
 
     # Runs the thing.  Returns self so you can run join on it
@@ -140,7 +133,16 @@ module Unicorn
     # one-at-a-time time and we'll happily drop signals in case somebody
     # is signalling us too often.
     def join
+      # this pipe is used to wake us up from select(2) in #join when signals
+      # are trapped.  See trap_deferred
+      @rd_sig, @wr_sig = IO.pipe.map do |io|
+        set_cloexec(io)
+        io.nonblock = true
+        io
+      end unless (@rd_sig && @wr_sig)
+
       %w(QUIT INT TERM USR1 USR2 HUP).each { |sig| trap_deferred(sig) }
+
       begin
         loop do
           reap_all_workers
@@ -346,8 +348,8 @@ module Unicorn
     # by the user.
     def init_worker_process
       %w(TERM INT QUIT USR1 USR2 HUP).each { |sig| trap(sig, 'IGNORE') }
-      @rd_sig.close
-      @wr_sig.close
+      @rd_sig.close if @rd_sig
+      @wr_sig.close if @wr_sig
       @workers.values.each { |other| other.tempfile.close rescue nil }
       @workers.clear
       @start_ctx.clear
