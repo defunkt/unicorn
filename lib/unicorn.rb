@@ -355,6 +355,8 @@ module Unicorn
       @start_ctx.clear
       @mode = @start_ctx = @workers = @rd_sig = @wr_sig = nil
       @listeners.each { |sock| set_cloexec(sock) }
+      ENV.delete('UNICORN_DAEMONIZE')
+      ENV.delete('UNICORN_FD')
     end
 
     # runs inside each forked worker, this sits around and waits
