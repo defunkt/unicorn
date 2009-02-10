@@ -69,6 +69,17 @@ module Unicorn
       return address if address.kind_of?(Socket)
 
       domain, bind_addr = if address[0..0] == "/"
+        if File.exist?(address)
+          if File.socket?(address)
+            if self.respond_to?(:logger)
+              logger.info "unlinking existing socket=#{address}"
+            end
+            File.unlink(address)
+          else
+            raise ArgumentError,
+                  "socket=#{address} specified but it is not a socket!"
+          end
+        end
         [ AF_UNIX, Socket.pack_sockaddr_un(address) ]
       elsif address =~ /^(\d+\.\d+\.\d+\.\d+):(\d+)$/
         [ AF_INET, Socket.pack_sockaddr_in($2.to_i, $1) ]
