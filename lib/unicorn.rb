@@ -44,6 +44,15 @@ module Unicorn
           server.logger.info("worker=#{worker_nr} spawning...")
         },
     }
+
+    Worker = Struct.new(:nr, :tempfile) unless defined?(Worker)
+    class Worker
+      # worker objects may be compared to just plain numbers
+      def ==(other_nr)
+        self.nr == other_nr
+      end
+    end
+
     # Creates a working server on host:port (strange things happen if
     # port isn't a Number).  Use HttpServer::run to start the server and
     # HttpServer.workers.join to join the thread that's processing
@@ -117,7 +126,9 @@ module Unicorn
     end
 
     # monitors children and receives signals forever
-    # (or until a termination signal is sent)
+    # (or until a termination signal is sent).  This handles signals
+    # one-at-a-time time and we'll happily drop signals in case somebody
+    # is signalling us too often.
     def join
       %w(QUIT INT TERM USR1 USR2 HUP).each { |sig| trap_deferred(sig) }
       begin
@@ -126,6 +137,7 @@ module Unicorn
           case @mode
           when :idle
             kill_each_worker(0) # ensure they're running
+            murder_lazy_workers
             spawn_missing_workers
           when 'QUIT' # graceful shutdown
             break
@@ -148,11 +160,15 @@ module Unicorn
             @mode = :idle
           end
           reap_all_workers
-          ready = IO.select([@rd_sig], nil, nil, 1) or next
+
+          ready = begin
+            IO.select([@rd_sig], nil, nil, 1) or next
+          rescue Errno::EINTR # next
+          end
           ready[0] && ready[0][0] or next
           begin # just consume the pipe when we're awakened, @mode is set
             loop { @rd_sig.sysread(Const::CHUNK_SIZE) }
-          rescue Errno::EAGAIN
+          rescue Errno::EAGAIN, Errno::EINTR # next
           end
         end
       rescue Errno::EINTR
@@ -207,8 +223,10 @@ module Unicorn
       begin
         loop do
           pid = waitpid(-1, WNOHANG) or break
-          worker_nr = @workers.delete(pid)
-          logger.info "reaped pid=#{pid} worker=#{worker_nr || 'unknown'} " \
+          worker = @workers.delete(pid)
+          worker.tempfile.close rescue nil
+          logger.info "reaped pid=#{pid} " \
+                      "worker=#{worker && worker.nr || 'unknown'} " \
                       "status=#{$?.exitstatus}"
         end
       rescue Errno::ECHILD
@@ -248,19 +266,39 @@ module Unicorn
       end
     end
 
+    # forcibly terminate all workers that haven't checked in in @timeout
+    # seconds.  The timeout is implemented using an unlinked tempfile
+    # shared between the parent process and each worker.  The worker
+    # runs File#chmod to modify the ctime of the tempfile.  If the ctime
+    # is stale for >@timeout seconds, then we'll kill the corresponding
+    # worker.
+    def murder_lazy_workers
+      now = Time.now
+      @workers.each_pair do |pid, worker|
+        (now - worker.tempfile.ctime) <= @timeout and next
+        logger.error "worker=#{worker.nr} pid=#{pid} is too old, killing"
+        kill_worker('KILL', pid) # take no prisoners for @timeout violations
+        worker.tempfile.close rescue nil
+      end
+    end
+
     def spawn_missing_workers
       return if @workers.size == @nr_workers
       (0...@nr_workers).each do |worker_nr|
         @workers.values.include?(worker_nr) and next
-        @before_fork.call(self, worker_nr)
-        pid = fork { worker_loop(worker_nr) }
-        @workers[pid] = worker_nr
+        tempfile = Tempfile.new('unicorn_worker')
+        tempfile.unlink # don't allow other processes to find or see it
+        tempfile.sync = true
+        worker = Worker.new(worker_nr, tempfile)
+        @before_fork.call(self, worker.nr)
+        pid = fork { worker_loop(worker) }
+        @workers[pid] = worker
       end
     end
 
     # once a client is accepted, it is processed in its entirety here
     # in 3 easy steps: read request, call app, write app response
-    def process_client(client, client_nr)
+    def process_client(client)
       env = @request.read(client) or return
       app_response = @app.call(env)
       HttpResponse.write(client, app_response)
@@ -279,18 +317,29 @@ module Unicorn
       @request.reset
     end
 
-    # runs inside each forked worker, this sits around and waits
-    # for connections and doesn't die until the parent dies
-    def worker_loop(worker_nr)
+    # gets rid of stuff the worker has no business keeping track of
+    # to free some resources and drops all sig handlers.
+    # traps for USR1, USR2, and HUP may be set in the @after_fork Proc
+    # by the user.
+    def init_worker_process
+      %w(TERM INT QUIT USR1 USR2 HUP).each { |sig| trap(sig, 'IGNORE') }
       @rd_sig.close
       @wr_sig.close
-      # allow @after_fork to override these signals:
-      %w(USR1 USR2 HUP).each { |sig| trap(sig, 'IGNORE') }
-      @after_fork.call(self, worker_nr) if @after_fork
-
+      @workers.values.each { |other| other.tempfile.close rescue nil }
+      @workers.clear
+      @start_ctx.clear
+      @mode = @start_ctx = @workers = @rd_sig = @wr_sig = nil
       @listeners.each { |sock| set_cloexec(sock) }
-      nr_before = nr = 0
-      client = nil
+    end
+
+    # runs inside each forked worker, this sits around and waits
+    # for connections and doesn't die until the parent dies (or is
+    # given a INT, QUIT, or TERM signal)
+    def worker_loop(worker)
+      init_worker_process
+      @after_fork.call(self, worker.nr) if @after_fork
+      nr = 0
+      tempfile = worker.tempfile
       alive = true
       ready = @listeners
       %w(TERM INT).each { |sig| trap(sig) { exit(0) } } # instant shutdown
@@ -300,8 +349,17 @@ module Unicorn
       end
 
       while alive && @master_pid == ppid
+        # we're a goner in @timeout seconds anyways if tempfile.chmod
+        # breaks, so don't trap the exception.  Using fchmod() since
+        # futimes() is not available in base Ruby and I very strongly
+        # prefer temporary files to be unlinked for security,
+        # performance and reliability reasons, so utime is out.  No-op
+        # changes with chmod doesn't update ctime on all filesystems; so
+        # we increment our counter each and every time.
+        tempfile.chmod(nr += 1)
+
         begin
-          nr_before = nr
+          accepted = false
           ready.each do |sock|
             begin
               client = begin
@@ -309,29 +367,30 @@ module Unicorn
               rescue Errno::EAGAIN
                 next
               end
-              client.sync = true
+              accepted = client.sync = true
               client.nonblock = false
               set_client_sockopt(client) if client.class == TCPSocket
-              nr += 1
-              process_client(client, nr)
+              process_client(client)
             rescue Errno::ECONNABORTED
               # client closed the socket even before accept
               if client && !client.closed?
                 client.close rescue nil
               end
             end
+            tempfile.chmod(nr += 1)
           end
 
           # make the following bet: if we accepted clients this round,
           # we're probably reasonably busy, so avoid calling select(2)
           # and try to do a blind non-blocking accept(2) on everything
           # before we sleep again in select
-          if nr != nr_before
+          if accepted
             ready = @listeners
           else
             begin
+              tempfile.chmod(nr += 1)
               # timeout used so we can detect parent death:
-              ret = IO.select(@listeners, nil, nil, @timeout) or next
+              ret = IO.select(@listeners, nil, nil, @timeout/2.0) or next
               ready = ret[0]
             rescue Errno::EBADF => e
               exit(alive ? 1 : 0)
@@ -348,15 +407,19 @@ module Unicorn
       end
     end
 
+    # delivers a signal to a worker and fails gracefully if the worker
+    # is no longer running.
+    def kill_worker(signal, pid)
+      begin
+        Process.kill(signal, pid)
+      rescue Errno::ESRCH
+        worker = @workers.delete(pid) and worker.tempfile.close rescue nil
+      end
+    end
+
     # delivers a signal to each worker
     def kill_each_worker(signal)
-      @workers.keys.each do |pid|
-        begin
-          Process.kill(signal, pid)
-        rescue Errno::ESRCH
-          @workers.delete(pid)
-        end
-      end
+      @workers.keys.each { |pid| kill_worker(signal, pid) }
     end
 
   end
