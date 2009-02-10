@@ -153,7 +153,6 @@ module Unicorn
       # this pipe is used to wake us up from select(2) in #join when signals
       # are trapped.  See trap_deferred
       @rd_sig, @wr_sig = IO.pipe.map do |io|
-        set_cloexec(io)
         io.nonblock = true
         io
       end unless (@rd_sig && @wr_sig)
@@ -268,6 +267,10 @@ module Unicorn
     # Returns the pid of the forked process
     def spawn_start_ctx(check = nil)
       fork do
+        @rd_sig.close if @rd_sig
+        @wr_sig.close if @wr_sig
+        @workers.values.each { |other| other.tempfile.close rescue nil }
+
         ENV.replace(@start_ctx[:environ])
         ENV['UNICORN_FD'] = @listeners.map { |sock| sock.fileno }.join(',')
         File.umask(@start_ctx[:umask])
