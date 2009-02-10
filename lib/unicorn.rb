@@ -61,6 +61,14 @@ module Unicorn
       @start_ctx = DEFAULT_START_CTX.dup
       @start_ctx.merge!(options[:start_ctx]) if options[:start_ctx]
       @purgatory = [] # prevents objects in here from being GC-ed
+
+      # this pipe is used to wake us up from select(2) in #join when signals
+      # are trapped.  See trap_deferred
+      @rd_sig, @wr_sig = IO.pipe.map do |io|
+        set_cloexec(io)
+        io.nonblock = true
+        io
+      end
     end
 
     # Runs the thing.  Returns self so you can run join on it
@@ -140,7 +148,12 @@ module Unicorn
             @mode = :idle
           end
           reap_all_workers
-          sleep 1
+          ready = IO.select([@rd_sig], nil, nil, 1) or next
+          ready[0] && ready[0][0] or next
+          begin # just consume the pipe when we're awakened, @mode is set
+            loop { @rd_sig.sysread(Const::CHUNK_SIZE) }
+          rescue Errno::EAGAIN
+          end
         end
       rescue Errno::EINTR
         retry
@@ -173,11 +186,19 @@ module Unicorn
 
     private
 
-    # defer a signal for later processing
+    # defer a signal for later processing in #join (master process)
     def trap_deferred(signal)
       trap(signal) do |sig_nr|
         trap(signal, 'IGNORE') # prevent double signalling
-        @mode = signal if Symbol === @mode
+        if Symbol === @mode
+          @mode = signal
+          begin
+            @wr_sig.syswrite('.') # wakeup master process from IO.select
+          rescue Errno::EAGAIN
+          rescue Errno::EINTR
+            retry
+          end
+        end
       end
     end
 
@@ -261,6 +282,8 @@ module Unicorn
     # runs inside each forked worker, this sits around and waits
     # for connections and doesn't die until the parent dies
     def worker_loop(worker_nr)
+      @rd_sig.close
+      @wr_sig.close
       # allow @after_fork to override these signals:
       %w(USR1 USR2 HUP).each { |sig| trap(sig, 'IGNORE') }
       @after_fork.call(self, worker_nr) if @after_fork
