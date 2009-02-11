@@ -140,7 +140,8 @@ module Unicorn
       if io = bind_listen(address, @listen_backlog)
         @purgatory << io
         io = server_cast(io)
-        logger.info "adding listener #{io} addr=#{sock_name(io)}"
+        logger.info "#{io} listening on pid=#{$$} " \
+                    "fd=#{io.fileno} addr=#{sock_name(io)}"
         @listeners << io
       else
         logger.error "adding listener failed addr=#{address} (in use)"
