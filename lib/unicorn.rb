@@ -159,7 +159,7 @@ module Unicorn
       @rd_sig.nonblock = @wr_sig.nonblock = true
 
       %w(QUIT INT TERM USR1 USR2 HUP).each { |sig| trap_deferred(sig) }
-
+      $0 = "unicorn master"
       begin
         loop do
           reap_all_workers
@@ -373,8 +373,9 @@ module Unicorn
     # to free some resources and drops all sig handlers.
     # traps for USR1, USR2, and HUP may be set in the @after_fork Proc
     # by the user.
-    def init_worker_process
+    def init_worker_process(worker)
       %w(TERM INT QUIT USR1 USR2 HUP).each { |sig| trap(sig, 'IGNORE') }
+      $0 = "unicorn worker[#{worker.nr}]"
       @rd_sig.close if @rd_sig
       @wr_sig.close if @wr_sig
       @workers.values.each { |other| other.tempfile.close rescue nil }
@@ -384,14 +385,14 @@ module Unicorn
       @listeners.each { |sock| set_cloexec(sock) }
       ENV.delete('UNICORN_DAEMONIZE')
       ENV.delete('UNICORN_FD')
+      @after_fork.call(self, worker.nr) if @after_fork
     end
 
     # runs inside each forked worker, this sits around and waits
     # for connections and doesn't die until the parent dies (or is
     # given a INT, QUIT, or TERM signal)
     def worker_loop(worker)
-      init_worker_process
-      @after_fork.call(self, worker.nr) if @after_fork
+      init_worker_process(worker)
       nr = 0
       tempfile = worker.tempfile
       alive = true
