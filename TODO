@@ -1,4 +1,9 @@
-X process management tests
+tests for process management
+tests for signal handling
+tests for hot_config_file reloading
+tests for binary rexecution + socket inheritance
+tests for upload tempfile reuse
+tests for timeouts
 X Rack compat
 Timestamped logger
 QA behaviour on 1.9
