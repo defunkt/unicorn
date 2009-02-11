@@ -10,3 +10,5 @@ log/
 *.so
 /local.mk
 pkg/
+/.config
+/InstalledFiles
