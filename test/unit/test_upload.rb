@@ -111,7 +111,7 @@ class UploadTest < Test::Unit::TestCase
     start_server(lambda { |env|
       new_tmp = Tempfile.new('unicorn_test')
       input = env['rack.input']
-      File.rename(input.path, new_tmp)
+      File.rename(input.path, new_tmp.path)
       resp = {
         :inode => input.stat.ino,
         :size => input.stat.size,
