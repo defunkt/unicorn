@@ -15,7 +15,7 @@ module Unicorn
 
     def initialize(logger)
       @logger = logger
-      @tempfile = @body = nil
+      @body = nil
       @buffer = ' ' * Const::CHUNK_SIZE # initial size, may grow
       @parser = HttpParser.new
       @params = Hash.new
@@ -24,7 +24,6 @@ module Unicorn
     def reset
       @parser.reset
       @params.clear
-      @body.truncate(0) rescue nil
       @body.close rescue nil
       @body = nil
     end
@@ -99,8 +98,7 @@ module Unicorn
         # small body, just use that
         @body = StringIO.new(http_body)
       else # huge body, put it in a tempfile
-        @tempfile ||= Tempfile.new(Const::UNICORN_TMP_BASE)
-        @body = File.open(@tempfile.path, "wb+")
+        @body = Tempfile.new(Const::UNICORN_TMP_BASE)
         @body.sync = true
         @body.syswrite(http_body)
       end
@@ -162,6 +160,7 @@ module Unicorn
 
       # Any errors means we should delete the file, including if the file
       # is dumped.  Truncate it ASAP to help avoid page flushes to disk.
+      @body.truncate(0) rescue nil
       reset
       false
     end

@@ -107,12 +107,6 @@ proxy we know of that meets this requirement.
    unportable event notification solutions for watching few
    file descriptors.
 
- * Since workers only work on one client at a time, the temporary
-   file for storing large POST/PUT requests is reused for the
-   lifetime of the process.  This should limit temp directory
-   growth on UNIX filesystems where temp file names are never
-   purged from the containing directory.
-
  * If the master process dies unexpectedly for any reason,
    workers will notice within :timeout/2 seconds and follow
    the master to its death.
