@@ -159,7 +159,7 @@ module Unicorn
       @rd_sig, @wr_sig = IO.pipe unless (@rd_sig && @wr_sig)
       @rd_sig.nonblock = @wr_sig.nonblock = true
 
-      %w(CHLD QUIT INT TERM USR1 USR2 HUP).each { |sig| trap_deferred(sig) }
+      %w(QUIT INT TERM USR1 USR2 HUP).each { |sig| trap_deferred(sig) }
       $0 = "unicorn master"
       begin
         loop do
