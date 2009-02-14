@@ -159,14 +159,13 @@ module Unicorn
       @rd_sig, @wr_sig = IO.pipe unless (@rd_sig && @wr_sig)
       @rd_sig.nonblock = @wr_sig.nonblock = true
 
-      %w(QUIT INT TERM USR1 USR2 HUP).each { |sig| trap_deferred(sig) }
+      %w(CHLD QUIT INT TERM USR1 USR2 HUP).each { |sig| trap_deferred(sig) }
       $0 = "unicorn master"
       begin
         loop do
           reap_all_workers
           case @mode
           when :idle
-            kill_each_worker(0) # ensure they're running
             murder_lazy_workers
             spawn_missing_workers
           when 'QUIT' # graceful shutdown
@@ -376,6 +375,7 @@ module Unicorn
     # by the user.
     def init_worker_process(worker)
       %w(TERM INT QUIT USR1 USR2 HUP).each { |sig| trap(sig, 'IGNORE') }
+      trap('CHLD', 'DEFAULT')
       $0 = "unicorn worker[#{worker.nr}]"
       @rd_sig.close if @rd_sig
       @wr_sig.close if @wr_sig
