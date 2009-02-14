@@ -44,7 +44,7 @@ module Unicorn
       out = [ "#{Const::DATE}: #{Time.now.httpdate}\r\n" ]
       sent = { Const::CONNECTION => true, Const::DATE => true }
 
-      headers.each_pair do |key, value|
+      headers.each do |key, value|
         if ! sent[key] || ALLOWED_DUPLICATES[key]
           sent[key] = true
           out << "#{key}: #{value}\r\n"
