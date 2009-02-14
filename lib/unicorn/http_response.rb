@@ -21,12 +21,6 @@ module Unicorn
 
   class HttpResponse
 
-    # enforce "Connection: close" usage on all our responses
-    HTTP_STATUS_HEADERS = HTTP_STATUS_CODES.inject({}) do |hash, (code, text)|
-      hash[code] = "HTTP/1.1 #{code} #{text}\r\nConnection: close".freeze
-      hash
-    end.freeze
-
     # headers we allow duplicates for
     ALLOWED_DUPLICATES = {
       'Set-Cookie' => true,
@@ -41,17 +35,20 @@ module Unicorn
 
       # Rack does not set/require Date, but don't worry about Content-Length
       # since Rack applications that conform to Rack::Lint enforce that
-      out = [ "#{Const::DATE}: #{Time.now.httpdate}\r\n" ]
+      out = [ "#{Const::DATE}: #{Time.now.httpdate}" ]
       sent = { Const::CONNECTION => true, Const::DATE => true }
 
       headers.each do |key, value|
         if ! sent[key] || ALLOWED_DUPLICATES[key]
           sent[key] = true
-          out << "#{key}: #{value}\r\n"
+          out << "#{key}: #{value}"
         end
       end
 
-      socket_write(socket, "#{HTTP_STATUS_HEADERS[status]}\r\n#{out.join}\r\n")
+      socket_write(socket,
+                   "HTTP/1.1 #{status} #{HTTP_STATUS_CODES[status]}\r\n" \
+                   "Connection: close\r\n" \
+                   "#{out.join("\r\n")}\r\n\r\n")
       body.each { |chunk| socket_write(socket, chunk) }
     end
 

@@ -17,6 +17,17 @@ class ResponseTest < Test::Unit::TestCase
     assert out.length > 0, "output didn't have data"
   end
 
+  def test_response_OFS_set
+    old_ofs = $,
+    $, = "\f\v"
+    out = StringIO.new
+    HttpResponse.write(out,[200, {"X-Whatever" => "stuff"}, ["cool"]])
+    resp = out.read
+    assert ! resp.include?("\f\v"), "output didn't use $, ($OFS)"
+    ensure
+      $, = old_ofs
+  end
+
   def test_response_200
     io = StringIO.new
     HttpResponse.write(io, [200, {}, []])
