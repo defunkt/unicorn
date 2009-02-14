@@ -137,8 +137,11 @@ You can get the source via git via the following locations:
 
 See the Sinatra example.
 
-It should be capable of running all Rack applications.  Since this
-is a preforking webserver
+It should be capable of running all Rack applications.  Since this is a
+preforking webserver, you do not have to worry about thread-safety of your
+application or libraries. However, your Rack application may use threads
+internally (and should even be able to continue running threads after the
+request is complete).
 
 == Contact
 
