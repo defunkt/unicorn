@@ -66,7 +66,7 @@ module Unicorn
     # an absolute path to a UNIX socket.  address can even be a Socket
     # object in which case it is immediately returned
     def bind_listen(address = '0.0.0.0:8080', backlog = 1024)
-      return address if address.kind_of?(Socket)
+      return address unless String === address
 
       domain, bind_addr = if address[0..0] == "/"
         if File.exist?(address)
