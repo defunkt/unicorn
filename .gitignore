@@ -12,3 +12,4 @@ log/
 pkg/
 /.config
 /InstalledFiles
+/doc
