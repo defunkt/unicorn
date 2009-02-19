@@ -41,8 +41,6 @@ static VALUE global_server_port;
 static VALUE global_server_protocol;
 static VALUE global_server_protocol_value;
 static VALUE global_http_host;
-static VALUE global_unicorn_version;
-static VALUE global_server_software;
 static VALUE global_port_80;
 
 #define TRIE_INCREASE 30
@@ -309,7 +307,6 @@ void header_done(void *data, const char *at, size_t length)
   /* grab the initial body and stuff it into the hash */
   rb_hash_aset(req, global_http_body, rb_str_new(at, length));
   rb_hash_aset(req, global_server_protocol, global_server_protocol_value);
-  rb_hash_aset(req, global_server_software, global_unicorn_version);
 }
 
 
@@ -509,7 +506,6 @@ void Init_http11()
   DEF_GLOBAL(server_protocol, "SERVER_PROTOCOL");
   DEF_GLOBAL(server_protocol_value, "HTTP/1.1");
   DEF_GLOBAL(http_host, "HTTP_HOST");
-  DEF_GLOBAL(server_software, "SERVER_SOFTWARE");
   DEF_GLOBAL(port_80, "80");
 
   eHttpParserError = rb_define_class_under(mUnicorn, "HttpParserError", rb_eIOError);
