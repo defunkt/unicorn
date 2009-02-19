@@ -42,6 +42,7 @@ static VALUE global_server_protocol;
 static VALUE global_server_protocol_value;
 static VALUE global_http_host;
 static VALUE global_port_80;
+static VALUE global_localhost;
 
 #define TRIE_INCREASE 30
 
@@ -302,6 +303,9 @@ void header_done(void *data, const char *at, size_t length)
       rb_hash_aset(req, global_server_name, temp);
       rb_hash_aset(req, global_server_port, global_port_80);
     }
+  } else {
+    rb_hash_aset(req, global_server_name, global_localhost);
+    rb_hash_aset(req, global_server_port, global_port_80);
   }
 
   /* grab the initial body and stuff it into the hash */
@@ -507,6 +511,7 @@ void Init_http11()
   DEF_GLOBAL(server_protocol_value, "HTTP/1.1");
   DEF_GLOBAL(http_host, "HTTP_HOST");
   DEF_GLOBAL(port_80, "80");
+  DEF_GLOBAL(localhost, "localhost");
 
   eHttpParserError = rb_define_class_under(mUnicorn, "HttpParserError", rb_eIOError);
 
