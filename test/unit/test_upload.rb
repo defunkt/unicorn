@@ -30,6 +30,7 @@ class UploadTest < Test::Unit::TestCase
 
   def teardown
     redirect_test_io { @server.stop(true) } if @server
+    @random.close
   end
 
   def test_put
