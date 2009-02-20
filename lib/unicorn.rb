@@ -26,7 +26,7 @@ module Unicorn
 
     DEFAULT_START_CTX = {
       :argv => ARGV.map { |arg| arg.dup },
-      :cwd => (ENV['PWD'] || Dir.pwd),
+      :cwd => Dir.pwd,
       :zero => $0.dup,
       :environ => {}.merge!(ENV),
       :umask => File.umask,
