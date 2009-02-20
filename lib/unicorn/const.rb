@@ -72,6 +72,10 @@ module Unicorn
 
     UNICORN_TMP_BASE="unicorn".freeze
 
+    DEFAULT_HOST = "0.0.0.0".freeze # default TCP listen host address
+    DEFAULT_PORT = "8080".freeze    # default TCP listen port
+    DEFAULT_LISTEN = "#{DEFAULT_HOST}:#{DEFAULT_PORT}".freeze
+
     # The standard empty 404 response for bad requests.  Use Error4040Handler for custom stuff.
     ERROR_404_RESPONSE="HTTP/1.1 404 Not Found\r\nConnection: close\r\nServer: Unicorn #{UNICORN_VERSION}\r\n\r\nNOT FOUND".freeze
 

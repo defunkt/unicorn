@@ -32,10 +32,12 @@ module Unicorn
       :umask => File.umask,
     }.freeze
 
+    DEFAULT_LOGGER = Logger.new(STDERR)
+
     DEFAULTS = {
       :timeout => 60,
-      :listeners => %w(0.0.0.0:8080),
-      :logger => Logger.new(STDERR),
+      :listeners => [ Const::DEFAULT_LISTEN ],
+      :logger => DEFAULT_LOGGER,
       :nr_workers => 1,
       :hot_config_file => nil,
       :after_fork => lambda { |server, worker_nr|
