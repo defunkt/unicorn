@@ -12,14 +12,9 @@ end
 
 require 'test/unit'
 require 'net/http'
-require 'timeout'
-require 'cgi/session'
-require 'fileutils'
-require 'benchmark'
 require 'digest/sha1'
 require 'uri'
 require 'stringio'
-require 'pp'
 require 'unicorn'
 require 'tmpdir'
 
