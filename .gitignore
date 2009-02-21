@@ -13,3 +13,4 @@ pkg/
 /.config
 /InstalledFiles
 /doc
+/test/install-*
