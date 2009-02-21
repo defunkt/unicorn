@@ -10,13 +10,14 @@ Echoe.new("unicorn") do |p|
   p.url = "http://unicorn.bogomips.org"
   p.rdoc_pattern = ['README', 'LICENSE', 'CONTRIBUTORS', 'CHANGELOG', 'COPYING', 'lib/**/*.rb', 'doc/**/*.rdoc']
   p.ignore_pattern = /^(pkg|site|projects|doc|log)|CVS|\.log/
-  p.extension_pattern = nil
-
   p.need_tar_gz = false
   p.need_tgz = true
 
   p.extension_pattern = ["ext/**/extconf.rb"]
 
+  # Eric hasn't bothered to figure out running exec tests properly
+  # from Rake, but Eric prefers GNU make to Rake for tests anyways...
+  p.test_pattern = [ 'test/unit/test*.rb' ]
 end
 
 #### Ragel builder

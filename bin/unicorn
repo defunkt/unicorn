@@ -1,27 +1,171 @@
 #!/home/ew/bin/ruby
 STDIN.sync = STDOUT.sync = STDERR.sync = true
-usage = "Usage: #{File.basename($0)} <config_file>"
-require 'unicorn'
-exit 0 if ARGV.size == 2 && ARGV[-1] == 'check' # used for reexec_check
-ARGV.size == 1 or abort usage
-case ARGV[0]
-when 'check' then exit
-when '-h' then puts usage
-when '-v' then puts "unicorn v#{Unicorn::Const::UNICORN_VERSION}"
-else
-  File.readable?(ARGV[0]) && File.file?(ARGV[0]) or abort usage
-  config = eval(File.read(ARGV[0]))
-  config.kind_of?(Hash) or abort "config is not a hash: #{config.class}"
-  app = config.delete(:app) or abort "Missing :app key in config!"
+require 'unicorn' # require this first to populate Unicorn::DEFAULT_START_CTX
+require 'rack'
+require 'optparse'
 
-  # only daemonize if we're not inheriting file descriptors from our parent
-  if ENV['UNICORN_DAEMONIZE'] && ! ENV['UNICORN_FD']
-    # don't set umask(0000), chdir("/") or redirect STDOUT/STDERR since
-    # it's more flexible to handle that in the config (which is just Ruby)
+env = "development"
+daemonize = false
+listeners = []
+options = { :listeners => listeners }
+host = Unicorn::Const::DEFAULT_HOST
+port = Unicorn::Const::DEFAULT_PORT
+
+opts = OptionParser.new("", 24, '  ') do |opts|
+  opts.banner = "Usage: #{File.basename($0)} " \
+                "[ruby options] [unicorn options] [rackup config file]"
+
+  opts.separator ""
+  opts.separator "Ruby options:"
+
+  lineno = 1
+  opts.on("-e", "--eval LINE", "evaluate a LINE of code") do |line|
+    eval line, TOPLEVEL_BINDING, "-e", lineno
+    lineno += 1
+  end
+
+  opts.on("-d", "--debug", "set debugging flags (set $DEBUG to true)") do
+    $DEBUG = true
+  end
+
+  opts.on("-w", "--warn", "turn warnings on for your script") do
+    $-w = true
+  end
+
+  opts.on("-I", "--include PATH",
+          "specify $LOAD_PATH (may be used more than once)") do |path|
+    $LOAD_PATH.unshift(*path.split(/:/))
+  end
+
+  opts.on("-r", "--require LIBRARY",
+          "require the library, before executing your script") do |library|
+    require library
+  end
+
+  opts.separator ""
+  opts.separator "Unicorn options:"
+
+  # some of these switches exist for rackup command-line compatibility,
+
+  opts.on("-o", "--host HOST", "listen on HOST (default: 0.0.0.0)") do |h|
+    warn "The --host/-o option is not recommended, see --listen/-l"
+    host = h
+  end
+
+  opts.on("-p", "--port PORT", "use PORT (default: 8080)") do |p|
+    warn "The --port/-p option is not recommended, see --listen/-l"
+    port = p.to_i
+  end
+
+  opts.on("-E", "--env ENVIRONMENT",
+          "use ENVIRONMENT for defaults (default: development)") do |e|
+    env = e
+  end
+
+  opts.on("-D", "--daemonize", "run daemonized in the background") do |d|
+    daemonize = d ? true : false
+  end
+
+  opts.on("-P", "--pid FILE", "file to store PID (default: none)") do |f|
+    options[:pid] = File.expand_path(f)
+  end
+
+  # Unicorn-specific stuff
+  opts.on("-l", "--listen <address:port|/path/to/socket>",
+          "listen on address:port or UNIX socket " \
+          "(default: 0.0.0.0:8080)" \
+          "  this may be specified multiple times") do |address|
+    listeners << address
+  end
+
+  opts.on("-c", "--config-file FILE", "Unicorn-specific config file") do |f|
+    options[:config_file] = File.expand_path(f)
+  end
+
+  # I'm avoiding Unicorn-specific config options on the command-line.
+  # IMNSHO, config options on the command-line are redundant given a
+  # config files and make things unnecessarily complicated with multiple
+  # places to look for a config option.
+
+  opts.separator ""
+  opts.separator "Common options:"
+
+  opts.on_tail("-h", "--help", "Show this message") do
+    puts opts
+    exit
+  end
+
+  opts.on_tail("--version", "Show version") do
+    puts "unicorn v#{Unicorn::Const::UNICORN_VERSION}"
+    exit
+  end
+
+  opts.parse! ARGV
+end
+
+require 'pp' if $DEBUG
+
+config = ARGV[0] || "config.ru"
+abort "configuration file #{config} not found" unless File.exist?(config)
+
+if config =~ /\.ru$/
+  cfgfile = File.read(config)
+  # parse embedded command-line options in config.ru comments
+  if cfgfile[/^#\\(.*)/]
+    opts.parse! $1.split(/\s+/)
+  end
+  inner_app = eval "Rack::Builder.new {(#{cfgfile}\n)}.to_app", nil, config
+else
+  require config
+  inner_app = Object.const_get(File.basename(config, '.rb').capitalize)
+end
+
+app = case env
+when "development"
+  Rack::Builder.new do
+    use Rack::CommonLogger, STDERR
+    use Rack::ShowExceptions
+    use Rack::Lint
+    run inner_app
+  end.to_app
+when "deployment"
+  Rack::Builder.new do
+    use Rack::CommonLogger, STDERR
+    run inner_app
+  end.to_app
+else
+  inner_app
+end
+
+if listeners.empty?
+  listener = "#{host}:#{port}"
+  listeners << listener if listener != Unicorn::Const::DEFAULT_LISTEN
+end
+
+if $DEBUG
+  pp({
+    :unicorn_options => options,
+    :app => app,
+    :inner_app => inner_app,
+    :daemonize => daemonize,
+  })
+end
+
+# only daemonize if we're not inheriting file descriptors from our parent
+if daemonize
+  unless ENV['UNICORN_FD']
     exit if fork
     Process.setsid
     exit if fork
-    STDIN.reopen("/dev/null")
   end
-  Unicorn.run(app, config)
+
+  Dir.chdir("/")
+  File.umask(0000)
+  STDIN.reopen("/dev/null")
+
+  # we can redirect these again in the Unicorn after_fork hook
+  STDOUT.reopen("/dev/null", "a")
+  STDERR.reopen("/dev/null", "a")
 end
+
+Unicorn.run(app, options)

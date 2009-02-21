@@ -1,0 +1,430 @@
+# Copyright (c) 2009 Eric Wong
+STDIN.sync = STDOUT.sync = STDERR.sync = true
+require 'test/test_helper'
+require 'pathname'
+require 'tempfile'
+require 'fileutils'
+
+do_test = true
+
+$unicorn_bin = ENV['UNICORN_TEST_BIN'] || "unicorn"
+pid = fork { redirect_test_io { exec($unicorn_bin, '-v'); exit!(1) } }
+Process.waitpid(pid)
+unless $?.success?
+  STDERR.puts "#{$unicorn_bin} not found in PATH=#{ENV['PATH']}, "\
+              "skipping this test"
+  do_test = false
+end
+
+begin
+  require 'rack'
+rescue LoadError
+  STDERR.puts "Unable to load Rack, skipping this test"
+  do_test = false
+end
+
+class ExecTest < Test::Unit::TestCase
+  trap('QUIT', 'IGNORE')
+
+  HI = <<-EOS
+use Rack::ContentLength
+run proc { |env| [ 200, { 'Content-Type' => 'text/plain' }, "HI\\n" ] }
+  EOS
+
+  HELLO = <<-EOS
+class Hello
+  def call(env)
+    [ 200, { 'Content-Type' => 'text/plain' }, "HI\\n" ]
+  end
+end
+  EOS
+
+  COMMON_TMP = Tempfile.new('unicorn_tmp') unless defined?(COMMON_TMP)
+
+  HEAVY_CFG = <<-EOS
+require 'fcntl'
+worker_processes 4
+timeout 30
+backlog 1
+logger Logger.new('#{COMMON_TMP.path}')
+before_fork do |server, worker_nr|
+  server.logger.info "before_fork: worker=\#{worker_nr}"
+end
+after_fork do |server, worker_nr|
+  trap('USR1') do # log rotation
+    server.logger.info "after_fork: worker=\#{worker_nr} rotating logs..."
+    ObjectSpace.each_object(File) do |fp|
+      next if fp.closed? || ! fp.sync
+      next unless (fp.fcntl(Fcntl::F_GETFL) & File::APPEND) == File::APPEND
+      begin
+        fp.stat.ino == File.stat(fp.path).ino
+      rescue Errno::ENOENT
+      end
+      fp.reopen(fp.path, "a")
+      fp.sync = true
+    end
+    server.logger.info "after_fork: worker=\#{worker_nr} done rotating logs"
+  end # trap('USR1')
+end # after_fork
+  EOS
+
+  def setup
+    @pwd = Dir.pwd
+    @tmpfile = Tempfile.new('unicorn_exec_test')
+    @tmpdir = @tmpfile.path
+    @tmpfile.close!
+    Dir.mkdir(@tmpdir)
+    Dir.chdir(@tmpdir)
+    @addr = ENV['UNICORN_TEST_ADDR'] || '127.0.0.1'
+    @port = unused_port(@addr)
+    @sockets = []
+  end
+
+  def teardown
+    Dir.chdir(@pwd)
+    FileUtils.rmtree(@tmpdir)
+    @sockets.each { |path| File.unlink(path) rescue nil }
+    loop do
+      Process.kill('-QUIT', 0)
+      begin
+        Process.waitpid(-1, Process::WNOHANG) or break
+      rescue Errno::ECHILD
+        break
+      end
+    end
+  end
+
+  def test_basic
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+    pid = fork do
+      redirect_test_io { exec($unicorn_bin, "-l", "#{@addr}:#{@port}") }
+    end
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_equal String, results[0].class
+    assert_shutdown(pid)
+  end
+
+  def test_unicorn_config_listeners_overrides_cli
+    port2 = unused_port(@addr)
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+    # listeners = [ ... ]  => should _override_ command-line options
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite("listeners %w(#{@addr}:#{@port})\n")
+    pid = fork do
+      redirect_test_io do
+        exec($unicorn_bin, "-c#{ucfg.path}", "-l#{@addr}:#{port2}")
+      end
+    end
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_raises(Errno::ECONNREFUSED) { TCPSocket.new(@addr, port2) }
+    assert_equal String, results[0].class
+    assert_shutdown(pid)
+  end
+
+  def test_unicorn_config_listen_augments_cli
+    port2 = unused_port(@addr)
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite("listen '#{@addr}:#{@port}'\n")
+    pid = fork do
+      redirect_test_io do
+        exec($unicorn_bin, "-c#{ucfg.path}", "-l#{@addr}:#{port2}")
+      end
+    end
+    uris = [@port, port2].map { |i| "http://#{@addr}:#{i}/" }
+    results = retry_hit(uris)
+    assert_equal results.size, uris.size
+    assert_equal String, results[0].class
+    assert_equal String, results[1].class
+    assert_shutdown(pid)
+  end
+
+  def test_weird_config_settings
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite(HEAVY_CFG)
+    pid = fork do
+      redirect_test_io do
+        exec($unicorn_bin, "-c#{ucfg.path}", "-l#{@addr}:#{@port}")
+      end
+    end
+
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_equal String, results[0].class
+    wait_master_ready(COMMON_TMP.path)
+    bf = File.readlines(COMMON_TMP.path).grep(/\bbefore_fork: worker=/)
+    assert_equal 4, bf.size
+    rotate = Tempfile.new('unicorn_rotate')
+    assert_nothing_raised do
+      File.rename(COMMON_TMP.path, rotate.path)
+      Process.kill('USR1', pid)
+    end
+    wait_for_file(COMMON_TMP.path)
+    assert File.exist?(COMMON_TMP.path), "#{COMMON_TMP.path} exists"
+    # USR1 should've been passed to all workers
+    tries = 100
+    log = File.readlines(rotate.path)
+    while (tries -= 1) > 0 && log.grep(/rotating logs\.\.\./).size < 4
+      sleep 0.1
+      log = File.readlines(rotate.path)
+    end
+    assert_equal 4, log.grep(/rotating logs\.\.\./).size
+    assert_equal 0, log.grep(/done rotating logs/).size
+
+    tries = 100
+    log = File.readlines(COMMON_TMP.path)
+    while (tries -= 1) > 0 && log.grep(/done rotating logs/).size < 4
+      sleep 0.1
+      log = File.readlines(COMMON_TMP.path)
+    end
+    assert_equal 4, log.grep(/done rotating logs/).size
+    assert_equal 0, log.grep(/rotating logs\.\.\./).size
+    assert_nothing_raised { Process.kill('QUIT', pid) }
+    status = nil
+    assert_nothing_raised { pid, status = Process.waitpid2(pid) }
+    assert status.success?, "exited successfully"
+  end
+
+  def test_read_embedded_cli_switches
+    File.open("config.ru", "wb") do |fp|
+      fp.syswrite("#\\ -p #{@port} -o #{@addr}\n")
+      fp.syswrite(HI)
+    end
+    pid = fork { redirect_test_io { exec($unicorn_bin) } }
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_equal String, results[0].class
+    assert_shutdown(pid)
+  end
+
+  def test_config_ru_alt_path
+    config_path = "#{@tmpdir}/foo.ru"
+    File.open(config_path, "wb") { |fp| fp.syswrite(HI) }
+    pid = fork do
+      redirect_test_io do
+        Dir.chdir("/")
+        exec($unicorn_bin, "-l#{@addr}:#{@port}", config_path)
+      end
+    end
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_equal String, results[0].class
+    assert_shutdown(pid)
+  end
+
+  def test_load_module
+    libdir = "#{@tmpdir}/lib"
+    FileUtils.mkpath([ libdir ])
+    config_path = "#{libdir}/hello.rb"
+    File.open(config_path, "wb") { |fp| fp.syswrite(HELLO) }
+    pid = fork do
+      redirect_test_io do
+        Dir.chdir("/")
+        exec($unicorn_bin, "-l#{@addr}:#{@port}", config_path)
+      end
+    end
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_equal String, results[0].class
+    assert_shutdown(pid)
+  end
+
+  def test_reexec
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+    pid_file = "#{@tmpdir}/test.pid"
+    pid = fork do
+      redirect_test_io do
+        exec($unicorn_bin, "-l#{@addr}:#{@port}", "-P#{pid_file}")
+      end
+    end
+    reexec_basic_test(pid, pid_file)
+  end
+
+  def test_reexec_alt_config
+    config_file = "#{@tmpdir}/foo.ru"
+    File.open(config_file, "wb") { |fp| fp.syswrite(HI) }
+    pid_file = "#{@tmpdir}/test.pid"
+    pid = fork do
+      redirect_test_io do
+        exec($unicorn_bin, "-l#{@addr}:#{@port}", "-P#{pid_file}", config_file)
+      end
+    end
+    reexec_basic_test(pid, pid_file)
+  end
+
+  def test_unicorn_config_file
+    pid_file = "#{@tmpdir}/test.pid"
+    sock = Tempfile.new('unicorn_test_sock')
+    sock_path = sock.path
+    sock.close!
+    @sockets << sock_path
+
+    log = Tempfile.new('unicorn_test_log')
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite("listen \"#{sock_path}\"\n")
+    ucfg.syswrite("pid \"#{pid_file}\"\n")
+    ucfg.syswrite("logger Logger.new('#{log.path}')\n")
+    ucfg.close
+
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+    pid = fork do
+      redirect_test_io do
+        exec($unicorn_bin, "-l#{@addr}:#{@port}",
+             "-P#{pid_file}", "-c#{ucfg.path}")
+      end
+    end
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_equal String, results[0].class
+    wait_master_ready(log.path)
+    assert File.exist?(pid_file), "pid_file created"
+    assert_equal pid, File.read(pid_file).to_i
+    assert File.socket?(sock_path), "socket created"
+    assert_nothing_raised do
+      sock = UNIXSocket.new(sock_path)
+      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+      results = sock.sysread(4096)
+    end
+    assert_equal String, results.class
+
+    # try reloading the config
+    sock = Tempfile.new('unicorn_test_sock')
+    new_sock_path = sock.path
+    @sockets << new_sock_path
+    sock.close!
+    new_log = Tempfile.new('unicorn_test_log')
+    new_log.sync = true
+    assert_equal 0, new_log.size
+
+    assert_nothing_raised do
+      ucfg = File.open(ucfg.path, "wb")
+      ucfg.syswrite("listen \"#{new_sock_path}\"\n")
+      ucfg.syswrite("pid \"#{pid_file}\"\n")
+      ucfg.syswrite("logger Logger.new('#{new_log.path}')\n")
+      ucfg.close
+      Process.kill('HUP', pid)
+    end
+
+    wait_for_file(new_sock_path)
+    assert File.socket?(new_sock_path), "socket exists"
+    @sockets.each do |path|
+      assert_nothing_raised do
+        sock = UNIXSocket.new(path)
+        sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+        results = sock.sysread(4096)
+      end
+      assert_equal String, results.class
+    end
+
+    assert_not_equal 0, new_log.size
+    reexec_usr2_quit_test(pid, pid_file)
+  end
+
+  def test_daemonize_reexec
+    pid_file = "#{@tmpdir}/test.pid"
+    log = Tempfile.new('unicorn_test_log')
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite("pid \"#{pid_file}\"\n")
+    ucfg.syswrite("logger Logger.new('#{log.path}')\n")
+    ucfg.close
+
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+    pid = fork do
+      redirect_test_io do
+        exec($unicorn_bin, "-D", "-l#{@addr}:#{@port}", "-c#{ucfg.path}")
+      end
+    end
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_equal String, results[0].class
+    wait_for_file(pid_file)
+    new_pid = File.read(pid_file).to_i
+    assert_not_equal pid, new_pid
+    pid, status = Process.waitpid2(pid)
+    assert status.success?, "original process exited successfully"
+    assert_nothing_raised { Process.kill(0, new_pid) }
+    reexec_usr2_quit_test(new_pid, pid_file)
+  end
+
+  private
+
+    # sometimes the server may not come up right away
+    def retry_hit(uris = [])
+      tries = 100
+      begin
+        hit(uris)
+      rescue Errno::ECONNREFUSED => err
+        if (tries -= 1) > 0
+          sleep 0.1
+          retry
+        end
+        raise err
+      end
+    end
+
+    def assert_shutdown(pid)
+      wait_master_ready("#{@tmpdir}/test_stderr.#{pid}.log")
+      assert_nothing_raised { Process.kill('QUIT', pid) }
+      status = nil
+      assert_nothing_raised { pid, status = Process.waitpid2(pid) }
+      assert status.success?, "exited successfully"
+    end
+
+    def wait_master_ready(master_log)
+      tries = 100
+      while (tries -= 1) > 0
+        begin
+          File.readlines(master_log).grep(/master process ready/)[0] and return
+        rescue Errno::ENOENT
+        end
+        sleep 0.1
+      end
+      raise "master process never became ready"
+    end
+
+    def reexec_usr2_quit_test(pid, pid_file)
+      assert File.exist?(pid_file), "pid file OK"
+      assert ! File.exist?("#{pid_file}.oldbin"), "oldbin pid file"
+      assert_nothing_raised { Process.kill('USR2', pid) }
+      assert_nothing_raised { retry_hit(["http://#{@addr}:#{@port}/"]) }
+      wait_for_file("#{pid_file}.oldbin")
+      wait_for_file(pid_file)
+
+      # kill old master process
+      assert_not_equal pid, File.read(pid_file).to_i
+      assert_equal pid, File.read("#{pid_file}.oldbin").to_i
+      assert_nothing_raised { Process.kill('QUIT', pid) }
+      assert_not_equal pid, File.read(pid_file).to_i
+      assert_nothing_raised { retry_hit(["http://#{@addr}:#{@port}/"]) }
+      wait_for_file(pid_file)
+      assert_nothing_raised { retry_hit(["http://#{@addr}:#{@port}/"]) }
+      assert_nothing_raised { Process.kill('QUIT', File.read(pid_file).to_i) }
+    end
+
+    def reexec_basic_test(pid, pid_file)
+      results = retry_hit(["http://#{@addr}:#{@port}/"])
+      assert_equal String, results[0].class
+      assert_nothing_raised { Process.kill(0, pid) }
+      master_log = "#{@tmpdir}/test_stderr.#{pid}.log"
+      wait_master_ready(master_log)
+      File.truncate(master_log, 0)
+      nr = 50
+      kill_point = 2
+      assert_nothing_raised do
+        nr.times do |i|
+          hit(["http://#{@addr}:#{@port}/#{i}"])
+          i == kill_point and Process.kill('HUP', pid)
+        end
+      end
+      wait_master_ready(master_log)
+      assert File.exist?(pid_file), "pid=#{pid_file} exists"
+      new_pid = File.read(pid_file).to_i
+      assert_not_equal pid, new_pid
+      assert_nothing_raised { Process.kill(0, new_pid) }
+      assert_nothing_raised { Process.kill('QUIT', new_pid) }
+    end
+
+    def wait_for_file(path)
+      tries = 1000
+      while (tries -= 1) > 0 && ! File.exist?(path)
+        sleep 0.1
+      end
+      assert File.exist?(path), "path=#{path} exists"
+    end
+
+end if do_test
