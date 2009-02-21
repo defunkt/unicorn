@@ -155,7 +155,7 @@ module Unicorn
       @rd_sig, @wr_sig = IO.pipe unless (@rd_sig && @wr_sig)
       @rd_sig.nonblock = @wr_sig.nonblock = true
 
-      %w(QUIT INT TERM USR1 USR2 HUP).each { |sig| trap_deferred(sig) }
+      reset_master
       $0 = "unicorn master"
       logger.info "master process ready" # test relies on this message
       begin
@@ -172,26 +172,23 @@ module Unicorn
             break
           when 'USR1' # user-defined (probably something like log reopening)
             kill_each_worker('USR1')
-            @mode = :idle
-            trap_deferred('USR1')
+            reset_master
           when 'USR2' # exec binary, stay alive in case something went wrong
             reexec
-            @mode = :idle
-            trap_deferred('USR2')
+            reset_master
           when 'HUP'
             if @config.config_file
               load_config!
-              @mode = :idle
-              trap_deferred('HUP')
+              reset_master
               redo # immediate reaping since we may have QUIT workers
             else # exec binary and exit if there's no config file
-              logger.info "config_file not present, reexecutingn binary"
+              logger.info "config_file not present, reexecuting binary"
               reexec
               break
             end
           else
             logger.error "master process in unknown mode: #{@mode}, resetting"
-            @mode = :idle
+            reset_master
           end
           reap_all_workers
 
@@ -210,6 +207,7 @@ module Unicorn
       rescue Object => e
         logger.error "Unhandled master loop exception #{e.inspect}."
         logger.error e.backtrace.join("\n")
+        reset_master
         retry
       end
       stop # gracefully shutdown all workers on our way out
@@ -234,10 +232,16 @@ module Unicorn
 
     private
 
+    # list of signals we care about and trap in master.
+    TRAP_SIGS = %w(QUIT INT TERM USR1 USR2 HUP).map { |x| x.freeze }.freeze
+
     # defer a signal for later processing in #join (master process)
     def trap_deferred(signal)
       trap(signal) do |sig_nr|
-        trap(signal, 'IGNORE') # prevent double signalling
+        # we only handle/defer one signal at a time and ignore all others
+        # until we're ready again.  Queueing signals can lead to more bugs,
+        # and simplicity is the most important thing
+        TRAP_SIGS.each { |sig| trap(sig, 'IGNORE') }
         if Symbol === @mode
           @mode = signal
           begin
@@ -248,6 +252,12 @@ module Unicorn
           end
         end
       end
+    end
+
+
+    def reset_master
+      @mode = :idle
+      TRAP_SIGS.each { |sig| trap_deferred(sig) }
     end
 
     # reaps all unreaped workers
@@ -291,6 +301,9 @@ module Unicorn
         rescue ArgumentError
           logger.error "old PID:#{valid_pid?(old_pid)} running with " \
                        "existing pid=#{old_pid}, refusing rexec"
+          return
+        rescue Object => e
+          logger.error "error writing pid=#{old_pid} #{e.class} #{e.message}"
           return
         end
       end
@@ -366,7 +379,7 @@ module Unicorn
     # traps for USR1, USR2, and HUP may be set in the @after_fork Proc
     # by the user.
     def init_worker_process(worker)
-      %w(TERM INT QUIT USR1 USR2 HUP).each { |sig| trap(sig, 'IGNORE') }
+      TRAP_SIGS.each { |sig| trap(sig, 'IGNORE') }
       trap('CHLD', 'DEFAULT')
       $0 = "unicorn worker[#{worker.nr}]"
       @rd_sig.close if @rd_sig

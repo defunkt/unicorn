@@ -109,6 +109,133 @@ end # after_fork
     assert_shutdown(pid)
   end
 
+  def test_broken_reexec_config
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+    pid_file = "#{@tmpdir}/test.pid"
+    old_file = "#{pid_file}.oldbin"
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite("listeners %w(#{@addr}:#{@port})\n")
+    ucfg.syswrite("pid %(#{pid_file})\n")
+    ucfg.syswrite("logger Logger.new(%(#{@tmpdir}/log))\n")
+    pid = fork do
+      redirect_test_io do
+        exec($unicorn_bin, "-D", "-l#{@addr}:#{@port}", "-c#{ucfg.path}")
+      end
+    end
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_equal String, results[0].class
+
+    wait_for_file(pid_file)
+    Process.waitpid(pid)
+    Process.kill('USR2', File.read(pid_file).to_i)
+    wait_for_file(old_file)
+    wait_for_file(pid_file)
+    Process.kill('QUIT', File.read(old_file).to_i)
+
+    ucfg.syswrite("timeout %(#{pid_file})\n") # introduce a bug
+    current_pid = File.read(pid_file).to_i
+    Process.kill('USR2', current_pid)
+
+    # wait for pid_file to restore itself
+    tries = 100
+    begin
+      while current_pid != File.read(pid_file).to_i
+        sleep(0.1) and (tries -= 1) > 0
+      end
+    rescue Errno::ENOENT
+      (sleep(0.1) and (tries -= 1) > 0) and retry
+    end
+    assert_equal current_pid, File.read(pid_file).to_i
+
+    tries = 100
+    while File.exist?(old_file)
+      (sleep(0.1) and (tries -= 1) > 0) or break
+    end
+    assert ! File.exist?(old_file), "oldbin=#{old_file} gone"
+    port2 = unused_port(@addr)
+
+    # fix the bug
+    ucfg.sysseek(0)
+    ucfg.truncate(0)
+    ucfg.syswrite("listeners %w(#{@addr}:#{@port} #{@addr}:#{port2})\n")
+    ucfg.syswrite("pid %(#{pid_file})\n")
+    Process.kill('USR2', current_pid)
+    wait_for_file(old_file)
+    wait_for_file(pid_file)
+    new_pid = File.read(pid_file).to_i
+    assert_not_equal current_pid, new_pid
+    assert_equal current_pid, File.read(old_file).to_i
+    results = retry_hit(["http://#{@addr}:#{@port}/",
+                         "http://#{@addr}:#{port2}/"])
+    assert_equal String, results[0].class
+    assert_equal String, results[1].class
+
+    assert_nothing_raised do
+      Process.kill('QUIT', current_pid)
+      Process.kill('QUIT', new_pid)
+    end
+  end
+
+  def test_broken_reexec_ru
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+    pid_file = "#{@tmpdir}/test.pid"
+    old_file = "#{pid_file}.oldbin"
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite("pid %(#{pid_file})\n")
+    ucfg.syswrite("logger Logger.new(%(#{@tmpdir}/log))\n")
+    pid = fork do
+      redirect_test_io do
+        exec($unicorn_bin, "-D", "-l#{@addr}:#{@port}", "-c#{ucfg.path}")
+      end
+    end
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_equal String, results[0].class
+
+    wait_for_file(pid_file)
+    Process.waitpid(pid)
+    Process.kill('USR2', File.read(pid_file).to_i)
+    wait_for_file(old_file)
+    wait_for_file(pid_file)
+    Process.kill('QUIT', File.read(old_file).to_i)
+
+    File.unlink("config.ru") # break reloading
+    current_pid = File.read(pid_file).to_i
+    Process.kill('USR2', current_pid)
+
+    # wait for pid_file to restore itself
+    tries = 100
+    begin
+      while current_pid != File.read(pid_file).to_i
+        sleep(0.1) and (tries -= 1) > 0
+      end
+    rescue Errno::ENOENT
+      (sleep(0.1) and (tries -= 1) > 0) and retry
+    end
+    assert_equal current_pid, File.read(pid_file).to_i
+
+    tries = 100
+    while File.exist?(old_file)
+      (sleep(0.1) and (tries -= 1) > 0) or break
+    end
+    assert ! File.exist?(old_file), "oldbin=#{old_file} gone"
+
+    # fix the bug
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+    Process.kill('USR2', current_pid)
+    wait_for_file(old_file)
+    wait_for_file(pid_file)
+    new_pid = File.read(pid_file).to_i
+    assert_not_equal current_pid, new_pid
+    assert_equal current_pid, File.read(old_file).to_i
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_equal String, results[0].class
+
+    assert_nothing_raised do
+      Process.kill('QUIT', current_pid)
+      Process.kill('QUIT', new_pid)
+    end
+  end
+
   def test_unicorn_config_listeners_overrides_cli
     port2 = unused_port(@addr)
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
