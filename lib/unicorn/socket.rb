@@ -62,6 +62,13 @@ module Unicorn
       end
     end
 
+    def destroy_safely(io)
+      if io.respond_to?(:path) && File.stat(io.path).ino == io.stat.ino
+        File.unlink(io.path) rescue nil
+      end
+      io.close rescue nil
+    end
+
     # creates a new server, socket. address may be a HOST:PORT or
     # an absolute path to a UNIX socket.  address can even be a Socket
     # object in which case it is immediately returned
