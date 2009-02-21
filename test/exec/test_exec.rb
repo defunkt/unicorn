@@ -8,8 +8,13 @@ require 'fileutils'
 do_test = true
 
 $unicorn_bin = ENV['UNICORN_TEST_BIN'] || "unicorn"
-pid = fork { redirect_test_io { exec($unicorn_bin, '-v'); exit!(1) } }
-Process.waitpid(pid)
+redirect_test_io do
+  pid = fork do
+    exec($unicorn_bin, '-v')
+    exit(1)
+  end
+  Process.waitpid(pid)
+end
 unless $?.success?
   STDERR.puts "#{$unicorn_bin} not found in PATH=#{ENV['PATH']}, "\
               "skipping this test"
