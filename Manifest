@@ -9,7 +9,9 @@ README
 Rakefile
 TODO
 bin/unicorn
-bin/unicorn-hello-world
+examples/sinatra/README
+examples/sinatra/sinatra_example.rb
+examples/sinatra/unicorn-sinatra-example
 ext/http11/ext_help.h
 ext/http11/extconf.rb
 ext/http11/http11.c
@@ -18,6 +20,7 @@ ext/http11/http11_parser.h
 ext/http11/http11_parser.rl
 ext/http11/http11_parser_common.rl
 lib/unicorn.rb
+lib/unicorn/configurator.rb
 lib/unicorn/const.rb
 lib/unicorn/http_request.rb
 lib/unicorn/http_response.rb
@@ -27,8 +30,11 @@ test/aggregate.rb
 test/benchmark/previous.rb
 test/benchmark/simple.rb
 test/benchmark/utils.rb
+test/exec/README
+test/exec/test_exec.rb
 test/test_helper.rb
 test/tools/trickletest.rb
 test/unit/test_http_parser.rb
 test/unit/test_response.rb
 test/unit/test_server.rb
+test/unit/test_upload.rb
