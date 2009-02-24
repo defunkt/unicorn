@@ -78,6 +78,10 @@ opts = OptionParser.new("", 24, '  ') do |opts|
     listeners << address
   end
 
+  opts.on("-C", "--directory PATH", "run in this directory") do |d|
+    options[:directory] = d
+  end
+
   opts.on("-c", "--config-file FILE", "Unicorn-specific config file") do |f|
     options[:config_file] = File.expand_path(f)
   end
@@ -159,11 +163,11 @@ if daemonize
     exit if fork
   end
 
-  Dir.chdir("/")
+  Dir.chdir("/") # setting options[:directory] will override this later on
   File.umask(0000)
   STDIN.reopen("/dev/null")
 
-  # we can redirect these again in the Unicorn after_fork hook
+  # we can redirect these again in the Unicorn {before,after}_fork hooks
   STDOUT.reopen("/dev/null", "a")
   STDERR.reopen("/dev/null", "a")
 end

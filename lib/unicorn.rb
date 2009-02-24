@@ -125,6 +125,13 @@ module Unicorn
       @pid = path
     end
 
+    # sets the path for running the master and worker process, useful for
+    # running and reexecuting from a symlinked path like Capistrano allows
+    def directory=(path)
+      Dir.chdir(path) if path
+      @directory = path
+    end
+
     # add a given address to the +listeners+ set, idempotently
     # Allows workers to add a private, per-process listener via the
     # @after_fork hook.  Very useful for debugging and testing.
@@ -316,7 +323,7 @@ module Unicorn
         ENV.replace(@start_ctx[:environ])
         ENV['UNICORN_FD'] = @listeners.map { |sock| sock.fileno }.join(',')
         File.umask(@start_ctx[:umask])
-        Dir.chdir(@start_ctx[:cwd])
+        Dir.chdir(@cwd || @start_ctx[:cwd])
         cmd = [ @start_ctx[:zero] ] + @start_ctx[:argv]
         logger.info "executing #{cmd.inspect} (in #{Dir.pwd})"
         exec(*cmd)
