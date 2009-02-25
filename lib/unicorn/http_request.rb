@@ -3,7 +3,7 @@ require 'uri'
 require 'stringio'
 
 # compiled extension
-require 'http11'
+require 'unicorn/http11'
 
 module Unicorn
   #
