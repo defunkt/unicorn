@@ -9,16 +9,9 @@ do_test = true
 
 $unicorn_bin = ENV['UNICORN_TEST_BIN'] || "unicorn"
 redirect_test_io do
-  pid = fork do
-    exec($unicorn_bin, '-v')
-    exit(1)
-  end
-  Process.waitpid(pid)
-end
-unless $?.success?
-  STDERR.puts "#{$unicorn_bin} not found in PATH=#{ENV['PATH']}, "\
-              "skipping this test"
-  do_test = false
+  do_test = system($unicorn_bin, '-v') or \
+    STDERR.puts "#{$unicorn_bin} not found in PATH=#{ENV['PATH']}, "\
+                "skipping this test"
 end
 
 begin
