@@ -8,6 +8,6 @@ $failures += $3.to_i
 $errors += $4.to_i
 
 END {
-  printf("\n%s - %d tests, %d assertions, %d failures, %d errors\n",
-         RUBY_VERSION, $tests, $assertions, $failures, $errors)
+  printf("\n%d tests, %d assertions, %d failures, %d errors\n",
+         $tests, $assertions, $failures, $errors)
 }
