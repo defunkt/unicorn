@@ -114,9 +114,8 @@ abort "configuration file #{config} not found" unless File.exist?(config)
 
 if config =~ /\.ru$/
   cfgfile = File.read(config)
-  # parse embedded command-line options in config.ru comments
   if cfgfile[/^#\\(.*)/]
-    opts.parse! $1.split(/\s+/)
+    warn %(not parsing embedded command-line options: "#$1")
   end
   inner_app = eval "Rack::Builder.new {(#{cfgfile}\n)}.to_app", nil, config
 else
