@@ -126,7 +126,7 @@ end # after_fork
     ucfg.syswrite("listeners %w(#{@addr}:#{@port})\n")
     ucfg.syswrite("pid %(#{pid_file})\n")
     ucfg.syswrite("logger Logger.new(%(#{@tmpdir}/log))\n")
-    pid = fork do
+    pid = xfork do
       redirect_test_io do
         exec($unicorn_bin, "-D", "-l#{@addr}:#{@port}", "-c#{ucfg.path}")
       end
@@ -192,7 +192,7 @@ end # after_fork
     ucfg = Tempfile.new('unicorn_test_config')
     ucfg.syswrite("pid %(#{pid_file})\n")
     ucfg.syswrite("logger Logger.new(%(#{@tmpdir}/log))\n")
-    pid = fork do
+    pid = xfork do
       redirect_test_io do
         exec($unicorn_bin, "-D", "-l#{@addr}:#{@port}", "-c#{ucfg.path}")
       end
@@ -251,7 +251,7 @@ end # after_fork
     # listeners = [ ... ]  => should _override_ command-line options
     ucfg = Tempfile.new('unicorn_test_config')
     ucfg.syswrite("listeners %w(#{@addr}:#{@port})\n")
-    pid = fork do
+    pid = xfork do
       redirect_test_io do
         exec($unicorn_bin, "-c#{ucfg.path}", "-l#{@addr}:#{port2}")
       end
@@ -267,7 +267,7 @@ end # after_fork
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
     ucfg = Tempfile.new('unicorn_test_config')
     ucfg.syswrite("listen '#{@addr}:#{@port}'\n")
-    pid = fork do
+    pid = xfork do
       redirect_test_io do
         exec($unicorn_bin, "-c#{ucfg.path}", "-l#{@addr}:#{port2}")
       end
@@ -284,7 +284,7 @@ end # after_fork
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
     ucfg = Tempfile.new('unicorn_test_config')
     ucfg.syswrite(HEAVY_CFG)
-    pid = fork do
+    pid = xfork do
       redirect_test_io do
         exec($unicorn_bin, "-c#{ucfg.path}", "-l#{@addr}:#{@port}")
       end
@@ -409,7 +409,7 @@ end # after_fork
     ucfg.close
 
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
-    pid = fork do
+    pid = xfork do
       redirect_test_io do
         exec($unicorn_bin, "-l#{@addr}:#{@port}",
              "-P#{pid_file}", "-c#{ucfg.path}")
@@ -470,7 +470,7 @@ end # after_fork
     ucfg.close
 
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
-    pid = fork do
+    pid = xfork do
       redirect_test_io do
         exec($unicorn_bin, "-D", "-l#{@addr}:#{@port}", "-c#{ucfg.path}")
       end
@@ -570,6 +570,15 @@ end # after_fork
         sleep 0.1
       end
       assert File.exist?(path), "path=#{path} exists"
+    end
+
+    def xfork(&block)
+      fork do
+        ObjectSpace.each_object(Tempfile) do |tmp|
+          ObjectSpace.undefine_finalizer(tmp)
+        end
+        yield
+      end
     end
 
 end if do_test
