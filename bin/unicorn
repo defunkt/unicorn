@@ -47,13 +47,13 @@ opts = OptionParser.new("", 24, '  ') do |opts|
 
   # some of these switches exist for rackup command-line compatibility,
 
-  opts.on("-o", "--host HOST", "listen on HOST (default: 0.0.0.0)") do |h|
-    warn "The --host/-o option is not recommended, see --listen/-l"
+  opts.on("-o", "--host HOST",
+          "listen on HOST (default: #{Unicorn::Const::DEFAULT_HOST})") do |h|
     host = h
   end
 
-  opts.on("-p", "--port PORT", "use PORT (default: 8080)") do |p|
-    warn "The --port/-p option is not recommended, see --listen/-l"
+  opts.on("-p", "--port PORT",
+          "use PORT (default: #{Unicorn::Const::DEFAULT_PORT})") do |p|
     port = p.to_i
   end
 
@@ -71,10 +71,10 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   end
 
   # Unicorn-specific stuff
-  opts.on("-l", "--listen <address:port|/path/to/socket>",
-          "listen on address:port or UNIX socket " \
-          "(default: 0.0.0.0:8080)" \
-          "  this may be specified multiple times") do |address|
+  opts.on("-l", "--listen {HOST:PORT|PATH}",
+          "listen on HOST:PORT or PATH",
+          "this may be specified multiple times",
+          "(default: #{Unicorn::Const::DEFAULT_LISTEN})") do |address|
     listeners << address
   end
 
@@ -87,7 +87,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   end
 
   # I'm avoiding Unicorn-specific config options on the command-line.
-  # IMNSHO, config options on the command-line are redundant given a
+  # IMNSHO, config options on the command-line are redundant given
   # config files and make things unnecessarily complicated with multiple
   # places to look for a config option.
 
@@ -99,7 +99,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
     exit
   end
 
-  opts.on_tail("--version", "Show version") do
+  opts.on_tail("-v", "--version", "Show version") do
     puts "unicorn v#{Unicorn::Const::UNICORN_VERSION}"
     exit
   end

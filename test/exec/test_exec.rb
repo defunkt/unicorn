@@ -102,6 +102,22 @@ end # after_fork
     assert_shutdown(pid)
   end
 
+  def test_help
+    redirect_test_io do
+      assert(system($unicorn_bin, "-h"), "help text returns true")
+    end
+    assert_equal 0, File.stat("test_stderr.#$$.log").size
+    assert_not_equal 0, File.stat("test_stdout.#$$.log").size
+    lines = File.readlines("test_stdout.#$$.log")
+
+    # Be considerate of the on-call technician working from their
+    # mobile phone or netbook on a slow connection :)
+    assert lines.size < 24, "help height fits in an ANSI terminal window"
+    lines.each do |line|
+      assert line.size < 80, "help width fits in an ANSI terminal window"
+    end
+  end
+
   def test_broken_reexec_config
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
     pid_file = "#{@tmpdir}/test.pid"
