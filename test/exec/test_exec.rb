@@ -6,6 +6,8 @@ require 'tempfile'
 require 'fileutils'
 
 do_test = true
+DEFAULT_TRIES = 1000
+DEFAULT_RES = 0.2
 
 $unicorn_bin = ENV['UNICORN_TEST_BIN'] || "unicorn"
 redirect_test_io do
@@ -146,19 +148,19 @@ end # after_fork
     Process.kill('USR2', current_pid)
 
     # wait for pid_file to restore itself
-    tries = 100
+    tries = DEFAULT_TRIES
     begin
       while current_pid != File.read(pid_file).to_i
-        sleep(0.1) and (tries -= 1) > 0
+        sleep(DEFAULT_RES) and (tries -= 1) > 0
       end
     rescue Errno::ENOENT
-      (sleep(0.1) and (tries -= 1) > 0) and retry
+      (sleep(DEFAULT_RES) and (tries -= 1) > 0) and retry
     end
     assert_equal current_pid, File.read(pid_file).to_i
 
-    tries = 100
+    tries = DEFAULT_TRIES
     while File.exist?(old_file)
-      (sleep(0.1) and (tries -= 1) > 0) or break
+      (sleep(DEFAULT_RES) and (tries -= 1) > 0) or break
     end
     assert ! File.exist?(old_file), "oldbin=#{old_file} gone"
     port2 = unused_port(@addr)
@@ -212,19 +214,19 @@ end # after_fork
     Process.kill('USR2', current_pid)
 
     # wait for pid_file to restore itself
-    tries = 100
+    tries = DEFAULT_TRIES
     begin
       while current_pid != File.read(pid_file).to_i
-        sleep(0.1) and (tries -= 1) > 0
+        sleep(DEFAULT_RES) and (tries -= 1) > 0
       end
     rescue Errno::ENOENT
-      (sleep(0.1) and (tries -= 1) > 0) and retry
+      (sleep(DEFAULT_RES) and (tries -= 1) > 0) and retry
     end
     assert_equal current_pid, File.read(pid_file).to_i
 
-    tries = 100
+    tries = DEFAULT_TRIES
     while File.exist?(old_file)
-      (sleep(0.1) and (tries -= 1) > 0) or break
+      (sleep(DEFAULT_RES) and (tries -= 1) > 0) or break
     end
     assert ! File.exist?(old_file), "oldbin=#{old_file} gone"
 
@@ -303,19 +305,19 @@ end # after_fork
     wait_for_file(COMMON_TMP.path)
     assert File.exist?(COMMON_TMP.path), "#{COMMON_TMP.path} exists"
     # USR1 should've been passed to all workers
-    tries = 100
+    tries = DEFAULT_TRIES
     log = File.readlines(rotate.path)
     while (tries -= 1) > 0 && log.grep(/rotating logs\.\.\./).size < 4
-      sleep 0.1
+      sleep DEFAULT_RES
       log = File.readlines(rotate.path)
     end
     assert_equal 4, log.grep(/rotating logs\.\.\./).size
     assert_equal 0, log.grep(/done rotating logs/).size
 
-    tries = 100
+    tries = DEFAULT_TRIES
     log = File.readlines(COMMON_TMP.path)
     while (tries -= 1) > 0 && log.grep(/done rotating logs/).size < 4
-      sleep 0.1
+      sleep DEFAULT_RES
       log = File.readlines(COMMON_TMP.path)
     end
     assert_equal 4, log.grep(/done rotating logs/).size
@@ -490,12 +492,12 @@ end # after_fork
 
     # sometimes the server may not come up right away
     def retry_hit(uris = [])
-      tries = 100
+      tries = DEFAULT_TRIES
       begin
         hit(uris)
       rescue Errno::ECONNREFUSED => err
         if (tries -= 1) > 0
-          sleep 0.1
+          sleep DEFAULT_RES
           retry
         end
         raise err
@@ -511,13 +513,13 @@ end # after_fork
     end
 
     def wait_master_ready(master_log)
-      tries = 100
+      tries = DEFAULT_TRIES
       while (tries -= 1) > 0
         begin
           File.readlines(master_log).grep(/master process ready/)[0] and return
         rescue Errno::ENOENT
         end
-        sleep 0.1
+        sleep DEFAULT_RES
       end
       raise "master process never became ready"
     end
@@ -565,9 +567,9 @@ end # after_fork
     end
 
     def wait_for_file(path)
-      tries = 1000
+      tries = DEFAULT_TRIES
       while (tries -= 1) > 0 && ! File.exist?(path)
-        sleep 0.1
+        sleep DEFAULT_RES
       end
       assert File.exist?(path), "path=#{path} exists"
     end
