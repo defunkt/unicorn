@@ -376,24 +376,30 @@ end # after_fork
   def test_reexec
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
     pid_file = "#{@tmpdir}/test.pid"
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite("pid \"#{pid_file}\"\n")
     pid = fork do
       redirect_test_io do
-        exec($unicorn_bin, "-l#{@addr}:#{@port}", "-P#{pid_file}")
+        exec($unicorn_bin, "-l#{@addr}:#{@port}", "-c#{ucfg.path}")
       end
     end
-    reexec_basic_test(pid, pid_file)
+    wait_for_file(pid_file)
+    reexec_usr2_quit_test(pid, pid_file)
   end
 
   def test_reexec_alt_config
     config_file = "#{@tmpdir}/foo.ru"
-    File.open(config_file, "wb") { |fp| fp.syswrite(HI) }
     pid_file = "#{@tmpdir}/test.pid"
-    pid = fork do
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite("pid \"#{pid_file}\"\n")
+    File.open(config_file, "wb") { |fp| fp.syswrite(HI) }
+    pid = xfork do
       redirect_test_io do
-        exec($unicorn_bin, "-l#{@addr}:#{@port}", "-P#{pid_file}", config_file)
+        exec($unicorn_bin, "-l#{@addr}:#{@port}", "-c#{ucfg.path}", config_file)
       end
     end
-    reexec_basic_test(pid, pid_file)
+    wait_for_file(pid_file)
+    reexec_usr2_quit_test(pid, pid_file)
   end
 
   def test_unicorn_config_file
@@ -413,8 +419,7 @@ end # after_fork
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
     pid = xfork do
       redirect_test_io do
-        exec($unicorn_bin, "-l#{@addr}:#{@port}",
-             "-P#{pid_file}", "-c#{ucfg.path}")
+        exec($unicorn_bin, "-l#{@addr}:#{@port}", "-c#{ucfg.path}")
       end
     end
     results = retry_hit(["http://#{@addr}:#{@port}/"])
