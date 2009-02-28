@@ -15,7 +15,6 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   opts.banner = "Usage: #{File.basename($0)} " \
                 "[ruby options] [unicorn options] [rackup config file]"
 
-  opts.separator ""
   opts.separator "Ruby options:"
 
   lineno = 1
@@ -42,7 +41,6 @@ opts = OptionParser.new("", 24, '  ') do |opts|
     require library
   end
 
-  opts.separator ""
   opts.separator "Unicorn options:"
 
   # some of these switches exist for rackup command-line compatibility,
@@ -87,7 +85,6 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   # config files and make things unnecessarily complicated with multiple
   # places to look for a config option.
 
-  opts.separator ""
   opts.separator "Common options:"
 
   opts.on_tail("-h", "--help", "Show this message") do
