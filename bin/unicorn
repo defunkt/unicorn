@@ -105,30 +105,37 @@ require 'pp' if $DEBUG
 config = ARGV[0] || "config.ru"
 abort "configuration file #{config} not found" unless File.exist?(config)
 
-if config =~ /\.ru$/
-  cfgfile = File.read(config)
-  if cfgfile[/^#\\(.*)/]
+inner_app = case config
+when /\.ru$/
+  raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }
+  if raw[/^#\\(.*)/]
     warn %(not parsing embedded command-line options: "#$1")
   end
-  inner_app = eval "Rack::Builder.new {(#{cfgfile}\n)}.to_app", nil, config
+  lambda { || eval("Rack::Builder.new {(#{raw}\n)}.to_app", nil, config) }
 else
-  require config
-  inner_app = Object.const_get(File.basename(config, '.rb').capitalize)
+  lambda do ||
+    require config
+    Object.const_get(File.basename(config, '.rb').capitalize)
+  end
 end
 
 app = case env
 when "development"
-  Rack::Builder.new do
-    use Rack::CommonLogger, STDERR
-    use Rack::ShowExceptions
-    use Rack::Lint
-    run inner_app
-  end.to_app
+  lambda do ||
+    Rack::Builder.new do
+      use Rack::CommonLogger, STDERR
+      use Rack::ShowExceptions
+      use Rack::Lint
+      run inner_app.call
+    end.to_app
+  end
 when "deployment"
-  Rack::Builder.new do
-    use Rack::CommonLogger, STDERR
-    run inner_app
-  end.to_app
+  lambda do ||
+    Rack::Builder.new do
+      use Rack::CommonLogger, STDERR
+      run inner_app.call
+    end.to_app
+  end
 else
   inner_app
 end

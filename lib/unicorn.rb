@@ -86,6 +86,7 @@ module Unicorn
       config_listeners.each { |addr| listen(addr) }
       listen(Const::DEFAULT_LISTENER) if @listeners.empty?
       self.pid = @config[:pid]
+      build_app!
       spawn_missing_workers
       self
     end
@@ -527,6 +528,10 @@ module Unicorn
     # returns an array of string names for the given listener array
     def listener_names(listeners = @listeners)
       listeners.map { |io| sock_name(io) }
+    end
+
+    def build_app!
+      @app = @app.call if @app.respond_to?(:arity) && @app.arity == 0
     end
 
   end
