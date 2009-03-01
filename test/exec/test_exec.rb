@@ -11,9 +11,12 @@ DEFAULT_RES = 0.2
 
 $unicorn_bin = ENV['UNICORN_TEST_BIN'] || "unicorn"
 redirect_test_io do
-  do_test = system($unicorn_bin, '-v') or \
-    STDERR.puts "#{$unicorn_bin} not found in PATH=#{ENV['PATH']}, "\
-                "skipping this test"
+  do_test = system($unicorn_bin, '-v')
+end
+
+unless do_test
+  STDERR.puts "#{$unicorn_bin} not found in PATH=#{ENV['PATH']}, " \
+              "skipping this test"
 end
 
 begin
