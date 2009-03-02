@@ -81,9 +81,11 @@ end # after_fork
     @addr = ENV['UNICORN_TEST_ADDR'] || '127.0.0.1'
     @port = unused_port(@addr)
     @sockets = []
+    @start_pid = $$
   end
 
   def teardown
+    return if @start_pid != $$
     Dir.chdir(@pwd)
     FileUtils.rmtree(@tmpdir)
     @sockets.each { |path| File.unlink(path) rescue nil }
