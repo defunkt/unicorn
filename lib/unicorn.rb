@@ -27,7 +27,9 @@ module Unicorn
 
     DEFAULT_START_CTX = {
       :argv => ARGV.map { |arg| arg.dup },
-      :cwd => Dir.pwd,
+      # don't rely on Dir.pwd here since it's not symlink-aware, and
+      # symlink dirs are the default with Capistrano...
+      :cwd => `/bin/sh -c pwd`.chomp("\n"),
       :zero => $0.dup,
       :environ => {}.merge!(ENV),
       :umask => File.umask,
@@ -324,7 +326,7 @@ module Unicorn
         ENV.replace(@start_ctx[:environ])
         ENV['UNICORN_FD'] = @listeners.map { |sock| sock.fileno }.join(',')
         File.umask(@start_ctx[:umask])
-        Dir.chdir(@cwd || @start_ctx[:cwd])
+        Dir.chdir(@directory || @start_ctx[:cwd])
         cmd = [ @start_ctx[:zero] ] + @start_ctx[:argv]
         logger.info "executing #{cmd.inspect} (in #{Dir.pwd})"
         exec(*cmd)
