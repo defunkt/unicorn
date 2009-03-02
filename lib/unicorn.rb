@@ -120,7 +120,6 @@ module Unicorn
                                "(or pid=#{path} is stale)"
         end
         File.open(path, 'wb') { |fp| fp.syswrite("#{$$}\n") }
-        at_exit { unlink_pid_safe(path) }
       end
       unlink_pid_safe(@pid) if @pid && @pid != path
       @pid = path
@@ -220,6 +219,7 @@ module Unicorn
       end
       stop # gracefully shutdown all workers on our way out
       logger.info "master PID:#{$$} join complete"
+      unlink_pid_safe(@pid) if @pid
     end
 
     # Terminates all workers, but does not exit master process
