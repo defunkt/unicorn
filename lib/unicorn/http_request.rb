@@ -133,7 +133,7 @@ module Unicorn
       @params.delete "HTTP_CONTENT_LENGTH"
       @params.update({ "rack.version" => [0,1],
                       "rack.input" => @body,
-                      "rack.errors" => STDERR,
+                      "rack.errors" => $stderr,
                       "rack.multithread" => false,
                       "rack.multiprocess" => true,
                       "rack.run_once" => false,

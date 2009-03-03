@@ -4,7 +4,7 @@ module Unicorn
   class Configurator
     include ::Unicorn::SocketHelper
 
-    DEFAULT_LOGGER = Logger.new(STDERR) unless defined?(DEFAULT_LOGGER)
+    DEFAULT_LOGGER = Logger.new($stderr) unless defined?(DEFAULT_LOGGER)
 
     DEFAULTS = {
       :timeout => 60,
@@ -24,6 +24,8 @@ module Unicorn
       :pid => nil,
       :backlog => 1024,
       :preload_app => false,
+      :stderr_path => nil,
+      :stdout_path => nil,
     }
 
     attr_reader :config_file
@@ -130,14 +132,7 @@ module Unicorn
     end
 
     # sets the +path+ for the PID file of the unicorn master process
-    def pid(path)
-      if path
-        path = File.expand_path(path)
-        File.writable?(File.dirname(path)) or raise ArgumentError,
-                                     "directory for pid=#{path} not writable"
-      end
-      @set[:pid] = path
-    end
+    def pid(path); set_path(:pid, path); end
 
     def directory(path)
       @set[:directory] = path ? File.expand_path(path) : nil
@@ -152,7 +147,28 @@ module Unicorn
       end
     end
 
+    def stderr_path(path)
+      set_path(:stderr_path, path)
+    end
+
+    def stdout_path(path)
+      set_path(:stdout_path, path)
+    end
+
     private
+
+    def set_path(var, path) #:nodoc:
+      case path
+      when NilClass
+      when String
+        path = File.expand_path(path)
+        File.writable?(File.dirname(path)) or \
+               raise ArgumentError, "directory for #{var}=#{path} not writable"
+      else
+        raise ArgumentError
+      end
+      @set[var] = path
+    end
 
     def set_hook(var, my_proc) #:nodoc:
       case my_proc

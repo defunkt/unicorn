@@ -90,6 +90,9 @@ module Unicorn
       listen(Const::DEFAULT_LISTENER) if @listeners.empty?
       self.pid = @config[:pid]
       build_app! if @preload_app
+      $stderr.reopen(@stderr_path, "a") if @stderr_path
+      $stdout.reopen(@stdout_path, "a") if @stdout_path
+      $stderr.sync = $stdout.sync = true
       spawn_missing_workers
       self
     end
