@@ -473,6 +473,8 @@ module Unicorn
               # timeout used so we can detect parent death:
               ret = IO.select(@listeners, nil, nil, @timeout/2.0) or next
               ready = ret[0]
+            rescue Errno::EINTR
+              ready = @listeners
             rescue Errno::EBADF => e
               exit(alive ? 1 : 0)
             end
