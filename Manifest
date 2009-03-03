@@ -25,6 +25,7 @@ lib/unicorn/const.rb
 lib/unicorn/http_request.rb
 lib/unicorn/http_response.rb
 lib/unicorn/socket.rb
+lib/unicorn/util.rb
 setup.rb
 test/aggregate.rb
 test/benchmark/previous.rb

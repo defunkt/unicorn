@@ -56,16 +56,7 @@ end
 after_fork do |server, worker_nr|
   trap('USR1') do # log rotation
     server.logger.info "after_fork: worker=\#{worker_nr} rotating logs..."
-    ObjectSpace.each_object(File) do |fp|
-      next if fp.closed? || ! fp.sync
-      next unless (fp.fcntl(Fcntl::F_GETFL) & File::APPEND) == File::APPEND
-      begin
-        fp.stat.ino == File.stat(fp.path).ino
-      rescue Errno::ENOENT
-      end
-      fp.reopen(fp.path, "a")
-      fp.sync = true
-    end
+    Unicorn::Util.reopen_logs
     server.logger.info "after_fork: worker=\#{worker_nr} done rotating logs"
   end # trap('USR1')
 end # after_fork

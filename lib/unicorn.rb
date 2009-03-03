@@ -5,6 +5,7 @@ require 'unicorn/const'
 require 'unicorn/http_request'
 require 'unicorn/http_response'
 require 'unicorn/configurator'
+require 'unicorn/util'
 
 # Unicorn module containing all of the classes (include C extensions) for running
 # a Unicorn web server.  It contains a minimalist HTTP server with just enough
