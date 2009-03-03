@@ -87,7 +87,7 @@ module Unicorn
       # objects; we need to prevent Socket objects from being garbage-collected
       config_listeners -= listener_names
       config_listeners.each { |addr| listen(addr) }
-      listen(Const::DEFAULT_LISTENER) if @listeners.empty?
+      listen(Const::DEFAULT_LISTEN) if @listeners.empty?
       self.pid = @config[:pid]
       build_app! if @preload_app
       $stderr.reopen(@stderr_path, "a") if @stderr_path
