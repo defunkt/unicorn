@@ -1,3 +1,7 @@
+require 'unicorn/socket'
+require 'unicorn/const'
+require 'logger'
+
 module Unicorn
 
   # Implements a simple DSL for configuring a Unicorn server.
