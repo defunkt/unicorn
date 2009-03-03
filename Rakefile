@@ -36,9 +36,3 @@ task :ragel do
     raise "Failed to build C source" unless File.exist? target
   end
 end
-
-#### Pre-compiled extensions for alternative platforms
-
-def move_extensions
-  Dir["ext/**/*.#{Config::CONFIG['DLEXT']}"].each { |file| mv file, "lib/" }
-end
