@@ -23,6 +23,7 @@ module Unicorn
       :directory => nil,
       :pid => nil,
       :backlog => 1024,
+      :preload_app => false,
     }
 
     attr_reader :config_file
@@ -140,6 +141,15 @@ module Unicorn
 
     def directory(path)
       @set[:directory] = path ? File.expand_path(path) : nil
+    end
+
+    def preload_app(bool)
+      case bool
+      when TrueClass, FalseClass
+        @set[:preload_app] = bool
+      else
+        raise ArgumentError, "preload_app=#{bool.inspect} not a boolean"
+      end
     end
 
     private

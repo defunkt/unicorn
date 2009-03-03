@@ -89,7 +89,7 @@ module Unicorn
       config_listeners.each { |addr| listen(addr) }
       listen(Const::DEFAULT_LISTENER) if @listeners.empty?
       self.pid = @config[:pid]
-      build_app!
+      build_app! if @preload_app
       spawn_missing_workers
       self
     end
@@ -391,6 +391,7 @@ module Unicorn
     # traps for USR1, USR2, and HUP may be set in the @after_fork Proc
     # by the user.
     def init_worker_process(worker)
+      build_app! unless @preload_app
       TRAP_SIGS.each { |sig| trap(sig, 'IGNORE') }
       trap('CHLD', 'DEFAULT')
       trap('USR1') do
