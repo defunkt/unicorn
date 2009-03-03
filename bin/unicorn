@@ -1,7 +1,6 @@
 #!/home/ew/bin/ruby
 $stdin.sync = $stdout.sync = $stderr.sync = true
 require 'unicorn' # require this first to populate Unicorn::DEFAULT_START_CTX
-require 'rack'
 require 'optparse'
 
 env = "development"
@@ -101,6 +100,10 @@ opts = OptionParser.new("", 24, '  ') do |opts|
 end
 
 require 'pp' if $DEBUG
+
+# require Rack as late as possible in case $LOAD_PATH is modified
+# in config.ru or command-line
+require 'rack'
 
 config = ARGV[0] || "config.ru"
 abort "configuration file #{config} not found" unless File.exist?(config)
