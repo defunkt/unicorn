@@ -53,13 +53,6 @@ logger Logger.new('#{COMMON_TMP.path}')
 before_fork do |server, worker_nr|
   server.logger.info "before_fork: worker=\#{worker_nr}"
 end
-after_fork do |server, worker_nr|
-  trap('USR1') do # log rotation
-    server.logger.info "after_fork: worker=\#{worker_nr} rotating logs..."
-    Unicorn::Util.reopen_logs
-    server.logger.info "after_fork: worker=\#{worker_nr} done rotating logs"
-  end # trap('USR1')
-end # after_fork
   EOS
 
   def setup

@@ -182,6 +182,7 @@ module Unicorn
             break
           when 'USR1' # user-defined (probably something like log reopening)
             kill_each_worker('USR1')
+            Unicorn::Util.reopen_logs
             reset_master
           when 'USR2' # exec binary, stay alive in case something went wrong
             reexec
@@ -392,6 +393,12 @@ module Unicorn
     def init_worker_process(worker)
       TRAP_SIGS.each { |sig| trap(sig, 'IGNORE') }
       trap('CHLD', 'DEFAULT')
+      trap('USR1') do
+        @logger.info "worker=#{worker.nr} rotating logs..."
+        Unicorn::Util.reopen_logs
+        @logger.info "worker=#{worker.nr} done rotating logs"
+      end
+
       $0 = "unicorn worker[#{worker.nr}]"
       @rd_sig.close if @rd_sig
       @wr_sig.close if @wr_sig
