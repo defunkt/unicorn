@@ -1,6 +1,5 @@
 require 'mkmf'
 
-dir_config("http11")
+dir_config("unicorn/http11")
 have_library("c", "main")
-
-create_makefile("http11")
+create_makefile("unicorn/http11")
