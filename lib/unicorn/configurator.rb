@@ -19,7 +19,11 @@ module Unicorn
           server.logger.info("worker=#{worker_nr} spawned pid=#{$$}")
 
           # per-process listener ports for debugging/admin:
-          # server.add_listener("127.0.0.1:#{8081 + worker_nr}")
+          # "rescue nil" statement is needed because USR2 will
+          # cause the master process to reexecute itself and the
+          # per-worker ports can be taken, necessitating another
+          # HUP after QUIT-ing the original master:
+          # server.listen("127.0.0.1:#{8081 + worker_nr}") rescue nil
         },
       :before_fork => lambda { |server, worker_nr|
           server.logger.info("worker=#{worker_nr} spawning...")
