@@ -45,7 +45,6 @@ end
   COMMON_TMP = Tempfile.new('unicorn_tmp') unless defined?(COMMON_TMP)
 
   HEAVY_CFG = <<-EOS
-require 'fcntl'
 worker_processes 4
 timeout 30
 backlog 1
