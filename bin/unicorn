@@ -145,7 +145,7 @@ end
 
 if listeners.empty?
   listener = "#{host}:#{port}"
-  listeners << listener if listener != Unicorn::Const::DEFAULT_LISTEN
+  listeners << listener
 end
 
 if $DEBUG
