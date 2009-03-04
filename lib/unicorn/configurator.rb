@@ -28,7 +28,6 @@ module Unicorn
       :before_fork => lambda { |server, worker_nr|
           server.logger.info("worker=#{worker_nr} spawning...")
         },
-      :directory => nil,
       :pid => nil,
       :backlog => 1024,
       :preload_app => false,
@@ -141,10 +140,6 @@ module Unicorn
 
     # sets the +path+ for the PID file of the unicorn master process
     def pid(path); set_path(:pid, path); end
-
-    def directory(path)
-      @set[:directory] = path ? File.expand_path(path) : nil
-    end
 
     def preload_app(bool)
       case bool

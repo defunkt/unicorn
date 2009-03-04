@@ -71,10 +71,6 @@ opts = OptionParser.new("", 24, '  ') do |opts|
     listeners << address
   end
 
-  opts.on("-C", "--directory PATH", "run in this directory") do |d|
-    options[:directory] = d
-  end
-
   opts.on("-c", "--config-file FILE", "Unicorn-specific config file") do |f|
     options[:config_file] = File.expand_path(f)
   end
@@ -174,11 +170,10 @@ if daemonize
   #     0000 and potentially exposing sensitive log data can be bad
   #     policy.
   #   * Don't bother to chdir here since Unicorn is designed to
-  #     run inside APP_ROOT (or whatever the "directory" directive
-  #     specifies).  Unicorn will also re-chdir() to the directory
-  #     it was started in when being re-executed to pickup code
-  #     changes if the original deployment directory is a symlink
-  #     or otherwise got replaced.
+  #     run inside APP_ROOT.  Unicorn will also re-chdir() to
+  #     the directory it was started in when being re-executed
+  #     to pickup code changes if the original deployment directory
+  #     is a symlink or otherwise got replaced.
 end
 
 Unicorn.run(app, options)
