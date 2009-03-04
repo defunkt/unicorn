@@ -90,8 +90,8 @@ module Unicorn
       raise ArgumentError, "no listeners" if @listeners.empty?
       self.pid = @config[:pid]
       build_app! if @preload_app
-      $stderr.reopen(@stderr_path, "a") if @stderr_path
-      $stdout.reopen(@stdout_path, "a") if @stdout_path
+      $stderr.reopen(File.open(@stderr_path, "a")) if @stderr_path
+      $stdout.reopen(File.open(@stdout_path, "a")) if @stdout_path
       $stderr.sync = $stdout.sync = true
       spawn_missing_workers
       self
