@@ -55,16 +55,17 @@ proxy we know of that meets this requirement.
    let nginx handle slow clients.
 
  * Configuration is purely in Ruby and eval().  Ruby is less
-   ambiguous than YAML and lets lambdas for before_fork/after_fork
-   hooks be defined inline.  An optional, separate hot_config_file
-   may be used to modify supported configuration changes
-   (and also gives you plenty of rope if you RTFS :>)
+   ambiguous than YAML and lets lambdas for
+   before_fork/after_fork/before_exec hooks be defined inline.  An
+   optional, separate config_file may be used to modify supported
+   configuration changes (and also gives you plenty of rope if you RTFS
+   :>)
 
  * One master process spawns and reaps worker processes.  The
    Rack application itself is called only within the worker process (but
    can be loaded within the master).  A copy-on-write friendly garbage
    collector like Ruby Enterprise Edition can be used to minimize memory
-   usage.
+   usage along with the "preload_app true" directive.
 
  * The number of worker processes should be scaled to the number of
    CPUs, memory or even spindles you have.  If you have an existing
@@ -135,13 +136,15 @@ You can get the source via git via the following locations:
 
 == Usage
 
-See the Sinatra example.
+Unicorn will look for the config.ru file used by rackup in APP_ROOT.
+Optionally, it can use a config file specified by the --config-file/-c
+command-line switch.
 
-It should be capable of running all Rack applications.  Since this is a
-preforking webserver, you do not have to worry about thread-safety of your
-application or libraries. However, your Rack application may use threads
-internally (and should even be able to continue running threads after the
-request is complete).
+Unicorn should be capable of running all Rack applications.  Since this
+is a preforking webserver, you do not have to worry about thread-safety
+of your application or libraries. However, your Rack application may use
+threads internally (and should even be able to continue running threads
+after the request is complete).
 
 == Contact
 
