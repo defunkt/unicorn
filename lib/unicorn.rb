@@ -327,6 +327,7 @@ module Unicorn
         Dir.chdir(@start_ctx[:cwd])
         cmd = [ @start_ctx[:zero] ] + @start_ctx[:argv]
         logger.info "executing #{cmd.inspect} (in #{Dir.pwd})"
+        @before_exec.call(self) if @before_exec
         exec(*cmd)
       end
     end

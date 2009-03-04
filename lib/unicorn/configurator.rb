@@ -28,6 +28,9 @@ module Unicorn
       :before_fork => lambda { |server, worker_nr|
           server.logger.info("worker=#{worker_nr} spawning...")
         },
+      :before_exec => lambda { |server|
+          server.logger.info("forked child re-executing...")
+        },
       :pid => nil,
       :backlog => 1024,
       :preload_app => false,
@@ -106,6 +109,16 @@ module Unicorn
       set_hook(:before_fork, block)
     end
 
+    # sets the before_exec hook to a given Proc object.  This
+    # Proc object will be called by the master process right
+    # before exec()-ing the new unicorn binary.  This is useful
+    # for freeing certain OS resources that you do NOT wish to
+    # share with the reexeced child process.
+    # There is no corresponding after_exec hook (for obvious reasons).
+    def before_exec(&block)
+      set_hook(:before_exec, block, 1)
+    end
+
     # sets the timeout of worker processes to +seconds+
     # This will gracefully restart all workers if the value is lowered
     # to prevent them from being timed out according to new timeout rules
@@ -173,12 +186,14 @@ module Unicorn
       @set[var] = path
     end
 
-    def set_hook(var, my_proc) #:nodoc:
+    def set_hook(var, my_proc, req_arity = 2) #:nodoc:
       case my_proc
       when Proc
         arity = my_proc.arity
-        (arity == 2 || arity < 0) or raise ArgumentError,
-                        "#{var}=#{my_proc.inspect} has invalid arity: #{arity}"
+        (arity == req_arity) or \
+          raise ArgumentError,
+                "#{var}=#{my_proc.inspect} has invalid arity: " \
+                "#{arity} (need #{req_arity})"
       when NilClass
         my_proc = DEFAULTS[var]
       else
