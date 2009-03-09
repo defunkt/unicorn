@@ -67,6 +67,11 @@ opts = OptionParser.new("", 24, '  ') do |opts|
     options[:pid] = File.expand_path(f)
   end
 
+  opts.on("-s", "--server SERVER",
+          "this flag only exists for compatibility") do |s|
+    warn "-s/--server only exists for compatibility with rackup"
+  end
+
   # Unicorn-specific stuff
   opts.on("-l", "--listen {HOST:PORT|PATH}",
           "listen on HOST:PORT or PATH",
