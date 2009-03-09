@@ -13,7 +13,6 @@ Echoe.new("unicorn") do |p|
                      'site/output', '.config', 'coverage',
                      'test_*.log', 'log', 'doc']
   p.url = "http://unicorn.bogomips.org"
-  p.rdoc_pattern = ['README', 'LICENSE', 'CONTRIBUTORS', 'CHANGELOG', 'COPYING', 'lib/**/*.rb', 'doc/**/*.rdoc']
   p.ignore_pattern = /^(pkg|site|projects|doc|log)|CVS|\.log/
   p.need_tar_gz = false
   p.need_tgz = true

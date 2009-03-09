@@ -104,4 +104,8 @@ Manifest:
 	cmp $@+ $@ || mv $@+ $@
 	$(RM) -f $@+
 
-.PHONY: $(T) $(slow_tests) Manifest
+# using rdoc 2.4.1
+doc: .document
+	rdoc -Na -m README -t "$(shell sed -ne '1s/^= //p' README)"
+
+.PHONY: doc $(T) $(slow_tests) Manifest
