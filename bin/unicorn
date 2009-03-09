@@ -63,6 +63,10 @@ opts = OptionParser.new("", 24, '  ') do |opts|
     daemonize = d ? true : false
   end
 
+  opts.on("-P", "--pid FILE", "file to store PID (default: none)") do |f|
+    options[:pid] = File.expand_path(f)
+  end
+
   # Unicorn-specific stuff
   opts.on("-l", "--listen {HOST:PORT|PATH}",
           "listen on HOST:PORT or PATH",
