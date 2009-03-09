@@ -47,7 +47,7 @@ end
   HEAVY_CFG = <<-EOS
 worker_processes 4
 timeout 30
-backlog 1
+backlog 128
 logger Logger.new('#{COMMON_TMP.path}')
 before_fork do |server, worker_nr|
   server.logger.info "before_fork: worker=\#{worker_nr}"
