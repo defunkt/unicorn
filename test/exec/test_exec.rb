@@ -316,18 +316,14 @@ end
     assert status.success?, "exited successfully"
   end
 
-  def test_ignore_embedded_cli_switches
-    port2 = unused_port(@addr)
+  def test_read_embedded_cli_switches
     File.open("config.ru", "wb") do |fp|
-      fp.syswrite("#\\ -p #{port2} -o #{@addr}\n")
+      fp.syswrite("#\\ -p #{@port} -o #{@addr}\n")
       fp.syswrite(HI)
     end
-    pid = fork do
-      redirect_test_io { exec($unicorn_bin, "-l#{@addr}:#{@port}") }
-    end
+    pid = fork { redirect_test_io { exec($unicorn_bin) } }
     results = retry_hit(["http://#{@addr}:#{@port}/"])
     assert_equal String, results[0].class
-    assert_raises(Errno::ECONNREFUSED) { TCPSocket.new(@addr, port2) }
     assert_shutdown(pid)
   end
 

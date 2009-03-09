@@ -107,8 +107,9 @@ abort "configuration file #{config} not found" unless File.exist?(config)
 inner_app = case config
 when /\.ru$/
   raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }
+  # parse embedded command-line options in config.ru comments
   if raw[/^#\\(.*)/]
-    warn %(not parsing embedded command-line options: "#$1")
+    opts.parse! $1.split(/\s+/)
   end
   lambda { || eval("Rack::Builder.new {(#{raw}\n)}.to_app", nil, config) }
 else
