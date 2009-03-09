@@ -1,0 +1,34 @@
+== Signal handling
+
+In general, signals need only be sent to the master process.  However,
+the signals unicorn uses internally to communicate with the worker
+processes are documented here as well.
+
+=== Master Process
+
+ * HUP - reload config file and gracefully restart all workers
+
+ * INT/TERM - quick shutdown, kills all workers immediately
+
+ * QUIT - graceful shutdown, waits for workers to finish their
+   current request before finishing.
+
+ * USR1 - reopen all logs owned by the master and all workers
+   See Unicorn::Util.reopen_logs for what is considered a log.
+
+ * USR2 - reexecute the running binary.  A separate QUIT
+   should be sent to the original process once the child is verified to
+   be up and running.
+
+=== Worker Processes
+
+Sending signals directly to the worker processes should not normally be
+needed.  If the master process is running, any exited worker will be
+automatically respawned.
+
+ * INT/TERM - quick shutdown, immediately exit
+
+ * QUIT - gracefully exit after finishing the current request
+
+ * USR1 - reopen all logs owned by the worker process
+   See Unicorn::Util.reopen_logs for what is considered a log.
