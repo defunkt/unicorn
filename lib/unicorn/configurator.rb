@@ -4,12 +4,23 @@ require 'logger'
 
 module Unicorn
 
-  # Implements a simple DSL for configuring a Unicorn server.
+  # Implements a simple DSL for configuring a unicorn server.
+  #
+  # Example (when used with the unicorn config file):
+  #   worker_processes 4
+  #   listeners %w(0.0.0.0:9292 /tmp/my_app.sock)
+  #   timeout 10
+  #   pid "/tmp/my_app.pid"
+  #   after_fork do |server,worker_nr|
+  #     server.listen("127.0.0.1:#{9293 + worker_nr}") rescue nil
+  #   end
   class Configurator
     include ::Unicorn::SocketHelper
 
+    # The default logger writes its output to $stderr
     DEFAULT_LOGGER = Logger.new($stderr) unless defined?(DEFAULT_LOGGER)
 
+    # Default settings for Unicorn
     DEFAULTS = {
       :timeout => 60,
       :listeners => [ Const::DEFAULT_LISTEN ],
@@ -38,9 +49,9 @@ module Unicorn
       :stdout_path => nil,
     }
 
-    attr_reader :config_file
+    attr_reader :config_file #:nodoc:
 
-    def initialize(defaults = {})
+    def initialize(defaults = {}) #:nodoc:
       @set = Hash.new(:unset)
       use_defaults = defaults.delete(:use_defaults)
       @config_file = defaults.delete(:config_file)
@@ -50,11 +61,11 @@ module Unicorn
       reload
     end
 
-    def reload
+    def reload #:nodoc:
       instance_eval(File.read(@config_file)) if @config_file
     end
 
-    def commit!(server, options = {})
+    def commit!(server, options = {}) #:nodoc:
       skip = options[:skip] || []
       @set.each do |key, value|
         (Symbol === value && value == :unset) and next
@@ -68,7 +79,7 @@ module Unicorn
       end
     end
 
-    def [](key)
+    def [](key) # :nodoc:
       @set[key]
     end
 
@@ -77,7 +88,8 @@ module Unicorn
     # existing listener sockets in any way, sockets must be completely
     # closed and rebound (inherited sockets preserve their existing
     # backlog setting).  Some operating systems allow negative values
-    # here to specify the maximum allowable value.
+    # here to specify the maximum allowable value.  See the listen(2)
+    # syscall documentation of your OS for the exact semantics of this.
     def backlog(nr)
       Integer === nr or raise ArgumentError,
          "not an integer: backlog=#{nr.inspect}"
@@ -96,8 +108,18 @@ module Unicorn
       @set[:logger] = new
     end
 
-    # sets after_fork hook to a given block.  This block
-    # will be called by the worker after forking
+    # sets after_fork hook to a given block.  This block will be called by
+    # the worker after forking.  The following is an example hook which adds
+    # a per-process listener to every worker:
+    #
+    #  after_fork do |server,worker_nr|
+    #    # per-process listener ports for debugging/admin:
+    #    # "rescue nil" statement is needed because USR2 will
+    #    # cause the master process to reexecute itself and the
+    #    # per-worker ports can be taken, necessitating another
+    #    # HUP after QUIT-ing the original master:
+    #    server.listen("127.0.0.1:#{9293 + worker_nr}") rescue nil
+    #  end
     def after_fork(&block)
       set_hook(:after_fork, block)
     end
@@ -119,9 +141,11 @@ module Unicorn
       set_hook(:before_exec, block, 1)
     end
 
-    # sets the timeout of worker processes to +seconds+
-    # This will gracefully restart all workers if the value is lowered
-    # to prevent them from being timed out according to new timeout rules
+    # sets the timeout of worker processes to +seconds+.  Workers
+    # handling the request/app.call/response cycle taking longer than
+    # this time period will be forcibly killed (via SIGKILL).  This
+    # timeout is enforced by the master process itself and not subject
+    # to the scheduling limitations by the worker process.
     def timeout(seconds)
       Numeric === seconds or raise ArgumentError,
                                   "not numeric: timeout=#{seconds.inspect}"
@@ -130,7 +154,8 @@ module Unicorn
       @set[:timeout] = seconds
     end
 
-    # sets the current number of worker_processes to +nr+
+    # sets the current number of worker_processes to +nr+.  Each worker
+    # process will serve exactly one client at a time.
     def worker_processes(nr)
       Integer === nr or raise ArgumentError,
                              "not an integer: worker_processes=#{nr.inspect}"
@@ -139,7 +164,9 @@ module Unicorn
       @set[:worker_processes] = nr
     end
 
-    # sets listeners to the given +addresses+, replacing the current set
+    # sets listeners to the given +addresses+, replacing or augmenting the
+    # current set.  This is for the global listener pool shared by all
+    # worker processes.  For per-worker listeners, see the after_fork example
     def listeners(addresses)
       Array === addresses or addresses = Array(addresses)
       @set[:listeners] = addresses
@@ -154,6 +181,15 @@ module Unicorn
     # sets the +path+ for the PID file of the unicorn master process
     def pid(path); set_path(:pid, path); end
 
+    # Enabling this preloads an application before forking worker
+    # processes.  This allows memory savings when using a
+    # copy-on-write-friendly GC but can cause bad things to happen when
+    # resources like sockets are opened at load time by the master
+    # process and shared by multiple children.  People enabling this are
+    # highly encouraged to look at the before_fork/after_fork hooks to
+    # properly close/reopen sockets.  Files opened for logging do not
+    # have to be reopened as (unbuffered-in-userspace) files opened with
+    # the File::APPEND flag are written to atomically on UNIX.
     def preload_app(bool)
       case bool
       when TrueClass, FalseClass
@@ -163,10 +199,17 @@ module Unicorn
       end
     end
 
+    # Allow redirecting $stderr to a given path.  Unlike doing this from
+    # the shell, this allows the unicorn process to know the path its
+    # writing to and rotate the file if it is used for logging.  The
+    # file will be opened with the File::APPEND flag and writes
+    # synchronized to the kernel (but not necessarily to _disk_) so
+    # multiple processes can safely append to it.
     def stderr_path(path)
       set_path(:stderr_path, path)
     end
 
+    # Same as stderr_path, except for $stdout
     def stdout_path(path)
       set_path(:stdout_path, path)
     end
