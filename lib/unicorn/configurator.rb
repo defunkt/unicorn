@@ -90,6 +90,10 @@ module Unicorn
     # backlog setting).  Some operating systems allow negative values
     # here to specify the maximum allowable value.  See the listen(2)
     # syscall documentation of your OS for the exact semantics of this.
+    #
+    # If you are running unicorn on multiple machines, lowering this number
+    # can help your load balancer detect when a machine is overloaded
+    # and give requests to a different machine.
     def backlog(nr)
       Integer === nr or raise ArgumentError,
          "not an integer: backlog=#{nr.inspect}"
