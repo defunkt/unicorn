@@ -173,7 +173,8 @@ static VALUE find_common_field_value(const char *field, size_t flen)
 #endif /* !HAVE_QSORT_BSEARCH */
 }
 
-void http_field(void *data, const char *field, size_t flen, const char *value, size_t vlen)
+static void http_field(void *data, const char *field,
+                       size_t flen, const char *value, size_t vlen)
 {
   VALUE req = (VALUE)data;
   VALUE v = Qnil;
@@ -207,7 +208,7 @@ void http_field(void *data, const char *field, size_t flen, const char *value, s
   rb_hash_aset(req, f, v);
 }
 
-void request_method(void *data, const char *at, size_t length)
+static void request_method(void *data, const char *at, size_t length)
 {
   VALUE req = (VALUE)data;
   VALUE val = Qnil;
@@ -216,7 +217,7 @@ void request_method(void *data, const char *at, size_t length)
   rb_hash_aset(req, global_request_method, val);
 }
 
-void request_uri(void *data, const char *at, size_t length)
+static void request_uri(void *data, const char *at, size_t length)
 {
   VALUE req = (VALUE)data;
   VALUE val = Qnil;
@@ -227,7 +228,7 @@ void request_uri(void *data, const char *at, size_t length)
   rb_hash_aset(req, global_request_uri, val);
 }
 
-void fragment(void *data, const char *at, size_t length)
+static void fragment(void *data, const char *at, size_t length)
 {
   VALUE req = (VALUE)data;
   VALUE val = Qnil;
@@ -238,7 +239,7 @@ void fragment(void *data, const char *at, size_t length)
   rb_hash_aset(req, global_fragment, val);
 }
 
-void request_path(void *data, const char *at, size_t length)
+static void request_path(void *data, const char *at, size_t length)
 {
   VALUE req = (VALUE)data;
   VALUE val = Qnil;
@@ -249,7 +250,7 @@ void request_path(void *data, const char *at, size_t length)
   rb_hash_aset(req, global_request_path, val);
 }
 
-void query_string(void *data, const char *at, size_t length)
+static void query_string(void *data, const char *at, size_t length)
 {
   VALUE req = (VALUE)data;
   VALUE val = Qnil;
@@ -260,7 +261,7 @@ void query_string(void *data, const char *at, size_t length)
   rb_hash_aset(req, global_query_string, val);
 }
 
-void http_version(void *data, const char *at, size_t length)
+static void http_version(void *data, const char *at, size_t length)
 {
   VALUE req = (VALUE)data;
   VALUE val = rb_str_new(at, length);
@@ -270,7 +271,7 @@ void http_version(void *data, const char *at, size_t length)
 /** Finalizes the request header to have a bunch of stuff that's
   needed. */
 
-void header_done(void *data, const char *at, size_t length)
+static void header_done(void *data, const char *at, size_t length)
 {
   VALUE req = (VALUE)data;
   VALUE temp = Qnil;
@@ -310,8 +311,7 @@ void header_done(void *data, const char *at, size_t length)
   rb_hash_aset(req, global_server_protocol, global_server_protocol_value);
 }
 
-
-void HttpParser_free(void *data) {
+static void HttpParser_free(void *data) {
   TRACE();
 
   if(data) {
@@ -320,7 +320,7 @@ void HttpParser_free(void *data) {
 }
 
 
-VALUE HttpParser_alloc(VALUE klass)
+static VALUE HttpParser_alloc(VALUE klass)
 {
   VALUE obj;
   http_parser *hp = ALLOC_N(http_parser, 1);
@@ -347,7 +347,7 @@ VALUE HttpParser_alloc(VALUE klass)
  *
  * Creates a new parser.
  */
-VALUE HttpParser_init(VALUE self)
+static VALUE HttpParser_init(VALUE self)
 {
   http_parser *http = NULL;
   DATA_GET(self, http_parser, http);
@@ -364,7 +364,7 @@ VALUE HttpParser_init(VALUE self)
  * Resets the parser to it's initial state so that you can reuse it
  * rather than making new ones.
  */
-VALUE HttpParser_reset(VALUE self)
+static VALUE HttpParser_reset(VALUE self)
 {
   http_parser *http = NULL;
   DATA_GET(self, http_parser, http);
@@ -381,7 +381,7 @@ VALUE HttpParser_reset(VALUE self)
  * Finishes a parser early which could put in a "good" or bad state.
  * You should call reset after finish it or bad things will happen.
  */
-VALUE HttpParser_finish(VALUE self)
+static VALUE HttpParser_finish(VALUE self)
 {
   http_parser *http = NULL;
   DATA_GET(self, http_parser, http);
@@ -408,7 +408,8 @@ VALUE HttpParser_finish(VALUE self)
  * the parsing from that position.  It needs all of the original data as well 
  * so you have to append to the data buffer as you read.
  */
-VALUE HttpParser_execute(VALUE self, VALUE req_hash, VALUE data, VALUE start)
+static VALUE HttpParser_execute(VALUE self, VALUE req_hash,
+                                VALUE data, VALUE start)
 {
   http_parser *http = NULL;
   int from = 0;
@@ -445,7 +446,7 @@ VALUE HttpParser_execute(VALUE self, VALUE req_hash, VALUE data, VALUE start)
  *
  * Tells you whether the parser is in an error state.
  */
-VALUE HttpParser_has_error(VALUE self)
+static VALUE HttpParser_has_error(VALUE self)
 {
   http_parser *http = NULL;
   DATA_GET(self, http_parser, http);
@@ -460,7 +461,7 @@ VALUE HttpParser_has_error(VALUE self)
  *
  * Tells you whether the parser is finished or not and in a good state.
  */
-VALUE HttpParser_is_finished(VALUE self)
+static VALUE HttpParser_is_finished(VALUE self)
 {
   http_parser *http = NULL;
   DATA_GET(self, http_parser, http);
@@ -476,7 +477,7 @@ VALUE HttpParser_is_finished(VALUE self)
  * Returns the amount of data processed so far during this processing cycle.  It is
  * set to 0 on initialize or reset calls and is incremented each time execute is called.
  */
-VALUE HttpParser_nread(VALUE self)
+static VALUE HttpParser_nread(VALUE self)
 {
   http_parser *http = NULL;
   DATA_GET(self, http_parser, http);
