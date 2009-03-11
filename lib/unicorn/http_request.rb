@@ -150,8 +150,7 @@ module Unicorn
     # the @body already.  It will return true if successful and false if not.
     def read_body(socket, remain)
       while remain > 0
-        # ASSUME: we are writing to a disk and these writes always write the
-        # requested amount.  This is true on Linux.
+        # writes always write the requested amount on a POSIX filesystem
         remain -= @body.syswrite(read_socket(socket))
       end
       true # success!
