@@ -99,6 +99,7 @@ module Unicorn
         @body = StringIO.new(http_body)
       else # huge body, put it in a tempfile
         @body = Tempfile.new(Const::UNICORN_TMP_BASE)
+        @body.binmode
         @body.sync = true
         @body.syswrite(http_body)
       end
