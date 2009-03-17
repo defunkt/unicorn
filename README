@@ -60,11 +60,20 @@ Unicorn will look for the config.ru file used by rackup in APP_ROOT.
 Optionally, it can use a config file specified by the --config-file/-c
 command-line switch.
 
-Unicorn should be capable of running all Rack applications.  Since this
+Unicorn should be capable of running most Rack applications.  Since this
 is a preforking webserver, you do not have to worry about thread-safety
 of your application or libraries. However, your Rack application may use
 threads internally (and should even be able to continue running threads
 after the request is complete).
+
+== Known Issues
+
+  * WONTFIX: code reloading with Sinatra 0.3.2 (and likely older
+    versions) apps is broken.  Since this is no longer an issue with
+    Sinatra 0.9.x apps and only affected non-production instances, this
+    will not be fixed on our end.  Also remember we're capable of
+    replacing the running binary without dropping any connections
+    regardless of framework :)
 
 == Contact
 
