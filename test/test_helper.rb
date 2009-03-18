@@ -41,7 +41,18 @@ def redirect_test_io
     STDOUT.reopen(orig_out)
   end
 end
-    
+
+# which(1) exit codes cannot be trusted on some systems
+# We use UNIX shell utilities in some tests because we don't trust
+# ourselves to write Ruby 100% correctly :)
+def which(bin)
+  ex = ENV['PATH'].split(/:/).detect do |x|
+    x << "/#{bin}"
+    File.executable?(x)
+  end or warn "`#{bin}' not found in PATH=#{ENV['PATH']}"
+  ex
+end
+
 # Either takes a string to do a get request against, or a tuple of [URI, HTTP] where
 # HTTP is some kind of Net::HTTP request object (POST, HEAD, etc.)
 def hit(uris)

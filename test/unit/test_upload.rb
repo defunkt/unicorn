@@ -135,6 +135,34 @@ class UploadTest < Test::Unit::TestCase
     assert_equal resp[:size], new_tmp.stat.size
   end
 
+  # Despite reading numerous articles and inspecting the 1.9.1-p0 C
+  # source, Eric Wong will never trust that we're always handling
+  # encoding-aware IO objects correctly.  Thus this test uses shell
+  # utilities that should always operate on files/sockets on a
+  # byte-level.
+  def test_uncomfortable_with_onenine_encodings
+    # POSIX doesn't require all of these to be present on a system
+    which('curl') or return
+    which('sha1sum') or return
+    which('dd') or return
+
+    start_server(@sha1_app)
+
+    tmp = Tempfile.new('dd_dest')
+    assert(system("dd", "if=#{@random.path}", "of=#{tmp.path}",
+                        "bs=#{@bs}", "count=#{@count}"),
+           "dd #@random to #{tmp}")
+    sha1_re = %r!\b([a-f0-9]{40})\b!
+    sha1_out = `sha1sum #{tmp.path}`
+    assert $?.success?, 'sha1sum ran OK'
+
+    assert_match(sha1_re, sha1_out)
+    sha1 = sha1_re.match(sha1_out)[1]
+    resp = `curl -isSfN -T#{tmp.path} http://#@addr:#@port/`
+    assert $?.success?, 'curl ran OK'
+    assert_match(%r!\b#{sha1}\b!, resp)
+  end
+
   private
 
   def length
