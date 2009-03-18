@@ -194,6 +194,10 @@ module Unicorn
     # properly close/reopen sockets.  Files opened for logging do not
     # have to be reopened as (unbuffered-in-userspace) files opened with
     # the File::APPEND flag are written to atomically on UNIX.
+    #
+    # In addition to reloading the unicorn-specific config settings,
+    # SIGHUP will reload application code in the working
+    # directory/symlink when workers are gracefully restarted.
     def preload_app(bool)
       case bool
       when TrueClass, FalseClass

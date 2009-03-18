@@ -53,6 +53,7 @@ module Unicorn
       @start_ctx = DEFAULT_START_CTX.dup
       @start_ctx.merge!(start_ctx) if start_ctx
       @app = app
+      @alive = true
       @mode = :idle
       @master_pid = $$
       @workers = Hash.new
@@ -165,7 +166,7 @@ module Unicorn
       $0 = "unicorn master"
       logger.info "master process ready" # test relies on this message
       begin
-        loop do
+        while @alive
           reap_all_workers
           case @mode
           when :idle
@@ -352,6 +353,13 @@ module Unicorn
       return if @workers.size == @worker_processes
       (0...@worker_processes).each do |worker_nr|
         @workers.values.include?(worker_nr) and next
+        begin
+          Dir.chdir(@start_ctx[:cwd])
+        rescue Errno::ENOENT => err
+          logger.fatal "#{err.inspect} (#{@start_ctx[:cwd]})"
+          @alive = false
+          return
+        end
         tempfile = Tempfile.new('') # as short as possible to save dir space
         tempfile.unlink # don't allow other processes to find or see it
         tempfile.sync = true

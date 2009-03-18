@@ -7,6 +7,8 @@ processes are documented here as well.
 === Master Process
 
  * HUP - reload config file and gracefully restart all workers
+   If preload_app is false (the default), the application code
+   will be reloaded when workers are restarted as well.
 
  * INT/TERM - quick shutdown, kills all workers immediately
 
