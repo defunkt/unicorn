@@ -53,8 +53,7 @@ module Unicorn
       @start_ctx = DEFAULT_START_CTX.dup
       @start_ctx.merge!(start_ctx) if start_ctx
       @app = app
-      @alive = true
-      @mode = :idle
+      @sig_queue = []
       @master_pid = $$
       @workers = Hash.new
       @io_purgatory = [] # prevents IO objects in here from being GC-ed
@@ -161,15 +160,17 @@ module Unicorn
       # are trapped.  See trap_deferred
       @rd_sig, @wr_sig = IO.pipe unless (@rd_sig && @wr_sig)
       @rd_sig.nonblock = @wr_sig.nonblock = true
+      ready = mode = nil
 
-      reset_master
+      QUEUE_SIGS.each { |sig| trap_deferred(sig) }
+      trap('CHLD') { |sig_nr| awaken_master }
       $0 = "unicorn master"
-      logger.info "master process ready" # test relies on this message
+      logger.info "master process ready" # test_exec.rb relies on this message
       begin
-        while @alive
+        loop do
           reap_all_workers
-          case @mode
-          when :idle
+          case (mode = @sig_queue.shift)
+          when nil
             murder_lazy_workers
             spawn_missing_workers
           when 'QUIT' # graceful shutdown
@@ -177,17 +178,14 @@ module Unicorn
           when 'TERM', 'INT' # immediate shutdown
             stop(false)
             break
-          when 'USR1' # user-defined (probably something like log reopening)
+          when 'USR1' # rotate logs
             kill_each_worker('USR1')
             Unicorn::Util.reopen_logs
-            reset_master
           when 'USR2' # exec binary, stay alive in case something went wrong
             reexec
-            reset_master
           when 'HUP'
             if @config.config_file
               load_config!
-              reset_master
               redo # immediate reaping since we may have QUIT workers
             else # exec binary and exit if there's no config file
               logger.info "config_file not present, reexecuting binary"
@@ -195,8 +193,7 @@ module Unicorn
               break
             end
           else
-            logger.error "master process in unknown mode: #{@mode}, resetting"
-            reset_master
+            logger.error "master process in unknown mode: #{mode}"
           end
           reap_all_workers
 
@@ -205,9 +202,10 @@ module Unicorn
           rescue Errno::EINTR # next
           end
           ready[0] && ready[0][0] or next
-          begin # just consume the pipe when we're awakened, @mode is set
-            loop { @rd_sig.sysread(Const::CHUNK_SIZE) }
-          rescue Errno::EAGAIN, Errno::EINTR # next
+          begin
+            @rd_sig.sysread(1)
+          rescue Errno::EAGAIN, Errno::EINTR
+            # spurious wakeup? ignore it
           end
         end
       rescue Errno::EINTR
@@ -215,7 +213,6 @@ module Unicorn
       rescue Object => e
         logger.error "Unhandled master loop exception #{e.inspect}."
         logger.error e.backtrace.join("\n")
-        reset_master
         retry
       end
       stop # gracefully shutdown all workers on our way out
@@ -242,31 +239,27 @@ module Unicorn
     private
 
     # list of signals we care about and trap in master.
-    TRAP_SIGS = %w(QUIT INT TERM USR1 USR2 HUP).map { |x| x.freeze }.freeze
+    QUEUE_SIGS = %w(QUIT INT TERM USR1 USR2 HUP).map { |x| x.freeze }.freeze
 
     # defer a signal for later processing in #join (master process)
     def trap_deferred(signal)
       trap(signal) do |sig_nr|
-        # we only handle/defer one signal at a time and ignore all others
-        # until we're ready again.  Queueing signals can lead to more bugs,
-        # and simplicity is the most important thing
-        TRAP_SIGS.each { |sig| trap(sig, 'IGNORE') }
-        if Symbol === @mode
-          @mode = signal
-          begin
-            @wr_sig.syswrite('.') # wakeup master process from IO.select
-          rescue Errno::EAGAIN
-          rescue Errno::EINTR
-            retry
-          end
+        if @sig_queue.size < 5
+          @sig_queue << signal
+          awaken_master
+        else
+          logger.error "ignoring SIG#{signal}, queue=#{@sig_queue.inspect}"
         end
       end
     end
 
-
-    def reset_master
-      @mode = :idle
-      TRAP_SIGS.each { |sig| trap_deferred(sig) }
+    def awaken_master
+      begin
+        @wr_sig.syswrite('.') # wakeup master process from IO.select
+      rescue Errno::EAGAIN # pipe is full, master should wake up anyways
+      rescue Errno::EINTR
+        retry
+      end
     end
 
     # reaps all unreaped workers
@@ -357,7 +350,7 @@ module Unicorn
           Dir.chdir(@start_ctx[:cwd])
         rescue Errno::ENOENT => err
           logger.fatal "#{err.inspect} (#{@start_ctx[:cwd]})"
-          @alive = false
+          @sig_queue << 'QUIT' # forcibly emulate SIGQUIT
           return
         end
         tempfile = Tempfile.new('') # as short as possible to save dir space
@@ -397,7 +390,8 @@ module Unicorn
     # by the user.
     def init_worker_process(worker)
       build_app! unless @preload_app
-      TRAP_SIGS.each { |sig| trap(sig, 'IGNORE') }
+      @sig_queue.clear
+      QUEUE_SIGS.each { |sig| trap(sig, 'IGNORE') }
       trap('CHLD', 'DEFAULT')
       trap('USR1') do
         @logger.info "worker=#{worker.nr} rotating logs..."
@@ -411,7 +405,7 @@ module Unicorn
       @workers.values.each { |other| other.tempfile.close rescue nil }
       @workers.clear
       @start_ctx.clear
-      @mode = @start_ctx = @workers = @rd_sig = @wr_sig = nil
+      @start_ctx = @workers = @rd_sig = @wr_sig = nil
       @listeners.each { |sock| set_cloexec(sock) }
       ENV.delete('UNICORN_FD')
       @after_fork.call(self, worker.nr) if @after_fork

@@ -283,6 +283,7 @@ end
     results = retry_hit(["http://#{@addr}:#{@port}/"])
     assert_equal String, results[0].class
     wait_master_ready(COMMON_TMP.path)
+    wait_workers_ready(COMMON_TMP.path, 4)
     bf = File.readlines(COMMON_TMP.path).grep(/\bbefore_fork: worker=/)
     assert_equal 4, bf.size
     rotate = Tempfile.new('unicorn_rotate')
@@ -496,6 +497,21 @@ end
       assert status.success?, "exited successfully"
     end
 
+    def wait_workers_ready(path, nr_workers)
+      tries = DEFAULT_TRIES
+      lines = []
+      while (tries -= 1) > 0
+        begin
+          lines = File.readlines(path).grep(/worker=\d+ spawned/)
+          lines.size == nr_workers and return
+        rescue Errno::ENOENT
+        end
+        sleep DEFAULT_RES
+      end
+      raise "#{nr_workers} workers never became ready:" \
+            "\n\t#{lines.join("\n\t")}\n"
+    end
+
     def wait_master_ready(master_log)
       tries = DEFAULT_TRIES
       while (tries -= 1) > 0
@@ -555,7 +571,7 @@ end
       while (tries -= 1) > 0 && ! File.exist?(path)
         sleep DEFAULT_RES
       end
-      assert File.exist?(path), "path=#{path} exists"
+      assert File.exist?(path), "path=#{path} exists #{caller.inspect}"
     end
 
     def xfork(&block)
