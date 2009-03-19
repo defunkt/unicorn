@@ -11,6 +11,7 @@ Rakefile
 SIGNALS
 TODO
 bin/unicorn
+bin/unicorn_rails
 ext/unicorn/http11/ext_help.h
 ext/unicorn/http11/extconf.rb
 ext/unicorn/http11/http11.c
