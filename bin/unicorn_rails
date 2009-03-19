@@ -1,0 +1,238 @@
+#!/home/ew/bin/ruby
+$stdin.sync = $stdout.sync = $stderr.sync = true
+require 'unicorn' # require this first to populate Unicorn::DEFAULT_START_CTX
+require 'optparse'
+require 'fileutils'
+
+rails_pid = File.join(Unicorn::HttpServer::DEFAULT_START_CTX[:cwd],
+                      "/tmp/pids/unicorn.pid")
+cmd = File.basename($0)
+daemonize = false
+listeners = []
+options = { :listeners => listeners }
+host, port = Unicorn::Const::DEFAULT_HOST, 3000
+ENV['RAILS_ENV'] ||= "development"
+map_path = ENV['RAILS_RELATIVE_URL_ROOT']
+
+opts = OptionParser.new("", 24, '  ') do |opts|
+  opts.banner = "Usage: #{cmd} " \
+                "[ruby options] [#{cmd} options] [rackup config file]"
+  opts.separator "Ruby options:"
+
+  lineno = 1
+  opts.on("-e", "--eval LINE", "evaluate a LINE of code") do |line|
+    eval line, TOPLEVEL_BINDING, "-e", lineno
+    lineno += 1
+  end
+
+  opts.on("-d", "--debug", "set debugging flags (set $DEBUG to true)") do
+    $DEBUG = true
+  end
+
+  opts.on("-w", "--warn", "turn warnings on for your script") do
+    $-w = true
+  end
+
+  opts.on("-I", "--include PATH",
+          "specify $LOAD_PATH (may be used more than once)") do |path|
+    $LOAD_PATH.unshift(*path.split(/:/))
+  end
+
+  opts.on("-r", "--require LIBRARY",
+          "require the library, before executing your script") do |library|
+    require library
+  end
+
+  opts.separator "#{cmd} options:"
+
+  # some of these switches exist for rackup command-line compatibility,
+
+  opts.on("-o", "--host HOST",
+          "listen on HOST (default: #{Unicorn::Const::DEFAULT_HOST})") do |h|
+    host = h
+  end
+
+  opts.on("-p", "--port PORT", "use PORT (default: #{port})") do |p|
+    port = p.to_i
+  end
+
+  opts.on("-E", "--env ENVIRONMENT",
+          "use ENVIRONMENT for defaults (default: development)") do |e|
+    ENV['RAILS_ENV'] = e
+  end
+
+  opts.on("-D", "--daemonize", "run daemonized in the background") do |d|
+    daemonize = d ? true : false
+  end
+
+  # Unicorn-specific stuff
+  opts.on("-l", "--listen {HOST:PORT|PATH}",
+          "listen on HOST:PORT or PATH",
+          "this may be specified multiple times",
+          "(default: #{Unicorn::Const::DEFAULT_LISTEN})") do |address|
+    listeners << address
+  end
+
+  opts.on("-c", "--config-file FILE", "Unicorn-specific config file") do |f|
+    options[:config_file] = File.expand_path(f)
+  end
+
+  opts.on("-P", "--path PATH", "Runs Rails app mounted at a specific path.",
+          "(default: /") do |v|
+    map_path = v
+  end
+
+  # I'm avoiding Unicorn-specific config options on the command-line.
+  # IMNSHO, config options on the command-line are redundant given
+  # config files and make things unnecessarily complicated with multiple
+  # places to look for a config option.
+
+  opts.separator "Common options:"
+
+  opts.on_tail("-h", "--help", "Show this message") do
+    puts opts
+    exit
+  end
+
+  opts.on_tail("-v", "--version", "Show version") do
+    puts " v#{Unicorn::Const::UNICORN_VERSION}"
+    exit
+  end
+
+  opts.parse! ARGV
+end
+
+require 'pp' if $DEBUG
+
+# Loads Rails and the private version of Rack it bundles. Returns a
+# lambda of arity==0 that will return *another* lambda of arity==1
+# suitable for using inside Rack::Builder.new block.
+rails_loader = lambda do ||
+  begin
+    require 'config/boot'
+    defined?(::RAILS_ROOT) or abort "RAILS_ROOT not defined by config/boot"
+    defined?(::RAILS_ENV) or abort "RAILS_ENV not defined by config/boot"
+    defined?(::Rails::VERSION::STRING) or
+      abort "Rails::VERSION::STRING not defined by config/boot"
+  rescue LoadError
+    abort "#$0 must be run inside RAILS_ROOT (#{::RAILS_ROOT})"
+  end
+
+  if ENV['UNICORN_RAILS_USE_SYSTEM_RACK'].to_i == 0
+    rails_ver = Rails::VERSION::STRING
+
+    # maps Rails versions to the vendorized Rack version they bundle
+    version_map = {
+      '2.3.2' => '1.0',
+      # 3.0.0 => false, # assuming 3.0.0 doesn't need vendorized Rack anymore
+    }
+    rack_ver = version_map[rails_ver] or
+      warn "Possibly unsupported Rails version: v#{rails_ver}"
+
+    rack_path = nil
+    case rack_ver
+    when String, NilClass
+      version_map.values.find_all { |v| String === v }.sort.each do |v|
+        $LOAD_PATH.grep(%r{/actionpack-[\d\.]+/lib/?\z}).each do |path|
+          rack_path = File.join(path, "action_controller/vendor/rack-#{v}")
+          File.directory?(rack_path) and break
+          rack_path = nil
+        end
+        break if rack_path
+      end
+      rack_path or abort(
+        "Unable to find Rails-vendorized Rack library.\n" \
+        "Perhaps this script is no longer with your" \
+        "Rails version (#{rails_ver}).\n")
+      puts "vendorized Rack load path #{rack_path}"
+      $LOAD_PATH.unshift(rack_path)
+    when FalseClass
+      # using non-vendorized rack library (most likely via gems)
+    end
+  end # Vendorized Rack LOAD_PATH finder
+
+  # require Rack as late as possible in case $LOAD_PATH is modified
+  # in config.ru or command-line
+  require 'rack'
+
+  # return the lambda
+  config = ::ARGV[0] || (File.exist?('config.ru') ? 'config.ru' : nil)
+  case config
+  when nil
+    lambda do ||
+      require "#{RAILS_ROOT}/config/environment"
+      ActionController::Dispatcher.new
+    end
+  when /\.ru$/
+    raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }
+    # parse embedded command-line options in config.ru comments
+    if raw[/^#\\(.*)/]
+      opts.parse! $1.split(/\s+/)
+      require 'pp' if $DEBUG
+    end
+    lambda { || eval("Rack::Builder.new {(#{raw}\n)}.to_app", nil, config) }
+  else
+    lambda do ||
+      require config
+      Object.const_get(File.basename(config, '.rb').capitalize)
+    end
+  end
+end
+
+# this won't run until after forking if preload_app is false
+app = lambda do ||
+  inner_app = rails_loader.call
+  require 'active_support'
+  require 'action_controller'
+  ActionController::Base.relative_url_root = map_path if map_path
+  Rack::Builder.new do
+    use Rails::Rack::LogTailer unless daemonize
+    use Rails::Rack::Debugger if $DEBUG
+    map(map_path || '/') do
+      use Rails::Rack::Static
+      run inner_app.call
+    end
+  end.to_app
+end
+
+if listeners.empty?
+  listener = "#{host}:#{port}"
+  listeners << listener
+end
+
+if $DEBUG
+  pp({
+    :unicorn_options => options,
+    :app => app,
+    :daemonize => daemonize,
+  })
+end
+
+# only daemonize if we're not inheriting file descriptors from our parent
+if daemonize
+  options[:pid] = rails_pid
+  $stdin.reopen("/dev/null")
+  unless ENV['UNICORN_FD']
+    exit if fork
+    Process.setsid
+    exit if fork
+  end
+
+  # We don't do a lot of standard daemonization stuff:
+  #   * $stderr/$stderr can/will be redirected separately
+  #   * umask is whatever was set by the parent process at startup
+  #     and can be set in config.ru and config_file, so making it
+  #     0000 and potentially exposing sensitive log data can be bad
+  #     policy.
+  #   * Don't bother to chdir here since Unicorn is designed to
+  #     run inside APP_ROOT.  Unicorn will also re-chdir() to
+  #     the directory it was started in when being re-executed
+  #     to pickup code changes if the original deployment directory
+  #     is a symlink or otherwise got replaced.
+end
+
+# ensure Rails standard tmp paths exist
+%w(cache pids sessions sockets).each do |dir|
+  FileUtils.mkdir_p("tmp/#{dir}")
+end
+Unicorn.run(app, options)
