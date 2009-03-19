@@ -35,7 +35,7 @@ proxy we know of that meets this requirement.
 == License
 
 Unicorn is copyright 2009 Eric Wong and contributors.
-It is based on Mongrel:
+It is based on Mongrel and carries the same license:
 
 Mongrel is copyright 2007 Zed A. Shaw and contributors. It is licensed
 under the Ruby license and the GPL2. See the include LICENSE file for
@@ -46,19 +46,43 @@ details.
 The library consists of a C extension so you'll need a C compiler or at
 least a friend who can build it for you.
 
-Finally, the source includes a setup.rb for those who hate RubyGems.
+You may download the tarball from the Mongrel project page on Rubyforge
+and run setup.rb after unpacking it:
 
-You can get the source via git via the following locations:
+  http://rubyforge.org/frs/?group_id=1306
+
+You may also install it via Rubygems on Rubyforge:
+
+  gem install unicorn
+
+You can get the latest source via git from the following locations
+(these versions may not be stable):
 
   git://git.bogomips.org/unicorn.git
-
   http://git.bogomips.org/unicorn.git
+  git://repo.or.cz/unicorn.git (mirror)
+  http://repo.or.cz/r/unicorn.git (mirror)
+
+If you have web browser software for the World Wide Web
+(on the Information Superhighway), you may browse the code from
+your web browser and download the latest snapshot tarballs here:
+
+* http://git.bogomips.org/cgit/unicorn.git
+* http://repo.or.cz/w/unicorn.git (gitweb mirror)
 
 == Usage
 
+=== non-Rails Rack applications
+
 Unicorn will look for the config.ru file used by rackup in APP_ROOT.
-Optionally, it can use a config file specified by the --config-file/-c
-command-line switch.
+Optionally, it can use a config file for unicorn-specific options
+specified by the --config-file/-c command-line switch.  See
+Unicorn::Configurator for the syntax of the unicorn-specific
+config options.
+
+In APP_ROOT, just run:
+
+  unicorn
 
 Unicorn should be capable of running most Rack applications.  Since this
 is a preforking webserver, you do not have to worry about thread-safety
@@ -66,17 +90,38 @@ of your application or libraries. However, your Rack application may use
 threads internally (and should even be able to continue running threads
 after the request is complete).
 
+=== Rack-enabled versions of Rails (v2.3.2+)
+
+In RAILS_ROOT, run:
+
+  unicorn_rails
+
+Most command-line options for other Rack applications (above) are also
+supported.  The unicorn_rails launcher attempts to combine the best
+features of the Rails-bundled "script/server" with the "rackup"-like
+functionality of the `unicorn' launcher.
+
+== Disclaimer
+
+There are no known production instances of unicorn deployed
+anywhere in the world.  The original author of unicorn only has
+one, internal, low-traffic Sinatra application deployed with it.
+Maybe you'll be the first guinea pig to test it in production.
+Of course there is NO WARRANTY whatsoever if anything goes wrong,
+but let us know and we'll try our best to fix it.
+
 == Known Issues
 
-  * WONTFIX: code reloading with Sinatra 0.3.2 (and likely older
-    versions) apps is broken.  Since this is no longer an issue with
-    Sinatra 0.9.x apps and only affected non-production instances, this
-    will not be fixed on our end.  Also remember we're capable of
-    replacing the running binary without dropping any connections
-    regardless of framework :)
+* WONTFIX: code reloading with Sinatra 0.3.2 (and likely older
+  versions) apps is broken.  The workaround is to force production
+  mode to disable code reloading in your Sinatra application:
+    set :env, :production
+  Since this is no longer an issue with Sinatra 0.9.x apps and only
+  affected non-production instances, this will not be fixed on our end.
+  Also remember we're capable of replacing the running binary without
+  dropping any connections regardless of framework :)
 
 == Contact
 
-Newsgroup and mailing list coming, or it'll be a part of the Mongrel project...
-
+Newsgroup and mailing list maybe coming...
 Email Eric Wong at normalperson@yhbt.net for now.
