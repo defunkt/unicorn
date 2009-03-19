@@ -1,6 +1,5 @@
 #!/home/ew/bin/ruby
-$stdin.sync = $stdout.sync = $stderr.sync = true
-require 'unicorn' # require this first to populate Unicorn::DEFAULT_START_CTX
+require 'unicorn/launcher'
 require 'optparse'
 
 env = "development"
@@ -163,27 +162,5 @@ if $DEBUG
   })
 end
 
-# only daemonize if we're not inheriting file descriptors from our parent
-if daemonize
-
-  $stdin.reopen("/dev/null")
-  unless ENV['UNICORN_FD']
-    exit if fork
-    Process.setsid
-    exit if fork
-  end
-
-  # We don't do a lot of standard daemonization stuff:
-  #   * $stderr/$stderr can/will be redirected separately
-  #   * umask is whatever was set by the parent process at startup
-  #     and can be set in config.ru and config_file, so making it
-  #     0000 and potentially exposing sensitive log data can be bad
-  #     policy.
-  #   * Don't bother to chdir here since Unicorn is designed to
-  #     run inside APP_ROOT.  Unicorn will also re-chdir() to
-  #     the directory it was started in when being re-executed
-  #     to pickup code changes if the original deployment directory
-  #     is a symlink or otherwise got replaced.
-end
-
+Unicorn::Launcher.daemonize! if daemonize
 Unicorn.run(app, options)

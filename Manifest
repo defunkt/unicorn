@@ -24,6 +24,7 @@ lib/unicorn/configurator.rb
 lib/unicorn/const.rb
 lib/unicorn/http_request.rb
 lib/unicorn/http_response.rb
+lib/unicorn/launcher.rb
 lib/unicorn/socket.rb
 lib/unicorn/util.rb
 setup.rb
