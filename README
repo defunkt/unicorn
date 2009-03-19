@@ -49,7 +49,7 @@ least a friend who can build it for you.
 You may download the tarball from the Mongrel project page on Rubyforge
 and run setup.rb after unpacking it:
 
-  http://rubyforge.org/frs/?group_id=1306
+http://rubyforge.org/frs/?group_id=1306
 
 You may also install it via Rubygems on Rubyforge:
 
