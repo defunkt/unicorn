@@ -211,5 +211,9 @@ end
 %w(cache pids sessions sockets).each do |dir|
   FileUtils.mkdir_p("tmp/#{dir}")
 end
-Unicorn::Launcher.daemonize! if daemonize
+
+if daemonize
+  options[:pid] = rails_pid
+  Unicorn::Launcher.daemonize!
+end
 Unicorn.run(app, options)
