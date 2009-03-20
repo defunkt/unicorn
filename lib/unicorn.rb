@@ -161,6 +161,7 @@ module Unicorn
       @rd_sig, @wr_sig = IO.pipe unless (@rd_sig && @wr_sig)
       @rd_sig.nonblock = @wr_sig.nonblock = true
       ready = mode = nil
+      respawn = true
 
       QUEUE_SIGS.each { |sig| trap_deferred(sig) }
       trap('CHLD') { |sig_nr| awaken_master }
@@ -172,7 +173,7 @@ module Unicorn
           case (mode = @sig_queue.shift)
           when nil
             murder_lazy_workers
-            spawn_missing_workers
+            spawn_missing_workers if respawn
           when 'QUIT' # graceful shutdown
             break
           when 'TERM', 'INT' # immediate shutdown
@@ -183,7 +184,16 @@ module Unicorn
             Unicorn::Util.reopen_logs
           when 'USR2' # exec binary, stay alive in case something went wrong
             reexec
+          when 'WINCH'
+            if ppid == 1 || getpgrp != $$
+              respawn = false
+              logger.info "gracefully stopping all workers"
+              kill_each_worker('QUIT')
+            else
+              logger.info "SIGWINCH ignored because we're not daemonized"
+            end
           when 'HUP'
+            respawn = true
             if @config.config_file
               load_config!
               redo # immediate reaping since we may have QUIT workers
@@ -239,7 +249,8 @@ module Unicorn
     private
 
     # list of signals we care about and trap in master.
-    QUEUE_SIGS = %w(QUIT INT TERM USR1 USR2 HUP).map { |x| x.freeze }.freeze
+    QUEUE_SIGS =
+      %w(WINCH QUIT INT TERM USR1 USR2 HUP).map { |x| x.freeze }.freeze
 
     # defer a signal for later processing in #join (master process)
     def trap_deferred(signal)
@@ -271,6 +282,7 @@ module Unicorn
             logger.error "reaped exec()-ed PID:#{pid} status=#{$?.exitstatus}"
             @reexec_pid = 0
             self.pid = @pid.chomp('.oldbin') if @pid
+            $0 = "unicorn master"
           else
             worker = @workers.delete(pid)
             worker.tempfile.close rescue nil
@@ -324,6 +336,7 @@ module Unicorn
         @before_exec.call(self) if @before_exec
         exec(*cmd)
       end
+      $0 = "unicorn master (old)"
     end
 
     # forcibly terminate all workers that haven't checked in in @timeout
