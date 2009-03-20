@@ -75,7 +75,6 @@ module Unicorn
     def bind_listen(address = '0.0.0.0:8080', backlog = 1024)
       return address unless String === address
 
-      address = File.expand_path(address) if address[0..0] == "~"
       domain, bind_addr = if address[0..0] == "/"
         if File.exist?(address)
           if File.socket?(address)

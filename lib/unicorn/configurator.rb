@@ -173,13 +173,14 @@ module Unicorn
     # worker processes.  For per-worker listeners, see the after_fork example
     def listeners(addresses)
       Array === addresses or addresses = Array(addresses)
+      addresses.map! { |addr| expand_addr(addr) }
       @set[:listeners] = addresses
     end
 
     # adds an +address+ to the existing listener set
     def listen(address)
       @set[:listeners] = [] unless Array === @set[:listeners]
-      @set[:listeners] << address
+      @set[:listeners] << expand_addr(address)
     end
 
     # sets the +path+ for the PID file of the unicorn master process
@@ -251,6 +252,18 @@ module Unicorn
         raise ArgumentError, "invalid type: #{var}=#{my_proc.inspect}"
       end
       @set[var] = my_proc
+    end
+
+    # expands pathnames of sockets if relative to "~" or "~username"
+    # expands "*:port and ":port" to "0.0.0.0:port"
+    def expand_addr(address) #:nodoc
+      return address unless String === address
+      if address[0..0] == '~'
+        return File.expand_path(address)
+      elsif address =~ %r{\A\*?:(\d+)\z}
+        return "0.0.0.0:#$1"
+      end
+      address
     end
 
   end
