@@ -67,7 +67,7 @@ If you have web browser software for the World Wide Web
 (on the Information Superhighway), you may browse the code from
 your web browser and download the latest snapshot tarballs here:
 
-* http://git.bogomips.org/cgit/unicorn.git
+* http://git.bogomips.org/cgit/unicorn.git (this server runs Unicorn!)
 * http://repo.or.cz/w/unicorn.git (gitweb mirror)
 
 == Usage
@@ -103,12 +103,16 @@ functionality of the `unicorn' launcher.
 
 == Disclaimer
 
-There are no known production instances of unicorn deployed
-anywhere in the world.  The original author of unicorn only has
-one, internal, low-traffic Sinatra application deployed with it.
-Maybe you'll be the first guinea pig to test it in production.
-Of course there is NO WARRANTY whatsoever if anything goes wrong,
-but let us know and we'll try our best to fix it.
+There are only a few instances of Unicorn deployed anywhere in the
+world.  The only public site known to run Unicorn at this time is
+http://git.bogomips.org/cgit which runs Unicorn::App::ExecCgi to
+fork()+exec() cgit.
+
+Be one of the first brave guinea pigs to run it on your production site!
+Of course there is NO WARRANTY whatsoever if anything goes wrong, but
+let us know and we'll try our best to fix it.  Unicorn is still in the
+early stages and testing + feedback would be *greatly* appreciated;
+maybe you'll get Rainbows as a reward!
 
 == Known Issues
 

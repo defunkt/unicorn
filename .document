@@ -5,7 +5,8 @@ CONTRIBUTORS
 LICENSE
 SIGNALS
 TODO
-bin
+bin/unicorn
+bin/unicorn_rails
 lib
 ext/**/*.c
 ext/**/*.rl
