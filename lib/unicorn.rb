@@ -23,7 +23,6 @@ module Unicorn
   # forked worker children.
   class HttpServer
     attr_reader :logger
-    include Process
     include ::Unicorn::SocketHelper
 
     DEFAULT_START_CTX = {
@@ -185,7 +184,7 @@ module Unicorn
           when 'USR2' # exec binary, stay alive in case something went wrong
             reexec
           when 'WINCH'
-            if ppid == 1 || getpgrp != $$
+            if Process.ppid == 1 || Process.getpgrp != $$
               respawn = false
               logger.info "gracefully stopping all workers"
               kill_each_worker('QUIT')
@@ -277,18 +276,18 @@ module Unicorn
     def reap_all_workers
       begin
         loop do
-          pid = waitpid(-1, WNOHANG) or break
+          pid, status = Process.waitpid2(-1, Process::WNOHANG)
+          pid or break
           if @reexec_pid == pid
-            logger.error "reaped exec()-ed PID:#{pid} status=#{$?.exitstatus}"
+            logger.error "reaped #{status.inspect} exec()-ed"
             @reexec_pid = 0
             self.pid = @pid.chomp('.oldbin') if @pid
             $0 = "unicorn master"
           else
             worker = @workers.delete(pid)
             worker.tempfile.close rescue nil
-            logger.info "reaped PID:#{pid} " \
-                        "worker=#{worker.nr rescue 'unknown'} " \
-                        "status=#{$?.exitstatus}"
+            logger.info "reaped #{status.inspect} " \
+                        "worker=#{worker.nr rescue 'unknown'}"
           end
         end
       rescue Errno::ECHILD
@@ -441,7 +440,7 @@ module Unicorn
         @listeners.each { |sock| sock.close rescue nil } # break IO.select
       end
 
-      while alive && @master_pid == ppid
+      while alive && @master_pid == Process.ppid
         # we're a goner in @timeout seconds anyways if tempfile.chmod
         # breaks, so don't trap the exception.  Using fchmod() since
         # futimes() is not available in base Ruby and I very strongly
@@ -507,7 +506,7 @@ module Unicorn
     # is no longer running.
     def kill_worker(signal, pid)
       begin
-        kill(signal, pid)
+        Process.kill(signal, pid)
       rescue Errno::ESRCH
         worker = @workers.delete(pid) and worker.tempfile.close rescue nil
       end
@@ -529,7 +528,7 @@ module Unicorn
     def valid_pid?(path)
       if File.exist?(path) && (pid = File.read(path).to_i) > 1
         begin
-          kill(0, pid)
+          Process.kill(0, pid)
           return pid
         rescue Errno::ESRCH
         end
