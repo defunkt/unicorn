@@ -117,49 +117,12 @@ rails_loader = lambda do ||
     abort "#$0 must be run inside RAILS_ROOT (#{::RAILS_ROOT})"
   end
 
-  if ENV['UNICORN_RAILS_USE_SYSTEM_RACK'].to_i == 0
-    rails_ver = Rails::VERSION::STRING
-
-    # maps Rails versions to the vendorized Rack version they bundle
-    version_map = {
-      '2.3.2' => '1.0',
-      # 3.0.0 => false, # assuming 3.0.0 doesn't need vendorized Rack anymore
-    }
-    rack_ver = version_map[rails_ver] or
-      warn "Possibly unsupported Rails version: v#{rails_ver}"
-
-    rack_path = nil
-    case rack_ver
-    when String, NilClass
-      version_map.values.find_all { |v| String === v }.sort.each do |v|
-        $LOAD_PATH.grep(%r{/actionpack-[\d\.]+/lib/?\z}).each do |path|
-          rack_path = File.join(path, "action_controller/vendor/rack-#{v}")
-          File.directory?(rack_path) and break
-          rack_path = nil
-        end
-        break if rack_path
-      end
-      rack_path or abort(
-        "Unable to find Rails-vendorized Rack library.\n" \
-        "Perhaps this script is no longer with your" \
-        "Rails version (#{rails_ver}).\n")
-      puts "vendorized Rack load path #{rack_path}"
-      $LOAD_PATH.unshift(rack_path)
-    when FalseClass
-      # using non-vendorized rack library (most likely via gems)
-    end
-  end # Vendorized Rack LOAD_PATH finder
-
-  # require Rack as late as possible in case $LOAD_PATH is modified
-  # in config.ru or command-line
-  require 'rack'
-
   # return the lambda
   config = ::ARGV[0] || (File.exist?('config.ru') ? 'config.ru' : nil)
   case config
   when nil
     lambda do ||
-      require "#{RAILS_ROOT}/config/environment"
+      require 'config/environment'
       ActionController::Dispatcher.new
     end
   when /\.ru$/
