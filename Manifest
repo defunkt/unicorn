@@ -20,6 +20,7 @@ ext/unicorn/http11/http11_parser.h
 ext/unicorn/http11/http11_parser.rl
 ext/unicorn/http11/http11_parser_common.rl
 lib/unicorn.rb
+lib/unicorn/app/exec_cgi.rb
 lib/unicorn/configurator.rb
 lib/unicorn/const.rb
 lib/unicorn/http_request.rb
