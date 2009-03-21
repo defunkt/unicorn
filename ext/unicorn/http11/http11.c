@@ -28,10 +28,8 @@ static VALUE global_fragment;
 static VALUE global_query_string;
 static VALUE global_http_version;
 static VALUE global_content_length;
-static VALUE global_http_content_length;
 static VALUE global_request_path;
 static VALUE global_content_type;
-static VALUE global_http_content_type;
 static VALUE global_http_body;
 static VALUE global_server_name;
 static VALUE global_server_port;
@@ -127,6 +125,7 @@ static int common_field_cmp(const void *a, const void *b)
 }
 #endif /* HAVE_QSORT_BSEARCH */
 
+/* this function is not performance-critical */
 static void init_common_fields(void)
 {
   int i;
@@ -135,8 +134,15 @@ static void init_common_fields(void)
   memcpy(tmp, HTTP_PREFIX, HTTP_PREFIX_LEN);
 
   for(i = 0; i < ARRAY_SIZE(common_http_fields); cf++, i++) {
-    memcpy(tmp + HTTP_PREFIX_LEN, cf->name, cf->len + 1);
-    cf->value = rb_obj_freeze(rb_str_new(tmp, HTTP_PREFIX_LEN + cf->len));
+    /* Rack doesn't like certain headers prefixed with "HTTP_" */
+    if (!strcmp("CONTENT_LENGTH", cf->name) ||
+        !strcmp("CONTENT_TYPE", cf->name)) {
+      cf->value = rb_str_new(cf->name, cf->len);
+    } else {
+      memcpy(tmp + HTTP_PREFIX_LEN, cf->name, cf->len + 1);
+      cf->value = rb_str_new(tmp, HTTP_PREFIX_LEN + cf->len);
+    }
+    cf->value = rb_obj_freeze(cf->value);
     rb_global_variable(&cf->value);
   }
 
@@ -273,19 +279,7 @@ static void header_done(void *data, const char *at, size_t length)
 {
   VALUE req = (VALUE)data;
   VALUE temp = Qnil;
-  VALUE ctype = Qnil;
-  VALUE clen = Qnil;
   char *colon = NULL;
-
-  clen = rb_hash_aref(req, global_http_content_length);
-  if(clen != Qnil) {
-    rb_hash_aset(req, global_content_length, clen);
-  }
-
-  ctype = rb_hash_aref(req, global_http_content_type);
-  if(ctype != Qnil) {
-    rb_hash_aset(req, global_content_type, ctype);
-  }
 
   if((temp = rb_hash_aref(req, global_http_host)) != Qnil) {
     colon = memchr(RSTRING_PTR(temp), ':', RSTRING_LEN(temp));
@@ -494,10 +488,8 @@ void Init_http11()
   DEF_GLOBAL(http_version, "HTTP_VERSION");
   DEF_GLOBAL(request_path, "REQUEST_PATH");
   DEF_GLOBAL(content_length, "CONTENT_LENGTH");
-  DEF_GLOBAL(http_content_length, "HTTP_CONTENT_LENGTH");
   DEF_GLOBAL(http_body, "HTTP_BODY");
   DEF_GLOBAL(content_type, "CONTENT_TYPE");
-  DEF_GLOBAL(http_content_type, "HTTP_CONTENT_TYPE");
   DEF_GLOBAL(server_name, "SERVER_NAME");
   DEF_GLOBAL(server_port, "SERVER_PORT");
   DEF_GLOBAL(server_protocol, "SERVER_PROTOCOL");

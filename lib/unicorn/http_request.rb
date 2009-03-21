@@ -130,8 +130,6 @@ module Unicorn
       raise "No REQUEST PATH" unless @params[Const::REQUEST_PATH]
 
       @params["QUERY_STRING"] ||= ''
-      @params.delete "HTTP_CONTENT_TYPE"
-      @params.delete "HTTP_CONTENT_LENGTH"
       @params.update({ "rack.version" => [0,1],
                       "rack.input" => @body,
                       "rack.errors" => $stderr,
