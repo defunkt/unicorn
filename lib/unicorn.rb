@@ -159,7 +159,7 @@ module Unicorn
       # are trapped.  See trap_deferred
       @rd_sig, @wr_sig = IO.pipe unless (@rd_sig && @wr_sig)
       @rd_sig.nonblock = @wr_sig.nonblock = true
-      ready = mode = nil
+      mode = nil
       respawn = true
 
       QUEUE_SIGS.each { |sig| trap_deferred(sig) }
@@ -173,6 +173,7 @@ module Unicorn
           when nil
             murder_lazy_workers
             spawn_missing_workers if respawn
+            master_sleep
           when 'QUIT' # graceful shutdown
             break
           when 'TERM', 'INT' # immediate shutdown
@@ -205,18 +206,6 @@ module Unicorn
             end
           else
             logger.error "master process in unknown mode: #{mode}"
-          end
-          reap_all_workers
-
-          ready = begin
-            IO.select([@rd_sig], nil, nil, 1) or next
-          rescue Errno::EINTR # next
-          end
-          ready[0] && ready[0][0] or next
-          begin
-            @rd_sig.sysread(1)
-          rescue Errno::EAGAIN, Errno::EINTR
-            # spurious wakeup? ignore it
           end
         end
       rescue Errno::EINTR
@@ -262,6 +251,17 @@ module Unicorn
         else
           logger.error "ignoring SIG#{signal}, queue=#{@sig_queue.inspect}"
         end
+      end
+    end
+
+    # wait for a signal hander to wake us up and then consume the pipe
+    # Wake up every second anyways to run murder_lazy_workers
+    def master_sleep
+      begin
+        ready = IO.select([@rd_sig], nil, nil, 1)
+        ready && ready[0] && ready[0][0] or return
+        loop { @rd_sig.sysread(Const::CHUNK_SIZE) }
+      rescue Errno::EAGAIN, Errno::EINTR
       end
     end
 
