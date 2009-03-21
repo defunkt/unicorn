@@ -39,6 +39,7 @@ test/test_helper.rb
 test/tools/trickletest.rb
 test/unit/test_configurator.rb
 test/unit/test_http_parser.rb
+test/unit/test_request.rb
 test/unit/test_response.rb
 test/unit/test_server.rb
 test/unit/test_upload.rb
