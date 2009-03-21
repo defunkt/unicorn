@@ -300,7 +300,7 @@ end
       sleep DEFAULT_RES
       log = File.readlines(rotate.path)
     end
-    assert_equal 4, log.grep(/rotating logs\.\.\./).size
+    assert_equal 4, log.grep(/worker=\d+ rotating logs\.\.\./).size
     assert_equal 0, log.grep(/done rotating logs/).size
 
     tries = DEFAULT_TRIES
@@ -309,7 +309,7 @@ end
       sleep DEFAULT_RES
       log = File.readlines(COMMON_TMP.path)
     end
-    assert_equal 4, log.grep(/done rotating logs/).size
+    assert_equal 4, log.grep(/worker=\d+ done rotating logs/).size
     assert_equal 0, log.grep(/rotating logs\.\.\./).size
     assert_nothing_raised { Process.kill('QUIT', pid) }
     status = nil

@@ -179,8 +179,10 @@ module Unicorn
             stop(false)
             break
           when 'USR1' # rotate logs
-            kill_each_worker('USR1')
+            logger.info "master rotating logs..."
             Unicorn::Util.reopen_logs
+            logger.info "master done rotating logs"
+            kill_each_worker('USR1')
           when 'USR2' # exec binary, stay alive in case something went wrong
             reexec
           when 'WINCH'
