@@ -33,8 +33,6 @@ static VALUE global_request_path;
 static VALUE global_content_type;
 static VALUE global_http_content_type;
 static VALUE global_http_body;
-static VALUE global_gateway_interface;
-static VALUE global_gateway_interface_value;
 static VALUE global_server_name;
 static VALUE global_server_port;
 static VALUE global_server_protocol;
@@ -289,7 +287,6 @@ static void header_done(void *data, const char *at, size_t length)
     rb_hash_aset(req, global_content_type, ctype);
   }
 
-  rb_hash_aset(req, global_gateway_interface, global_gateway_interface_value);
   if((temp = rb_hash_aref(req, global_http_host)) != Qnil) {
     colon = memchr(RSTRING_PTR(temp), ':', RSTRING_LEN(temp));
     if(colon != NULL) {
@@ -501,8 +498,6 @@ void Init_http11()
   DEF_GLOBAL(http_body, "HTTP_BODY");
   DEF_GLOBAL(content_type, "CONTENT_TYPE");
   DEF_GLOBAL(http_content_type, "HTTP_CONTENT_TYPE");
-  DEF_GLOBAL(gateway_interface, "GATEWAY_INTERFACE");
-  DEF_GLOBAL(gateway_interface_value, "CGI/1.2");
   DEF_GLOBAL(server_name, "SERVER_NAME");
   DEF_GLOBAL(server_port, "SERVER_PORT");
   DEF_GLOBAL(server_protocol, "SERVER_PROTOCOL");
