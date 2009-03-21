@@ -153,7 +153,7 @@ module Unicorn
       end
       true # success!
     rescue Object => e
-      logger.error "Error reading HTTP body: #{e.inspect}"
+      @logger.error "Error reading HTTP body: #{e.inspect}"
       socket.closed? or socket.close rescue nil
 
       # Any errors means we should delete the file, including if the file
