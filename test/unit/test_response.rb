@@ -41,5 +41,12 @@ class ResponseTest < Test::Unit::TestCase
     io.rewind
     assert_match(/.* #{HTTP_STATUS_CODES[code]}$/, io.readline.chomp, "wrong default reason phrase")
   end
+
+  def test_rack_multivalue_headers
+    out = StringIO.new
+    HttpResponse.write(out,[200, {"X-Whatever" => "stuff\nbleh"}, []])
+    assert_match(/^X-Whatever: stuff\r\nX-Whatever: bleh\r\n/, out.string)
+  end
+
 end
 

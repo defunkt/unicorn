@@ -21,30 +21,25 @@ module Unicorn
 
   class HttpResponse
 
-    # headers we allow duplicates for
-    ALLOWED_DUPLICATES = {
-      'Set-Cookie' => true,
-      'Set-Cookie2' => true,
-      'Warning' => true,
-      'WWW-Authenticate' => true,
-    }.freeze
+    # Rack does not set/require a Date: header.  We always override the
+    # Connection: and Date: headers no matter what (if anything) our
+    # Rack application sent us.
+    SKIP = { 'connection' => true, 'date' => true }.freeze
 
     # writes the rack_response to socket as an HTTP response
     def self.write(socket, rack_response)
       status, headers, body = rack_response
+      out = [ "Date: #{Time.now.httpdate}" ]
 
-      # Rack does not set/require Date, but don't worry about Content-Length
-      # since Rack applications that conform to Rack::Lint enforce that
-      out = [ "#{Const::DATE}: #{Time.now.httpdate}" ]
-      sent = { Const::CONNECTION => true, Const::DATE => true }
-
+      # Don't bother enforcing duplicate supression, it's a Hash most of
+      # the time anyways so just hope our app knows what it's doing
       headers.each do |key, value|
-        if ! sent[key] || ALLOWED_DUPLICATES[key]
-          sent[key] = true
-          out << "#{key}: #{value}"
-        end
+        next if SKIP.include?(key.downcase)
+        value.split(/\n/).each { |v| out << "#{key}: #{v}" }
       end
 
+      # Rack should enforce Content-Length or chunked transfer encoding,
+      # so don't worry or care about them.
       socket_write(socket,
                    "HTTP/1.1 #{status} #{HTTP_STATUS_CODES[status]}\r\n" \
                    "Connection: close\r\n" \
