@@ -1,3 +1,4 @@
+v0.2.2 - small bug fixes, fix Rack multi-value headers (Set-Cookie:)
 v0.2.1 - Fix broken Manifest that cause unicorn_rails to not be bundled
 v0.2.0 - unicorn_rails launcher script.
 v0.1.0 - Unicorn - UNIX-only fork of Mongrel free of threading
