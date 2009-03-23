@@ -48,10 +48,6 @@ module Unicorn
   # the constant just refers to a string with the same contents.  Using these constants
   # gave about a 3% to 10% performance improvement over using the strings directly.
   # Symbols did not really improve things much compared to constants.
-  #
-  # While Unicorn does try to emulate the CGI/1.2 protocol, it does not use the REMOTE_IDENT,
-  # REMOTE_USER, or REMOTE_HOST parameters since those are either a security problem or 
-  # too taxing on performance.
   module Const
     DATE="Date".freeze
 
@@ -61,10 +57,7 @@ module Unicorn
     # Request body
     HTTP_BODY="HTTP_BODY".freeze
 
-    # This is the initial part that your handler is identified as by URIClassifier.
-    SCRIPT_NAME="SCRIPT_NAME".freeze
-
-    # The original URI requested by the client.  Passed to URIClassifier to build PATH_INFO and SCRIPT_NAME.
+    # The original URI requested by the client.
     REQUEST_URI='REQUEST_URI'.freeze
     REQUEST_PATH='REQUEST_PATH'.freeze
     
@@ -75,14 +68,6 @@ module Unicorn
     DEFAULT_HOST = "0.0.0.0".freeze # default TCP listen host address
     DEFAULT_PORT = "8080".freeze    # default TCP listen port
     DEFAULT_LISTEN = "#{DEFAULT_HOST}:#{DEFAULT_PORT}".freeze
-
-    # The standard empty 404 response for bad requests.  Use Error4040Handler for custom stuff.
-    ERROR_404_RESPONSE="HTTP/1.1 404 Not Found\r\nConnection: close\r\nServer: Unicorn #{UNICORN_VERSION}\r\n\r\nNOT FOUND".freeze
-
-    CONTENT_LENGTH="CONTENT_LENGTH".freeze
-
-    # A common header for indicating the server is too busy.  Not used yet.
-    ERROR_503_RESPONSE="HTTP/1.1 503 Service Unavailable\r\n\r\nBUSY".freeze
 
     # The basic max request size we'll try to read.
     CHUNK_SIZE=(16 * 1024)
@@ -95,22 +80,11 @@ module Unicorn
     MAX_BODY=MAX_HEADER
 
     # A frozen format for this is about 15% faster
-    CONTENT_TYPE = "Content-Type".freeze
-    LAST_MODIFIED = "Last-Modified".freeze
-    ETAG = "ETag".freeze
-    REQUEST_METHOD="REQUEST_METHOD".freeze
-    GET="GET".freeze
-    HEAD="HEAD".freeze
-    # ETag is based on the apache standard of hex mtime-size-inode (inode is 0 on win32)
-    ETAG_FORMAT="\"%x-%x-%x\"".freeze
-    LINE_END="\r\n".freeze
+    CONTENT_LENGTH="CONTENT_LENGTH".freeze
     REMOTE_ADDR="REMOTE_ADDR".freeze
     HTTP_X_FORWARDED_FOR="HTTP_X_FORWARDED_FOR".freeze
-    HTTP_IF_MODIFIED_SINCE="HTTP_IF_MODIFIED_SINCE".freeze
-    HTTP_IF_NONE_MATCH="HTTP_IF_NONE_MATCH".freeze
-    REDIRECT = "HTTP/1.1 302 Found\r\nLocation: %s\r\nConnection: close\r\n\r\n".freeze
-    HOST = "HOST".freeze
-    CONNECTION = "Connection".freeze
+    QUERY_STRING="QUERY_STRING".freeze
+    RACK_INPUT="rack.input".freeze
   end
 
 end

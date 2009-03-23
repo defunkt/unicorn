@@ -13,6 +13,20 @@ module Unicorn
   # 
   class HttpRequest
 
+     # default parameters we merge into the request env for Rack handlers
+     DEF_PARAMS = {
+       "rack.errors" => $stderr,
+       "rack.multiprocess" => true,
+       "rack.multithread" => false,
+       "rack.run_once" => false,
+       "rack.url_scheme" => "http",
+       "rack.version" => [0, 1],
+       "SCRIPT_NAME" => "",
+
+       # this is not in the Rack spec, but some apps may rely on it
+       "SERVER_SOFTWARE" => "Unicorn #{Const::UNICORN_VERSION}"
+     }.freeze
+
     def initialize(logger)
       @logger = logger
       @body = nil
@@ -52,17 +66,7 @@ module Unicorn
         nparsed = @parser.execute(@params, data, nparsed)
 
         if @parser.finished?
-          # From http://www.ietf.org/rfc/rfc3875:
-          # "Script authors should be aware that the REMOTE_ADDR and
-          #  REMOTE_HOST meta-variables (see sections 4.1.8 and 4.1.9)
-          #  may not identify the ultimate source of the request.  They
-          #  identify the client for the immediate request to the server;
-          #  that client may be a proxy, gateway, or other intermediary
-          #  acting on behalf of the actual source client."
-          @params[Const::REMOTE_ADDR] = socket.unicorn_peeraddr
-
-          handle_body(socket) and return rack_env # success!
-          return nil # fail
+          return handle_body(socket) ? rack_env(socket) : nil
         else
           # Parser is not done, queue up more data to read and continue
           # parsing
@@ -123,23 +127,31 @@ module Unicorn
     # Returns an environment which is rackable:
     # http://rack.rubyforge.org/doc/files/SPEC.html
     # Based on Rack's old Mongrel handler.
-    def rack_env
-      # It might be a dumbass full host request header
-      @params[Const::REQUEST_PATH] ||=
-                           URI.parse(@params[Const::REQUEST_URI]).path
-      raise "No REQUEST PATH" unless @params[Const::REQUEST_PATH]
+    def rack_env(socket)
+      # I'm considering enabling "unicorn.client".  It gives
+      # applications some rope to do some "interesting" things like
+      # replacing a worker with another process that has full control
+      # over the HTTP response.
+      # @params["unicorn.client"] = socket
 
-      @params["QUERY_STRING"] ||= ''
-      @params.update({ "rack.version" => [0,1],
-                      "rack.input" => @body,
-                      "rack.errors" => $stderr,
-                      "rack.multithread" => false,
-                      "rack.multiprocess" => true,
-                      "rack.run_once" => false,
-                      "rack.url_scheme" => "http",
-                      Const::PATH_INFO => @params[Const::REQUEST_PATH],
-                      Const::SCRIPT_NAME => "",
-                    })
+      # From http://www.ietf.org/rfc/rfc3875:
+      # "Script authors should be aware that the REMOTE_ADDR and
+      #  REMOTE_HOST meta-variables (see sections 4.1.8 and 4.1.9)
+      #  may not identify the ultimate source of the request.  They
+      #  identify the client for the immediate request to the server;
+      #  that client may be a proxy, gateway, or other intermediary
+      #  acting on behalf of the actual source client."
+      @params[Const::REMOTE_ADDR] = socket.unicorn_peeraddr
+
+      # It might be a dumbass full host request header
+      @params[Const::PATH_INFO] = (
+          @params[Const::REQUEST_PATH] ||=
+              URI.parse(@params[Const::REQUEST_URI]).path) or
+         raise "No REQUEST_PATH"
+
+      @params[Const::QUERY_STRING] ||= ''
+      @params[Const::RACK_INPUT] = @body
+      @params.update(DEF_PARAMS)
     end
 
     # Does the heavy lifting of properly reading the larger body requests in
