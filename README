@@ -90,7 +90,7 @@ of your application or libraries. However, your Rack application may use
 threads internally (and should even be able to continue running threads
 after the request is complete).
 
-=== Rack-enabled versions of Rails (v2.3.2+)
+=== for Rails applications (should work for all 1.2 or later versions)
 
 In RAILS_ROOT, run:
 

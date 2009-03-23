@@ -7,6 +7,7 @@ rails_pid = File.join(Unicorn::HttpServer::DEFAULT_START_CTX[:cwd],
                       "/tmp/pids/unicorn.pid")
 cmd = File.basename($0)
 daemonize = false
+static = true
 listeners = []
 options = { :listeners => listeners }
 host, port = Unicorn::Const::DEFAULT_HOST, 3000
@@ -123,7 +124,22 @@ rails_loader = lambda do ||
   when nil
     lambda do ||
       require 'config/environment'
-      ActionController::Dispatcher.new
+
+      # it seems Rails >=2.2 support Rack, but only >=2.3 requires it
+      old_rails = case ::Rails::VERSION::MAJOR
+      when 0, 1 then true
+      when 2 then Rails::VERSION::MINOR < 3 ? true : false
+      else
+        false
+      end
+
+      if old_rails
+        require 'rack'
+        require 'unicorn/app/old_rails'
+        Unicorn::App::OldRails.new
+      else
+        ActionController::Dispatcher.new
+      end
     end
   when /\.ru$/
     raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }
@@ -147,12 +163,26 @@ app = lambda do ||
   require 'active_support'
   require 'action_controller'
   ActionController::Base.relative_url_root = map_path if map_path
+  map_path ||= '/'
+  inner_app = inner_app.call
   Rack::Builder.new do
-    use Rails::Rack::LogTailer unless daemonize
-    use Rails::Rack::Debugger if $DEBUG
-    map(map_path || '/') do
-      use Rails::Rack::Static
-      run inner_app.call
+    if inner_app.class.to_s == "Unicorn::App::OldRails"
+      $stderr.puts "LogTailer not available for Rails < 2.3" unless daemonize
+      $stderr.puts "Debugger not available" if $DEBUG
+      map(map_path) do
+        if static
+          require 'unicorn/app/old_rails/static'
+          use Unicorn::App::OldRails::Static
+        end
+        run inner_app
+      end
+    else
+      use Rails::Rack::LogTailer unless daemonize
+      use Rails::Rack::Debugger if $DEBUG
+      map(map_path) do
+        use Rails::Rack::Static if static
+        run inner_app
+      end
     end
   end.to_app
 end
