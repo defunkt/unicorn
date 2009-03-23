@@ -14,7 +14,7 @@ count = ENV['count'] ? ENV['count'].to_i : 1
 slice = (' ' * bs).freeze
 body = (1..count).map { slice }.freeze
 hdr = {
-  'Content-Length' => bs * count,
+  'Content-Length' => (bs * count).to_s.freeze,
   'Content-Type' => 'text/plain'.freeze
 }.freeze
 response = [ 200, hdr, body ].freeze
