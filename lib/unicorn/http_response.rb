@@ -35,7 +35,11 @@ module Unicorn
       # the time anyways so just hope our app knows what it's doing
       headers.each do |key, value|
         next if SKIP.include?(key.downcase)
-        value.split(/\n/).each { |v| out << "#{key}: #{v}" }
+        if value =~ /\n/
+          value.split(/\n/).each { |v| out << "#{key}: #{v}" }
+        else
+          out << "#{key}: #{value}"
+        end
       end
 
       # Rack should enforce Content-Length or chunked transfer encoding,
