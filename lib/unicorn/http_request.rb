@@ -57,8 +57,8 @@ module Unicorn
     # to handle any socket errors (e.g. user aborted upload).
     def read(socket)
       # short circuit the common case with small GET requests first
-      nparsed = @parser.execute(@params, read_socket(socket), 0)
-      @parser.finished? and return handle_body(socket)
+      @parser.execute(@params, read_socket(socket)) and
+          return handle_body(socket)
 
       data = @buffer.dup # read_socket will clobber @buffer
 
@@ -66,8 +66,8 @@ module Unicorn
       # an Exception thrown from the @parser will throw us out of the loop
       loop do
         data << read_socket(socket)
-        nparsed = @parser.execute(@params, data, nparsed)
-        @parser.finished? and return handle_body(socket)
+        @parser.execute(@params, data) and
+            return handle_body(socket)
       end
       rescue HttpParserError => e
         @logger.error "HTTP parse error, malformed request " \

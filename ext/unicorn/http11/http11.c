@@ -1,4 +1,5 @@
 /**
+ * Copyright (c) 2009 Eric Wong (all bugs are Eric's fault)
  * Copyright (c) 2005 Zed A. Shaw
  * You can redistribute it and/or modify it under the same terms as Ruby.
  */
@@ -367,113 +368,37 @@ static VALUE HttpParser_reset(VALUE self)
 
 /**
  * call-seq:
- *    parser.finish -> true/false
+ *    parser.execute(req_hash, data) -> true/false
  *
- * Finishes a parser early which could put in a "good" or bad state.
- * You should call reset after finish it or bad things will happen.
- */
-static VALUE HttpParser_finish(VALUE self)
-{
-  http_parser *http = NULL;
-  DATA_GET(self, http_parser, http);
-  http_parser_finish(http);
-
-  return http_parser_is_finished(http) ? Qtrue : Qfalse;
-}
-
-
-/**
- * call-seq:
- *    parser.execute(req_hash, data, start) -> Integer
- *
- * Takes a Hash and a String of data, parses the String of data filling in the Hash
- * returning an Integer to indicate how much of the data has been read.  No matter
- * what the return value, you should call HttpParser#finished? and HttpParser#error?
- * to figure out if it's done parsing or there was an error.
+ * Takes a Hash and a String of data, parses the String of data filling
+ * in the Hash returning a boolean to indicate whether or not parsing
+ * is finished.
  * 
- * This function now throws an exception when there is a parsing error.  This makes 
- * the logic for working with the parser much easier.  You can still test for an 
- * error, but now you need to wrap the parser with an exception handling block.
- *
- * The third argument allows for parsing a partial request and then continuing
- * the parsing from that position.  It needs all of the original data as well 
- * so you have to append to the data buffer as you read.
+ * This function now throws an exception when there is a parsing error.
+ * This makes the logic for working with the parser much easier.  You
+ * will need to wrap the parser with an exception handling block.
  */
-static VALUE HttpParser_execute(VALUE self, VALUE req_hash,
-                                VALUE data, VALUE start)
+
+static VALUE HttpParser_execute(VALUE self, VALUE req_hash, VALUE data)
 {
-  http_parser *http = NULL;
-  int from = 0;
-  char *dptr = NULL;
-  long dlen = 0;
+  http_parser *http;
+  char *dptr = RSTRING_PTR(data);
+  long dlen = RSTRING_LEN(data);
 
   DATA_GET(self, http_parser, http);
 
-  from = FIX2INT(start);
-  dptr = RSTRING_PTR(data);
-  dlen = RSTRING_LEN(data);
-
-  if(from >= dlen) {
-    rb_raise(eHttpParserError, "Requested start is after data buffer end.");
-  } else {
+  if (http->nread < dlen) {
     http->data = (void *)req_hash;
-    http_parser_execute(http, dptr, dlen, from);
+    http_parser_execute(http, dptr, dlen);
 
-    VALIDATE_MAX_LENGTH(http_parser_nread(http), HEADER);
+    VALIDATE_MAX_LENGTH(http->nread, HEADER);
 
-    if(http_parser_has_error(http)) {
-      rb_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
-    } else {
-      return INT2FIX(http_parser_nread(http));
-    }
+    if (!http_parser_has_error(http))
+      return http_parser_is_finished(http) ? Qtrue : Qfalse;
+
+    rb_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
   }
-}
-
-
-
-/**
- * call-seq:
- *    parser.error? -> true/false
- *
- * Tells you whether the parser is in an error state.
- */
-static VALUE HttpParser_has_error(VALUE self)
-{
-  http_parser *http = NULL;
-  DATA_GET(self, http_parser, http);
-
-  return http_parser_has_error(http) ? Qtrue : Qfalse;
-}
-
-
-/**
- * call-seq:
- *    parser.finished? -> true/false
- *
- * Tells you whether the parser is finished or not and in a good state.
- */
-static VALUE HttpParser_is_finished(VALUE self)
-{
-  http_parser *http = NULL;
-  DATA_GET(self, http_parser, http);
-
-  return http_parser_is_finished(http) ? Qtrue : Qfalse;
-}
-
-
-/**
- * call-seq:
- *    parser.nread -> Integer
- *
- * Returns the amount of data processed so far during this processing cycle.  It is
- * set to 0 on initialize or reset calls and is incremented each time execute is called.
- */
-static VALUE HttpParser_nread(VALUE self)
-{
-  http_parser *http = NULL;
-  DATA_GET(self, http_parser, http);
-
-  return INT2FIX(http->nread);
+  rb_raise(eHttpParserError, "Requested start is after data buffer end.");
 }
 
 void Init_http11()
@@ -504,10 +429,6 @@ void Init_http11()
   rb_define_alloc_func(cHttpParser, HttpParser_alloc);
   rb_define_method(cHttpParser, "initialize", HttpParser_init,0);
   rb_define_method(cHttpParser, "reset", HttpParser_reset,0);
-  rb_define_method(cHttpParser, "finish", HttpParser_finish,0);
-  rb_define_method(cHttpParser, "execute", HttpParser_execute,3);
-  rb_define_method(cHttpParser, "error?", HttpParser_has_error,0);
-  rb_define_method(cHttpParser, "finished?", HttpParser_is_finished,0);
-  rb_define_method(cHttpParser, "nread", HttpParser_nread,0);
+  rb_define_method(cHttpParser, "execute", HttpParser_execute,2);
   init_common_fields();
 }
