@@ -42,49 +42,39 @@ module Unicorn
       @body = nil
     end
 
-    #
     # Does the majority of the IO processing.  It has been written in
-    # Ruby using about 7 different IO processing strategies and no
-    # matter how it's done the performance just does not improve.  It is
-    # currently carefully constructed to make sure that it gets the best
-    # possible performance, but anyone who thinks they can make it
-    # faster is more than welcome to take a crack at it.
+    # Ruby using about 8 different IO processing strategies.
+    #
+    # It is currently carefully constructed to make sure that it gets
+    # the best possible performance for the common case: GET requests
+    # that are fully complete after a single read(2)
+    #
+    # Anyone who thinks they can make it faster is more than welcome to
+    # take a crack at it.
     #
     # returns an environment hash suitable for Rack if successful
     # This does minimal exception trapping and it is up to the caller
     # to handle any socket errors (e.g. user aborted upload).
     def read(socket)
-      data = String.new(read_socket(socket))
-      nparsed = 0
+      # short circuit the common case with small GET requests first
+      nparsed = @parser.execute(@params, read_socket(socket), 0)
+      @parser.finished? and return handle_body(socket)
 
-      # Assumption: nparsed will always be less since data will get
-      # filled with more after each parsing.  If it doesn't get more
-      # then there was a problem with the read operation on the client
-      # socket.  Effect is to stop processing when the socket can't
-      # fill the buffer for further parsing.
-      while nparsed < data.length
+      data = @buffer.dup # read_socket will clobber @buffer
+
+      # Parser is not done, queue up more data to read and continue parsing
+      # an Exception thrown from the @parser will throw us out of the loop
+      loop do
+        data << read_socket(socket)
         nparsed = @parser.execute(@params, data, nparsed)
-
-        if @parser.finished?
-          return handle_body(socket) ? rack_env(socket) : nil
-        else
-          # Parser is not done, queue up more data to read and continue
-          # parsing
-          data << read_socket(socket)
-          if data.length >= Const::MAX_HEADER
-            raise HttpParserError.new("HEADER is longer than allowed, " \
-                                      "aborting client early.")
-          end
-        end
+        @parser.finished? and return handle_body(socket)
       end
-      nil # XXX bug?
       rescue HttpParserError => e
         @logger.error "HTTP parse error, malformed request " \
                       "(#{@params[Const::HTTP_X_FORWARDED_FOR] ||
                           socket.unicorn_peeraddr}): #{e.inspect}"
         @logger.error "REQUEST DATA: #{data.inspect}\n---\n" \
                       "PARAMS: #{@params.inspect}\n---\n"
-        socket.closed? or socket.close rescue nil
         nil
     end
 
@@ -112,7 +102,7 @@ module Unicorn
       # This will probably truncate them but at least the request goes through
       # usually.
       if remain > 0
-        read_body(socket, remain) or return false # fail!
+        read_body(socket, remain) or return nil # fail!
       end
       @body.rewind
       @body.sysseek(0) if @body.respond_to?(:sysseek)
@@ -121,7 +111,7 @@ module Unicorn
       # another request, we'll truncate it.  Again, we don't do pipelining
       # or keepalive
       @body.truncate(content_length)
-      true
+      rack_env(socket)
     end
 
     # Returns an environment which is rackable:
