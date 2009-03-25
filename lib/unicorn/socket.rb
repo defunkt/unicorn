@@ -62,10 +62,17 @@ module Unicorn
       end
     end
 
+    def log_buffer_sizes(sock, pfx = '')
+      respond_to?(:logger) or return
+      rcvbuf = sock.getsockopt(SOL_SOCKET, SO_RCVBUF).unpack('i')
+      sndbuf = sock.getsockopt(SOL_SOCKET, SO_SNDBUF).unpack('i')
+      logger.info "#{pfx}#{sock_name(sock)} rcvbuf=#{rcvbuf} sndbuf=#{sndbuf}"
+    end
+
     # creates a new server, socket. address may be a HOST:PORT or
     # an absolute path to a UNIX socket.  address can even be a Socket
     # object in which case it is immediately returned
-    def bind_listen(address = '0.0.0.0:8080', backlog = 1024)
+    def bind_listen(address = '0.0.0.0:8080', opt = { :backlog => 1024 })
       return address unless String === address
 
       domain, bind_addr = if address[0..0] == "/"
@@ -95,7 +102,13 @@ module Unicorn
         sock.close rescue nil
         return nil
       end
-      sock.listen(backlog)
+      if opt[:rcvbuf] || opt[:sndbuf]
+        log_buffer_sizes(sock, "before: ")
+        sock.setsockopt(SOL_SOCKET, SO_RCVBUF, opt[:rcvbuf]) if opt[:rcvbuf]
+        sock.setsockopt(SOL_SOCKET, SO_SNDBUF, opt[:sndbuf]) if opt[:sndbuf]
+        log_buffer_sizes(sock, " after: ")
+      end
+      sock.listen(opt[:backlog] || 1024)
       set_server_sockopt(sock) if domain == AF_INET
       sock
     end

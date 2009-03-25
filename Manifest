@@ -21,6 +21,9 @@ ext/unicorn/http11/http11_parser.rl
 ext/unicorn/http11/http11_parser_common.rl
 lib/unicorn.rb
 lib/unicorn/app/exec_cgi.rb
+lib/unicorn/app/old_rails.rb
+lib/unicorn/app/old_rails/static.rb
+lib/unicorn/cgi_wrapper.rb
 lib/unicorn/configurator.rb
 lib/unicorn/const.rb
 lib/unicorn/http_request.rb
@@ -30,9 +33,11 @@ lib/unicorn/socket.rb
 lib/unicorn/util.rb
 setup.rb
 test/aggregate.rb
-test/benchmark/previous.rb
-test/benchmark/simple.rb
-test/benchmark/utils.rb
+test/benchmark/README
+test/benchmark/big_request.rb
+test/benchmark/dd.ru
+test/benchmark/request.rb
+test/benchmark/response.rb
 test/exec/README
 test/exec/test_exec.rb
 test/test_helper.rb
@@ -42,4 +47,5 @@ test/unit/test_http_parser.rb
 test/unit/test_request.rb
 test/unit/test_response.rb
 test/unit/test_server.rb
+test/unit/test_socket_helper.rb
 test/unit/test_upload.rb

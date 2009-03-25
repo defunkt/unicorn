@@ -135,7 +135,7 @@ module Unicorn
     def listen(address)
       return if String === address && listener_names.include?(address)
 
-      if io = bind_listen(address, @backlog)
+      if io = bind_listen(address, { :backlog => @backlog })
         if Socket == io.class
           @io_purgatory << io
           io = server_cast(io)
