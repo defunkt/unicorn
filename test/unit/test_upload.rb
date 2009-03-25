@@ -50,6 +50,32 @@ class UploadTest < Test::Unit::TestCase
     assert_equal @sha1.hexdigest, resp[:sha1]
   end
 
+  def test_tempfile_unlinked
+    spew_path = lambda do |env|
+      if orig = env['HTTP_X_OLD_PATH']
+        assert orig != env['rack.input'].path
+      end
+      assert_equal length, env['rack.input'].size
+      [ 200, @hdr.merge('X-Tempfile-Path' => env['rack.input'].path), [] ]
+    end
+    start_server(spew_path)
+    sock = TCPSocket.new(@addr, @port)
+    sock.syswrite("PUT / HTTP/1.0\r\nContent-Length: #{length}\r\n\r\n")
+    @count.times { sock.syswrite(' ' * @bs) }
+    path = sock.read[/^X-Tempfile-Path: (\S+)/, 1]
+    sock.close
+
+    # send another request to ensure we hit the next request
+    sock = TCPSocket.new(@addr, @port)
+    sock.syswrite("PUT / HTTP/1.0\r\nX-Old-Path: #{path}\r\n" \
+                  "Content-Length: #{length}\r\n\r\n")
+    @count.times { sock.syswrite(' ' * @bs) }
+    path2 = sock.read[/^X-Tempfile-Path: (\S+)/, 1]
+    sock.close
+    assert path != path2
+
+    assert ! File.exist?(path)
+  end
 
   def test_put_keepalive_truncates_small_overwrite
     start_server(@sha1_app)
