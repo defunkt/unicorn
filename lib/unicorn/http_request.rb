@@ -39,6 +39,7 @@ module Unicorn
       @parser.reset
       @params.clear
       @body.close rescue nil
+      @body.close! rescue nil
       @body = nil
     end
 
