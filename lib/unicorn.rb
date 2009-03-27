@@ -435,19 +435,19 @@ module Unicorn
         alive = false
         @listeners.each { |sock| sock.close rescue nil } # break IO.select
       end
-      trap('USR1') do
-        begin
+      reopen_logs, (rd, wr) = false, IO.pipe
+      trap(:USR1) { reopen_logs = true; rd.close rescue nil }
+      @logger.info "worker=#{worker.nr} ready"
+
+      while alive && @master_pid == Process.ppid
+        if reopen_logs
+          reopen_logs = false
           @logger.info "worker=#{worker.nr} rotating logs..."
           Unicorn::Util.reopen_logs
           @logger.info "worker=#{worker.nr} done rotating logs"
-        rescue Object => err
-          @logger.error "error rotating logs: #{err.inspect}"
-          @logger.error "gracefully restarting worker=#{worker.nr} PID:#$$"
-          Process.kill('QUIT', $$)
+          wr.close rescue nil
+          rd, wr = IO.pipe
         end
-      end
-
-      while alive && @master_pid == Process.ppid
         # we're a goner in @timeout seconds anyways if tempfile.chmod
         # breaks, so don't trap the exception.  Using fchmod() since
         # futimes() is not available in base Ruby and I very strongly
@@ -477,6 +477,7 @@ module Unicorn
               end
             end
             tempfile.chmod(nr += 1)
+            break if reopen_logs
           end
           client = nil
 
@@ -484,18 +485,18 @@ module Unicorn
           # we're probably reasonably busy, so avoid calling select(2)
           # and try to do a blind non-blocking accept(2) on everything
           # before we sleep again in select
-          if accepted
+          if accepted || reopen_logs
             ready = @listeners
           else
             begin
               tempfile.chmod(nr += 1)
               # timeout used so we can detect parent death:
-              ret = IO.select(@listeners, nil, nil, @timeout/2.0) or next
+              ret = IO.select(@listeners, nil, [rd], @timeout/2.0) or next
               ready = ret[0]
             rescue Errno::EINTR
               ready = @listeners
             rescue Errno::EBADF => e
-              exit(alive ? 1 : 0)
+              reopen_logs or exit(alive ? 1 : 0)
             end
           end
         rescue SystemExit => e

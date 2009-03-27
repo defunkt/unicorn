@@ -502,7 +502,7 @@ end
       lines = []
       while (tries -= 1) > 0
         begin
-          lines = File.readlines(path).grep(/worker=\d+ spawned/)
+          lines = File.readlines(path).grep(/worker=\d+ ready/)
           lines.size == nr_workers and return
         rescue Errno::ENOENT
         end
