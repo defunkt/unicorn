@@ -465,7 +465,7 @@ module Unicorn
               rescue Errno::EAGAIN
                 next
               end
-              accepted = client.sync = true
+              accepted = true
               client.nonblock = false
               set_client_sockopt(client) if TCPSocket === client
               process_client(client)
