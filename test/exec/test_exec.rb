@@ -27,7 +27,7 @@ rescue LoadError
 end
 
 class ExecTest < Test::Unit::TestCase
-  trap('QUIT', 'IGNORE')
+  trap(:QUIT, 'IGNORE')
 
   HI = <<-EOS
 use Rack::ContentLength
@@ -126,14 +126,14 @@ end
 
     wait_for_file(pid_file)
     Process.waitpid(pid)
-    Process.kill('USR2', File.read(pid_file).to_i)
+    Process.kill(:USR2, File.read(pid_file).to_i)
     wait_for_file(old_file)
     wait_for_file(pid_file)
-    Process.kill('QUIT', File.read(old_file).to_i)
+    Process.kill(:QUIT, File.read(old_file).to_i)
 
     ucfg.syswrite("timeout %(#{pid_file})\n") # introduce a bug
     current_pid = File.read(pid_file).to_i
-    Process.kill('USR2', current_pid)
+    Process.kill(:USR2, current_pid)
 
     # wait for pid_file to restore itself
     tries = DEFAULT_TRIES
@@ -158,7 +158,7 @@ end
     ucfg.truncate(0)
     ucfg.syswrite("listeners %w(#{@addr}:#{@port} #{@addr}:#{port2})\n")
     ucfg.syswrite("pid %(#{pid_file})\n")
-    Process.kill('USR2', current_pid)
+    Process.kill(:USR2, current_pid)
     wait_for_file(old_file)
     wait_for_file(pid_file)
     new_pid = File.read(pid_file).to_i
@@ -170,8 +170,8 @@ end
     assert_equal String, results[1].class
 
     assert_nothing_raised do
-      Process.kill('QUIT', current_pid)
-      Process.kill('QUIT', new_pid)
+      Process.kill(:QUIT, current_pid)
+      Process.kill(:QUIT, new_pid)
     end
   end
 
@@ -192,14 +192,14 @@ end
 
     wait_for_file(pid_file)
     Process.waitpid(pid)
-    Process.kill('USR2', File.read(pid_file).to_i)
+    Process.kill(:USR2, File.read(pid_file).to_i)
     wait_for_file(old_file)
     wait_for_file(pid_file)
-    Process.kill('QUIT', File.read(old_file).to_i)
+    Process.kill(:QUIT, File.read(old_file).to_i)
 
     File.unlink("config.ru") # break reloading
     current_pid = File.read(pid_file).to_i
-    Process.kill('USR2', current_pid)
+    Process.kill(:USR2, current_pid)
 
     # wait for pid_file to restore itself
     tries = DEFAULT_TRIES
@@ -220,7 +220,7 @@ end
 
     # fix the bug
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
-    Process.kill('USR2', current_pid)
+    Process.kill(:USR2, current_pid)
     wait_for_file(old_file)
     wait_for_file(pid_file)
     new_pid = File.read(pid_file).to_i
@@ -230,8 +230,8 @@ end
     assert_equal String, results[0].class
 
     assert_nothing_raised do
-      Process.kill('QUIT', current_pid)
-      Process.kill('QUIT', new_pid)
+      Process.kill(:QUIT, current_pid)
+      Process.kill(:QUIT, new_pid)
     end
   end
 
@@ -289,7 +289,7 @@ end
     rotate = Tempfile.new('unicorn_rotate')
     assert_nothing_raised do
       File.rename(COMMON_TMP.path, rotate.path)
-      Process.kill('USR1', pid)
+      Process.kill(:USR1, pid)
     end
     wait_for_file(COMMON_TMP.path)
     assert File.exist?(COMMON_TMP.path), "#{COMMON_TMP.path} exists"
@@ -311,7 +311,7 @@ end
     end
     assert_equal 4, log.grep(/worker=\d+ done rotating logs/).size
     assert_equal 0, log.grep(/rotating logs\.\.\./).size
-    assert_nothing_raised { Process.kill('QUIT', pid) }
+    assert_nothing_raised { Process.kill(:QUIT, pid) }
     status = nil
     assert_nothing_raised { pid, status = Process.waitpid2(pid) }
     assert status.success?, "exited successfully"
@@ -430,7 +430,7 @@ end
       ucfg.syswrite("pid \"#{pid_file}\"\n")
       ucfg.syswrite("logger Logger.new('#{new_log.path}')\n")
       ucfg.close
-      Process.kill('HUP', pid)
+      Process.kill(:HUP, pid)
     end
 
     wait_for_file(new_sock_path)
@@ -491,7 +491,7 @@ end
 
     def assert_shutdown(pid)
       wait_master_ready("#{@tmpdir}/test_stderr.#{pid}.log")
-      assert_nothing_raised { Process.kill('QUIT', pid) }
+      assert_nothing_raised { Process.kill(:QUIT, pid) }
       status = nil
       assert_nothing_raised { pid, status = Process.waitpid2(pid) }
       assert status.success?, "exited successfully"
@@ -527,7 +527,7 @@ end
     def reexec_usr2_quit_test(pid, pid_file)
       assert File.exist?(pid_file), "pid file OK"
       assert ! File.exist?("#{pid_file}.oldbin"), "oldbin pid file"
-      assert_nothing_raised { Process.kill('USR2', pid) }
+      assert_nothing_raised { Process.kill(:USR2, pid) }
       assert_nothing_raised { retry_hit(["http://#{@addr}:#{@port}/"]) }
       wait_for_file("#{pid_file}.oldbin")
       wait_for_file(pid_file)
@@ -535,12 +535,12 @@ end
       # kill old master process
       assert_not_equal pid, File.read(pid_file).to_i
       assert_equal pid, File.read("#{pid_file}.oldbin").to_i
-      assert_nothing_raised { Process.kill('QUIT', pid) }
+      assert_nothing_raised { Process.kill(:QUIT, pid) }
       assert_not_equal pid, File.read(pid_file).to_i
       assert_nothing_raised { retry_hit(["http://#{@addr}:#{@port}/"]) }
       wait_for_file(pid_file)
       assert_nothing_raised { retry_hit(["http://#{@addr}:#{@port}/"]) }
-      assert_nothing_raised { Process.kill('QUIT', File.read(pid_file).to_i) }
+      assert_nothing_raised { Process.kill(:QUIT, File.read(pid_file).to_i) }
     end
 
     def reexec_basic_test(pid, pid_file)
@@ -555,7 +555,7 @@ end
       assert_nothing_raised do
         nr.times do |i|
           hit(["http://#{@addr}:#{@port}/#{i}"])
-          i == kill_point and Process.kill('HUP', pid)
+          i == kill_point and Process.kill(:HUP, pid)
         end
       end
       wait_master_ready(master_log)
@@ -563,7 +563,7 @@ end
       new_pid = File.read(pid_file).to_i
       assert_not_equal pid, new_pid
       assert_nothing_raised { Process.kill(0, new_pid) }
-      assert_nothing_raised { Process.kill('QUIT', new_pid) }
+      assert_nothing_raised { Process.kill(:QUIT, new_pid) }
     end
 
     def wait_for_file(path)

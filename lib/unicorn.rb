@@ -162,7 +162,7 @@ module Unicorn
       respawn = true
 
       QUEUE_SIGS.each { |sig| trap_deferred(sig) }
-      trap('CHLD') { |sig_nr| awaken_master }
+      trap(:CHLD) { |sig_nr| awaken_master }
       $0 = "unicorn master"
       logger.info "master process ready" # test_exec.rb relies on this message
       begin
@@ -173,27 +173,27 @@ module Unicorn
             murder_lazy_workers
             spawn_missing_workers if respawn
             master_sleep
-          when 'QUIT' # graceful shutdown
+          when :QUIT # graceful shutdown
             break
-          when 'TERM', 'INT' # immediate shutdown
+          when :TERM, :INT # immediate shutdown
             stop(false)
             break
-          when 'USR1' # rotate logs
+          when :USR1 # rotate logs
             logger.info "master rotating logs..."
             Unicorn::Util.reopen_logs
             logger.info "master done rotating logs"
-            kill_each_worker('USR1')
-          when 'USR2' # exec binary, stay alive in case something went wrong
+            kill_each_worker(:USR1)
+          when :USR2 # exec binary, stay alive in case something went wrong
             reexec
-          when 'WINCH'
+          when :WINCH
             if Process.ppid == 1 || Process.getpgrp != $$
               respawn = false
               logger.info "gracefully stopping all workers"
-              kill_each_worker('QUIT')
+              kill_each_worker(:QUIT)
             else
               logger.info "SIGWINCH ignored because we're not daemonized"
             end
-          when 'HUP'
+          when :HUP
             respawn = true
             if @config.config_file
               load_config!
@@ -221,7 +221,7 @@ module Unicorn
 
     # Terminates all workers, but does not exit master process
     def stop(graceful = true)
-      kill_each_worker(graceful ? 'QUIT' : 'TERM')
+      kill_each_worker(graceful ? :QUIT : :TERM)
       timeleft = @timeout
       step = 0.2
       reap_all_workers
@@ -229,7 +229,7 @@ module Unicorn
         sleep(step)
         reap_all_workers
         (timeleft -= step) > 0 and next
-        kill_each_worker('KILL')
+        kill_each_worker(:KILL)
       end
     ensure
       self.listeners = []
@@ -238,8 +238,7 @@ module Unicorn
     private
 
     # list of signals we care about and trap in master.
-    QUEUE_SIGS =
-      %w(WINCH QUIT INT TERM USR1 USR2 HUP).map { |x| x.freeze }.freeze
+    QUEUE_SIGS = [ :WINCH, :QUIT, :INT, :TERM, :USR1, :USR2, :HUP ].freeze
 
     # defer a signal for later processing in #join (master process)
     def trap_deferred(signal)
@@ -350,7 +349,7 @@ module Unicorn
       @workers.each_pair do |pid, worker|
         (now - worker.tempfile.ctime) <= @timeout and next
         logger.error "worker=#{worker.nr} PID:#{pid} is too old, killing"
-        kill_worker('KILL', pid) # take no prisoners for @timeout violations
+        kill_worker(:KILL, pid) # take no prisoners for @timeout violations
         worker.tempfile.close rescue nil
       end
     end
@@ -363,7 +362,7 @@ module Unicorn
           Dir.chdir(@start_ctx[:cwd])
         rescue Errno::ENOENT => err
           logger.fatal "#{err.inspect} (#{@start_ctx[:cwd]})"
-          @sig_queue << 'QUIT' # forcibly emulate SIGQUIT
+          @sig_queue << :QUIT # forcibly emulate SIGQUIT
           return
         end
         tempfile = Tempfile.new('') # as short as possible to save dir space
@@ -405,7 +404,7 @@ module Unicorn
       build_app! unless @preload_app
       @sig_queue.clear
       QUEUE_SIGS.each { |sig| trap(sig, 'IGNORE') }
-      trap('CHLD', 'DEFAULT')
+      trap(:CHLD, 'DEFAULT')
 
       $0 = "unicorn worker[#{worker.nr}]"
       @rd_sig.close if @rd_sig
@@ -430,13 +429,13 @@ module Unicorn
       alive = true
       ready = @listeners
       client = nil
-      %w(TERM INT).each { |sig| trap(sig) { exit(0) } } # instant shutdown
-      trap('QUIT') do
+      [:TERM, :INT].each { |sig| trap(sig) { exit(0) } } # instant shutdown
+      trap(:QUIT) do
         alive = false
         @listeners.each { |sock| sock.close rescue nil } # break IO.select
       end
       reopen_logs, (rd, wr) = false, IO.pipe
-      trap(:USR1) { reopen_logs = true; rd.close rescue nil }
+      trap(:USR1) { reopen_logs = true; rd.close rescue nil } # break IO.select
       @logger.info "worker=#{worker.nr} ready"
 
       while alive && @master_pid == Process.ppid
@@ -549,7 +548,7 @@ module Unicorn
         logger.info "reloading config_file=#{@config.config_file}"
         @config.reload
         @config.commit!(self)
-        kill_each_worker('QUIT')
+        kill_each_worker(:QUIT)
         logger.info "done reloading config_file=#{@config.config_file}"
       rescue Object => e
         logger.error "error reloading config_file=#{@config.config_file}: " \
