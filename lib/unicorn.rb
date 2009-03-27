@@ -406,11 +406,6 @@ module Unicorn
       @sig_queue.clear
       QUEUE_SIGS.each { |sig| trap(sig, 'IGNORE') }
       trap('CHLD', 'DEFAULT')
-      trap('USR1') do
-        @logger.info "worker=#{worker.nr} rotating logs..."
-        Unicorn::Util.reopen_logs
-        @logger.info "worker=#{worker.nr} done rotating logs"
-      end
 
       $0 = "unicorn worker[#{worker.nr}]"
       @rd_sig.close if @rd_sig
@@ -439,6 +434,17 @@ module Unicorn
       trap('QUIT') do
         alive = false
         @listeners.each { |sock| sock.close rescue nil } # break IO.select
+      end
+      trap('USR1') do
+        begin
+          @logger.info "worker=#{worker.nr} rotating logs..."
+          Unicorn::Util.reopen_logs
+          @logger.info "worker=#{worker.nr} done rotating logs"
+        rescue Object => err
+          @logger.error "error rotating logs: #{err.inspect}"
+          @logger.error "gracefully restarting worker=#{worker.nr} PID:#$$"
+          Process.kill('QUIT', $$)
+        end
       end
 
       while alive && @master_pid == Process.ppid
