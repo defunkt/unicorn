@@ -35,6 +35,25 @@ class WebServerTest < Test::Unit::TestCase
     end
   end
 
+  def test_broken_app
+    teardown
+    port = unused_port
+    app = lambda { |env| raise RuntimeError, "hello" }
+    # [200, {}, []] }
+    redirect_test_io do
+      @server = HttpServer.new(app, :listeners => [ "127.0.0.1:#{port}"] )
+      @server.start
+    end
+    sock = nil
+    assert_nothing_raised do
+      sock = TCPSocket.new('127.0.0.1', port)
+      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+    end
+
+    assert_match %r{\AHTTP/1.[01] 500\b}, sock.sysread(4096)
+    assert_nothing_raised { sock.close }
+  end
+
   def test_simple_server
     results = hit(["http://localhost:#{@port}/test"])
     assert_equal 'hello!\n', results[0], "Handler didn't really run"
@@ -75,6 +94,16 @@ class WebServerTest < Test::Unit::TestCase
     redirect_test_io do
       do_test("GET /test HTTP/BAD", 3)
     end
+  end
+
+  def test_bad_client_400
+    sock = nil
+    assert_nothing_raised do
+      sock = TCPSocket.new('127.0.0.1', @port)
+      sock.syswrite("GET / HTTP/1.0\r\nHost: foo\rbar\r\n\r\n")
+    end
+    assert_match %r{\AHTTP/1.[01] 400\b}, sock.sysread(4096)
+    assert_nothing_raised { sock.close }
   end
 
   def test_header_is_too_long

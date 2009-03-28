@@ -22,7 +22,7 @@ class ResponseTest < Test::Unit::TestCase
     $, = "\f\v"
     out = StringIO.new
     HttpResponse.write(out,[200, {"X-Whatever" => "stuff"}, ["cool"]])
-    resp = out.read
+    resp = out.string
     assert ! resp.include?("\f\v"), "output didn't use $, ($OFS)"
     ensure
       $, = old_ofs
@@ -38,8 +38,9 @@ class ResponseTest < Test::Unit::TestCase
     code = 400
     io = StringIO.new
     HttpResponse.write(io, [code, {}, []])
-    io.rewind
-    assert_match(/.* #{HTTP_STATUS_CODES[code]}$/, io.readline.chomp, "wrong default reason phrase")
+    lines = io.string.split(/\r\n/)
+    assert_match(/.* #{HTTP_STATUS_CODES[code]}$/, lines.first,
+                 "wrong default reason phrase")
   end
 
   def test_rack_multivalue_headers

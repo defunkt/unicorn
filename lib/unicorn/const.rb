@@ -79,6 +79,10 @@ module Unicorn
     # Maximum request body size before it is moved out of memory and into a tempfile for reading.
     MAX_BODY=MAX_HEADER
 
+    # common errors we'll send back
+    ERROR_400_RESPONSE = "HTTP/1.1 400 Bad Request\r\n\r\n".freeze
+    ERROR_500_RESPONSE = "HTTP/1.1 500 Internal Server Error\r\n\r\n".freeze
+
     # A frozen format for this is about 15% faster
     CONTENT_LENGTH="CONTENT_LENGTH".freeze
     REMOTE_ADDR="REMOTE_ADDR".freeze

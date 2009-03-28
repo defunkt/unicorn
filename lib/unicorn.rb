@@ -378,12 +378,21 @@ module Unicorn
     # once a client is accepted, it is processed in its entirety here
     # in 3 easy steps: read request, call app, write app response
     def process_client(client)
-      env = @request.read(client) or return
+      client.nonblock = false
+      set_client_sockopt(client) if TCPSocket === client
+      env = @request.read(client)
       app_response = @app.call(env)
       HttpResponse.write(client, app_response)
+    # if we get any error, try to write something back to the client
+    # assuming we haven't closed the socket, but don't get hung up
+    # if the socket is already closed or broken.  We'll always ensure
+    # the socket is closed at the end of this function
     rescue EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF
-      client.closed? or client.close rescue nil
+      client.write_nonblock(Const::ERROR_500_RESPONSE) rescue nil
+    rescue HttpParserError # try to tell the client they're bad
+      client.write_nonblock(Const::ERROR_400_RESPONSE) rescue nil
     rescue Object => e
+      client.write_nonblock(Const::ERROR_500_RESPONSE) rescue nil
       logger.error "Read error: #{e.inspect}"
       logger.error e.backtrace.join("\n")
     ensure
@@ -466,14 +475,10 @@ module Unicorn
                 next
               end
               accepted = true
-              client.nonblock = false
-              set_client_sockopt(client) if TCPSocket === client
               process_client(client)
             rescue Errno::ECONNABORTED
               # client closed the socket even before accept
-              if client && !client.closed?
-                client.close rescue nil
-              end
+              client.close rescue nil
             end
             tempfile.chmod(nr += 1)
             break if reopen_logs

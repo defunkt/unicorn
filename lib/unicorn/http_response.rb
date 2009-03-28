@@ -49,6 +49,7 @@ module Unicorn
                    "Connection: close\r\n" \
                    "#{out.join("\r\n")}\r\n\r\n")
       body.each { |chunk| socket_write(socket, chunk) }
+      socket.close # uncorks the socket immediately
       ensure
         body.respond_to?(:close) and body.close rescue nil
     end

@@ -75,13 +75,13 @@ module Unicorn
                           socket.unicorn_peeraddr}): #{e.inspect}"
         @logger.error "REQUEST DATA: #{data.inspect}\n---\n" \
                       "PARAMS: #{@params.inspect}\n---\n"
-        nil
+        raise e
     end
 
     private
 
     # Handles dealing with the rest of the request
-    # returns true if successful, false if not
+    # returns a Rack environment if successful, raises an exception if not
     def handle_body(socket)
       http_body = @params[Const::HTTP_BODY]
       content_length = @params[Const::CONTENT_LENGTH].to_i
@@ -101,9 +101,7 @@ module Unicorn
       # Some clients (like FF1.0) report 0 for body and then send a body.
       # This will probably truncate them but at least the request goes through
       # usually.
-      if remain > 0
-        read_body(socket, remain) or return nil # fail!
-      end
+      read_body(socket, remain) if remain > 0
       @body.rewind
       @body.sysseek(0) if @body.respond_to?(:sysseek)
 
@@ -153,16 +151,14 @@ module Unicorn
         # writes always write the requested amount on a POSIX filesystem
         remain -= @body.syswrite(read_socket(socket))
       end
-      true # success!
     rescue Object => e
       @logger.error "Error reading HTTP body: #{e.inspect}"
-      socket.closed? or socket.close rescue nil
 
       # Any errors means we should delete the file, including if the file
       # is dumped.  Truncate it ASAP to help avoid page flushes to disk.
       @body.truncate(0) rescue nil
       reset
-      false
+      raise e
     end
 
     # read(2) on "slow" devices like sockets can be interrupted by signals
