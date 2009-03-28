@@ -67,8 +67,7 @@ module Unicorn
       # an Exception thrown from the @parser will throw us out of the loop
       loop do
         data << read_socket(socket)
-        @parser.execute(@params, data) and
-            return handle_body(socket)
+        @parser.execute(@params, data) and return handle_body(socket)
       end
       rescue HttpParserError => e
         @logger.error "HTTP parse error, malformed request " \
