@@ -25,8 +25,8 @@ class WebServerTest < Test::Unit::TestCase
     @tester = TestHandler.new
     redirect_test_io do
       @server = HttpServer.new(@tester, :listeners => [ "127.0.0.1:#{@port}" ] )
+      @server.start
     end
-    @server.start
   end
 
   def teardown
