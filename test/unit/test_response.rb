@@ -13,6 +13,7 @@ class ResponseTest < Test::Unit::TestCase
   def test_response_headers
     out = StringIO.new
     HttpResponse.write(out,[200, {"X-Whatever" => "stuff"}, ["cool"]])
+    assert out.closed?
 
     assert out.length > 0, "output didn't have data"
   end
@@ -22,6 +23,7 @@ class ResponseTest < Test::Unit::TestCase
     $, = "\f\v"
     out = StringIO.new
     HttpResponse.write(out,[200, {"X-Whatever" => "stuff"}, ["cool"]])
+    assert out.closed?
     resp = out.string
     assert ! resp.include?("\f\v"), "output didn't use $, ($OFS)"
     ensure
@@ -31,6 +33,7 @@ class ResponseTest < Test::Unit::TestCase
   def test_response_200
     io = StringIO.new
     HttpResponse.write(io, [200, {}, []])
+    assert io.closed?
     assert io.length > 0, "output didn't have data"
   end
 
@@ -38,6 +41,7 @@ class ResponseTest < Test::Unit::TestCase
     code = 400
     io = StringIO.new
     HttpResponse.write(io, [code, {}, []])
+    assert io.closed?
     lines = io.string.split(/\r\n/)
     assert_match(/.* #{HTTP_STATUS_CODES[code]}$/, lines.first,
                  "wrong default reason phrase")
@@ -46,6 +50,7 @@ class ResponseTest < Test::Unit::TestCase
   def test_rack_multivalue_headers
     out = StringIO.new
     HttpResponse.write(out,[200, {"X-Whatever" => "stuff\nbleh"}, []])
+    assert out.closed?
     assert_match(/^X-Whatever: stuff\r\nX-Whatever: bleh\r\n/, out.string)
   end
 
