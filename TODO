@@ -1,5 +1,33 @@
-tests for timeouts
-Performance
-QA behaviour on 1.9
-X Make sure Echoe doesn't activate itself in packaged gems
-Optimize Rack's dispatcher http://github.com/chneukirchen/rack/blob/cf040ea68a6a60a11f484a2145d2e62c34e7487e/lib/rack/urlmap.rb
+== 1.0.0
+
+  * integration tests for Rails 1.2.x-2.2.x and 2.3.x+
+
+  * tests for preload_app boolean
+
+  * reexec_worker_processes config option:
+    This is the number of worker processes to startup initially
+    when being reexecuted.
+
+    Default: worker_processes/2 + 1
+
+  * integration tests with nginx including bad client handling
+
+  * Unicorn philosophy documentation
+
+  * cleanup HttpParser handling of HTTP_BODY
+
+  * read CLI switches in config.ru at startup, not load time
+
+  * tests for timeout
+
+  * per-listener backlog, sndbuf, rcvbuf settings in Configurator
+
+  * QA behaviour on 1.9 (with Rails 2.3.x+)
+
+  * manpages (why do so few Ruby executables come with proper manpages?)
+
+== 1.1.0
+
+  * Transfer-Encoding: chunked request handling.  Testcase:
+
+      curl -T- http://host:port/path < file_from_stdin
