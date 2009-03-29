@@ -54,5 +54,15 @@ class ResponseTest < Test::Unit::TestCase
     assert_match(/^X-Whatever: stuff\r\nX-Whatever: bleh\r\n/, out.string)
   end
 
-end
+  def test_body_closed
+    expect_body = %w(1 2 3 4).join("\n")
+    body = StringIO.new(expect_body)
+    body.rewind
+    out = StringIO.new
+    HttpResponse.write(out,[200, {}, body])
+    assert out.closed?
+    assert body.closed?
+    assert_match(expect_body, out.string.split(/\r\n/).last)
+  end
 
+end
