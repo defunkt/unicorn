@@ -19,6 +19,7 @@
 static VALUE mUnicorn;
 static VALUE cHttpParser;
 static VALUE eHttpParserError;
+static VALUE sym_http_body;
 
 #define HTTP_PREFIX "HTTP_"
 #define HTTP_PREFIX_LEN (sizeof(HTTP_PREFIX) - 1)
@@ -31,7 +32,6 @@ static VALUE global_http_version;
 static VALUE global_content_length;
 static VALUE global_request_path;
 static VALUE global_content_type;
-static VALUE global_http_body;
 static VALUE global_server_name;
 static VALUE global_server_port;
 static VALUE global_server_protocol;
@@ -299,7 +299,7 @@ static void header_done(void *data, const char *at, size_t length)
   }
 
   /* grab the initial body and stuff it into the hash */
-  rb_hash_aset(req, global_http_body, rb_str_new(at, length));
+  rb_hash_aset(req, sym_http_body, rb_str_new(at, length));
   rb_hash_aset(req, global_server_protocol, global_server_protocol_value);
 }
 
@@ -413,7 +413,6 @@ void Init_http11()
   DEF_GLOBAL(http_version, "HTTP_VERSION");
   DEF_GLOBAL(request_path, "REQUEST_PATH");
   DEF_GLOBAL(content_length, "CONTENT_LENGTH");
-  DEF_GLOBAL(http_body, "HTTP_BODY");
   DEF_GLOBAL(content_type, "CONTENT_TYPE");
   DEF_GLOBAL(server_name, "SERVER_NAME");
   DEF_GLOBAL(server_port, "SERVER_PORT");
@@ -430,5 +429,6 @@ void Init_http11()
   rb_define_method(cHttpParser, "initialize", HttpParser_init,0);
   rb_define_method(cHttpParser, "reset", HttpParser_reset,0);
   rb_define_method(cHttpParser, "execute", HttpParser_execute,2);
+  sym_http_body = ID2SYM(rb_intern("http_body"));
   init_common_fields();
 }

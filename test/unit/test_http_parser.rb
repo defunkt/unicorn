@@ -113,7 +113,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'PUT', req['REQUEST_METHOD']
     assert_equal 'HTTP/1.0', req['HTTP_VERSION']
     assert_equal 'HTTP/1.1', req['SERVER_PROTOCOL']
-    assert_equal "abcde", req['HTTP_BODY']
+    assert_equal "abcde", req[:http_body]
   end
 
   def test_put_body_later
@@ -126,7 +126,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'PUT', req['REQUEST_METHOD']
     assert_equal 'HTTP/1.0', req['HTTP_VERSION']
     assert_equal 'HTTP/1.1', req['SERVER_PROTOCOL']
-    assert_equal "", req['HTTP_BODY']
+    assert_equal "", req[:http_body]
   end
 
   def test_fragment_in_uri

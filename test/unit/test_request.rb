@@ -50,6 +50,7 @@ class RequestTest < Test::Unit::TestCase
       "abcde")
     res = env = nil
     assert_nothing_raised { env = @request.read(client) }
+    assert ! env.include?(:http_body)
     assert_nothing_raised { res = @lint.call(env) }
   end
 
@@ -71,6 +72,7 @@ class RequestTest < Test::Unit::TestCase
     assert_equal 0, client.sysseek(0)
     res = env = nil
     assert_nothing_raised { env = @request.read(client) }
+    assert ! env.include?(:http_body)
     assert_equal length, env['rack.input'].size
     count.times { assert_equal buf, env['rack.input'].read(bs) }
     assert_nil env['rack.input'].read(bs)

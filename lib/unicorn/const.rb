@@ -54,9 +54,6 @@ module Unicorn
     # This is the part of the path after the SCRIPT_NAME.
     PATH_INFO="PATH_INFO".freeze
     
-    # Request body
-    HTTP_BODY="HTTP_BODY".freeze
-
     # The original URI requested by the client.
     REQUEST_URI='REQUEST_URI'.freeze
     REQUEST_PATH='REQUEST_PATH'.freeze

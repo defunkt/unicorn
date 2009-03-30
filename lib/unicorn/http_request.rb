@@ -83,7 +83,7 @@ module Unicorn
     # Handles dealing with the rest of the request
     # returns a Rack environment if successful, raises an exception if not
     def handle_body(socket)
-      http_body = @params[Const::HTTP_BODY]
+      http_body = @params.delete(:http_body)
       content_length = @params[Const::CONTENT_LENGTH].to_i
       remain = content_length - http_body.length
 
