@@ -21,6 +21,7 @@ require 'rack/file'
 # fast as if you use a static server like nginx).
 class Unicorn::App::OldRails::Static
   FILE_METHODS = { 'GET' => true, 'HEAD' => true }.freeze
+  REQUEST_METHOD = 'REQUEST_METHOD'.freeze
 
   def initialize(app)
     @app = app
@@ -30,8 +31,7 @@ class Unicorn::App::OldRails::Static
 
   def call(env)
     # short circuit this ASAP if serving non-file methods
-    FILE_METHODS.include?(env[Unicorn::Const::REQUEST_METHOD]) or
-      return @app.call(env)
+    FILE_METHODS.include?(env[REQUEST_METHOD]) or return @app.call(env)
 
     # first try the path as-is
     path_info = env[Unicorn::Const::PATH_INFO].chomp("/")
