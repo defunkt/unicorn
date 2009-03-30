@@ -45,4 +45,28 @@ class TestConfigurator < Test::Unit::TestCase
     assert_nil @logger
   end
 
+  def test_listen_options
+    tmp = Tempfile.new('unicorn_config')
+    expect = { :sndbuf => 1, :rcvbuf => 2, :backlog => 10 }.freeze
+    listener = "127.0.0.1:12345"
+    tmp.syswrite("listen '#{listener}', #{expect.inspect}\n")
+    cfg = nil
+    assert_nothing_raised do
+      cfg = Unicorn::Configurator.new(:config_file => tmp.path)
+    end
+    assert_nothing_raised { cfg.commit!(self) }
+    assert(listener_opts = instance_variable_get("@listener_opts"))
+    assert_equal expect, listener_opts[listener]
+  end
+
+  def test_listen_option_bad
+    tmp = Tempfile.new('unicorn_config')
+    expect = { :sndbuf => "five" }
+    listener = "127.0.0.1:12345"
+    tmp.syswrite("listen '#{listener}', #{expect.inspect}\n")
+    assert_raises(ArgumentError) do
+      Unicorn::Configurator.new(:config_file => tmp.path)
+    end
+  end
+
 end

@@ -20,8 +20,6 @@
 
   * tests for timeout
 
-  * per-listener backlog, sndbuf, rcvbuf settings in Configurator
-
   * QA behaviour on 1.9 (with Rails 2.3.x+)
 
   * manpages (why do so few Ruby executables come with proper manpages?)

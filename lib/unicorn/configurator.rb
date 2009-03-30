@@ -43,7 +43,6 @@ module Unicorn
           server.logger.info("forked child re-executing...")
         },
       :pid => nil,
-      :backlog => 1024,
       :preload_app => false,
       :stderr_path => nil,
       :stdout_path => nil,
@@ -81,23 +80,6 @@ module Unicorn
 
     def [](key) # :nodoc:
       @set[key]
-    end
-
-    # Changes the listen() syscall backlog to +nr+ for yet-to-be-created
-    # sockets.  Due to limitations of the OS, this cannot affect
-    # existing listener sockets in any way, sockets must be completely
-    # closed and rebound (inherited sockets preserve their existing
-    # backlog setting).  Some operating systems allow negative values
-    # here to specify the maximum allowable value.  See the listen(2)
-    # syscall documentation of your OS for the exact semantics of this.
-    #
-    # If you are running unicorn on multiple machines, lowering this number
-    # can help your load balancer detect when a machine is overloaded
-    # and give requests to a different machine.
-    def backlog(nr)
-      Integer === nr or raise ArgumentError,
-         "not an integer: backlog=#{nr.inspect}"
-      @set[:backlog] = nr
     end
 
     # sets object to the +new+ Logger-like object.  The new logger-like
@@ -177,10 +159,57 @@ module Unicorn
       @set[:listeners] = addresses
     end
 
-    # adds an +address+ to the existing listener set
-    def listen(address)
+    # adds an +address+ to the existing listener set.
+    #
+    # The following options may be specified (but are generally not needed):
+    #
+    # +backlog+: this is the backlog of the listen() syscall.
+    #
+    #   Some operating systems allow negative values here to specify the
+    #   maximum allowable value.  In most cases, this number is only
+    #   recommendation and there are other OS-specific tunables and
+    #   variables that can affect this number.  See the listen(2)
+    #   syscall documentation of your OS for the exact semantics of
+    #   this.
+    #
+    #   If you are running unicorn on multiple machines, lowering this number
+    #   can help your load balancer detect when a machine is overloaded
+    #   and give requests to a different machine.
+    #
+    #   Default: 1024
+    #
+    # +rcvbuf+, +sndbuf+: maximum send and receive buffer sizes of sockets
+    #
+    #   These correspond to the SO_RCVBUF and SO_SNDBUF settings which
+    #   can be set via the setsockopt(2) syscall.  Some kernels
+    #   (e.g. Linux 2.4+) have intelligent auto-tuning mechanisms and
+    #   there is no need (and it is sometimes detrimental) to specify them.
+    #
+    #   See the socket API documentation of your operating system
+    #   to determine the exact semantics of these settings and
+    #   other operating system-specific knobs where they can be
+    #   specified.
+    #
+    #   Defaults: operating system defaults
+    #
+    # Due to limitations of the operating system, options specified here
+    # cannot affect existing listener sockets in any way, sockets must be
+    # completely closed and rebound.
+    def listen(address, opt = { :backlog => 1024 })
+      address = expand_addr(address)
+      if String === address
+        Hash === @set[:listener_opts] or
+          @set[:listener_opts] = Hash.new { |hash,key| hash[key] = {} }
+        [ :backlog, :sndbuf, :rcvbuf ].each do |key|
+          value = opt[key] or next
+          Integer === value or
+            raise ArgumentError, "not an integer: #{key}=#{value.inspect}"
+        end
+        @set[:listener_opts][address].merge!(opt)
+      end
+
       @set[:listeners] = [] unless Array === @set[:listeners]
-      @set[:listeners] << expand_addr(address)
+      @set[:listeners] << address
     end
 
     # sets the +path+ for the PID file of the unicorn master process

@@ -59,6 +59,7 @@ module Unicorn
       @request = @rd_sig = @wr_sig = nil
       @reexec_pid = 0
       @config = Configurator.new(options.merge(:use_defaults => true))
+      @listener_opts = {}
       @config.commit!(self, :skip => [:listeners, :pid])
       @listeners = []
     end
@@ -135,7 +136,7 @@ module Unicorn
     def listen(address)
       return if String === address && listener_names.include?(address)
 
-      if io = bind_listen(address, { :backlog => @backlog })
+      if io = bind_listen(address, @listener_opts[address] || {})
         if Socket == io.class
           @io_purgatory << io
           io = server_cast(io)
