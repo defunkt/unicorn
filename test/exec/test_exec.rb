@@ -128,7 +128,9 @@ end
     Process.kill(:USR2, File.read(pid_file).to_i)
     wait_for_file(old_file)
     wait_for_file(pid_file)
-    Process.kill(:QUIT, File.read(old_file).to_i)
+    old_pid = File.read(old_file).to_i
+    Process.kill(:QUIT, old_pid)
+    wait_for_death(old_pid)
 
     ucfg.syswrite("timeout %(#{pid_file})\n") # introduce a bug
     current_pid = File.read(pid_file).to_i
@@ -158,7 +160,8 @@ end
     ucfg.syswrite("listen %(#@addr:#@port)\n")
     ucfg.syswrite("listen %(#@addr:#{port2})\n")
     ucfg.syswrite("pid %(#{pid_file})\n")
-    Process.kill(:USR2, current_pid)
+    assert_nothing_raised { Process.kill(:USR2, current_pid) }
+
     wait_for_file(old_file)
     wait_for_file(pid_file)
     new_pid = File.read(pid_file).to_i
@@ -195,7 +198,9 @@ end
     Process.kill(:USR2, File.read(pid_file).to_i)
     wait_for_file(old_file)
     wait_for_file(pid_file)
-    Process.kill(:QUIT, File.read(old_file).to_i)
+    old_pid = File.read(old_file).to_i
+    Process.kill(:QUIT, old_pid)
+    wait_for_death(old_pid)
 
     File.unlink("config.ru") # break reloading
     current_pid = File.read(pid_file).to_i
@@ -220,7 +225,7 @@ end
 
     # fix the bug
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
-    Process.kill(:USR2, current_pid)
+    assert_nothing_raised { Process.kill(:USR2, current_pid) }
     wait_for_file(old_file)
     wait_for_file(pid_file)
     new_pid = File.read(pid_file).to_i
@@ -293,20 +298,21 @@ end
     # USR1 should've been passed to all workers
     tries = DEFAULT_TRIES
     log = File.readlines(rotate.path)
-    while (tries -= 1) > 0 && log.grep(/rotating logs\.\.\./).size < 4
+    while (tries -= 1) > 0 &&
+          log.grep(/rotating logs\.\.\./).size < 5
       sleep DEFAULT_RES
       log = File.readlines(rotate.path)
     end
-    assert_equal 4, log.grep(/worker=\d+ rotating logs\.\.\./).size
+    assert_equal 5, log.grep(/rotating logs\.\.\./).size
     assert_equal 0, log.grep(/done rotating logs/).size
 
     tries = DEFAULT_TRIES
     log = File.readlines(COMMON_TMP.path)
-    while (tries -= 1) > 0 && log.grep(/done rotating logs/).size < 4
+    while (tries -= 1) > 0 && log.grep(/done rotating logs/).size < 5
       sleep DEFAULT_RES
       log = File.readlines(COMMON_TMP.path)
     end
-    assert_equal 4, log.grep(/worker=\d+ done rotating logs/).size
+    assert_equal 5, log.grep(/done rotating logs/).size
     assert_equal 0, log.grep(/rotating logs\.\.\./).size
     assert_nothing_raised { Process.kill(:QUIT, pid) }
     status = nil
@@ -529,15 +535,18 @@ end
       wait_for_file("#{pid_file}.oldbin")
       wait_for_file(pid_file)
 
+      old_pid = File.read("#{pid_file}.oldbin").to_i
+      new_pid = File.read(pid_file).to_i
+
       # kill old master process
-      assert_not_equal pid, File.read(pid_file).to_i
-      assert_equal pid, File.read("#{pid_file}.oldbin").to_i
-      assert_nothing_raised { Process.kill(:QUIT, pid) }
-      assert_not_equal pid, File.read(pid_file).to_i
+      assert_not_equal pid, new_pid
+      assert_equal pid, old_pid
+      assert_nothing_raised { Process.kill(:QUIT, old_pid) }
       assert_nothing_raised { retry_hit(["http://#{@addr}:#{@port}/"]) }
-      wait_for_file(pid_file)
+      wait_for_death(old_pid)
+      assert_equal new_pid, File.read(pid_file).to_i
       assert_nothing_raised { retry_hit(["http://#{@addr}:#{@port}/"]) }
-      assert_nothing_raised { Process.kill(:QUIT, File.read(pid_file).to_i) }
+      assert_nothing_raised { Process.kill(:QUIT, new_pid) }
     end
 
     def reexec_basic_test(pid, pid_file)
@@ -578,6 +587,24 @@ end
         end
         yield
       end
+    end
+
+    # can't waitpid on detached processes
+    def wait_for_death(pid)
+      tries = DEFAULT_TRIES
+      while (tries -= 1) > 0
+        begin
+          Process.kill(0, pid)
+          begin
+            Process.waitpid(pid, Process::WNOHANG)
+          rescue Errno::ECHILD
+          end
+          sleep(DEFAULT_RES)
+        rescue Errno::ESRCH
+          return
+        end
+      end
+      raise "PID:#{pid} never died!"
     end
 
 end if do_test
