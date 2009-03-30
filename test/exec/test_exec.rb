@@ -31,13 +31,13 @@ class ExecTest < Test::Unit::TestCase
 
   HI = <<-EOS
 use Rack::ContentLength
-run proc { |env| [ 200, { 'Content-Type' => 'text/plain' }, "HI\\n" ] }
+run proc { |env| [ 200, { 'Content-Type' => 'text/plain' }, [ "HI\\n" ] ] }
   EOS
 
   HELLO = <<-EOS
 class Hello
   def call(env)
-    [ 200, { 'Content-Type' => 'text/plain' }, "HI\\n" ]
+    [ 200, { 'Content-Type' => 'text/plain' }, [ "HI\\n" ] ]
   end
 end
   EOS
