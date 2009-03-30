@@ -126,8 +126,8 @@ rails_loader = lambda do ||
     defined?(::RAILS_ENV) or abort "RAILS_ENV not defined by config/boot"
     defined?(::Rails::VERSION::STRING) or
       abort "Rails::VERSION::STRING not defined by config/boot"
-  rescue LoadError
-    abort "#$0 must be run inside RAILS_ROOT (#{::RAILS_ROOT})"
+  rescue LoadError => err
+    abort "#$0 must be run inside RAILS_ROOT=(#{::RAILS_ROOT}) #{err.inspect}"
   end
 
   case config
