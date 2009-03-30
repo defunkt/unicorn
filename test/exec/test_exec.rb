@@ -215,13 +215,13 @@ end
     rescue Errno::ENOENT
       (sleep(DEFAULT_RES) and (tries -= 1) > 0) and retry
     end
-    assert_equal current_pid, File.read(pid_file).to_i
 
     tries = DEFAULT_TRIES
     while File.exist?(old_file)
       (sleep(DEFAULT_RES) and (tries -= 1) > 0) or break
     end
     assert ! File.exist?(old_file), "oldbin=#{old_file} gone"
+    assert_equal current_pid, File.read(pid_file).to_i
 
     # fix the bug
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
