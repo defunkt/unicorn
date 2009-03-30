@@ -8,7 +8,8 @@ module Unicorn
   #
   # Example (when used with the unicorn config file):
   #   worker_processes 4
-  #   listeners %w(0.0.0.0:9292 /tmp/my_app.sock)
+  #   listen '/tmp/my_app.sock', :backlog => 1
+  #   listen '0.0.0.0:9292'
   #   timeout 10
   #   pid "/tmp/my_app.pid"
   #   after_fork do |server,worker_nr|
@@ -23,7 +24,7 @@ module Unicorn
     # Default settings for Unicorn
     DEFAULTS = {
       :timeout => 60,
-      :listeners => [ Const::DEFAULT_LISTEN ],
+      :listeners => [],
       :logger => DEFAULT_LOGGER,
       :worker_processes => 1,
       :after_fork => lambda { |server, worker_nr|
@@ -153,7 +154,9 @@ module Unicorn
     # sets listeners to the given +addresses+, replacing or augmenting the
     # current set.  This is for the global listener pool shared by all
     # worker processes.  For per-worker listeners, see the after_fork example
-    def listeners(addresses)
+    # This is for internal API use only, do not use it in your Unicorn
+    # config file.  Use listen instead.
+    def listeners(addresses) # :nodoc:
       Array === addresses or addresses = Array(addresses)
       addresses.map! { |addr| expand_addr(addr) }
       @set[:listeners] = addresses

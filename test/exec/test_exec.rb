@@ -112,7 +112,7 @@ end
     pid_file = "#{@tmpdir}/test.pid"
     old_file = "#{pid_file}.oldbin"
     ucfg = Tempfile.new('unicorn_test_config')
-    ucfg.syswrite("listeners %w(#{@addr}:#{@port})\n")
+    ucfg.syswrite("listen %(#@addr:#@port)\n")
     ucfg.syswrite("pid %(#{pid_file})\n")
     ucfg.syswrite("logger Logger.new(%(#{@tmpdir}/log))\n")
     pid = xfork do
@@ -155,7 +155,8 @@ end
     # fix the bug
     ucfg.sysseek(0)
     ucfg.truncate(0)
-    ucfg.syswrite("listeners %w(#{@addr}:#{@port} #{@addr}:#{port2})\n")
+    ucfg.syswrite("listen %(#@addr:#@port)\n")
+    ucfg.syswrite("listen %(#@addr:#{port2})\n")
     ucfg.syswrite("pid %(#{pid_file})\n")
     Process.kill(:USR2, current_pid)
     wait_for_file(old_file)
@@ -234,19 +235,16 @@ end
     end
   end
 
-  def test_unicorn_config_listeners_overrides_cli
-    port2 = unused_port(@addr)
+  def test_unicorn_config_listen_with_options
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
-    # listeners = [ ... ]  => should _override_ command-line options
     ucfg = Tempfile.new('unicorn_test_config')
-    ucfg.syswrite("listeners %w(#{@addr}:#{@port})\n")
+    ucfg.syswrite("listen '#{@addr}:#{@port}', :backlog => 512,\n")
+    ucfg.syswrite("                            :rcvbuf => 4096,\n")
+    ucfg.syswrite("                            :sndbuf => 4096\n")
     pid = xfork do
-      redirect_test_io do
-        exec($unicorn_bin, "-c#{ucfg.path}", "-l#{@addr}:#{port2}")
-      end
+      redirect_test_io { exec($unicorn_bin, "-c#{ucfg.path}") }
     end
     results = retry_hit(["http://#{@addr}:#{@port}/"])
-    assert_raises(Errno::ECONNREFUSED) { TCPSocket.new(@addr, port2) }
     assert_equal String, results[0].class
     assert_shutdown(pid)
   end
