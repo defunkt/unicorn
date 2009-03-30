@@ -26,6 +26,7 @@ class Unicorn::CGIWrapper < ::CGI
   CHARSET = 'charset'.freeze # this gets appended to Content-Type
   COOKIE = 'cookie'.freeze # maps (Hash,Array,String) to "Set-Cookie" headers
   STATUS = 'status'.freeze # stored as @status
+  Status = 'Status'.freeze # fallback, Rails sets this
 
   # some of these are common strings, but this is the only module
   # using them and the reason they're not in Unicorn::Const
@@ -63,6 +64,7 @@ class Unicorn::CGIWrapper < ::CGI
     cookies = @head.delete(:cookies)
     cookies.empty? or @head[SET_COOKIE] = cookies.join("\n")
     @head[CONTENT_LENGTH] ||= @body.size
+    @head.delete(Status)
 
     [ @status, @head, [ @body.string ] ]
   end
@@ -97,7 +99,8 @@ class Unicorn::CGIWrapper < ::CGI
           cookies << cookie.to_s
         end
       end
-      @status ||= (status = options.delete(STATUS))
+      @status ||= (status = options.delete(STATUS)) # all lower-case
+      @status ||= (status = options.delete(Status)) # Capitalized
       # drop the keys we don't want anymore
       options.delete(NPH)
       options.delete(CONNECTION)
