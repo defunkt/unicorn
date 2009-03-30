@@ -124,9 +124,9 @@ module Unicorn
           raise ArgumentError, "Already running on PID:#{x} " \
                                "(or pid=#{path} is stale)"
         end
-        File.open(path, 'wb') { |fp| fp.syswrite("#{$$}\n") }
       end
-      unlink_pid_safe(@pid) if @pid && @pid != path
+      unlink_pid_safe(@pid) if @pid
+      File.open(path, 'wb') { |fp| fp.syswrite("#$$\n") } if path
       @pid = path
     end
 
