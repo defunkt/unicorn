@@ -105,22 +105,25 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   opts.parse! ARGV
 end
 
+config = ARGV[0] || "config.ru"
+abort "configuration file #{config} not found" unless File.exist?(config)
+
+if config =~ /\.ru$/
+  # parse embedded command-line options in config.ru comments
+  if File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) } =~ /^#\\(.*)/
+    opts.parse! $1.split(/\s+/)
+  end
+end
+
 require 'pp' if $DEBUG
 
 # require Rack as late as possible in case $LOAD_PATH is modified
 # in config.ru or command-line
 require 'rack'
 
-config = ARGV[0] || "config.ru"
-abort "configuration file #{config} not found" unless File.exist?(config)
-
 inner_app = case config
 when /\.ru$/
   raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }
-  # parse embedded command-line options in config.ru comments
-  if raw[/^#\\(.*)/]
-    opts.parse! $1.split(/\s+/)
-  end
   lambda { || eval("Rack::Builder.new {(#{raw}\n)}.to_app", nil, config) }
 else
   lambda do ||

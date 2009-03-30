@@ -105,6 +105,15 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   opts.parse! ARGV
 end
 
+config = ARGV[0] || (File.exist?('config.ru') ? 'config.ru' : nil)
+
+if config && config =~ /\.ru$/
+  # parse embedded command-line options in config.ru comments
+  if File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) } =~ /^#\\(.*)/
+    opts.parse! $1.split(/\s+/)
+  end
+end
+
 require 'pp' if $DEBUG
 
 # Loads Rails and the private version of Rack it bundles. Returns a
@@ -121,8 +130,6 @@ rails_loader = lambda do ||
     abort "#$0 must be run inside RAILS_ROOT (#{::RAILS_ROOT})"
   end
 
-  # return the lambda
-  config = ::ARGV[0] || (File.exist?('config.ru') ? 'config.ru' : nil)
   case config
   when nil
     lambda do ||
@@ -146,11 +153,6 @@ rails_loader = lambda do ||
     end
   when /\.ru$/
     raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }
-    # parse embedded command-line options in config.ru comments
-    if raw[/^#\\(.*)/]
-      opts.parse! $1.split(/\s+/)
-      require 'pp' if $DEBUG
-    end
     lambda { || eval("Rack::Builder.new {(#{raw}\n)}.to_app", nil, config) }
   else
     lambda do ||
