@@ -57,7 +57,8 @@ test: $(T) $(T_n)
 	@cat $(t_log) | $(ruby) test/aggregate.rb
 	@$(RM) $(t_log)
 
-slow-tests: $(slow_tests)
+test-exec: $(wildcard test/exec/test_*.rb)
+test-unit: $(wildcard test/unit/test_*.rb)
 $(slow_tests):
 	@$(MAKE) $(shell $(awk_slow) $@)
 
