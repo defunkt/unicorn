@@ -6,8 +6,8 @@ env = "development"
 daemonize = false
 listeners = []
 options = { :listeners => listeners }
-host = Unicorn::Const::DEFAULT_HOST
-port = Unicorn::Const::DEFAULT_PORT
+host, port = Unicorn::Const::DEFAULT_HOST, Unicorn::Const::DEFAULT_PORT
+set_listener = false
 
 opts = OptionParser.new("", 24, '  ') do |opts|
   opts.banner = "Usage: #{File.basename($0)} " \
@@ -46,11 +46,13 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   opts.on("-o", "--host HOST",
           "listen on HOST (default: #{Unicorn::Const::DEFAULT_HOST})") do |h|
     host = h
+    set_listener = true
   end
 
   opts.on("-p", "--port PORT",
           "use PORT (default: #{Unicorn::Const::DEFAULT_PORT})") do |p|
     port = p.to_i
+    set_listener = true
   end
 
   opts.on("-E", "--env ENVIRONMENT",
@@ -148,10 +150,7 @@ else
   inner_app
 end
 
-if listeners.empty?
-  listener = "#{host}:#{port}"
-  listeners << listener
-end
+listeners << "#{host}:#{port}" if set_listener
 
 if $DEBUG
   pp({

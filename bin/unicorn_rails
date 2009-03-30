@@ -10,7 +10,8 @@ daemonize = false
 static = true
 listeners = []
 options = { :listeners => listeners }
-host, port = Unicorn::Const::DEFAULT_HOST, 3000
+host, port = Unicorn::Const::DEFAULT_HOST, Unicorn::Const::DEFAULT_PORT
+set_listener = false
 ENV['RAILS_ENV'] ||= "development"
 map_path = ENV['RAILS_RELATIVE_URL_ROOT']
 
@@ -50,10 +51,12 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   opts.on("-o", "--host HOST",
           "listen on HOST (default: #{Unicorn::Const::DEFAULT_HOST})") do |h|
     host = h
+    set_listener = true
   end
 
   opts.on("-p", "--port PORT", "use PORT (default: #{port})") do |p|
     port = p.to_i
+    set_listener = true
   end
 
   opts.on("-E", "--env ENVIRONMENT",
@@ -187,10 +190,7 @@ app = lambda do ||
   end.to_app
 end
 
-if listeners.empty?
-  listener = "#{host}:#{port}"
-  listeners << listener
-end
+listeners << "#{host}:#{port}" if set_listener
 
 if $DEBUG
   pp({

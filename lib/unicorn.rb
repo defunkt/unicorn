@@ -86,6 +86,9 @@ module Unicorn
       # share the same OS-level file descriptor as the higher-level *Server
       # objects; we need to prevent Socket objects from being garbage-collected
       config_listeners -= listener_names
+      if config_listeners.empty? && @listeners.empty?
+        config_listeners << Unicorn::Const::DEFAULT_LISTEN
+      end
       config_listeners.each { |addr| listen(addr) }
       raise ArgumentError, "no listeners" if @listeners.empty?
       self.pid = @config[:pid]
@@ -133,10 +136,10 @@ module Unicorn
     # add a given address to the +listeners+ set, idempotently
     # Allows workers to add a private, per-process listener via the
     # @after_fork hook.  Very useful for debugging and testing.
-    def listen(address)
+    def listen(address, opt = {}.merge(@listener_opts[address] || {}))
       return if String === address && listener_names.include?(address)
 
-      if io = bind_listen(address, @listener_opts[address] || {})
+      if io = bind_listen(address, opt)
         if Socket == io.class
           @io_purgatory << io
           io = server_cast(io)
