@@ -286,16 +286,26 @@ module Unicorn
       @set[var] = my_proc
     end
 
+    # expands "unix:path/to/foo" to a socket relative to the current path
     # expands pathnames of sockets if relative to "~" or "~username"
     # expands "*:port and ":port" to "0.0.0.0:port"
     def expand_addr(address) #:nodoc
       return address unless String === address
-      if address[0..0] == '~'
-        return File.expand_path(address)
-      elsif address =~ %r{\A\*?:(\d+)\z}
-        return "0.0.0.0:#$1"
+
+      case address
+      when %r{\Aunix:(.*)\z}
+        File.expand_path($1)
+      when %r{\A~}
+        File.expand_path(address)
+      when %r{\A\*:(\d+)\z}
+        "0.0.0.0:#$1"
+      when %r{\A(.*):(\d+)\z}
+        # canonicalize the name
+        packed = Socket.pack_sockaddr_in($2.to_i, $1)
+        Socket.unpack_sockaddr_in(packed).reverse!.join(':')
+      else
+        address
       end
-      address
     end
 
   end

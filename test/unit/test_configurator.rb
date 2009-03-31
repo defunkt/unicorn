@@ -8,6 +8,28 @@ class TestConfigurator < Test::Unit::TestCase
     assert_nothing_raised { Unicorn::Configurator.new {} }
   end
 
+  def test_expand_addr
+    meth = Unicorn::Configurator.new.method(:expand_addr)
+
+    assert_equal "/var/run/unicorn.sock", meth.call("/var/run/unicorn.sock")
+    assert_equal "#{Dir.pwd}/foo/bar.sock", meth.call("unix:foo/bar.sock")
+
+    path = meth.call("~/foo/bar.sock")
+    assert_equal "/", path[0..0]
+    assert_match %r{/foo/bar\.sock\z}, path
+
+    path = meth.call("~root/foo/bar.sock")
+    assert_equal "/", path[0..0]
+    assert_match %r{/foo/bar\.sock\z}, path
+
+    assert_equal "1.2.3.4:2007", meth.call('1.2.3.4:2007')
+    assert_equal "0.0.0.0:2007", meth.call('0.0.0.0:2007')
+    assert_equal "0.0.0.0:2007", meth.call(':2007')
+    assert_equal "0.0.0.0:2007", meth.call('*:2007')
+    assert_match %r{\A\d+\.\d+\.\d+\.\d+:2007\z}, meth.call('1:2007')
+    assert_match %r{\A\d+\.\d+\.\d+\.\d+:2007\z}, meth.call('2:2007')
+  end
+
   def test_config_invalid
     tmp = Tempfile.new('unicorn_config')
     tmp.syswrite(%q(asdfasdf "hello-world"))
