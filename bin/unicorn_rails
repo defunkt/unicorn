@@ -7,7 +7,6 @@ rails_pid = File.join(Unicorn::HttpServer::DEFAULT_START_CTX[:cwd],
                       "/tmp/pids/unicorn.pid")
 cmd = File.basename($0)
 daemonize = false
-static = true
 listeners = []
 options = { :listeners => listeners }
 host, port = Unicorn::Const::DEFAULT_HOST, Unicorn::Const::DEFAULT_PORT
@@ -175,17 +174,15 @@ app = lambda do ||
       $stderr.puts "LogTailer not available for Rails < 2.3" unless daemonize
       $stderr.puts "Debugger not available" if $DEBUG
       map(map_path) do
-        if static
-          require 'unicorn/app/old_rails/static'
-          use Unicorn::App::OldRails::Static
-        end
+        require 'unicorn/app/old_rails/static'
+        use Unicorn::App::OldRails::Static
         run inner_app
       end
     else
       use Rails::Rack::LogTailer unless daemonize
       use Rails::Rack::Debugger if $DEBUG
       map(map_path) do
-        use Rails::Rack::Static if static
+        use Rails::Rack::Static
         run inner_app
       end
     end
