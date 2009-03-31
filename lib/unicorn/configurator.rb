@@ -16,8 +16,6 @@ module Unicorn
   #     server.listen("127.0.0.1:#{9293 + worker_nr}") rescue nil
   #   end
   class Configurator
-    include ::Unicorn::SocketHelper
-
     # The default logger writes its output to $stderr
     DEFAULT_LOGGER = Logger.new($stderr) unless defined?(DEFAULT_LOGGER)
 
