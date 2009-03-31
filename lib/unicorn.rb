@@ -161,7 +161,6 @@ module Unicorn
       # this pipe is used to wake us up from select(2) in #join when signals
       # are trapped.  See trap_deferred
       @rd_sig, @wr_sig = IO.pipe unless (@rd_sig && @wr_sig)
-      @rd_sig.nonblock = @wr_sig.nonblock = true
       mode = nil
       respawn = true
 
@@ -262,16 +261,16 @@ module Unicorn
       begin
         ready = IO.select([@rd_sig], nil, nil, 1)
         ready && ready[0] && ready[0][0] or return
-        loop { @rd_sig.sysread(Const::CHUNK_SIZE) }
+        loop { @rd_sig.read_nonblock(Const::CHUNK_SIZE) }
       rescue Errno::EAGAIN, Errno::EINTR
       end
     end
 
     def awaken_master
       begin
-        @wr_sig.syswrite('.') # wakeup master process from IO.select
-      rescue Errno::EAGAIN # pipe is full, master should wake up anyways
-      rescue Errno::EINTR
+        @wr_sig.write_nonblock('.') # wakeup master process from IO.select
+      rescue Errno::EAGAIN, Errno::EINTR
+        # pipe is full, master should wake up anyways
         retry
       end
     end
