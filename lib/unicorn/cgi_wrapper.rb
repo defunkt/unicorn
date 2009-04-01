@@ -38,6 +38,7 @@ class Unicorn::CGIWrapper < ::CGI
 
   # this maps CGI header names to HTTP header names
   HEADER_MAP = {
+    'status' => Status,
     'type' => CONTENT_TYPE,
     'server' => 'Server'.freeze,
     'language' => 'Content-Language'.freeze,
@@ -53,7 +54,7 @@ class Unicorn::CGIWrapper < ::CGI
   # Mongrel...
   def initialize(rack_env, *args)
     @env_table = rack_env
-    @status = 200
+    @status = nil
     @head = {}
     @headv = Hash.new { |hash,key| hash[key] = [] }
     @body = StringIO.new
@@ -66,6 +67,12 @@ class Unicorn::CGIWrapper < ::CGI
     @headv[SET_COOKIE] += @output_cookies if @output_cookies
     @headv.each_pair do |key,value|
       @head[key] ||= value.join("\n") unless value.empty?
+    end
+
+    # Capitalized "Status:", with human-readable status code (e.g. "200 OK")
+    parseable_status = @head.delete(Status)
+    unless @status
+      @status ||= parseable_status.split(/ /)[0].to_i rescue 404
     end
 
     [ @status, @head, [ @body.string ] ]
@@ -101,11 +108,11 @@ class Unicorn::CGIWrapper < ::CGI
           set_cookies << cookie.to_s
         end
       end
-      @status ||= (status = options.delete(STATUS)) # all lower-case
+      @status ||= options.delete(STATUS) # all lower-case
+
       # drop the keys we don't want anymore
       options.delete(NPH)
       options.delete(CONNECTION)
-      options.delete(Status) # Capitalized, with human-readable string
 
       # finally, set the rest of the headers as-is, allowing duplicates
       options.each_pair { |k,v| @headv[k] << v }
