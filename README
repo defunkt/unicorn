@@ -1,36 +1,48 @@
-= Unicorn: UNIX + LAN/localhost-only fork of Mongrel
+= Unicorn: Unix + LAN/localhost-optimized fork of Mongrel
 
-Only run this behind a full-HTTP-request-buffering reverse proxy if
-you're serving slow clients.  That said, nginx is the only reverse
-proxy we know of that meets this requirement.
+Unicorn is designed to only serve fast clients.  See the PHILOSOPHY
+and DESIGN documents for more details regarding this.
 
 == Features
 
-* process management: Unicorn will reap and restart workers that
-  die because of broken apps and there is no need to manage
-  multiple processes yourself.
+* Built on the solid Mongrel code base and takes full advantage
+  of functionality exclusive to Unix-like operating systems.
 
-* does not care if your application is thread-safe or not, workers
+* Mostly written in Ruby, only the HTTP parser (stolen and trimmed
+  down from Mongrel) is written in C.  Unicorn is compatible with
+  both Ruby 1.8 and 1.9.
+
+* Process management: Unicorn will reap and restart workers that
+  die from broken apps.  There is no need to manage multiple processes
+  yourself.
+
+* Load balancing is done entirely by the operating system kernel.
+  Requests never pile up behind a busy worker.
+
+* Does not care if your application is thread-safe or not, workers
   all run within their own isolated address space and only serve one
   client at a time...
 
-* able to listen on multiple interfaces, including UNIX sockets,
-  each worker process can also bind to a private port via the
-  after_fork hook for easy debugging.
+* Supports all Rack applications, along with pre-Rack versions of
+  Ruby on Rails via a Rack wrapper.
 
-* supports all Rack applications
+* Builtin log rotation of all log files in your application via USR1
+  signal.
 
 * nginx-style binary re-execution without losing connections.
-  You can upgrade unicorn, your entire application, libraries
-  and even your Ruby interpreter as long as unicorn is
+  You can upgrade Unicorn, your entire application, libraries
+  and even your Ruby interpreter as long as Unicorn is
   installed in the same path.
 
 * before_fork and after_fork hooks in case your application
   has special needs when dealing with forked processes.
 
-* builtin log rotation via USR1 signal
+* Can be used with copy-on-write-friendly memory management
+  to save memory.
 
-* Ruby 1.9-compatible (at least the test cases all pass :>)
+* Able to listen on multiple interfaces including UNIX sockets,
+  each worker process can also bind to a private port via the
+  after_fork hook for easy debugging.
 
 == License
 
@@ -40,6 +52,8 @@ It is based on Mongrel and carries the same license:
 Mongrel is copyright 2007 Zed A. Shaw and contributors. It is licensed
 under the Ruby license and the GPL2. See the include LICENSE file for
 details.
+
+Unicorn is 100% Free Software.
 
 == Install
 
@@ -74,21 +88,9 @@ your web browser and download the latest snapshot tarballs here:
 
 === non-Rails Rack applications
 
-Unicorn will look for the config.ru file used by rackup in APP_ROOT.
-Optionally, it can use a config file for unicorn-specific options
-specified by the --config-file/-c command-line switch.  See
-Unicorn::Configurator for the syntax of the unicorn-specific
-config options.
-
-In APP_ROOT, just run:
+In APP_ROOT, run:
 
   unicorn
-
-Unicorn should be capable of running most Rack applications.  Since this
-is a preforking webserver, you do not have to worry about thread-safety
-of your application or libraries. However, your Rack application may use
-threads internally (and should even be able to continue running threads
-after the request is complete).
 
 === for Rails applications (should work for all 1.2 or later versions)
 
@@ -96,23 +98,31 @@ In RAILS_ROOT, run:
 
   unicorn_rails
 
+Unicorn will bind to all interfaces TCP port 8080 by default.
+You may use the '-l/--listen' switch to bind to a different
+address:port or a UNIX socket.
+
+=== Configuration File(s)
+
+Unicorn will look for the config.ru file used by rackup in APP_ROOT.
+
+For deployments, it can use a config file for Unicorn-specific options
+specified by the --config-file/-c command-line switch.  See
+Unicorn::Configurator for the syntax of the Unicorn-specific options.
+The default settings are designed for maximum out-of-the-box
+compatibility with existing applications.
+
 Most command-line options for other Rack applications (above) are also
-supported.  The unicorn_rails launcher attempts to combine the best
-features of the Rails-bundled "script/server" with the "rackup"-like
-functionality of the `unicorn' launcher.
+supported.  Run `unicorn -h` or `unicorn_rails -h` to see command-line
+options.
 
 == Disclaimer
 
-There are only a few instances of Unicorn deployed anywhere in the
-world.  The only public site known to run Unicorn at this time is
-http://git.bogomips.org/cgit which runs Unicorn::App::ExecCgi to
-fork()+exec() cgit.
+Like the creatures themselves, production deployments of Unicorn are rare.
+There is NO WARRANTY whatsoever if anything goes wrong, but let us know and
+we'll try our best to fix it.
 
-Be one of the first brave guinea pigs to run it on your production site!
-Of course there is NO WARRANTY whatsoever if anything goes wrong, but
-let us know and we'll try our best to fix it.  Unicorn is still in the
-early stages and testing + feedback would be *greatly* appreciated;
-maybe you'll get Rainbows as a reward!
+Rainbows are NOT included.
 
 == Known Issues
 

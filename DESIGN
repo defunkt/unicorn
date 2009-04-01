@@ -79,3 +79,7 @@
 * If the master process dies unexpectedly for any reason,
   workers will notice within :timeout/2 seconds and follow
   the master to its death.
+
+* There is never any explicit real-time dependency or communication
+  between the worker processes themselves nor to the master process.
+  Synchronization is handled entirely by the OS kernel.

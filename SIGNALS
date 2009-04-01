@@ -61,27 +61,27 @@ The procedure is exactly like that of nginx:
    of unicorn running now, both of which will have workers servicing
    requests.  Your process tree should look something like this:
 
-   unicorn master (old)
-   \_ unicorn worker[0]
-   \_ unicorn worker[1]
-   \_ unicorn worker[2]
-   \_ unicorn worker[3]
-   \_ unicorn master
-      \_ unicorn worker[0]
-      \_ unicorn worker[1]
-      \_ unicorn worker[2]
-      \_ unicorn worker[3]
+     unicorn master (old)
+     \_ unicorn worker[0]
+     \_ unicorn worker[1]
+     \_ unicorn worker[2]
+     \_ unicorn worker[3]
+     \_ unicorn master
+        \_ unicorn worker[0]
+        \_ unicorn worker[1]
+        \_ unicorn worker[2]
+        \_ unicorn worker[3]
 
-4. You can now send WINCH to the old master process so only the new workers
+3. You can now send WINCH to the old master process so only the new workers
    serve requests.  If your unicorn process is bound to an interactive
    terminal, you can skip this step.  Step 5 will be more difficult but
    you can also skip it if your process is not daemonized.
 
-5. You should now ensure that everything is running correctly with the
+4. You should now ensure that everything is running correctly with the
    new workers as the old workers die off.
 
-6a. If everything seems ok, then send QUIT to the old master.  You're done!
+5. If everything seems ok, then send QUIT to the old master.  You're done!
 
-6b. If something is broken, then send HUP to the old master to reload
-    the config and restart its workers.  Then send QUIT to the new master
-    process.
+   If something is broken, then send HUP to the old master to reload
+   the config and restart its workers.  Then send QUIT to the new master
+   process.

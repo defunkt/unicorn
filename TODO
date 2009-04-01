@@ -1,7 +1,5 @@
 == 1.0.0
 
-  * integration tests for Rails 1.2.x-2.2.x and 2.3.x+
-
   * tests for preload_app boolean
 
   * reexec_worker_processes config option:
@@ -12,15 +10,7 @@
 
   * integration tests with nginx including bad client handling
 
-  * Unicorn philosophy documentation
-
-  * cleanup HttpParser handling of HTTP_BODY
-
-  * read CLI switches in config.ru at startup, not load time
-
   * tests for timeout
-
-  * QA behaviour on 1.9 (with Rails 2.3.x+)
 
   * manpages (why do so few Ruby executables come with proper manpages?)
 
@@ -29,3 +19,9 @@
   * Transfer-Encoding: chunked request handling.  Testcase:
 
       curl -T- http://host:port/path < file_from_stdin
+
+  * code cleanups (launchers)
+
+  * Pure Ruby HTTP parser
+
+  * Rubinius support?
