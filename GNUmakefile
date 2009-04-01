@@ -13,12 +13,15 @@ endif
 # dunno how to implement this as concisely in Ruby, and hell, I love awk
 awk_slow := awk '/def test_/{print FILENAME"--"$$2".n"}' 2>/dev/null
 
+rails_vers := $(subst test/rails/app-,,$(wildcard test/rails/app-*))
 slow_tests := test/unit/test_server.rb test/exec/test_exec.rb
 log_suffix = .$(RUBY_VERSION).log
-T := $(filter-out $(slow_tests),$(wildcard test/*/test*.rb))
+T_r := $(wildcard test/rails/test*.rb)
+T := $(filter-out $(slow_tests) $(T_r), $(wildcard test/*/test*.rb))
 T_n := $(shell $(awk_slow) $(slow_tests))
 T_log := $(subst .rb,$(log_suffix),$(T))
 T_n_log := $(subst .n,$(log_suffix),$(T_n))
+T_r_log := $(subst .r,$(log_suffix),$(T_r))
 test_prefix = $(CURDIR)/test/install-$(RUBY_VERSION)
 
 http11_deps := $(addprefix ext/unicorn/http11/, \
@@ -49,8 +52,8 @@ install-test:
 	$(MAKE) -C $(test_prefix) http11 shebang
 
 # this is only intended to be run within $(test_prefix)
-shebang: bin/unicorn
-	$(ruby) -i -p -e '$$_.gsub!(%r{^#!.*$$},"#!$(ruby_bin)")' $<
+shebang: bin/unicorn bin/unicorn_rails
+	$(ruby) -i -p -e '$$_.gsub!(%r{^#!.*$$},"#!$(ruby_bin)")' $^
 
 t_log := $(T_log) $(T_n_log)
 test: $(T) $(T_n)
@@ -63,7 +66,7 @@ $(slow_tests):
 	@$(MAKE) $(shell $(awk_slow) $@)
 
 TEST_OPTS = -v
-run_test = @echo '*** $(arg) ***'; \
+run_test = @echo '*** $(arg)$(extra) ***'; \
   setsid $(ruby) $(arg) $(TEST_OPTS) >$(t) 2>&1 || \
   (cat >&2 < $(t); exit 1)
 
@@ -108,5 +111,25 @@ Manifest:
 # using rdoc 2.4.1
 doc: .document
 	rdoc -Na -m README -t "$(shell sed -ne '1s/^= //p' README)"
+
+rails_git_url = git://github.com/rails/rails.git
+rails_git := vendor/rails.git
+$(rails_git)/info/cloned-stamp:
+	git clone --mirror -q $(rails_git_url) $(rails_git)
+	> $@
+
+rails_tests := $(addsuffix .r,$(addprefix $(T_r).,$(rails_vers)))
+test-rails: $(rails_tests)
+$(T_r).%.r: t = $(addsuffix $(log_suffix),$@)
+$(T_r).%.r: rv = $(subst .r,,$(subst $(T_r).,,$@))
+$(T_r).%.r: extra = ' 'v$(rv)
+$(T_r).%.r: arg = $(T_r)
+$(T_r).%.r: export PATH := $(test_prefix)/bin:$(PATH)
+$(T_r).%.r: export RUBYLIB := $(test_prefix)/lib:$(RUBYLIB)
+$(T_r).%.r: export UNICORN_RAILS_TEST_VERSION = $(rv)
+$(T_r).%.r: export RAILS_GIT_REPO = $(CURDIR)/$(rails_git)
+$(T_r).%.r: $(test_prefix)/.stamp $(rails_git)/info/cloned-stamp
+	$(run_test)
+	@sed 's,^,$(rv): ,' < $(t)
 
 .PHONY: doc $(T) $(slow_tests) Manifest

@@ -10,3 +10,4 @@
 ext/unicorn/http11/Makefile
 log/
 pkg/
+/vendor
