@@ -68,7 +68,7 @@ $(slow_tests):
 TEST_OPTS = -v
 run_test = @echo '*** $(arg)$(extra) ***'; \
   setsid $(ruby) $(arg) $(TEST_OPTS) >$(t) 2>&1 || \
-  (cat >&2 < $(t); exit 1)
+  (sed "s,^,$(extra): ," >&2 < $(t); exit 1)
 
 %.n: arg = $(subst .n,,$(subst --, -n ,$@))
 %.n: t = $(subst .n,$(log_suffix),$@)
