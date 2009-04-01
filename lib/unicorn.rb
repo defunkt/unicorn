@@ -429,6 +429,7 @@ module Unicorn
       @listeners.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
       ENV.delete('UNICORN_FD')
       @after_fork.call(self, worker.nr) if @after_fork
+      worker.tempfile.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       @request = HttpRequest.new(logger)
     end
 
@@ -448,6 +449,8 @@ module Unicorn
         @listeners.each { |sock| sock.close rescue nil } # break IO.select
       end
       reopen_logs, (rd, wr) = false, IO.pipe
+      rd.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+      wr.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       trap(:USR1) { reopen_logs = true; rd.close rescue nil } # break IO.select
       @logger.info "worker=#{worker.nr} ready"
 
@@ -459,6 +462,8 @@ module Unicorn
           @logger.info "worker=#{worker.nr} done rotating logs"
           wr.close rescue nil
           rd, wr = IO.pipe
+          rd.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+          wr.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
         end
         # we're a goner in @timeout seconds anyways if tempfile.chmod
         # breaks, so don't trap the exception.  Using fchmod() since
