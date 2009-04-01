@@ -1,4 +1,5 @@
 require 'logger'
+require 'fcntl'
 
 require 'unicorn/socket'
 require 'unicorn/const'
@@ -425,7 +426,7 @@ module Unicorn
       @workers.clear
       @start_ctx.clear
       @start_ctx = @workers = @rd_sig = @wr_sig = nil
-      @listeners.each { |sock| set_cloexec(sock) }
+      @listeners.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
       ENV.delete('UNICORN_FD')
       @after_fork.call(self, worker.nr) if @after_fork
       @request = HttpRequest.new(logger)

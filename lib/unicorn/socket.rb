@@ -1,4 +1,3 @@
-require 'fcntl'
 require 'socket'
 require 'io/nonblock'
 
@@ -46,10 +45,6 @@ module Unicorn
     def set_client_sockopt(sock)
       sock.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1) if defined?(TCP_NODELAY)
       sock.setsockopt(SOL_TCP, TCP_CORK, 1) if defined?(TCP_CORK)
-    end
-
-    def set_cloexec(io)
-      io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) if defined?(Fcntl::FD_CLOEXEC)
     end
 
     def set_server_sockopt(sock)
