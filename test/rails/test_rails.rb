@@ -80,22 +80,23 @@ logger Logger.new('#{COMMON_TMP.path}')
     @pid = nil
   end
 
-  def test_launcher_defaults
+  def test_launcher
     tmp_dirs = %w(cache pids sessions sockets)
     tmp_dirs.each { |dir| assert(! File.exist?("tmp/#{dir}")) }
     redirect_test_io { @pid = fork { exec 'unicorn_rails', "-l#@addr:#@port" } }
     wait_master_ready("test_stderr.#$$.log")
+
+    # temp dirs exist
     tmp_dirs.each { |dir| assert(File.directory?("tmp/#{dir}")) }
+
+    # basic GET
     res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/foo"))
     assert_equal "FOO\n", res.body
     assert_match %r{^text/html\b}, res['Content-Type']
     assert_equal "4", res['Content-Length']
     assert_nil res['Status']
-  end
 
-  def test_cookies
-    redirect_test_io { @pid = fork { exec 'unicorn_rails', "-l#@addr:#@port" } }
-    wait_master_ready("test_stderr.#$$.log")
+    # can we set cookies?
     res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/foo/xcookie"))
     assert_equal "200", res.code
     assert_nil res['Status']
@@ -103,21 +104,16 @@ logger Logger.new('#{COMMON_TMP.path}')
     assert_equal 2, cookies.size
     assert_equal 1, cookies.grep(/\A_unicorn_rails_test\./).size
     assert_equal 1, cookies.grep(/\Afoo=cookie/).size
-  end
 
-  def test_session
-    redirect_test_io { @pid = fork { exec 'unicorn_rails', "-l#@addr:#@port" } }
-    wait_master_ready("test_stderr.#$$.log")
+    # how about just a session?
     res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/foo/xnotice"))
     assert_equal "200", res.code
     assert_nil res['Status']
     cookies = res.get_fields('Set-Cookie')
     assert_equal 1, cookies.size
     assert_equal 1, cookies.grep(/\A_unicorn_rails_test\./).size
-  end
 
-  def test_post
-    redirect_test_io { @pid = fork { exec 'unicorn_rails', "-l#@addr:#@port" } }
+    # posting forms?
     uri = URI.parse("http://#@addr:#@port/foo/xpost")
     wait_master_ready("test_stderr.#$$.log")
     res = Net::HTTP.post_form(uri, {"a" => "b", "c"=>"d"})
@@ -129,14 +125,8 @@ logger Logger.new('#{COMMON_TMP.path}')
     assert_equal 'b', params['a']
     assert_equal 'd', params['c']
     assert_nil res['Status']
-  end
 
-  def test_post_upload
-    # I don't trust myself to generate a multipart request by hand
-    which('curl') or return
-
-    redirect_test_io { @pid = fork { exec 'unicorn_rails', "-l#@addr:#@port" } }
-    wait_master_ready("test_stderr.#$$.log")
+    # try uploading a big file
     tmp = Tempfile.new('random')
     sha1 = Digest::SHA1.new
     assert_nothing_raised do
@@ -159,24 +149,51 @@ logger Logger.new('#{COMMON_TMP.path}')
     assert_equal 1, grepped.size
     assert_match %r{^text/plain}, grepped.first.split(/\s*:\s*/)[1]
 
-    assert_equal 0, resp.grep(/^Status:/i).size
-  end
+    assert_equal 0, resp.grep(/^Status:/i).size # Rack hates "Status: " lines
 
-  def test_post_forbidden
-    redirect_test_io { @pid = fork { exec 'unicorn_rails', "-l#@addr:#@port" } }
+    # make sure we can get 403 responses, too
     uri = URI.parse("http://#@addr:#@port/foo/xpost")
     wait_master_ready("test_stderr.#$$.log")
     res = Net::HTTP.get_response(uri)
     assert_equal "403", res.code
     assert_nil res['Status']
-  end
 
-  def test_get_404
-    redirect_test_io { @pid = fork { exec 'unicorn_rails', "-l#@addr:#@port" } }
+    # non existent controller
     uri = URI.parse("http://#@addr:#@port/asdf")
-    wait_master_ready("test_stderr.#$$.log")
     res = Net::HTTP.get_response(uri)
     assert_equal "404", res.code
+    assert_nil res['Status']
+
+    # static files
+
+    # ensure file we're about to serve is not there yet
+    res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/pid.txt"))
+    assert_nil res['Status']
+    assert_equal '404', res.code
+
+    # can we serve text files based on suffix?
+    File.open("public/pid.txt", "wb") { |fp| fp.syswrite("#$$\n") }
+    res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/pid.txt"))
+    assert_equal '200', res.code
+    assert_match %r{^text/plain}, res['Content-Type']
+    assert_equal "#$$\n", res.body
+    assert_nil res['Status']
+
+    # can we serve HTML files based on suffix?
+    assert File.exist?("public/500.html")
+    res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/500.html"))
+    assert_equal '200', res.code
+    assert_match %r{^text/html}, res['Content-Type']
+    five_hundred_body = res.body
+    assert_nil res['Status']
+
+    # lets try pretending 500 is a controller that got cached
+    assert ! File.exist?("public/500")
+    assert_equal five_hundred_body, File.read("public/500.html")
+    res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/500"))
+    assert_equal '200', res.code
+    assert_match %r{^text/html}, res['Content-Type']
+    assert_equal five_hundred_body, res.body
     assert_nil res['Status']
   end
 
@@ -199,36 +216,6 @@ logger Logger.new('#{COMMON_TMP.path}')
 
     res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/foo"))
     assert_equal "404", res.code
-    assert_nil res['Status']
-  end
-
-  def test_static
-    redirect_test_io { @pid = fork { exec 'unicorn_rails', "-l#@addr:#@port" } }
-    wait_master_ready("test_stderr.#$$.log")
-    res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/pid.txt"))
-    assert_nil res['Status']
-    assert_equal '404', res.code
-    File.open("public/pid.txt", "wb") { |fp| fp.syswrite("#$$\n") }
-
-    res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/pid.txt"))
-    assert_equal '200', res.code
-    assert_match %r{^text/plain}, res['Content-Type']
-    assert_equal "#$$\n", res.body
-    assert_nil res['Status']
-
-    res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/500.html"))
-    assert_equal '200', res.code
-    assert_match %r{^text/html}, res['Content-Type']
-    five_hundred_body = res.body
-    assert_nil res['Status']
-
-    assert ! File.exist?("public/500")
-    assert File.exist?("public/500.html")
-    assert_equal five_hundred_body, File.read("public/500.html")
-    res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/500"))
-    assert_equal '200', res.code
-    assert_match %r{^text/html}, res['Content-Type']
-    assert_equal five_hundred_body, res.body
     assert_nil res['Status']
   end
 
