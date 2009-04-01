@@ -81,7 +81,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
 
   opts.on("-P", "--path PATH", "Runs Rails app mounted at a specific path.",
           "(default: /") do |v|
-    map_path = v
+    ENV['RAILS_RELATIVE_URL_ROOT'] = map_path = v
   end
 
   # I'm avoiding Unicorn-specific config options on the command-line.
@@ -126,8 +126,12 @@ rails_loader = lambda do ||
     defined?(::Rails::VERSION::STRING) or
       abort "Rails::VERSION::STRING not defined by config/boot"
   rescue LoadError => err
-    abort "#$0 must be run inside RAILS_ROOT=(#{::RAILS_ROOT}) #{err.inspect}"
+    abort "#$0 must be run inside RAILS_ROOT: #{err.inspect}"
   end
+  defined?(::RAILS_ROOT) or abort "RAILS_ROOT not defined by config/boot"
+  defined?(::RAILS_ENV) or abort "RAILS_ENV not defined by config/boot"
+  defined?(::Rails::VERSION::STRING) or
+    abort "Rails::VERSION::STRING not defined by config/boot"
 
   case config
   when nil
@@ -166,11 +170,15 @@ app = lambda do ||
   inner_app = rails_loader.call
   require 'active_support'
   require 'action_controller'
-  ActionController::Base.relative_url_root = map_path if map_path
   map_path ||= '/'
   inner_app = inner_app.call
   Rack::Builder.new do
     if inner_app.class.to_s == "Unicorn::App::OldRails"
+      if map_path != '/'
+        # patches + tests welcome, but I really cbf to deal with this
+        # since all apps I've ever dealt with just use "/" ...
+        $stderr.puts "relative URL roots may not work for older Rails"
+      end
       $stderr.puts "LogTailer not available for Rails < 2.3" unless daemonize
       $stderr.puts "Debugger not available" if $DEBUG
       map(map_path) do
