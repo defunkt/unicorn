@@ -245,6 +245,38 @@ end
     assert_shutdown(pid)
   end
 
+  def test_unicorn_config_per_worker_listen
+    port2 = unused_port
+    pid_spit = 'use Rack::ContentLength;' \
+      'run proc { |e| [ 200, {"Content-Type"=>"text/plain"}, ["#$$\\n"] ] }'
+    File.open("config.ru", "wb") { |fp| fp.syswrite(pid_spit) }
+    tmp = Tempfile.new('test.socket')
+    File.unlink(tmp.path)
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite("listen '#@addr:#@port'\n")
+    ucfg.syswrite("before_fork { |s,nr|\n")
+    ucfg.syswrite("  s.listen('#{tmp.path}', :backlog => 5, :sndbuf => 8192)\n")
+    ucfg.syswrite("  s.listen('#@addr:#{port2}', :rcvbuf => 8192)\n")
+    ucfg.syswrite("\n}\n")
+    pid = xfork do
+      redirect_test_io { exec($unicorn_bin, "-c#{ucfg.path}") }
+    end
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_equal String, results[0].class
+    worker_pid = results[0].to_i
+    assert_not_equal pid, worker_pid
+    s = UNIXSocket.new(tmp.path)
+    s.syswrite("GET / HTTP/1.0\r\n\r\n")
+    results = ''
+    loop { results << s.sysread(4096) } rescue nil
+    assert_nothing_raised { s.close }
+    assert_equal worker_pid, results.split(/\r\n/).last.to_i
+    results = hit(["http://#@addr:#{port2}/"])
+    assert_equal String, results[0].class
+    assert_equal worker_pid, results[0].to_i
+    assert_shutdown(pid)
+  end
+
   def test_unicorn_config_listen_augments_cli
     port2 = unused_port(@addr)
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
