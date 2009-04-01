@@ -58,7 +58,7 @@ module Unicorn
     REQUEST_URI='REQUEST_URI'.freeze
     REQUEST_PATH='REQUEST_PATH'.freeze
     
-    UNICORN_VERSION="0.2.3".freeze
+    UNICORN_VERSION="0.4.1".freeze
 
     UNICORN_TMP_BASE="unicorn".freeze
 
