@@ -1,0 +1,43 @@
+# this is the local.mk file used by Eric Wong on his dev boxes.
+# GNUmakefile will source local.mk in the top-level source tree
+# if it is present.
+#
+# This is depends on a bunch of GNU-isms from bash, sed, touch.
+
+DLEXT := so
+rack_ver := 0.9.1
+
+# Avoid loading rubygems to speed up tests because gmake is
+# fork+exec heavy with Ruby.
+ifeq ($(r19),)
+  ruby := $(HOME)/bin/ruby
+  RUBYLIB := $(HOME)/lib/ruby/gems/1.8/gems/rack-$(rack_ver)/lib
+else
+  export PATH := $(HOME)/ruby-1.9/bin:$(PATH)
+  ruby := $(HOME)/ruby-1.9/bin/ruby --disable-gems
+  RUBYLIB := $(HOME)/ruby-1.9/lib/ruby/gems/1.9.1/gems/rack-$(rack_ver)/lib
+endif
+
+# pipefail is THE reason to use bash (v3+)
+SHELL := /bin/bash -e -o pipefail
+
+full-test: test-18 test-19
+test-18:
+	$(MAKE) test 2>&1 | sed -u -e 's!^!1.8 !'
+test-19:
+	$(MAKE) test r19=1 2>&1 | sed -u -e 's!^!1.9 !'
+
+# publishes docs to http://unicorn.bogomips.org
+publish_doc:
+	-git set-file-times
+	$(MAKE) doc
+	$(MAKE) doc_gz
+	rsync -av --delete doc/ dcvr:/srv/unicorn/
+
+# Create gzip variants of the same timestamp as the original so nginx
+# "gzip_static on" can serve the gzipped versions directly.
+doc_gz: suf := html js css
+doc_gz: globs := $(addprefix doc/*.,$(suf)) $(addprefix doc/*/*.,$(suf))
+doc_gz: docs := $(wildcard $(globs))
+doc_gz:
+	for i in $(docs); do gzip < $$i > $$i.gz; touch -r $$i $$i.gz; done
