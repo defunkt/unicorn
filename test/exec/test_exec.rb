@@ -1,28 +1,19 @@
 # Copyright (c) 2009 Eric Wong
-STDIN.sync = STDOUT.sync = STDERR.sync = true
 require 'test/test_helper'
-require 'pathname'
-require 'tempfile'
-require 'fileutils'
 
 do_test = true
-DEFAULT_TRIES = 1000
-DEFAULT_RES = 0.2
-
 $unicorn_bin = ENV['UNICORN_TEST_BIN'] || "unicorn"
 redirect_test_io do
   do_test = system($unicorn_bin, '-v')
 end
 
 unless do_test
-  STDERR.puts "#{$unicorn_bin} not found in PATH=#{ENV['PATH']}, " \
-              "skipping this test"
+  warn "#{$unicorn_bin} not found in PATH=#{ENV['PATH']}, " \
+       "skipping this test"
 end
 
-begin
-  require 'rack'
-rescue LoadError
-  STDERR.puts "Unable to load Rack, skipping this test"
+unless try_require('rack')
+  warn "Unable to load Rack, skipping this test"
   do_test = false
 end
 
@@ -475,136 +466,5 @@ end
     assert_nothing_raised { Process.kill(0, new_pid) }
     reexec_usr2_quit_test(new_pid, pid_file)
   end
-
-  private
-
-    # sometimes the server may not come up right away
-    def retry_hit(uris = [])
-      tries = DEFAULT_TRIES
-      begin
-        hit(uris)
-      rescue Errno::ECONNREFUSED => err
-        if (tries -= 1) > 0
-          sleep DEFAULT_RES
-          retry
-        end
-        raise err
-      end
-    end
-
-    def assert_shutdown(pid)
-      wait_master_ready("#{@tmpdir}/test_stderr.#{pid}.log")
-      assert_nothing_raised { Process.kill(:QUIT, pid) }
-      status = nil
-      assert_nothing_raised { pid, status = Process.waitpid2(pid) }
-      assert status.success?, "exited successfully"
-    end
-
-    def wait_workers_ready(path, nr_workers)
-      tries = DEFAULT_TRIES
-      lines = []
-      while (tries -= 1) > 0
-        begin
-          lines = File.readlines(path).grep(/worker=\d+ ready/)
-          lines.size == nr_workers and return
-        rescue Errno::ENOENT
-        end
-        sleep DEFAULT_RES
-      end
-      raise "#{nr_workers} workers never became ready:" \
-            "\n\t#{lines.join("\n\t")}\n"
-    end
-
-    def wait_master_ready(master_log)
-      tries = DEFAULT_TRIES
-      while (tries -= 1) > 0
-        begin
-          File.readlines(master_log).grep(/master process ready/)[0] and return
-        rescue Errno::ENOENT
-        end
-        sleep DEFAULT_RES
-      end
-      raise "master process never became ready"
-    end
-
-    def reexec_usr2_quit_test(pid, pid_file)
-      assert File.exist?(pid_file), "pid file OK"
-      assert ! File.exist?("#{pid_file}.oldbin"), "oldbin pid file"
-      assert_nothing_raised { Process.kill(:USR2, pid) }
-      assert_nothing_raised { retry_hit(["http://#{@addr}:#{@port}/"]) }
-      wait_for_file("#{pid_file}.oldbin")
-      wait_for_file(pid_file)
-
-      old_pid = File.read("#{pid_file}.oldbin").to_i
-      new_pid = File.read(pid_file).to_i
-
-      # kill old master process
-      assert_not_equal pid, new_pid
-      assert_equal pid, old_pid
-      assert_nothing_raised { Process.kill(:QUIT, old_pid) }
-      assert_nothing_raised { retry_hit(["http://#{@addr}:#{@port}/"]) }
-      wait_for_death(old_pid)
-      assert_equal new_pid, File.read(pid_file).to_i
-      assert_nothing_raised { retry_hit(["http://#{@addr}:#{@port}/"]) }
-      assert_nothing_raised { Process.kill(:QUIT, new_pid) }
-    end
-
-    def reexec_basic_test(pid, pid_file)
-      results = retry_hit(["http://#{@addr}:#{@port}/"])
-      assert_equal String, results[0].class
-      assert_nothing_raised { Process.kill(0, pid) }
-      master_log = "#{@tmpdir}/test_stderr.#{pid}.log"
-      wait_master_ready(master_log)
-      File.truncate(master_log, 0)
-      nr = 50
-      kill_point = 2
-      assert_nothing_raised do
-        nr.times do |i|
-          hit(["http://#{@addr}:#{@port}/#{i}"])
-          i == kill_point and Process.kill(:HUP, pid)
-        end
-      end
-      wait_master_ready(master_log)
-      assert File.exist?(pid_file), "pid=#{pid_file} exists"
-      new_pid = File.read(pid_file).to_i
-      assert_not_equal pid, new_pid
-      assert_nothing_raised { Process.kill(0, new_pid) }
-      assert_nothing_raised { Process.kill(:QUIT, new_pid) }
-    end
-
-    def wait_for_file(path)
-      tries = DEFAULT_TRIES
-      while (tries -= 1) > 0 && ! File.exist?(path)
-        sleep DEFAULT_RES
-      end
-      assert File.exist?(path), "path=#{path} exists #{caller.inspect}"
-    end
-
-    def xfork(&block)
-      fork do
-        ObjectSpace.each_object(Tempfile) do |tmp|
-          ObjectSpace.undefine_finalizer(tmp)
-        end
-        yield
-      end
-    end
-
-    # can't waitpid on detached processes
-    def wait_for_death(pid)
-      tries = DEFAULT_TRIES
-      while (tries -= 1) > 0
-        begin
-          Process.kill(0, pid)
-          begin
-            Process.waitpid(pid, Process::WNOHANG)
-          rescue Errno::ECHILD
-          end
-          sleep(DEFAULT_RES)
-        rescue Errno::ESRCH
-          return
-        end
-      end
-      raise "PID:#{pid} never died!"
-    end
 
 end if do_test

@@ -1,14 +1,8 @@
 # Copyright (c) 2009 Eric Wong
-STDIN.sync = STDOUT.sync = STDERR.sync = true
 require 'test/test_helper'
-require 'pathname'
-require 'tempfile'
-require 'fileutils'
 
 # don't call exit(0) since it may be run under rake (but gmake is recommended)
 do_test = true
-DEFAULT_TRIES = 1000
-DEFAULT_RES = 0.2
 
 $unicorn_rails_bin = ENV['UNICORN_RAILS_TEST_BIN'] || "unicorn_rails"
 redirect_test_io { do_test = system($unicorn_rails_bin, '-v') }
@@ -92,7 +86,7 @@ logger Logger.new('#{COMMON_TMP.path}')
     redirect_test_io do
       pid = fork { exec 'unicorn_rails', "-l#@addr:#@port" }
     end
-    sleep 1 # HACK
+    wait_master_ready("test_stderr.#$$.log")
     tmp_dirs.each { |dir| assert(File.directory?("tmp/#{dir}")) }
     res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/foo"))
     assert_equal "FOO\n", res.body
@@ -111,7 +105,7 @@ logger Logger.new('#{COMMON_TMP.path}')
     redirect_test_io do
       pid = fork { exec 'unicorn_rails', "-l#@addr:#@port", '-P/poo' }
     end
-    sleep 1 # HACK
+    wait_master_ready("test_stderr.#$$.log")
     res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/poo/foo"))
     # p res
     # p res.body
