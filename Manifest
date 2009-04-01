@@ -6,6 +6,7 @@ DESIGN
 GNUmakefile
 LICENSE
 Manifest
+PHILOSOPHY
 README
 Rakefile
 SIGNALS
@@ -31,6 +32,7 @@ lib/unicorn/http_response.rb
 lib/unicorn/launcher.rb
 lib/unicorn/socket.rb
 lib/unicorn/util.rb
+local.mk.sample
 setup.rb
 test/aggregate.rb
 test/benchmark/README
