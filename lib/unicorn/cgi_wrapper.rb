@@ -26,7 +26,7 @@ class Unicorn::CGIWrapper < ::CGI
   CHARSET = 'charset'.freeze # this gets appended to Content-Type
   COOKIE = 'cookie'.freeze # maps (Hash,Array,String) to "Set-Cookie" headers
   STATUS = 'status'.freeze # stored as @status
-  Status = 'Status'.freeze # fallback, Rails sets this
+  Status = 'Status'.freeze # code + human-readable text, Rails sets this
 
   # some of these are common strings, but this is the only module
   # using them and the reason they're not in Unicorn::Const
@@ -54,17 +54,19 @@ class Unicorn::CGIWrapper < ::CGI
   def initialize(rack_env, *args)
     @env_table = rack_env
     @status = 200
-    @head = { :cookies => [] }
+    @head = {}
+    @headv = Hash.new { |hash,key| hash[key] = [] }
     @body = StringIO.new
     super(*args)
   end
 
   # finalizes the response in a way Rack applications would expect
   def rack_response
-    cookies = @head.delete(:cookies)
-    cookies.empty? or @head[SET_COOKIE] = cookies.join("\n")
-    @head[CONTENT_LENGTH] ||= @body.size
-    @head.delete(Status)
+    # @head[CONTENT_LENGTH] ||= @body.size
+    @headv[SET_COOKIE] += @output_cookies if @output_cookies
+    @headv.each_pair do |key,value|
+      @head[key] ||= value.join("\n") unless value.empty?
+    end
 
     [ @status, @head, [ @body.string ] ]
   end
@@ -79,7 +81,7 @@ class Unicorn::CGIWrapper < ::CGI
     else
       HEADER_MAP.each_pair do |from, to|
         from = options.delete(from) or next
-        @head[to] = from
+        @head[to] = from.to_s
       end
 
       @head[CONTENT_TYPE] ||= "text/html"
@@ -89,24 +91,24 @@ class Unicorn::CGIWrapper < ::CGI
 
       # lots of ways to set cookies
       if cookie = options.delete(COOKIE)
-        cookies = @head[:cookies]
+        set_cookies = @headv[SET_COOKIE]
         case cookie
         when Array
-          cookie.each { |c| cookies << c.to_s }
+          cookie.each { |c| set_cookies << c.to_s }
         when Hash
-          cookie.each_value { |c| cookies << c.to_s }
+          cookie.each_value { |c| set_cookies << c.to_s }
         else
-          cookies << cookie.to_s
+          set_cookies << cookie.to_s
         end
       end
       @status ||= (status = options.delete(STATUS)) # all lower-case
-      @status ||= (status = options.delete(Status)) # Capitalized
       # drop the keys we don't want anymore
       options.delete(NPH)
       options.delete(CONNECTION)
+      options.delete(Status) # Capitalized, with human-readable string
 
-      # finally, set the rest of the headers as-is
-      options.each_pair { |k,v| @head[k] = v }
+      # finally, set the rest of the headers as-is, allowing duplicates
+      options.each_pair { |k,v| @headv[k] << v }
     end
 
     # doing this fakes out the cgi library to think the headers are empty
@@ -121,7 +123,7 @@ class Unicorn::CGIWrapper < ::CGI
   def out(options = "text/html")
     header(options)
     @body.size == 0 or return
-    @body << yield
+    @body << yield if block_given?
   end
 
   # Used to wrap the normal stdinput variable used inside CGI.
