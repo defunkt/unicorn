@@ -121,10 +121,6 @@ require 'pp' if $DEBUG
 rails_loader = lambda do ||
   begin
     require 'config/boot'
-    defined?(::RAILS_ROOT) or abort "RAILS_ROOT not defined by config/boot"
-    defined?(::RAILS_ENV) or abort "RAILS_ENV not defined by config/boot"
-    defined?(::Rails::VERSION::STRING) or
-      abort "Rails::VERSION::STRING not defined by config/boot"
   rescue LoadError => err
     abort "#$0 must be run inside RAILS_ROOT: #{err.inspect}"
   end
@@ -135,43 +131,36 @@ rails_loader = lambda do ||
 
   case config
   when nil
-    lambda do ||
-      require 'config/environment'
+    require 'config/environment'
 
-      # it seems Rails >=2.2 support Rack, but only >=2.3 requires it
-      old_rails = case ::Rails::VERSION::MAJOR
-      when 0, 1 then true
-      when 2 then Rails::VERSION::MINOR < 3 ? true : false
-      else
-        false
-      end
+    # it seems Rails >=2.2 support Rack, but only >=2.3 requires it
+    old_rails = case ::Rails::VERSION::MAJOR
+    when 0, 1 then true
+    when 2 then Rails::VERSION::MINOR < 3 ? true : false
+    else
+      false
+    end
 
-      if old_rails
-        require 'rack'
-        require 'unicorn/app/old_rails'
-        Unicorn::App::OldRails.new
-      else
-        ActionController::Dispatcher.new
-      end
+    if old_rails
+      require 'rack'
+      require 'unicorn/app/old_rails'
+      Unicorn::App::OldRails.new
+    else
+      ActionController::Dispatcher.new
     end
   when /\.ru$/
     raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }
-    lambda { || eval("Rack::Builder.new {(#{raw}\n)}.to_app", nil, config) }
+    eval("Rack::Builder.new {(#{raw}\n)}.to_app", nil, config)
   else
-    lambda do ||
-      require config
-      Object.const_get(File.basename(config, '.rb').capitalize)
-    end
+    require config
+    Object.const_get(File.basename(config, '.rb').capitalize)
   end
 end
 
 # this won't run until after forking if preload_app is false
 app = lambda do ||
-  inner_app = rails_loader.call
-  require 'active_support'
-  require 'action_controller'
   map_path ||= '/'
-  inner_app = inner_app.call
+  inner_app = rails_loader.call
   Rack::Builder.new do
     if inner_app.class.to_s == "Unicorn::App::OldRails"
       if map_path != '/'
