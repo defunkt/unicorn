@@ -589,7 +589,7 @@ module Unicorn
     end
 
     def proc_name(tag)
-      $0 = ([ @start_ctx[:zero].sub(%r{\A.*?([^/]+)\z}, '\1'), tag ] +
+      $0 = ([ File.basename(@start_ctx[:zero]), tag ] +
               @start_ctx[:argv]).join(' ')
     end
 
