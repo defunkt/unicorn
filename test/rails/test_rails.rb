@@ -74,6 +74,10 @@ logger Logger.new('#{COMMON_TMP.path}')
     Dir.chdir("#@tmpdir/vendor/rails") do
       system('git', 'reset', '-q', '--hard', "v#{UNICORN_RAILS_TEST_VERSION}")
     end
+
+    assert(system('rake', 'db:sessions:create'))
+    assert(system('rake', 'db:migrate'))
+
     @addr = ENV['UNICORN_TEST_ADDR'] || '127.0.0.1'
     @port = unused_port(@addr)
     @start_pid = $$
