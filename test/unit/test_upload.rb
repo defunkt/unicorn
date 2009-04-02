@@ -74,6 +74,12 @@ class UploadTest < Test::Unit::TestCase
     sock.close
     assert path != path2
 
+    # make sure the next request comes in so the unlink got processed
+    sock = TCPSocket.new(@addr, @port)
+    sock.syswrite("GET ?lasdf\r\n\r\n\r\n\r\n")
+    sock.sysread(4096) rescue nil
+    sock.close
+
     assert ! File.exist?(path)
   end
 
