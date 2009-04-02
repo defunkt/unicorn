@@ -167,7 +167,7 @@ module Unicorn
 
       QUEUE_SIGS.each { |sig| trap_deferred(sig) }
       trap(:CHLD) { |sig_nr| awaken_master }
-      $0 = "unicorn master"
+      proc_name 'master'
       logger.info "master process ready" # test_exec.rb relies on this message
       begin
         loop do
@@ -286,7 +286,7 @@ module Unicorn
             logger.error "reaped #{status.inspect} exec()-ed"
             @reexec_pid = 0
             self.pid = @pid.chomp('.oldbin') if @pid
-            $0 = "unicorn master"
+            proc_name 'master'
           else
             worker = @workers.delete(pid)
             worker.tempfile.close rescue nil
@@ -348,7 +348,7 @@ module Unicorn
         @before_exec.call(self) if @before_exec
         exec(*cmd)
       end
-      $0 = "unicorn master (old)"
+      proc_name 'master (old)'
     end
 
     # forcibly terminate all workers that haven't checked in in @timeout
@@ -428,7 +428,7 @@ module Unicorn
       QUEUE_SIGS.each { |sig| trap(sig, 'IGNORE') }
       trap(:CHLD, 'DEFAULT')
 
-      $0 = "unicorn worker[#{worker.nr}]"
+      proc_name "worker[#{worker.nr}]"
       @rd_sig.close if @rd_sig
       @wr_sig.close if @wr_sig
       @workers.values.each { |other| other.tempfile.close rescue nil }
@@ -586,6 +586,11 @@ module Unicorn
 
     def build_app!
       @app = @app.call if @app.respond_to?(:arity) && @app.arity == 0
+    end
+
+    def proc_name(tag)
+      $0 = ([ @start_ctx[:zero].sub(%r{\A.*?([^/]+)\z}, '\1'), tag ] +
+              @start_ctx[:argv]).join(' ')
     end
 
   end
