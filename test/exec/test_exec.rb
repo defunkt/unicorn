@@ -499,4 +499,67 @@ end
     reexec_usr2_quit_test(new_pid, pid_file)
   end
 
+  def test_reexec_fd_leak
+    unless RUBY_PLATFORM =~ /linux/ # Solaris may work, too, but I forget...
+      warn "FD leak test only works on Linux at the moment"
+      return
+    end
+    pid_file = "#{@tmpdir}/test.pid"
+    log = Tempfile.new('unicorn_test_log')
+    log.sync = true
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite("pid \"#{pid_file}\"\n")
+    ucfg.syswrite("logger Logger.new('#{log.path}')\n")
+    ucfg.syswrite("stderr_path '#{log.path}'\n")
+    ucfg.syswrite("stdout_path '#{log.path}'\n")
+    ucfg.close
+
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+    pid = xfork do
+      redirect_test_io do
+        exec($unicorn_bin, "-D", "-l#{@addr}:#{@port}", "-c#{ucfg.path}")
+      end
+    end
+
+    wait_master_ready(log.path)
+    wait_for_file(pid_file)
+    orig_pid = pid = File.read(pid_file).to_i
+    orig_fds = `ls -l /proc/#{pid}/fd`.split(/\n/)
+    assert $?.success?
+    expect_size = orig_fds.size
+
+    assert_nothing_raised do
+      Process.kill(:USR2, pid)
+      wait_for_file("#{pid_file}.oldbin")
+      Process.kill(:QUIT, pid)
+    end
+    wait_for_death(pid)
+
+    wait_for_file(pid_file)
+    pid = File.read(pid_file).to_i
+    assert_not_equal orig_pid, pid
+    curr_fds = `ls -l /proc/#{pid}/fd`.split(/\n/)
+    assert $?.success?
+
+    # we could've inherited descriptors the first time around
+    assert expect_size >= curr_fds.size
+    expect_size = curr_fds.size
+
+    assert_nothing_raised do
+      Process.kill(:USR2, pid)
+      wait_for_file("#{pid_file}.oldbin")
+      Process.kill(:QUIT, pid)
+    end
+    wait_for_death(pid)
+
+    wait_for_file(pid_file)
+    pid = File.read(pid_file).to_i
+    curr_fds = `ls -l /proc/#{pid}/fd`.split(/\n/)
+    assert $?.success?
+    assert_equal expect_size, curr_fds.size
+
+    Process.kill(:QUIT, pid)
+    wait_for_death(pid)
+  end
+
 end if do_test

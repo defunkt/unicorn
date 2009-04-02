@@ -326,15 +326,24 @@ module Unicorn
       end
 
       @reexec_pid = fork do
-        @rd_sig.close if @rd_sig
-        @wr_sig.close if @wr_sig
-        @workers.values.each { |other| other.tempfile.close rescue nil }
-
         ENV.replace(@start_ctx[:environ])
-        ENV['UNICORN_FD'] = @listeners.map { |sock| sock.fileno }.join(',')
+        listener_fds = @listeners.map { |sock| sock.fileno }
+        ENV['UNICORN_FD'] = listener_fds.join(',')
         File.umask(@start_ctx[:umask])
         Dir.chdir(@start_ctx[:cwd])
         cmd = [ @start_ctx[:zero] ] + @start_ctx[:argv]
+
+        # avoid leaking FDs we don't know about, but let before_exec
+        # unset FD_CLOEXEC, if anything else in the app eventually
+        # relies on FD inheritence.
+        purgatory = [] # prevent GC of IO objects
+        (3..1024).each do |io|
+          next if listener_fds.include?(io)
+          io = IO.for_fd(io) rescue nil
+          io or next
+          purgatory << io
+          io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+        end
         logger.info "executing #{cmd.inspect} (in #{Dir.pwd})"
         @before_exec.call(self) if @before_exec
         exec(*cmd)
