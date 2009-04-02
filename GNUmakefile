@@ -84,11 +84,15 @@ $(T): export RUBYLIB := $(test_prefix)/lib:$(RUBYLIB)
 $(T): $(test_prefix)/.stamp
 	$(run_test)
 
-install: bin/unicorn
+install: bin/unicorn bin/unicorn_rails
 	$(prep_setup_rb)
-	git diff --quiet $<
+	$(RM) -r .install-tmp
+	mkdir .install-tmp
+	cp -p $^ .install-tmp
 	$(ruby) setup.rb all
-	git checkout $<
+	$(RM) $^
+	mv $(addprefix .install-tmp/,$(^F)) bin/
+	$(RM) -r .install-tmp
 	$(prep_setup_rb)
 
 clean-http11:
