@@ -117,40 +117,35 @@ end
 
 require 'pp' if $DEBUG
 
-# require Rack as late as possible in case $LOAD_PATH is modified
-# in config.ru or command-line
-require 'rack'
-
-inner_app = case config
-when /\.ru$/
-  raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }
-  lambda { || eval("Rack::Builder.new {(#{raw}\n)}.to_app", nil, config) }
-else
-  lambda do ||
+app = lambda do ||
+  # require Rack as late as possible in case $LOAD_PATH is modified
+  # in config.ru or command-line
+  require 'rack'
+  inner_app = case config
+  when /\.ru$/
+    raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }
+    eval("Rack::Builder.new {(#{raw}\n)}.to_app", nil, config)
+  else
     require config
     Object.const_get(File.basename(config, '.rb').capitalize)
   end
-end
-
-app = case env
-when "development"
-  lambda do ||
+  pp({ :inner_app => inner_app }) if $DEBUG
+  case env
+  when "development"
     Rack::Builder.new do
       use Rack::CommonLogger, $stderr
       use Rack::ShowExceptions
       use Rack::Lint
-      run inner_app.call
+      run inner_app
     end.to_app
-  end
-when "deployment"
-  lambda do ||
+  when "deployment"
     Rack::Builder.new do
       use Rack::CommonLogger, $stderr
-      run inner_app.call
+      run inner_app
     end.to_app
+  else
+    inner_app
   end
-else
-  inner_app
 end
 
 listeners << "#{host}:#{port}" if set_listener
@@ -159,7 +154,6 @@ if $DEBUG
   pp({
     :unicorn_options => options,
     :app => app,
-    :inner_app => inner_app,
     :daemonize => daemonize,
   })
 end
