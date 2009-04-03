@@ -35,8 +35,9 @@ end
 def redirect_test_io
   orig_err = STDERR.dup
   orig_out = STDOUT.dup
-  STDERR.reopen("test_stderr.#{$$}.log")
-  STDOUT.reopen("test_stdout.#{$$}.log")
+  STDERR.reopen("test_stderr.#{$$}.log", "a")
+  STDOUT.reopen("test_stdout.#{$$}.log", "a")
+  STDERR.sync = STDOUT.sync = true
 
   at_exit do
     File.unlink("test_stderr.#{$$}.log") rescue nil
