@@ -105,15 +105,15 @@ module Unicorn
     #    # HUP after QUIT-ing the original master:
     #    server.listen("127.0.0.1:#{9293 + worker_nr}") rescue nil
     #  end
-    def after_fork(&block)
-      set_hook(:after_fork, block)
+    def after_fork(*args, &block)
+      set_hook(:after_fork, block_given? ? block : args[0])
     end
 
     # sets before_fork got be a given Proc object.  This Proc
     # object will be called by the master process before forking
     # each worker.
-    def before_fork(&block)
-      set_hook(:before_fork, block)
+    def before_fork(*args, &block)
+      set_hook(:before_fork, block_given? ? block : args[0])
     end
 
     # sets the before_exec hook to a given Proc object.  This
@@ -122,8 +122,8 @@ module Unicorn
     # for freeing certain OS resources that you do NOT wish to
     # share with the reexeced child process.
     # There is no corresponding after_exec hook (for obvious reasons).
-    def before_exec(&block)
-      set_hook(:before_exec, block, 1)
+    def before_exec(*args, &block)
+      set_hook(:before_exec, block_given? ? block : args[0], 1)
     end
 
     # sets the timeout of worker processes to +seconds+.  Workers

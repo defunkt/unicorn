@@ -91,4 +91,19 @@ class TestConfigurator < Test::Unit::TestCase
     end
   end
 
+  def test_after_fork_proc
+    [ proc { |a,b| }, Proc.new { |a,b| }, lambda { |a,b| } ].each do |my_proc|
+      Unicorn::Configurator.new(:after_fork => my_proc).commit!(self)
+      assert_equal my_proc, @after_fork
+    end
+  end
+
+  def test_after_fork_wrong_arity
+    [ proc { |a| }, Proc.new { }, lambda { |a,b,c| } ].each do |my_proc|
+      assert_raises(ArgumentError) do
+        Unicorn::Configurator.new(:after_fork => my_proc)
+      end
+    end
+  end
+
 end
