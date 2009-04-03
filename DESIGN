@@ -37,10 +37,11 @@
 
 * The number of worker processes should be scaled to the number of
   CPUs, memory or even spindles you have.  If you have an existing
-  Mongrel cluster, using the same amount of processes should work.
-  Let a full-HTTP-request-buffering reverse proxy like nginx manage
-  concurrency to thousands of slow clients for you.  Unicorn scaling
-  should only be concerned about limits of your backend system(s).
+  Mongrel cluster on a single-threaded app, using the same amount of
+  processes should work.  Let a full-HTTP-request-buffering reverse
+  proxy like nginx manage concurrency to thousands of slow clients for
+  you.  Unicorn scaling should only be concerned about limits of your
+  backend system(s).
 
 * Load balancing between worker processes is done by the OS kernel.
   All workers share a common set of listener sockets and does
@@ -56,8 +57,8 @@
 
 * Blocking I/O is used for clients.  This allows a simpler code path
   to be followed within the Ruby interpreter and fewer syscalls.
-  Applications that use threads should continue to work if Unicorn
-  is serving LAN or localhost clients.
+  Applications that use threads continue to work if Unicorn
+  is only serving LAN or localhost clients.
 
 * Timeout implementation is done via fchmod(2) in each worker
   on a shared file descriptor to update st_ctime on the inode.
@@ -67,8 +68,9 @@
   pwrite(2)/pread(2) are supported by base MRI, nor are they as
   portable on UNIX systems as fchmod(2).
 
-* SIGKILL is used to terminate the timed-out workers as reliably
-  as possible on a UNIX system.
+* SIGKILL is used to terminate the timed-out workers from misbehaving apps
+  as reliably as possible on a UNIX system.  The default timeout is a
+  generous 60 seconds (same default as in Mongrel).
 
 * The poor performance of select() on large FD sets is avoided
   as few file descriptors are used in each worker.
@@ -81,5 +83,7 @@
   the master to its death.
 
 * There is never any explicit real-time dependency or communication
-  between the worker processes themselves nor to the master process.
-  Synchronization is handled entirely by the OS kernel.
+  between the worker processes nor to the master process.
+  Synchronization is handled entirely by the OS kernel and shared
+  resources are never accessed by the worker when it is servicing
+  a client.

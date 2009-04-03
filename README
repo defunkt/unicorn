@@ -21,13 +21,15 @@ and DESIGN documents for more details regarding this.
 
 * Does not care if your application is thread-safe or not, workers
   all run within their own isolated address space and only serve one
-  client at a time...
+  client at a time.
 
 * Supports all Rack applications, along with pre-Rack versions of
   Ruby on Rails via a Rack wrapper.
 
-* Builtin log rotation of all log files in your application via USR1
-  signal.
+* Builtin reopening of all log files in your application via
+  USR1 signal.  This allows logrotate to rotate files atomically
+  and quickly via rename instead of the racy and slow
+  copytruncate method.
 
 * nginx-style binary re-execution without losing connections.
   You can upgrade Unicorn, your entire application, libraries
@@ -35,10 +37,12 @@ and DESIGN documents for more details regarding this.
   installed in the same path.
 
 * before_fork and after_fork hooks in case your application
-  has special needs when dealing with forked processes.
+  has special needs when dealing with forked processes.  These
+  should not be needed when the "preload_app" directive is
+  false (the default).
 
 * Can be used with copy-on-write-friendly memory management
-  to save memory.
+  to save memory (by setting "preload_app" to true).
 
 * Able to listen on multiple interfaces including UNIX sockets,
   each worker process can also bind to a private port via the
