@@ -91,11 +91,14 @@ module Unicorn
 
       sock = Socket.new(domain, SOCK_STREAM, 0)
       sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1) if defined?(SO_REUSEADDR)
+      old_umask = File.umask(0)
       begin
         sock.bind(bind_addr)
       rescue Errno::EADDRINUSE
         sock.close rescue nil
         return nil
+      ensure
+        File.umask(old_umask)
       end
       if opt[:rcvbuf] || opt[:sndbuf]
         log_buffer_sizes(sock, "before: ")

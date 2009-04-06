@@ -42,12 +42,18 @@ class TestSocketHelper < Test::Unit::TestCase
   end
 
   def test_bind_listen_unix
+    old_umask = File.umask(0777)
     tmp = Tempfile.new 'unix.sock'
     @unix_listener_path = tmp.path
     File.unlink(@unix_listener_path)
     @unix_listener = bind_listen(@unix_listener_path)
     assert Socket === @unix_listener
     assert_equal @unix_listener_path, sock_name(@unix_listener)
+    assert File.readable?(@unix_listener_path), "not readable"
+    assert File.writable?(@unix_listener_path), "not writable"
+    assert_equal 0777, File.umask
+    ensure
+      File.umask(old_umask)
   end
 
   def test_bind_listen_unix_idempotent
