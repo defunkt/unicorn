@@ -33,6 +33,7 @@ publish_doc:
 	$(MAKE) doc
 	$(MAKE) doc_gz
 	rsync -av --delete doc/ dcvr:/srv/unicorn/
+	git ls-files | xargs touch
 
 # Create gzip variants of the same timestamp as the original so nginx
 # "gzip_static on" can serve the gzipped versions directly.
