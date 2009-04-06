@@ -66,8 +66,19 @@ $(slow_tests):
 	@$(MAKE) $(shell $(awk_slow) $@)
 
 TEST_OPTS = -v
-run_test = @echo '* $(arg)$(extra)'; \
-  setsid $(ruby) $(arg) $(TEST_OPTS) >$(t) 2>&1 || \
+TEST_OPTS = -v
+ifndef V
+       quiet_pre = @echo '* $(arg)$(extra)';
+       quiet_post = >$(t) 2>&1
+else
+       # we can't rely on -o pipefail outside of bash 3+,
+       # so we use a stamp file to indicate success and
+       # have rm fail if the stamp didn't get created
+       stamp = $@$(log_suffix).ok
+       quiet_pre = @echo $(ruby) $(arg) $(TEST_OPTS); ! test -f $(stamp) && (
+       quiet_post = && > $(stamp) )>&2 | tee $(t); rm $(stamp) 2>/dev/null
+endif
+run_test = $(quiet_pre) setsid $(ruby) $(arg) $(TEST_OPTS) $(quiet_post) || \
   (sed "s,^,$(extra): ," >&2 < $(t); exit 1)
 
 %.n: arg = $(subst .n,,$(subst --, -n ,$@))
@@ -134,6 +145,5 @@ $(T_r).%.r: export UNICORN_RAILS_TEST_VERSION = $(rv)
 $(T_r).%.r: export RAILS_GIT_REPO = $(CURDIR)/$(rails_git)
 $(T_r).%.r: $(test_prefix)/.stamp $(rails_git)/info/cloned-stamp
 	$(run_test)
-	@sed 's,^,$(rv): ,' < $(t)
 
 .PHONY: doc $(T) $(slow_tests) Manifest
