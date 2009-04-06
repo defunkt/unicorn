@@ -78,7 +78,7 @@ else
        quiet_pre = @echo $(ruby) $(arg) $(TEST_OPTS); ! test -f $(stamp) && (
        quiet_post = && > $(stamp) )>&2 | tee $(t); rm $(stamp) 2>/dev/null
 endif
-run_test = $(quiet_pre) setsid $(ruby) $(arg) $(TEST_OPTS) $(quiet_post) || \
+run_test = $(quiet_pre) setsid $(ruby) -w $(arg) $(TEST_OPTS) $(quiet_post) || \
   (sed "s,^,$(extra): ," >&2 < $(t); exit 1)
 
 %.n: arg = $(subst .n,,$(subst --, -n ,$@))

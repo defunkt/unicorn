@@ -4,7 +4,7 @@ require 'unicorn/configurator'
 
 class TestConfigurator < Test::Unit::TestCase
 
-  def test_config_defaults
+  def test_config_init
     assert_nothing_raised { Unicorn::Configurator.new {} }
   end
 
