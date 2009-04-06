@@ -66,7 +66,7 @@ $(slow_tests):
 	@$(MAKE) $(shell $(awk_slow) $@)
 
 TEST_OPTS = -v
-run_test = @echo '*** $(arg)$(extra) ***'; \
+run_test = @echo '* $(arg)$(extra)'; \
   setsid $(ruby) $(arg) $(TEST_OPTS) >$(t) 2>&1 || \
   (sed "s,^,$(extra): ," >&2 < $(t); exit 1)
 
