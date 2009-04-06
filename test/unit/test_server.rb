@@ -35,6 +35,44 @@ class WebServerTest < Test::Unit::TestCase
     end
   end
 
+  def test_preload_app_config
+    teardown
+    port = unused_port
+    tmp = Tempfile.new('test_preload_app_config')
+    ObjectSpace.undefine_finalizer(tmp)
+    app = lambda { ||
+      tmp.sysseek(0)
+      tmp.truncate(0)
+      tmp.syswrite($$)
+      lambda { |env| [ 200, { 'Content-Type' => 'text/plain' }, [ "#$$\n" ] ] }
+    }
+    redirect_test_io do
+      @server = HttpServer.new(app, :listeners => [ "127.0.0.1:#{port}"] )
+      @server.start
+    end
+    results = hit(["http://localhost:#{port}/"])
+    worker_pid = results[0].to_i
+    tmp.sysseek(0)
+    loader_pid = tmp.sysread(4096).to_i
+    assert_equal worker_pid, loader_pid
+    teardown
+
+    port = unused_port
+    redirect_test_io do
+      @server = HttpServer.new(app, :listeners => [ "127.0.0.1:#{port}"],
+                               :preload_app => true)
+      @server.start
+    end
+    results = hit(["http://localhost:#{port}/"])
+    worker_pid = results[0].to_i
+    tmp.sysseek(0)
+    loader_pid = tmp.sysread(4096).to_i
+    assert_equal $$, loader_pid
+    assert worker_pid != loader_pid
+    ensure
+      tmp.close!
+  end
+
   def test_broken_app
     teardown
     port = unused_port
