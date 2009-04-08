@@ -75,7 +75,7 @@ module Unicorn
         io = Socket.for_fd(fd.to_i)
         set_server_sockopt(io)
         @io_purgatory << io
-        logger.info "inherited: #{io} fd=#{fd} addr=#{sock_name(io)}"
+        logger.info "inherited addr=#{sock_name(io)} fd=#{fd}"
         server_cast(io)
       end
 
@@ -145,8 +145,7 @@ module Unicorn
           @io_purgatory << io
           io = server_cast(io)
         end
-        logger.info "#{io} listening on PID:#{$$} " \
-                    "fd=#{io.fileno} addr=#{sock_name(io)}"
+        logger.info "listening on addr=#{sock_name(io)} fd=#{io.fileno}"
         @listeners << io
       else
         logger.error "adding listener failed addr=#{address} (in use)"
@@ -219,7 +218,7 @@ module Unicorn
         retry
       end
       stop # gracefully shutdown all workers on our way out
-      logger.info "master PID:#{$$} join complete"
+      logger.info "master complete"
       unlink_pid_safe(@pid) if @pid
     end
 
