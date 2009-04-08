@@ -33,6 +33,28 @@ class RequestTest < Test::Unit::TestCase
     @lint = Rack::Lint.new(@app)
   end
 
+  def test_options
+    client = MockRequest.new("OPTIONS * HTTP/1.1\r\n" \
+                             "Host: foo\r\n\r\n")
+    res = env = nil
+    assert_nothing_raised { env = @request.read(client) }
+    assert_equal '*', env['REQUEST_PATH']
+    assert_equal '*', env['PATH_INFO']
+    assert_equal '*', env['REQUEST_URI']
+
+    # assert_nothing_raised { res = @lint.call(env) } # fails Rack lint
+  end
+
+  def test_full_url_path
+    client = MockRequest.new("GET http://e:3/x?y=z HTTP/1.1\r\n" \
+                             "Host: foo\r\n\r\n")
+    res = env = nil
+    assert_nothing_raised { env = @request.read(client) }
+    assert_equal '/x', env['REQUEST_PATH']
+    assert_equal '/x', env['PATH_INFO']
+    assert_nothing_raised { res = @lint.call(env) }
+  end
+
   def test_rack_lint_get
     client = MockRequest.new("GET / HTTP/1.1\r\nHost: foo\r\n\r\n")
     res = env = nil
