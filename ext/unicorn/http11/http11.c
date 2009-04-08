@@ -111,21 +111,6 @@ static struct common_field common_http_fields[] = {
 # undef f
 };
 
-/*
- * qsort(3) and bsearch(3) improve average performance slightly, but may
- * not be worth it for lack of portability to certain platforms...
- */
-#if defined(HAVE_QSORT_BSEARCH)
-/* sort by length, then by name if there's a tie */
-static int common_field_cmp(const void *a, const void *b)
-{
-  struct common_field *cfa = (struct common_field *)a;
-  struct common_field *cfb = (struct common_field *)b;
-  signed long diff = cfa->len - cfb->len;
-  return diff ? diff : memcmp(cfa->name, cfb->name, cfa->len);
-}
-#endif /* HAVE_QSORT_BSEARCH */
-
 /* this function is not performance-critical */
 static void init_common_fields(void)
 {
@@ -146,28 +131,10 @@ static void init_common_fields(void)
     cf->value = rb_obj_freeze(cf->value);
     rb_global_variable(&cf->value);
   }
-
-#if defined(HAVE_QSORT_BSEARCH)
-  qsort(common_http_fields,
-        ARRAY_SIZE(common_http_fields),
-        sizeof(struct common_field),
-        common_field_cmp);
-#endif /* HAVE_QSORT_BSEARCH */
 }
 
 static VALUE find_common_field_value(const char *field, size_t flen)
 {
-#if defined(HAVE_QSORT_BSEARCH)
-  struct common_field key;
-  struct common_field *found;
-  key.name = field;
-  key.len = (signed long)flen;
-  found = (struct common_field *)bsearch(&key, common_http_fields,
-                                         ARRAY_SIZE(common_http_fields),
-                                         sizeof(struct common_field),
-                                         common_field_cmp);
-  return found ? found->value : Qnil;
-#else /* !HAVE_QSORT_BSEARCH */
   int i;
   struct common_field *cf = common_http_fields;
   for(i = 0; i < ARRAY_SIZE(common_http_fields); i++, cf++) {
@@ -175,7 +142,6 @@ static VALUE find_common_field_value(const char *field, size_t flen)
       return cf->value;
   }
   return Qnil;
-#endif /* !HAVE_QSORT_BSEARCH */
 }
 
 static void http_field(void *data, const char *field,
