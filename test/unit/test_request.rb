@@ -55,10 +55,31 @@ class RequestTest < Test::Unit::TestCase
     assert_nothing_raised { res = @lint.call(env) }
   end
 
+  def test_x_forwarded_proto
+    res = env = nil
+    client = MockRequest.new("GET / HTTP/1.1\r\n" \
+                             "X-Forwarded-Proto: https\r\n" \
+                             "Host: foo\r\n\r\n")
+    assert_nothing_raised { env = @request.read(client) }
+    assert_equal "https", env['rack.url_scheme']
+    assert_nothing_raised { res = @lint.call(env) }
+  end
+
+  def test_x_forwarded_proto_invalid
+    res = env = nil
+    client = MockRequest.new("GET / HTTP/1.1\r\n" \
+                             "X-Forwarded-Proto: ftp\r\n" \
+                             "Host: foo\r\n\r\n")
+    assert_nothing_raised { env = @request.read(client) }
+    assert_equal "http", env['rack.url_scheme']
+    assert_nothing_raised { res = @lint.call(env) }
+  end
+
   def test_rack_lint_get
     client = MockRequest.new("GET / HTTP/1.1\r\nHost: foo\r\n\r\n")
     res = env = nil
     assert_nothing_raised { env = @request.read(client) }
+    assert_equal "http", env['rack.url_scheme']
     assert_equal '666.666.666.666', env['REMOTE_ADDR']
     assert_nothing_raised { res = @lint.call(env) }
   end

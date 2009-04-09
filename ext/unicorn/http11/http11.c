@@ -24,6 +24,7 @@ static VALUE sym_http_body;
 #define HTTP_PREFIX "HTTP_"
 #define HTTP_PREFIX_LEN (sizeof(HTTP_PREFIX) - 1)
 
+static VALUE global_rack_url_scheme;
 static VALUE global_request_method;
 static VALUE global_request_uri;
 static VALUE global_fragment;
@@ -37,6 +38,7 @@ static VALUE global_server_port;
 static VALUE global_server_protocol;
 static VALUE global_server_protocol_value;
 static VALUE global_http_host;
+static VALUE global_http_x_forwarded_proto;
 static VALUE global_port_80;
 static VALUE global_localhost;
 
@@ -106,6 +108,7 @@ static struct common_field common_http_fields[] = {
 	f("USER_AGENT"),
 	f("VIA"),
 	f("X_FORWARDED_FOR"), /* common for proxies */
+	f("X_FORWARDED_PROTO"), /* common for proxies */
 	f("X_REAL_IP"), /* common for proxies */
 	f("WARNING")
 # undef f
@@ -248,6 +251,17 @@ static void header_done(void *data, const char *at, size_t length)
   VALUE temp = Qnil;
   char *colon = NULL;
 
+  /* set rack.url_scheme to "https" or "http" */
+  if ((temp = rb_hash_aref(req, global_http_x_forwarded_proto)) != Qnil) {
+    if (strcmp("https", RSTRING_PTR(temp)))
+      temp = rb_str_new("http", 4);
+    /* we leave temp alone if it's "https" */
+  } else {
+    temp = rb_str_new("http", 4);
+  }
+  rb_hash_aset(req, global_rack_url_scheme, temp);
+
+  /* set the SERVER_NAME and SERVER_PORT variables */
   if((temp = rb_hash_aref(req, global_http_host)) != Qnil) {
     colon = memchr(RSTRING_PTR(temp), ':', RSTRING_LEN(temp));
     if(colon != NULL) {
@@ -372,6 +386,7 @@ void Init_http11()
 
   mUnicorn = rb_define_module("Unicorn");
 
+  DEF_GLOBAL(rack_url_scheme, "rack.url_scheme");
   DEF_GLOBAL(request_method, "REQUEST_METHOD");
   DEF_GLOBAL(request_uri, "REQUEST_URI");
   DEF_GLOBAL(fragment, "FRAGMENT");
@@ -385,6 +400,7 @@ void Init_http11()
   DEF_GLOBAL(server_protocol, "SERVER_PROTOCOL");
   DEF_GLOBAL(server_protocol_value, "HTTP/1.1");
   DEF_GLOBAL(http_host, "HTTP_HOST");
+  DEF_GLOBAL(http_x_forwarded_proto, "HTTP_X_FORWARDED_PROTO");
   DEF_GLOBAL(port_80, "80");
   DEF_GLOBAL(localhost, "localhost");
 

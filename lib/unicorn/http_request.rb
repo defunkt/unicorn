@@ -19,7 +19,6 @@ module Unicorn
        "rack.multiprocess" => true,
        "rack.multithread" => false,
        "rack.run_once" => false,
-       "rack.url_scheme" => "http",
        "rack.version" => [0, 1],
        "SCRIPT_NAME" => "",
 
