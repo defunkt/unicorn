@@ -231,6 +231,38 @@ end
     end
   end
 
+  def test_unicorn_config_listener_swap
+    port_cli = unused_port
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite("listen '#@addr:#@port'\n")
+    pid = xfork do
+      redirect_test_io do
+        exec($unicorn_bin, "-c#{ucfg.path}", "-l#@addr:#{port_cli}")
+      end
+    end
+    results = retry_hit(["http://#@addr:#{port_cli}/"])
+    assert_equal String, results[0].class
+    results = retry_hit(["http://#@addr:#@port/"])
+    assert_equal String, results[0].class
+
+    port2 = unused_port(@addr)
+    ucfg.sysseek(0)
+    ucfg.truncate(0)
+    ucfg.syswrite("listen '#@addr:#{port2}'\n")
+    Process.kill(:HUP, pid)
+
+    results = retry_hit(["http://#@addr:#{port2}/"])
+    assert_equal String, results[0].class
+    results = retry_hit(["http://#@addr:#{port_cli}/"])
+    assert_equal String, results[0].class
+    assert_nothing_raised do
+      reuse = TCPServer.new(@addr, @port)
+      reuse.close
+    end
+    assert_shutdown(pid)
+  end
+
   def test_unicorn_config_listen_with_options
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
     ucfg = Tempfile.new('unicorn_test_config')
@@ -442,7 +474,7 @@ end
     assert_equal String, results.class
 
     # try reloading the config
-    sock = Tempfile.new('unicorn_test_sock')
+    sock = Tempfile.new('new_test_sock')
     new_sock_path = sock.path
     @sockets << new_sock_path
     sock.close!
@@ -452,6 +484,7 @@ end
 
     assert_nothing_raised do
       ucfg = File.open(ucfg.path, "wb")
+      ucfg.syswrite("listen \"#{sock_path}\"\n")
       ucfg.syswrite("listen \"#{new_sock_path}\"\n")
       ucfg.syswrite("pid \"#{pid_file}\"\n")
       ucfg.syswrite("logger Logger.new('#{new_log.path}')\n")

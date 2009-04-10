@@ -59,6 +59,7 @@ module Unicorn
       @io_purgatory = [] # prevents IO objects in here from being GC-ed
       @request = @rd_sig = @wr_sig = nil
       @reexec_pid = 0
+      @init_listeners = options[:listeners] ? options[:listeners].dup : []
       @config = Configurator.new(options.merge(:use_defaults => true))
       @listener_opts = {}
       @config.commit!(self, :skip => [:listeners, :pid])
@@ -570,6 +571,7 @@ module Unicorn
     def load_config!
       begin
         logger.info "reloading config_file=#{@config.config_file}"
+        @config[:listeners].replace(@init_listeners)
         @config.reload
         @config.commit!(self)
         kill_each_worker(:QUIT)
