@@ -37,7 +37,6 @@ class WebServerTest < Test::Unit::TestCase
 
   def test_preload_app_config
     teardown
-    port = unused_port
     tmp = Tempfile.new('test_preload_app_config')
     ObjectSpace.undefine_finalizer(tmp)
     app = lambda { ||
@@ -47,23 +46,22 @@ class WebServerTest < Test::Unit::TestCase
       lambda { |env| [ 200, { 'Content-Type' => 'text/plain' }, [ "#$$\n" ] ] }
     }
     redirect_test_io do
-      @server = HttpServer.new(app, :listeners => [ "127.0.0.1:#{port}"] )
+      @server = HttpServer.new(app, :listeners => [ "127.0.0.1:#@port"] )
       @server.start
     end
-    results = hit(["http://localhost:#{port}/"])
+    results = hit(["http://localhost:#@port/"])
     worker_pid = results[0].to_i
     tmp.sysseek(0)
     loader_pid = tmp.sysread(4096).to_i
     assert_equal worker_pid, loader_pid
     teardown
 
-    port = unused_port
     redirect_test_io do
-      @server = HttpServer.new(app, :listeners => [ "127.0.0.1:#{port}"],
+      @server = HttpServer.new(app, :listeners => [ "127.0.0.1:#@port"],
                                :preload_app => true)
       @server.start
     end
-    results = hit(["http://localhost:#{port}/"])
+    results = hit(["http://localhost:#@port/"])
     worker_pid = results[0].to_i
     tmp.sysseek(0)
     loader_pid = tmp.sysread(4096).to_i
@@ -75,16 +73,15 @@ class WebServerTest < Test::Unit::TestCase
 
   def test_broken_app
     teardown
-    port = unused_port
     app = lambda { |env| raise RuntimeError, "hello" }
     # [200, {}, []] }
     redirect_test_io do
-      @server = HttpServer.new(app, :listeners => [ "127.0.0.1:#{port}"] )
+      @server = HttpServer.new(app, :listeners => [ "127.0.0.1:#@port"] )
       @server.start
     end
     sock = nil
     assert_nothing_raised do
-      sock = TCPSocket.new('127.0.0.1', port)
+      sock = TCPSocket.new('127.0.0.1', @port)
       sock.syswrite("GET / HTTP/1.0\r\n\r\n")
     end
 

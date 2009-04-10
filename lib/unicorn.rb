@@ -110,8 +110,10 @@ module Unicorn
 
       @listeners.delete_if do |io|
         if dead_names.include?(sock_name(io))
-          @io_purgatory.delete_if { |pio| pio.fileno == io.fileno }
-          true
+          @io_purgatory.delete_if do |pio|
+            pio.fileno == io.fileno && (pio.close rescue nil).nil?
+          end
+          (io.close rescue nil).nil?
         else
           false
         end
