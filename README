@@ -1,23 +1,22 @@
-= Unicorn: Unix + LAN/localhost-optimized fork of Mongrel
-
-Unicorn is designed to only serve fast clients.  See the PHILOSOPHY
-and DESIGN documents for more details regarding this.
+= Unicorn: Unix + LAN/localhost-only fork of Mongrel
 
 == Features
 
-* Built on the solid Mongrel code base and takes full advantage
-  of functionality exclusive to Unix-like operating systems.
+* Designed for Rack, Unix, fast clients, and ease-of-debugging.  We
+  cut out all things that are better-supported by nginx or Rack.
 
 * Mostly written in Ruby, only the HTTP parser (stolen and trimmed
   down from Mongrel) is written in C.  Unicorn is compatible with
-  both Ruby 1.8 and 1.9.
+  both Ruby 1.8 and 1.9.  A pure-Ruby (but still Unix-only) version
+  is planned.
 
 * Process management: Unicorn will reap and restart workers that
   die from broken apps.  There is no need to manage multiple processes
-  yourself.
+  or ports yourself.  Unicorn can spawn and manage any fixed number of
+  worker processes you choose to scale to your backend.
 
 * Load balancing is done entirely by the operating system kernel.
-  Requests never pile up behind a busy worker.
+  Requests never pile up behind a busy worker process.
 
 * Does not care if your application is thread-safe or not, workers
   all run within their own isolated address space and only serve one
@@ -27,9 +26,10 @@ and DESIGN documents for more details regarding this.
   Ruby on Rails via a Rack wrapper.
 
 * Builtin reopening of all log files in your application via
-  USR1 signal.  This allows logrotate to rotate files atomically
-  and quickly via rename instead of the racy and slow
-  copytruncate method.
+  USR1 signal.  This allows logrotate to rotate files atomically and
+  quickly via rename instead of the racy and slow copytruncate method.
+  Unicorn also takes steps to ensure multi-line log entries from one
+  request all stay within the same file.
 
 * nginx-style binary re-execution without losing connections.
   You can upgrade Unicorn, your entire application, libraries
@@ -54,7 +54,7 @@ Unicorn is copyright 2009 Eric Wong and contributors.
 It is based on Mongrel and carries the same license:
 
 Mongrel is copyright 2007 Zed A. Shaw and contributors. It is licensed
-under the Ruby license and the GPL2. See the include LICENSE file for
+under the Ruby license and the GPL2. See the included LICENSE file for
 details.
 
 Unicorn is 100% Free Software.
@@ -85,8 +85,8 @@ If you have web browser software for the World Wide Web
 (on the Information Superhighway), you may browse the code from
 your web browser and download the latest snapshot tarballs here:
 
-* http://git.bogomips.org/cgit/unicorn.git (this server runs Unicorn!)
-* http://repo.or.cz/w/unicorn.git (gitweb mirror)
+* http://git.bogomips.org/cgit/unicorn.git (cgit)
+* http://repo.or.cz/w/unicorn.git (gitweb)
 
 == Usage
 
@@ -122,9 +122,12 @@ options.
 
 == Disclaimer
 
-Like the creatures themselves, production deployments of Unicorn are rare.
-There is NO WARRANTY whatsoever if anything goes wrong, but let us know and
-we'll try our best to fix it.
+Like the creatures themselves, production deployments of Unicorn are
+rare or even non-existent.  There is NO WARRANTY whatsoever if anything
+goes wrong, but let us know and we'll try our best to fix it.
+
+Unicorn is designed to only serve fast clients.  See the PHILOSOPHY
+and DESIGN documents for more details regarding this.
 
 Rainbows are NOT included.
 
@@ -141,5 +144,5 @@ Rainbows are NOT included.
 
 == Contact
 
-Newsgroup and mailing list maybe coming...
 Email Eric Wong at normalperson@yhbt.net for now.
+Newsgroup and mailing list maybe coming...
