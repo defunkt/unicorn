@@ -439,6 +439,38 @@ end
     reexec_basic_test(pid, pid_file)
   end
 
+  def test_socket_unlinked_restore
+    results = nil
+    sock = Tempfile.new('unicorn_test_sock')
+    sock_path = sock.path
+    sock.close!
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite("listen \"#{sock_path}\"\n")
+
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+    pid = xfork { redirect_test_io { exec($unicorn_bin, "-c#{ucfg.path}") } }
+    wait_for_file(sock_path)
+    assert File.socket?(sock_path)
+    assert_nothing_raised do
+      sock = UNIXSocket.new(sock_path)
+      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+      results = sock.sysread(4096)
+    end
+    assert_equal String, results.class
+    assert_nothing_raised do
+      File.unlink(sock_path)
+      Process.kill(:HUP, pid)
+    end
+    wait_for_file(sock_path)
+    assert File.socket?(sock_path)
+    assert_nothing_raised do
+      sock = UNIXSocket.new(sock_path)
+      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+      results = sock.sysread(4096)
+    end
+    assert_equal String, results.class
+  end
+
   def test_unicorn_config_file
     pid_file = "#{@tmpdir}/test.pid"
     sock = Tempfile.new('unicorn_test_sock')

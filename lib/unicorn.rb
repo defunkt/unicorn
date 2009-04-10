@@ -105,16 +105,25 @@ module Unicorn
     # replaces current listener set with +listeners+.  This will
     # close the socket if it will not exist in the new listener set
     def listeners=(listeners)
-      cur_names = listener_names
+      cur_names, dead_names = [], []
+      listener_names.each do |name|
+        if "/" == name[0..0]
+          # mark unlinked sockets as dead so we can rebind them
+          (File.socket?(name) ? cur_names : dead_names) << name
+        else
+          cur_names << name
+        end
+      end
       set_names = listener_names(listeners)
-      dead_names = cur_names - set_names
+      dead_names += cur_names - set_names
+      dead_names.uniq!
 
       @listeners.delete_if do |io|
         if dead_names.include?(sock_name(io))
           @io_purgatory.delete_if do |pio|
-            pio.fileno == io.fileno && (pio.close rescue nil).nil?
+            pio.fileno == io.fileno && (pio.close rescue nil).nil? # true
           end
-          (io.close rescue nil).nil?
+          (io.close rescue nil).nil? # true
         else
           false
         end
