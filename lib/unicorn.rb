@@ -74,7 +74,7 @@ module Unicorn
       # before they become UNIXServer or TCPServer
       inherited = ENV['UNICORN_FD'].to_s.split(/,/).map do |fd|
         io = Socket.for_fd(fd.to_i)
-        set_server_sockopt(io)
+        set_server_sockopt(io, @listener_opts[sock_name(io)])
         @io_purgatory << io
         logger.info "inherited addr=#{sock_name(io)} fd=#{fd}"
         server_cast(io)
@@ -125,6 +125,7 @@ module Unicorn
           end
           (io.close rescue nil).nil? # true
         else
+          set_server_sockopt(io, @listener_opts[sock_name(io)])
           false
         end
       end
@@ -153,7 +154,7 @@ module Unicorn
       return if String === address && listener_names.include?(address)
 
       if io = bind_listen(address, opt)
-        if Socket == io.class
+        unless TCPServer === io || UNIXServer === io
           @io_purgatory << io
           io = server_cast(io)
         end

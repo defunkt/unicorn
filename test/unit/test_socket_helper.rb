@@ -16,7 +16,7 @@ class TestSocketHelper < Test::Unit::TestCase
     port = unused_port @test_addr
     @tcp_listener_name = "#@test_addr:#{port}"
     @tcp_listener = bind_listen(@tcp_listener_name)
-    assert Socket === @tcp_listener
+    assert TCPServer === @tcp_listener
     assert_equal @tcp_listener_name, sock_name(@tcp_listener)
   end
 
@@ -31,10 +31,10 @@ class TestSocketHelper < Test::Unit::TestCase
     ].each do |opts|
       assert_nothing_raised do
         tcp_listener = bind_listen(tcp_listener_name, opts)
-        assert Socket === tcp_listener
+        assert TCPServer === tcp_listener
         tcp_listener.close
         unix_listener = bind_listen(unix_listener_name, opts)
-        assert Socket === unix_listener
+        assert UNIXServer === unix_listener
         unix_listener.close
       end
     end
@@ -47,7 +47,7 @@ class TestSocketHelper < Test::Unit::TestCase
     @unix_listener_path = tmp.path
     File.unlink(@unix_listener_path)
     @unix_listener = bind_listen(@unix_listener_path)
-    assert Socket === @unix_listener
+    assert UNIXServer === @unix_listener
     assert_equal @unix_listener_path, sock_name(@unix_listener)
     assert File.readable?(@unix_listener_path), "not readable"
     assert File.writable?(@unix_listener_path), "not writable"
@@ -61,6 +61,7 @@ class TestSocketHelper < Test::Unit::TestCase
     a = bind_listen(@unix_listener)
     assert_equal a.fileno, @unix_listener.fileno
     unix_server = server_cast(@unix_listener)
+    assert UNIXServer === unix_server
     a = bind_listen(unix_server)
     assert_equal a.fileno, unix_server.fileno
     assert_equal a.fileno, @unix_listener.fileno
@@ -71,6 +72,7 @@ class TestSocketHelper < Test::Unit::TestCase
     a = bind_listen(@tcp_listener)
     assert_equal a.fileno, @tcp_listener.fileno
     tcp_server = server_cast(@tcp_listener)
+    assert TCPServer === tcp_server
     a = bind_listen(tcp_server)
     assert_equal a.fileno, tcp_server.fileno
     assert_equal a.fileno, @tcp_listener.fileno
@@ -79,7 +81,7 @@ class TestSocketHelper < Test::Unit::TestCase
   def test_bind_listen_unix_rebind
     test_bind_listen_unix
     new_listener = bind_listen(@unix_listener_path)
-    assert Socket === new_listener
+    assert UNIXServer === new_listener
     assert new_listener.fileno != @unix_listener.fileno
     assert_equal sock_name(new_listener), sock_name(@unix_listener)
     assert_equal @unix_listener_path, sock_name(new_listener)
@@ -100,13 +102,17 @@ class TestSocketHelper < Test::Unit::TestCase
       test_bind_listen_unix
       test_bind_listen_tcp
     end
-    @unix_server = server_cast(@unix_listener)
+    unix_listener_socket = Socket.for_fd(@unix_listener.fileno)
+    assert Socket === unix_listener_socket
+    @unix_server = server_cast(unix_listener_socket)
     assert_equal @unix_listener.fileno, @unix_server.fileno
     assert UNIXServer === @unix_server
     assert File.socket?(@unix_server.path)
     assert_equal @unix_listener_path, sock_name(@unix_server)
 
-    @tcp_server = server_cast(@tcp_listener)
+    tcp_listener_socket = Socket.for_fd(@tcp_listener.fileno)
+    assert Socket === tcp_listener_socket
+    @tcp_server = server_cast(tcp_listener_socket)
     assert_equal @tcp_listener.fileno, @tcp_server.fileno
     assert TCPServer === @tcp_server
     assert_equal @tcp_listener_name, sock_name(@tcp_server)

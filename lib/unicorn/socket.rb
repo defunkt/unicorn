@@ -47,7 +47,17 @@ module Unicorn
       sock.setsockopt(SOL_TCP, TCP_CORK, 1) if defined?(TCP_CORK)
     end
 
-    def set_server_sockopt(sock)
+    def set_server_sockopt(sock, opt)
+      opt ||= {}
+      if opt[:rcvbuf] || opt[:sndbuf]
+        log_buffer_sizes(sock, "before: ")
+        sock.setsockopt(SOL_SOCKET, SO_RCVBUF, opt[:rcvbuf]) if opt[:rcvbuf]
+        sock.setsockopt(SOL_SOCKET, SO_SNDBUF, opt[:sndbuf]) if opt[:sndbuf]
+        log_buffer_sizes(sock, " after: ")
+      end
+      sock.listen(opt[:backlog] || 1024)
+      return if sock_name(sock)[0..0] == "/"
+
       if defined?(TCP_DEFER_ACCEPT)
         sock.setsockopt(SOL_TCP, TCP_DEFER_ACCEPT, 1) rescue nil
       end
@@ -70,7 +80,7 @@ module Unicorn
     def bind_listen(address = '0.0.0.0:8080', opt = { :backlog => 1024 })
       return address unless String === address
 
-      domain, bind_addr = if address[0..0] == "/"
+      sock = if address[0..0] == "/"
         if File.exist?(address)
           if File.socket?(address)
             if self.respond_to?(:logger)
@@ -82,32 +92,18 @@ module Unicorn
                   "socket=#{address} specified but it is not a socket!"
           end
         end
-        [ AF_UNIX, Socket.pack_sockaddr_un(address) ]
+        old_umask = File.umask(0)
+        begin
+          UNIXServer.new(address)
+        ensure
+          File.umask(old_umask)
+        end
       elsif address =~ /^(\d+\.\d+\.\d+\.\d+):(\d+)$/
-        [ AF_INET, Socket.pack_sockaddr_in($2.to_i, $1) ]
+        TCPServer.new($1, $2.to_i)
       else
         raise ArgumentError, "Don't know how to bind: #{address}"
       end
-
-      sock = Socket.new(domain, SOCK_STREAM, 0)
-      sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1) if defined?(SO_REUSEADDR)
-      old_umask = File.umask(0)
-      begin
-        sock.bind(bind_addr)
-      rescue Errno::EADDRINUSE
-        sock.close rescue nil
-        return nil
-      ensure
-        File.umask(old_umask)
-      end
-      if opt[:rcvbuf] || opt[:sndbuf]
-        log_buffer_sizes(sock, "before: ")
-        sock.setsockopt(SOL_SOCKET, SO_RCVBUF, opt[:rcvbuf]) if opt[:rcvbuf]
-        sock.setsockopt(SOL_SOCKET, SO_SNDBUF, opt[:sndbuf]) if opt[:sndbuf]
-        log_buffer_sizes(sock, " after: ")
-      end
-      sock.listen(opt[:backlog] || 1024)
-      set_server_sockopt(sock) if domain == AF_INET
+      set_server_sockopt(sock, opt)
       sock
     end
 

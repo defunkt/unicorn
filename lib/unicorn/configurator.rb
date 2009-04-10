@@ -192,10 +192,6 @@ module Unicorn
     #   specified.
     #
     #   Defaults: operating system defaults
-    #
-    # Due to limitations of the operating system, options specified here
-    # cannot affect existing listener sockets in any way, sockets must be
-    # completely closed and rebound.
     def listen(address, opt = { :backlog => 1024 })
       address = expand_addr(address)
       if String === address
