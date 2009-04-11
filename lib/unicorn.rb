@@ -404,7 +404,6 @@ module Unicorn
     # in 3 easy steps: read request, call app, write app response
     def process_client(client)
       client.nonblock = false
-      set_client_sockopt(client) if TCPSocket === client
       env = @request.read(client)
       app_response = @app.call(env)
       HttpResponse.write(client, app_response)

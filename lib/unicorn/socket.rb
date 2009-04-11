@@ -1,30 +1,6 @@
 require 'socket'
 require 'io/nonblock'
 
-# non-portable Socket code goes here:
-class Socket
-  module Constants
-    # configure platform-specific options (only tested on Linux 2.6 so far)
-    case RUBY_PLATFORM
-    when /linux/
-      # from /usr/include/linux/tcp.h
-      TCP_DEFER_ACCEPT = 9 unless defined?(TCP_DEFER_ACCEPT)
-      TCP_CORK = 3 unless defined?(TCP_CORK)
-    when /freebsd(([1-4]\..{1,2})|5\.[0-4])/
-    when /freebsd/
-      # Use the HTTP accept filter if available.
-      # The struct made by pack() is defined in /usr/include/sys/socket.h
-      # as accept_filter_arg
-      unless `/sbin/sysctl -nq net.inet.accf.http`.empty?
-        unless defined?(SO_ACCEPTFILTER_HTTPREADY)
-          SO_ACCEPTFILTER_HTTPREADY = ['httpready',nil].pack('a16a240').freeze
-        end
-
-      end
-    end
-  end
-end
-
 class UNIXSocket
   UNICORN_PEERADDR = '127.0.0.1'.freeze
   def unicorn_peeraddr
@@ -42,11 +18,6 @@ module Unicorn
   module SocketHelper
     include Socket::Constants
 
-    def set_client_sockopt(sock)
-      sock.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1) if defined?(TCP_NODELAY)
-      sock.setsockopt(SOL_TCP, TCP_CORK, 1) if defined?(TCP_CORK)
-    end
-
     def set_server_sockopt(sock, opt)
       opt ||= {}
       if opt[:rcvbuf] || opt[:sndbuf]
@@ -56,15 +27,6 @@ module Unicorn
         log_buffer_sizes(sock, " after: ")
       end
       sock.listen(opt[:backlog] || 1024)
-      return if sock_name(sock)[0..0] == "/"
-
-      if defined?(TCP_DEFER_ACCEPT)
-        sock.setsockopt(SOL_TCP, TCP_DEFER_ACCEPT, 1) rescue nil
-      end
-      if defined?(SO_ACCEPTFILTER_HTTPREADY)
-        sock.setsockopt(SOL_SOCKET, SO_ACCEPTFILTER,
-                        SO_ACCEPTFILTER_HTTPREADY) rescue nil
-      end
     end
 
     def log_buffer_sizes(sock, pfx = '')
