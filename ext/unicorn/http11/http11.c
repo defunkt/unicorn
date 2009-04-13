@@ -41,6 +41,7 @@ static VALUE global_http_host;
 static VALUE global_http_x_forwarded_proto;
 static VALUE global_port_80;
 static VALUE global_localhost;
+static VALUE global_http;
 
 /** Defines common length and error messages for input length validation. */
 #define DEF_MAX_LENGTH(N,length) const size_t MAX_##N##_LENGTH = length; const char *MAX_##N##_LENGTH_ERR = "HTTP element " # N  " is longer than the " # length " allowed length."
@@ -251,13 +252,12 @@ static void header_done(void *data, const char *at, size_t length)
   VALUE temp = Qnil;
   char *colon = NULL;
 
-  /* set rack.url_scheme to "https" or "http" */
-  if ((temp = rb_hash_aref(req, global_http_x_forwarded_proto)) != Qnil) {
-    if (strcmp("https", RSTRING_PTR(temp)))
-      temp = rb_str_new("http", 4);
-    /* we leave temp alone if it's "https" */
-  } else {
-    temp = rb_str_new("http", 4);
+  /* set rack.url_scheme to "https" or "http", no others are allowed by Rack */
+  temp = rb_hash_aref(req, global_http_x_forwarded_proto);
+  switch (temp == Qnil ? 0 : RSTRING_LEN(temp)) {
+  case 5: if (!memcmp("https", RSTRING_PTR(temp), 5)) break;
+  case 4: if (!memcmp("http", RSTRING_PTR(temp), 4)) break;
+  default: temp = global_http;
   }
   rb_hash_aset(req, global_rack_url_scheme, temp);
 
@@ -403,6 +403,7 @@ void Init_http11()
   DEF_GLOBAL(http_x_forwarded_proto, "HTTP_X_FORWARDED_PROTO");
   DEF_GLOBAL(port_80, "80");
   DEF_GLOBAL(localhost, "localhost");
+  DEF_GLOBAL(http, "http");
 
   eHttpParserError = rb_define_class_under(mUnicorn, "HttpParserError", rb_eIOError);
 
