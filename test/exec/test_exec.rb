@@ -39,8 +39,8 @@ end
 worker_processes 4
 timeout 30
 logger Logger.new('#{COMMON_TMP.path}')
-before_fork do |server, worker_nr|
-  server.logger.info "before_fork: worker=\#{worker_nr}"
+before_fork do |server, worker|
+  server.logger.info "before_fork: worker=\#{worker.nr}"
 end
   EOS
 
@@ -286,7 +286,7 @@ end
     File.unlink(tmp.path)
     ucfg = Tempfile.new('unicorn_test_config')
     ucfg.syswrite("listen '#@addr:#@port'\n")
-    ucfg.syswrite("before_fork { |s,nr|\n")
+    ucfg.syswrite("before_fork { |s,w|\n")
     ucfg.syswrite("  s.listen('#{tmp.path}', :backlog => 5, :sndbuf => 8192)\n")
     ucfg.syswrite("  s.listen('#@addr:#{port2}', :rcvbuf => 8192)\n")
     ucfg.syswrite("\n}\n")

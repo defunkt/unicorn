@@ -12,8 +12,8 @@ module Unicorn
   #   listen '0.0.0.0:9292'
   #   timeout 10
   #   pid "/tmp/my_app.pid"
-  #   after_fork do |server,worker_nr|
-  #     server.listen("127.0.0.1:#{9293 + worker_nr}") rescue nil
+  #   after_fork do |server,worker|
+  #     server.listen("127.0.0.1:#{9293 + worker.nr}") rescue nil
   #   end
   class Configurator
     # The default logger writes its output to $stderr
@@ -25,18 +25,18 @@ module Unicorn
       :listeners => [],
       :logger => DEFAULT_LOGGER,
       :worker_processes => 1,
-      :after_fork => lambda { |server, worker_nr|
-          server.logger.info("worker=#{worker_nr} spawned pid=#{$$}")
+      :after_fork => lambda { |server, worker|
+          server.logger.info("worker=#{worker.nr} spawned pid=#{$$}")
 
           # per-process listener ports for debugging/admin:
           # "rescue nil" statement is needed because USR2 will
           # cause the master process to reexecute itself and the
           # per-worker ports can be taken, necessitating another
           # HUP after QUIT-ing the original master:
-          # server.listen("127.0.0.1:#{8081 + worker_nr}") rescue nil
+          # server.listen("127.0.0.1:#{8081 + worker.nr}") rescue nil
         },
-      :before_fork => lambda { |server, worker_nr|
-          server.logger.info("worker=#{worker_nr} spawning...")
+      :before_fork => lambda { |server, worker|
+          server.logger.info("worker=#{worker.nr} spawning...")
         },
       :before_exec => lambda { |server|
           server.logger.info("forked child re-executing...")
@@ -97,13 +97,13 @@ module Unicorn
     # the worker after forking.  The following is an example hook which adds
     # a per-process listener to every worker:
     #
-    #  after_fork do |server,worker_nr|
+    #  after_fork do |server,worker|
     #    # per-process listener ports for debugging/admin:
     #    # "rescue nil" statement is needed because USR2 will
     #    # cause the master process to reexecute itself and the
     #    # per-worker ports can be taken, necessitating another
     #    # HUP after QUIT-ing the original master:
-    #    server.listen("127.0.0.1:#{9293 + worker_nr}") rescue nil
+    #    server.listen("127.0.0.1:#{9293 + worker.nr}") rescue nil
     #  end
     def after_fork(*args, &block)
       set_hook(:after_fork, block_given? ? block : args[0])

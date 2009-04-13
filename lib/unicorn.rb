@@ -389,7 +389,7 @@ module Unicorn
         tempfile = Tempfile.new('') # as short as possible to save dir space
         tempfile.unlink # don't allow other processes to find or see it
         worker = Worker.new(worker_nr, tempfile)
-        @before_fork.call(self, worker.nr)
+        @before_fork.call(self, worker)
         pid = fork { worker_loop(worker) }
         @workers[pid] = worker
       end
@@ -438,7 +438,7 @@ module Unicorn
       @start_ctx = @workers = @rd_sig = @wr_sig = nil
       @listeners.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
       worker.tempfile.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
-      @after_fork.call(self, worker.nr) if @after_fork # can drop perms
+      @after_fork.call(self, worker) if @after_fork # can drop perms
       @request = HttpRequest.new(logger)
       build_app! unless @preload_app
     end

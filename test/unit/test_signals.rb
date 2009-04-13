@@ -30,7 +30,7 @@ class SignalsTest < Test::Unit::TestCase
     tmp.chmod(0)
     @server_opts = {
       :listeners => [ "127.0.0.1:#@port", @tmp.path ],
-      :after_fork => lambda { |server,worker_nr|
+      :after_fork => lambda { |server,worker|
         trap(:HUP) { tmp.chmod(n += 1) }
       },
     }
