@@ -104,6 +104,20 @@ module Unicorn
     #    # per-worker ports can be taken, necessitating another
     #    # HUP after QUIT-ing the original master:
     #    server.listen("127.0.0.1:#{9293 + worker.nr}") rescue nil
+    #
+    #    # drop permissions to "www-data" in the worker
+    #    # generally there's no reason to start Unicorn as a priviledged user
+    #    # as it is not recommended to expose Unicorn to public clients.
+    #    uid, gid = Process.euid, Process.egid
+    #    user, group = 'www-data', 'www-data'
+    #    target_uid = Etc.getpwnam(user).uid
+    #    target_gid = Etc.getgrnam(group).gid
+    #    worker.tempfile.chown(target_uid, target_gid)
+    #    if uid != target_uid || gid != target_gid
+    #      Process.initgroups(user, target_gid)
+    #      Process::GID.change_privilege(target_gid)
+    #      Process::UID.change_privilege(target_uid)
+    #    end
     #  end
     def after_fork(*args, &block)
       set_hook(:after_fork, block_given? ? block : args[0])
