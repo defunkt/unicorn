@@ -403,7 +403,8 @@ module Unicorn
     # once a client is accepted, it is processed in its entirety here
     # in 3 easy steps: read request, call app, write app response
     def process_client(client)
-      client.nonblock = false
+      # one syscall less than "client.nonblock = false":
+      client.fcntl(Fcntl::F_SETFL, File::RDWR)
       env = @request.read(client)
       app_response = @app.call(env)
       HttpResponse.write(client, app_response)

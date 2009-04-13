@@ -1,5 +1,4 @@
 require 'socket'
-require 'io/nonblock'
 
 class UNIXSocket
   UNICORN_PEERADDR = '127.0.0.1'.freeze
