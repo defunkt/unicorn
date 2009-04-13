@@ -26,6 +26,7 @@ module Unicorn
     attr_reader :logger
     include ::Unicorn::SocketHelper
 
+    SIG_QUEUE = []
     DEFAULT_START_CTX = {
       :argv => ARGV.map { |arg| arg.dup },
       # don't rely on Dir.pwd here since it's not symlink-aware, and
@@ -51,7 +52,6 @@ module Unicorn
       @start_ctx = DEFAULT_START_CTX.dup
       @start_ctx.merge!(start_ctx) if start_ctx
       @app = app
-      @sig_queue = []
       @master_pid = $$
       @workers = Hash.new
       @io_purgatory = [] # prevents IO objects in here from being GC-ed
@@ -182,7 +182,7 @@ module Unicorn
       begin
         loop do
           reap_all_workers
-          case (mode = @sig_queue.shift)
+          case (mode = SIG_QUEUE.shift)
           when nil
             murder_lazy_workers
             spawn_missing_workers if respawn
@@ -257,11 +257,11 @@ module Unicorn
     # defer a signal for later processing in #join (master process)
     def trap_deferred(signal)
       trap(signal) do |sig_nr|
-        if @sig_queue.size < 5
-          @sig_queue << signal
+        if SIG_QUEUE.size < 5
+          SIG_QUEUE << signal
           awaken_master
         else
-          logger.error "ignoring SIG#{signal}, queue=#{@sig_queue.inspect}"
+          logger.error "ignoring SIG#{signal}, queue=#{SIG_QUEUE.inspect}"
         end
       end
     end
@@ -383,7 +383,7 @@ module Unicorn
           Dir.chdir(@start_ctx[:cwd])
         rescue Errno::ENOENT => err
           logger.fatal "#{err.inspect} (#{@start_ctx[:cwd]})"
-          @sig_queue << :QUIT # forcibly emulate SIGQUIT
+          SIG_QUEUE << :QUIT # forcibly emulate SIGQUIT
           return
         end
         tempfile = Tempfile.new('') # as short as possible to save dir space
@@ -430,23 +430,19 @@ module Unicorn
     # traps for USR1, USR2, and HUP may be set in the @after_fork Proc
     # by the user.
     def init_worker_process(worker)
-      build_app! unless @preload_app
-      @sig_queue.clear
-      QUEUE_SIGS.each { |sig| trap(sig, 'IGNORE') }
+      QUEUE_SIGS.each { |sig| trap(sig, 'DEFAULT') }
       trap(:CHLD, 'DEFAULT')
-
+      SIG_QUEUE.clear
       proc_name "worker[#{worker.nr}]"
       @rd_sig.close if @rd_sig
       @wr_sig.close if @wr_sig
       @workers.values.each { |other| other.tempfile.close rescue nil }
-      @workers.clear
-      @start_ctx.clear
       @start_ctx = @workers = @rd_sig = @wr_sig = nil
       @listeners.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
-      ENV.delete('UNICORN_FD')
-      @after_fork.call(self, worker.nr) if @after_fork
       worker.tempfile.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+      @after_fork.call(self, worker.nr) if @after_fork # can drop perms
       @request = HttpRequest.new(logger)
+      build_app! unless @preload_app
     end
 
     # runs inside each forked worker, this sits around and waits
@@ -459,9 +455,8 @@ module Unicorn
       alive = true
       ready = @listeners
       client = nil
-      [:TERM, :INT].each { |sig| trap(sig) { exit(0) } } # instant shutdown
       trap(:QUIT) do
-        alive = false
+        alive = false # graceful shutdown
         @listeners.each { |sock| sock.close rescue nil } # break IO.select
       end
       reopen_logs, (rd, wr) = false, IO.pipe
