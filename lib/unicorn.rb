@@ -521,8 +521,8 @@ module Unicorn
               reopen_logs or exit(alive ? 1 : 0)
             end
           end
-        rescue SystemExit => e
-          exit(e.status)
+        rescue SignalException, SystemExit => e
+          raise e
         rescue Object => e
           if alive
             logger.error "Unhandled listen loop exception #{e.inspect}."

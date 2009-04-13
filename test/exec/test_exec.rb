@@ -72,6 +72,22 @@ end
     end
   end
 
+  def test_exit_signals
+    %w(INT TERM QUIT).each do |sig|
+      File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+      pid = xfork { redirect_test_io { exec($unicorn_bin, "-l#@addr:#@port") } }
+      wait_master_ready("test_stderr.#{pid}.log")
+      status = nil
+      assert_nothing_raised do
+        Process.kill(sig, pid)
+        pid, status = Process.waitpid2(pid)
+      end
+      reaped = File.readlines("test_stderr.#{pid}.log").grep(/reaped/)
+      assert_equal 1, reaped.size
+      assert status.exited?
+    end
+  end
+
   def test_basic
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
     pid = fork do
