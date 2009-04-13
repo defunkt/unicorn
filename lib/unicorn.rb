@@ -400,9 +400,7 @@ module Unicorn
     def process_client(client)
       # one syscall less than "client.nonblock = false":
       client.fcntl(Fcntl::F_SETFL, File::RDWR)
-      env = @request.read(client)
-      app_response = @app.call(env)
-      HttpResponse.write(client, app_response)
+      HttpResponse.write(client, @app.call(@request.read(client)))
     # if we get any error, try to write something back to the client
     # assuming we haven't closed the socket, but don't get hung up
     # if the socket is already closed or broken.  We'll always ensure
