@@ -392,7 +392,6 @@ module Unicorn
         end
         tempfile = Tempfile.new('') # as short as possible to save dir space
         tempfile.unlink # don't allow other processes to find or see it
-        tempfile.sync = true
         worker = Worker.new(worker_nr, tempfile)
         @before_fork.call(self, worker.nr)
         pid = fork { worker_loop(worker) }
