@@ -587,6 +587,7 @@ end
     end
 
     wait_master_ready(log.path)
+    File.truncate(log.path, 0)
     wait_for_file(pid_file)
     orig_pid = pid = File.read(pid_file).to_i
     orig_fds = `ls -l /proc/#{pid}/fd`.split(/\n/)
@@ -600,6 +601,8 @@ end
     end
     wait_for_death(pid)
 
+    wait_master_ready(log.path)
+    File.truncate(log.path, 0)
     wait_for_file(pid_file)
     pid = File.read(pid_file).to_i
     assert_not_equal orig_pid, pid
@@ -607,7 +610,7 @@ end
     assert $?.success?
 
     # we could've inherited descriptors the first time around
-    assert expect_size >= curr_fds.size
+    assert expect_size >= curr_fds.size, curr_fds.inspect
     expect_size = curr_fds.size
 
     assert_nothing_raised do
@@ -617,11 +620,13 @@ end
     end
     wait_for_death(pid)
 
+    wait_master_ready(log.path)
+    File.truncate(log.path, 0)
     wait_for_file(pid_file)
     pid = File.read(pid_file).to_i
     curr_fds = `ls -l /proc/#{pid}/fd`.split(/\n/)
     assert $?.success?
-    assert_equal expect_size, curr_fds.size
+    assert_equal expect_size, curr_fds.size, curr_fds.inspect
 
     Process.kill(:QUIT, pid)
     wait_for_death(pid)
