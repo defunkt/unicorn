@@ -49,7 +49,7 @@ class HttpParserTest < Test::Unit::TestCase
     should_be_good = "GET / HTTP/1.1\r\naaaaaaaaaaaaa:++++++++++\r\n\r\n"
     assert parser.execute(req, should_be_good)
 
-    # ref: http://thread.gmane.org/gmane.comp.lang.ruby.Unicorn.devel/37/focus=45
+    # ref: http://thread.gmane.org/gmane.comp.lang.ruby.mongrel.devel/37/focus=45
     # (note we got 'pen' mixed up with 'pound' in that thread,
     # but the gist of it is still relevant: these nasty headers are irrelevant
     #
