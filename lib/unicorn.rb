@@ -32,8 +32,6 @@ module Unicorn
       # symlink dirs are the default with Capistrano...
       :cwd => `/bin/sh -c pwd`.chomp("\n"),
       :zero => $0.dup,
-      :environ => {}.merge!(ENV),
-      :umask => File.umask,
     }.freeze
 
     Worker = Struct.new(:nr, :tempfile) unless defined?(Worker)
@@ -338,10 +336,8 @@ module Unicorn
       end
 
       @reexec_pid = fork do
-        ENV.replace(@start_ctx[:environ])
         listener_fds = @listeners.map { |sock| sock.fileno }
         ENV['UNICORN_FD'] = listener_fds.join(',')
-        File.umask(@start_ctx[:umask])
         Dir.chdir(@start_ctx[:cwd])
         cmd = [ @start_ctx[:zero] ] + @start_ctx[:argv]
 
