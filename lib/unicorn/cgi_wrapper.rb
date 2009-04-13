@@ -71,11 +71,9 @@ class Unicorn::CGIWrapper < ::CGI
 
     # Capitalized "Status:", with human-readable status code (e.g. "200 OK")
     parseable_status = @head.delete(Status)
-    unless @status
-      @status ||= parseable_status.split(/ /)[0].to_i rescue 404
-    end
+    @status ||= parseable_status.split(/ /)[0].to_i rescue 500
 
-    [ @status, @head, [ @body.string ] ]
+    [ @status || 500, @head, [ @body.string ] ]
   end
 
   # The header is typically called to send back the header.  In our case we

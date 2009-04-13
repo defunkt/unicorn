@@ -13,9 +13,15 @@ class Unicorn::App::OldRails
 
   def call(env)
     cgi = Unicorn::CGIWrapper.new(env)
-    Dispatcher.dispatch(cgi,
-        ActionController::CgiRequest::DEFAULT_SESSION_OPTIONS,
-        cgi.body)
+    begin
+      Dispatcher.dispatch(cgi,
+          ActionController::CgiRequest::DEFAULT_SESSION_OPTIONS,
+          cgi.body)
+    rescue Object => e
+      err = env['rack.errors']
+      out.write("#{e} #{e.message}\n")
+      e.backtrace.each { |line| out.write("#{line}\n") }
+    end
     cgi.out  # finalize the response
     cgi.rack_response
   end
