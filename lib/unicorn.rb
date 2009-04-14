@@ -453,6 +453,7 @@ module Unicorn
       alive = true
       ready = @listeners
       client = nil
+      [:TERM, :INT].each { |sig| trap(sig) { exit(0) } } # instant shutdown
       trap(:QUIT) do
         alive = false # graceful shutdown
         @listeners.each { |sock| sock.close rescue nil } # break IO.select
