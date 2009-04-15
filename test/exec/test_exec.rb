@@ -370,21 +370,21 @@ end
     tries = DEFAULT_TRIES
     log = File.readlines(rotate.path)
     while (tries -= 1) > 0 &&
-          log.grep(/rotating logs\.\.\./).size < 5
+          log.grep(/reopening logs\.\.\./).size < 5
       sleep DEFAULT_RES
       log = File.readlines(rotate.path)
     end
-    assert_equal 5, log.grep(/rotating logs\.\.\./).size
-    assert_equal 0, log.grep(/done rotating logs/).size
+    assert_equal 5, log.grep(/reopening logs\.\.\./).size
+    assert_equal 0, log.grep(/done reopening logs/).size
 
     tries = DEFAULT_TRIES
     log = File.readlines(COMMON_TMP.path)
-    while (tries -= 1) > 0 && log.grep(/done rotating logs/).size < 5
+    while (tries -= 1) > 0 && log.grep(/done reopening logs/).size < 5
       sleep DEFAULT_RES
       log = File.readlines(COMMON_TMP.path)
     end
-    assert_equal 5, log.grep(/done rotating logs/).size
-    assert_equal 0, log.grep(/rotating logs\.\.\./).size
+    assert_equal 5, log.grep(/done reopening logs/).size
+    assert_equal 0, log.grep(/reopening logs\.\.\./).size
     assert_nothing_raised { Process.kill(:QUIT, pid) }
     status = nil
     assert_nothing_raised { pid, status = Process.waitpid2(pid) }

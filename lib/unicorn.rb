@@ -193,9 +193,9 @@ module Unicorn
             stop(false)
             break
           when :USR1 # rotate logs
-            logger.info "master rotating logs..."
+            logger.info "master reopening logs..."
             Unicorn::Util.reopen_logs
-            logger.info "master done rotating logs"
+            logger.info "master done reopening logs"
             kill_each_worker(:USR1)
           when :USR2 # exec binary, stay alive in case something went wrong
             reexec
@@ -467,9 +467,9 @@ module Unicorn
       while alive && @master_pid == Process.ppid
         if reopen_logs
           reopen_logs = false
-          @logger.info "worker=#{worker.nr} rotating logs..."
+          @logger.info "worker=#{worker.nr} reopening logs..."
           Unicorn::Util.reopen_logs
-          @logger.info "worker=#{worker.nr} done rotating logs"
+          @logger.info "worker=#{worker.nr} done reopening logs"
           wr.close rescue nil
           rd, wr = IO.pipe
           rd.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
