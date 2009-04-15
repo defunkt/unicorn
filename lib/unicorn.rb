@@ -353,7 +353,7 @@ module Unicorn
           io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
         end
         logger.info "executing #{cmd.inspect} (in #{Dir.pwd})"
-        @before_exec.call(self) if @before_exec
+        @before_exec.call(self)
         exec(*cmd)
       end
       proc_name 'master (old)'
@@ -438,7 +438,7 @@ module Unicorn
       @start_ctx = @workers = @rd_sig = @wr_sig = nil
       @listeners.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
       worker.tempfile.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
-      @after_fork.call(self, worker) if @after_fork # can drop perms
+      @after_fork.call(self, worker) # can drop perms
       @request = HttpRequest.new(logger)
       build_app! unless @preload_app
     end
