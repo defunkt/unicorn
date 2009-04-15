@@ -52,7 +52,6 @@ module Unicorn
       @start_ctx = DEFAULT_START_CTX.dup
       @start_ctx.merge!(start_ctx) if start_ctx
       @app = app
-      @master_pid = $$
       @workers = Hash.new
       @io_purgatory = [] # prevents IO objects in here from being GC-ed
       @request = @rd_sig = @wr_sig = nil
@@ -447,26 +446,24 @@ module Unicorn
     # for connections and doesn't die until the parent dies (or is
     # given a INT, QUIT, or TERM signal)
     def worker_loop(worker)
+      master_pid = Process.ppid # slightly racy, but less memory usage
       init_worker_process(worker)
-      nr = 0
+      nr = 0 # this becomes negative if we need to reopen logs
       tempfile = worker.tempfile
-      alive = true
       ready = @listeners
       client = nil
-      [:TERM, :INT].each { |sig| trap(sig) { exit(0) } } # instant shutdown
-      trap(:QUIT) do
-        alive = false # graceful shutdown
-        @listeners.each { |sock| sock.close rescue nil } # break IO.select
-      end
-      reopen_logs, (rd, wr) = false, IO.pipe
+      rd, wr = IO.pipe
       rd.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       wr.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
-      trap(:USR1) { reopen_logs = true; rd.close rescue nil } # break IO.select
+
+      # closing anything we IO.select on will raise EBADF
+      trap(:USR1) { nr = -65536; rd.close rescue nil }
+      trap(:QUIT) { @listeners.each { |sock| sock.close rescue nil } }
+      [:TERM, :INT].each { |sig| trap(sig) { exit(0) } } # instant shutdown
       @logger.info "worker=#{worker.nr} ready"
 
-      while alive && @master_pid == Process.ppid
-        if reopen_logs
-          reopen_logs = false
+      while master_pid == Process.ppid
+        if nr < 0
           @logger.info "worker=#{worker.nr} reopening logs..."
           Unicorn::Util.reopen_logs
           @logger.info "worker=#{worker.nr} done reopening logs"
@@ -481,11 +478,11 @@ module Unicorn
         # prefer temporary files to be unlinked for security,
         # performance and reliability reasons, so utime is out.  No-op
         # changes with chmod doesn't update ctime on all filesystems; so
-        # we increment our counter each and every time.
-        tempfile.chmod(nr += 1)
+        # we change our counter each and every time (after process_client
+        # and before IO.select).
+        tempfile.chmod(nr = 0)
 
         begin
-          accepted = false
           ready.each do |sock|
             begin
               client = begin
@@ -493,22 +490,22 @@ module Unicorn
               rescue Errno::EAGAIN
                 next
               end
-              accepted = true
               process_client(client)
             rescue Errno::ECONNABORTED
               # client closed the socket even before accept
               client.close rescue nil
+            ensure
+              tempfile.chmod(nr += 1)
+              break if nr < 0
             end
-            tempfile.chmod(nr += 1)
-            break if reopen_logs
           end
           client = nil
 
           # make the following bet: if we accepted clients this round,
-          # we're probably reasonably busy, so avoid calling select(2)
-          # and try to do a blind non-blocking accept(2) on everything
-          # before we sleep again in select
-          if accepted || reopen_logs
+          # we're probably reasonably busy, so avoid calling select()
+          # and do a speculative accept_nonblock on every listener
+          # before we sleep again in select().
+          if nr != 0 # (nr < 0) => reopen logs
             ready = @listeners
           else
             begin
@@ -519,7 +516,7 @@ module Unicorn
             rescue Errno::EINTR
               ready = @listeners
             rescue Errno::EBADF => e
-              reopen_logs or exit(alive ? 1 : 0)
+              nr < 0 or exit(@listeners[0].closed? ? 0 : 1)
             end
           end
         rescue SignalException, SystemExit => e
