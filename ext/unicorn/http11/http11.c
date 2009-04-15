@@ -40,6 +40,7 @@ static VALUE global_server_protocol_value;
 static VALUE global_http_host;
 static VALUE global_http_x_forwarded_proto;
 static VALUE global_port_80;
+static VALUE global_port_443;
 static VALUE global_localhost;
 static VALUE global_http;
 
@@ -243,40 +244,36 @@ static void http_version(void *data, const char *at, size_t length)
   rb_hash_aset(req, global_http_version, val);
 }
 
-/** Finalizes the request header to have a bunch of stuff that's
-  needed. */
-
+/** Finalizes the request header to have a bunch of stuff that's needed. */
 static void header_done(void *data, const char *at, size_t length)
 {
   VALUE req = (VALUE)data;
-  VALUE temp = Qnil;
-  char *colon = NULL;
+  VALUE server_name = global_localhost;
+  VALUE server_port = global_port_80;
+  VALUE temp;
 
   /* set rack.url_scheme to "https" or "http", no others are allowed by Rack */
-  temp = rb_hash_aref(req, global_http_x_forwarded_proto);
-  switch (temp == Qnil ? 0 : RSTRING_LEN(temp)) {
-  case 5: if (!memcmp("https", RSTRING_PTR(temp), 5)) break;
-  case 4: if (!memcmp("http", RSTRING_PTR(temp), 4)) break;
-  default: temp = global_http;
-  }
+  if ((temp = rb_hash_aref(req, global_http_x_forwarded_proto)) != Qnil &&
+      RSTRING_LEN(temp) == 5 &&
+      !memcmp("https", RSTRING_PTR(temp), 5))
+    server_port = global_port_443;
+  else
+    temp = global_http;
   rb_hash_aset(req, global_rack_url_scheme, temp);
 
-  /* set the SERVER_NAME and SERVER_PORT variables */
-  if((temp = rb_hash_aref(req, global_http_host)) != Qnil) {
-    colon = memchr(RSTRING_PTR(temp), ':', RSTRING_LEN(temp));
-    if(colon != NULL) {
-      rb_hash_aset(req, global_server_name, rb_str_substr(temp, 0, colon - RSTRING_PTR(temp)));
-      rb_hash_aset(req, global_server_port, 
-          rb_str_substr(temp, colon - RSTRING_PTR(temp)+1, 
-            RSTRING_LEN(temp)));
+  /* parse and set the SERVER_NAME and SERVER_PORT variables */
+  if ((temp = rb_hash_aref(req, global_http_host)) != Qnil) {
+    char *colon = memchr(RSTRING_PTR(temp), ':', RSTRING_LEN(temp));
+    if (colon) {
+      server_name = rb_str_substr(temp, 0, colon - RSTRING_PTR(temp));
+      server_port = rb_str_substr(temp, colon - RSTRING_PTR(temp)+1,
+                                  RSTRING_LEN(temp));
     } else {
-      rb_hash_aset(req, global_server_name, temp);
-      rb_hash_aset(req, global_server_port, global_port_80);
+      server_name = temp;
     }
-  } else {
-    rb_hash_aset(req, global_server_name, global_localhost);
-    rb_hash_aset(req, global_server_port, global_port_80);
   }
+  rb_hash_aset(req, global_server_name, server_name);
+  rb_hash_aset(req, global_server_port, server_port);
 
   /* grab the initial body and stuff it into the hash */
   rb_hash_aset(req, sym_http_body, rb_str_new(at, length));
@@ -402,6 +399,7 @@ void Init_http11()
   DEF_GLOBAL(http_host, "HTTP_HOST");
   DEF_GLOBAL(http_x_forwarded_proto, "HTTP_X_FORWARDED_PROTO");
   DEF_GLOBAL(port_80, "80");
+  DEF_GLOBAL(port_443, "443");
   DEF_GLOBAL(localhost, "localhost");
   DEF_GLOBAL(http, "http");
 
