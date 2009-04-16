@@ -125,5 +125,6 @@ test/unit/test_http_parser.rb
 test/unit/test_request.rb
 test/unit/test_response.rb
 test/unit/test_server.rb
+test/unit/test_signals.rb
 test/unit/test_socket_helper.rb
 test/unit/test_upload.rb
