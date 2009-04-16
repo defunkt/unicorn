@@ -62,7 +62,7 @@ test: $(T) $(T_n)
 
 test-exec: $(wildcard test/exec/test_*.rb)
 test-unit: $(wildcard test/unit/test_*.rb)
-$(slow_tests):
+$(slow_tests): $(test_prefix)/.stamp
 	@$(MAKE) $(shell $(awk_slow) $@)
 
 TEST_OPTS = -v
