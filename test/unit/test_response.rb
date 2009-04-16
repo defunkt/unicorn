@@ -54,6 +54,27 @@ class ResponseTest < Test::Unit::TestCase
     assert_match(/^X-Whatever: stuff\r\nX-Whatever: bleh\r\n/, out.string)
   end
 
+  # Even though Rack explicitly forbids "Status" in the header hash,
+  # some broken clients still rely on it
+  def test_status_header_added
+    out = StringIO.new
+    HttpResponse.write(out,[200, {"X-Whatever" => "stuff"}, []])
+    assert out.closed?
+    assert_match(/^Status: 200 OK\r\nX-Whatever: stuff\r\n/, out.string)
+  end
+
+  # we always favor the code returned by the application, since "Status"
+  # in the header hash is not allowed by Rack (but not every app is
+  # fully Rack-compliant).
+  def test_status_header_ignores_app_hash
+    out = StringIO.new
+    header_hash = {"X-Whatever" => "stuff", 'StaTus' => "666" }
+    HttpResponse.write(out,[200, header_hash, []])
+    assert out.closed?
+    assert_match(/^Status: 200 OK\r\nX-Whatever: stuff\r\n/, out.string)
+    assert_equal 1, out.string.split(/\r\n/).grep(/^Status:/i).size
+  end
+
   def test_body_closed
     expect_body = %w(1 2 3 4).join("\n")
     body = StringIO.new(expect_body)

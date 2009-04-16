@@ -24,12 +24,16 @@ module Unicorn
     # Rack does not set/require a Date: header.  We always override the
     # Connection: and Date: headers no matter what (if anything) our
     # Rack application sent us.
-    SKIP = { 'connection' => true, 'date' => true }.freeze
+    SKIP = { 'connection' => true, 'date' => true, 'status' => true }.freeze
 
     # writes the rack_response to socket as an HTTP response
     def self.write(socket, rack_response)
       status, headers, body = rack_response
-      out = [ "Date: #{Time.now.httpdate}" ]
+      status = "#{status} #{HTTP_STATUS_CODES[status]}"
+
+      # Date is required by HTTP/1.1 as long as our clock can be trusted.
+      # Some broken clients require a "Status" header so we accomodate them
+      out = [ "Date: #{Time.now.httpdate}", "Status: #{status}" ]
 
       # Don't bother enforcing duplicate supression, it's a Hash most of
       # the time anyways so just hope our app knows what it's doing
@@ -45,7 +49,7 @@ module Unicorn
       # Rack should enforce Content-Length or chunked transfer encoding,
       # so don't worry or care about them.
       socket_write(socket,
-                   "HTTP/1.1 #{status} #{HTTP_STATUS_CODES[status]}\r\n" \
+                   "HTTP/1.1 #{status}\r\n" \
                    "Connection: close\r\n" \
                    "#{out.join("\r\n")}\r\n\r\n")
       body.each { |chunk| socket_write(socket, chunk) }
