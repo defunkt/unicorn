@@ -23,9 +23,9 @@ SHELL := /bin/bash -e -o pipefail
 
 full-test: test-18 test-19
 test-18:
-	$(MAKE) test 2>&1 | sed -u -e 's!^!1.8 !'
+	$(MAKE) test test-rails 2>&1 | sed -u -e 's!^!1.8 !'
 test-19:
-	$(MAKE) test r19=1 2>&1 | sed -u -e 's!^!1.9 !'
+	$(MAKE) test test-rails r19=1 2>&1 | sed -u -e 's!^!1.9 !'
 
 # publishes docs to http://unicorn.bogomips.org
 publish_doc:
