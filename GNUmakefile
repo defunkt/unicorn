@@ -32,23 +32,23 @@ inst_deps := $(wildcard bin/*) $(wildcard lib/*.rb) \
 
 ext/unicorn/http11/http11_parser.c: ext/unicorn/http11/http11_parser.rl
 	cd $(@D) && ragel $(<F) -C -G2 -o $(@F)
-ext/unicorn/http11/Makefile: ext/unicorn/http11/extconf.rb
+ext/unicorn/http11/Makefile: ext/unicorn/http11/extconf.rb $(http11_deps)
 	cd $(@D) && $(ruby) $(<F)
-ext/unicorn/http11/http11.$(DLEXT): $(http11_deps) ext/unicorn/http11/Makefile
+ext/unicorn/http11/http11.$(DLEXT): ext/unicorn/http11/Makefile
 	$(MAKE) -C $(@D)
 lib/unicorn/http11.$(DLEXT): ext/unicorn/http11/http11.$(DLEXT)
 	@mkdir -p lib
 	install -m644 $< $@
 http11: lib/unicorn/http11.$(DLEXT)
 
-$(test_prefix)/.stamp: $(inst_deps)
-	$(MAKE) clean-http11
-	$(MAKE) install-test
+$(test_prefix)/.stamp: install-test
 	> $@
 
-install-test:
+install-test: $(inst_deps)
+	test -n "$(test_prefix)"
 	mkdir -p $(test_prefix)/.ccache
 	tar c bin ext lib GNUmakefile | (cd $(test_prefix) && tar x)
+	$(MAKE) -C $(test_prefix) clean
 	$(MAKE) -C $(test_prefix) http11 shebang
 
 # this is only intended to be run within $(test_prefix)
