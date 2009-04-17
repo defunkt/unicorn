@@ -25,15 +25,13 @@ module Unicorn
     # Connection: and Date: headers no matter what (if anything) our
     # Rack application sent us.
     SKIP = { 'connection' => true, 'date' => true, 'status' => true }.freeze
+    HEADER_OUT = [ "Connection: close" ] # :nodoc
 
     # writes the rack_response to socket as an HTTP response
     def self.write(socket, rack_response)
       status, headers, body = rack_response
       status = "#{status} #{HTTP_STATUS_CODES[status]}"
-
-      # Date is required by HTTP/1.1 as long as our clock can be trusted.
-      # Some broken clients require a "Status" header so we accomodate them
-      out = [ "Date: #{Time.now.httpdate}", "Status: #{status}" ]
+      out = HEADER_OUT.dup # shallow copy
 
       # Don't bother enforcing duplicate supression, it's a Hash most of
       # the time anyways so just hope our app knows what it's doing
@@ -48,9 +46,12 @@ module Unicorn
 
       # Rack should enforce Content-Length or chunked transfer encoding,
       # so don't worry or care about them.
+      # Date is required by HTTP/1.1 as long as our clock can be trusted.
+      # Some broken clients require a "Status" header so we accomodate them
       socket_write(socket,
                    "HTTP/1.1 #{status}\r\n" \
-                   "Connection: close\r\n" \
+                   "Date: #{Time.now.httpdate}\r\n" \
+                   "Status: #{status}\r\n" \
                    "#{out.join("\r\n")}\r\n\r\n")
       body.each { |chunk| socket_write(socket, chunk) }
       socket.close # uncorks the socket immediately

@@ -60,7 +60,7 @@ class ResponseTest < Test::Unit::TestCase
     out = StringIO.new
     HttpResponse.write(out,[200, {"X-Whatever" => "stuff"}, []])
     assert out.closed?
-    assert_match(/^Status: 200 OK\r\nX-Whatever: stuff\r\n/, out.string)
+    assert_equal 1, out.string.split(/\r\n/).grep(/^Status: 200 OK/i).size
   end
 
   # we always favor the code returned by the application, since "Status"
@@ -71,7 +71,7 @@ class ResponseTest < Test::Unit::TestCase
     header_hash = {"X-Whatever" => "stuff", 'StaTus' => "666" }
     HttpResponse.write(out,[200, header_hash, []])
     assert out.closed?
-    assert_match(/^Status: 200 OK\r\nX-Whatever: stuff\r\n/, out.string)
+    assert_equal 1, out.string.split(/\r\n/).grep(/^Status: 200 OK/i).size
     assert_equal 1, out.string.split(/\r\n/).grep(/^Status:/i).size
   end
 
