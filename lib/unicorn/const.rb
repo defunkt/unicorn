@@ -49,8 +49,6 @@ module Unicorn
   # gave about a 3% to 10% performance improvement over using the strings directly.
   # Symbols did not really improve things much compared to constants.
   module Const
-    DATE="Date".freeze
-
     # This is the part of the path after the SCRIPT_NAME.
     PATH_INFO="PATH_INFO".freeze
 
