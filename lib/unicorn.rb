@@ -495,7 +495,7 @@ module Unicorn
               # client closed the socket even before accept
               client.close rescue nil
             ensure
-              tempfile.chmod(nr += 1)
+              tempfile.chmod(nr += 1) if client
               break if nr < 0
             end
           end
