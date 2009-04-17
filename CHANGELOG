@@ -1,3 +1,4 @@
+v0.5.3 - fix 100% CPU usage when idle, small cleanups
 v0.5.2 - force Status: header for compat, small cleanups
 v0.5.1 - exit correctly on INT/TERM, QUIT is still recommended, however
 v0.5.0 - {after,before}_fork API change, small tweaks/fixes
