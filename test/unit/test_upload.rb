@@ -18,7 +18,8 @@ class UploadTest < Test::Unit::TestCase
     @sha1 = Digest::SHA1.new
     @sha1_app = lambda do |env|
       input = env['rack.input']
-      resp = { :pos => input.pos, :size => input.stat.size }
+      resp = { :pos => input.pos, :size => input.size, :class => input.class }
+      @sha1.reset
       begin
         loop { @sha1.update(input.sysread(@bs)) }
       rescue EOFError
@@ -193,6 +194,22 @@ class UploadTest < Test::Unit::TestCase
     resp = `curl -isSfN -T#{tmp.path} http://#@addr:#@port/`
     assert $?.success?, 'curl ran OK'
     assert_match(%r!\b#{sha1}\b!, resp)
+    assert_match(/Tempfile/, resp)
+
+    # small StringIO path
+    assert(system("dd", "if=#{@random.path}", "of=#{tmp.path}",
+                        "bs=1024", "count=1"),
+           "dd #@random to #{tmp}")
+    sha1_re = %r!\b([a-f0-9]{40})\b!
+    sha1_out = `sha1sum #{tmp.path}`
+    assert $?.success?, 'sha1sum ran OK'
+
+    assert_match(sha1_re, sha1_out)
+    sha1 = sha1_re.match(sha1_out)[1]
+    resp = `curl -isSfN -T#{tmp.path} http://#@addr:#@port/`
+    assert $?.success?, 'curl ran OK'
+    assert_match(%r!\b#{sha1}\b!, resp)
+    assert_match(/StringIO/, resp)
   end
 
   private
