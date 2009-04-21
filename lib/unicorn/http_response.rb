@@ -64,15 +64,12 @@ module Unicorn
       # write(2) can return short on slow devices like sockets as well
       # as fail with EINTR if a signal was caught.
       def self.socket_write(socket, buffer)
-        loop do
-          begin
-            written = socket.syswrite(buffer)
-            return written if written == buffer.length
-            buffer = buffer[written..-1]
-          rescue Errno::EINTR
-            retry
-          end
-        end
+        begin
+          written = socket.syswrite(buffer)
+          return written if written == buffer.length
+          buffer = buffer[written..-1]
+        rescue Errno::EINTR
+        end while true
       end
 
   end
