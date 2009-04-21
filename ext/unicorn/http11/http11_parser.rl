@@ -2,10 +2,35 @@
  * Copyright (c) 2005 Zed A. Shaw
  * You can redistribute it and/or modify it under the same terms as Ruby.
  */
-#include "http11_parser.h"
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#ifndef http11_parser_h
+#define http11_parser_h
+
+#include <sys/types.h>
+
+static void http_field(void *data, const char *field,
+                       size_t flen, const char *value, size_t vlen);
+static void request_method(void *data, const char *at, size_t length);
+static void request_uri(void *data, const char *at, size_t length);
+static void fragment(void *data, const char *at, size_t length);
+static void request_path(void *data, const char *at, size_t length);
+static void query_string(void *data, const char *at, size_t length);
+static void http_version(void *data, const char *at, size_t length);
+static void header_done(void *data, const char *at, size_t length);
+
+typedef struct http_parser {
+  int cs;
+  size_t body_start;
+  size_t nread;
+  size_t mark;
+  size_t field_start;
+  size_t field_len;
+  size_t query_start;
+
+  void *data;
+} http_parser;
+
+static int http_parser_has_error(http_parser *parser);
+static int http_parser_is_finished(http_parser *parser);
 
 /*
  * capitalizes all lower-case ASCII characters,
@@ -45,43 +70,34 @@ static void downcase_char(char *c)
 
   action start_value { MARK(mark, fpc); }
   action write_value {
-    if(parser->http_field != NULL) {
-      parser->http_field(parser->data, PTR_TO(field_start), parser->field_len, PTR_TO(mark), LEN(mark, fpc));
-    }
+    http_field(parser->data, PTR_TO(field_start), parser->field_len, PTR_TO(mark), LEN(mark, fpc));
   }
   action request_method {
-    if(parser->request_method != NULL)
-      parser->request_method(parser->data, PTR_TO(mark), LEN(mark, fpc));
+    request_method(parser->data, PTR_TO(mark), LEN(mark, fpc));
   }
   action request_uri {
-    if(parser->request_uri != NULL)
-      parser->request_uri(parser->data, PTR_TO(mark), LEN(mark, fpc));
+    request_uri(parser->data, PTR_TO(mark), LEN(mark, fpc));
   }
   action fragment {
-    if(parser->fragment != NULL)
-      parser->fragment(parser->data, PTR_TO(mark), LEN(mark, fpc));
+    fragment(parser->data, PTR_TO(mark), LEN(mark, fpc));
   }
 
   action start_query {MARK(query_start, fpc); }
   action query_string {
-    if(parser->query_string != NULL)
-      parser->query_string(parser->data, PTR_TO(query_start), LEN(query_start, fpc));
+    query_string(parser->data, PTR_TO(query_start), LEN(query_start, fpc));
   }
 
   action http_version {
-    if(parser->http_version != NULL)
-      parser->http_version(parser->data, PTR_TO(mark), LEN(mark, fpc));
+    http_version(parser->data, PTR_TO(mark), LEN(mark, fpc));
   }
 
   action request_path {
-    if(parser->request_path != NULL)
-      parser->request_path(parser->data, PTR_TO(mark), LEN(mark,fpc));
+    request_path(parser->data, PTR_TO(mark), LEN(mark,fpc));
   }
 
   action done {
     parser->body_start = fpc - buffer + 1;
-    if(parser->header_done != NULL)
-      parser->header_done(parser->data, fpc + 1, pe - fpc - 1);
+    header_done(parser->data, fpc + 1, pe - fpc - 1);
     fbreak;
   }
 
@@ -91,7 +107,7 @@ static void downcase_char(char *c)
 /** Data **/
 %% write data;
 
-int http_parser_init(http_parser *parser)  {
+static int http_parser_init(http_parser *parser) {
   int cs = 0;
   %% write init;
   parser->cs = cs;
@@ -105,7 +121,9 @@ int http_parser_init(http_parser *parser)  {
 }
 
 /** exec **/
-size_t http_parser_execute(http_parser *parser, const char *buffer, size_t len)  {
+static size_t http_parser_execute(
+  http_parser *parser, const char *buffer, size_t len)
+{
   const char *p, *pe;
   int cs = parser->cs;
   size_t off = parser->nread;
@@ -134,21 +152,11 @@ size_t http_parser_execute(http_parser *parser, const char *buffer, size_t len) 
   return(parser->nread);
 }
 
-int http_parser_finish(http_parser *parser)
-{
-  if (http_parser_has_error(parser) ) {
-    return -1;
-  } else if (http_parser_is_finished(parser) ) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-
-int http_parser_has_error(http_parser *parser) {
+static int http_parser_has_error(http_parser *parser) {
   return parser->cs == http_parser_error;
 }
 
-int http_parser_is_finished(http_parser *parser) {
+static int http_parser_is_finished(http_parser *parser) {
   return parser->cs == http_parser_first_final;
 }
+#endif /* http11_parser_h */

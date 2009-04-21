@@ -26,12 +26,12 @@ T_r_log := $(subst .r,$(log_suffix),$(T_r))
 test_prefix = $(CURDIR)/test/install-$(RUBY_VERSION)
 
 http11_deps := $(addprefix ext/unicorn/http11/, \
-                 ext_help.h http11.c http11_parser.c http11_parser.h \
+                 ext_help.h http11.c http11_parser.h \
                  http11_parser.rl http11_parser_common.rl)
 inst_deps := $(wildcard bin/*) $(wildcard lib/*.rb) \
   $(wildcard lib/*/*.rb) $(http11_deps)
 
-ext/unicorn/http11/http11_parser.c: $(wildcard ext/unicorn/http11/*.rl)
+ext/unicorn/http11/http11_parser.h: $(wildcard ext/unicorn/http11/*.rl)
 	cd $(@D) && ragel http11_parser.rl -C -G2 -o $(@F)
 	$(ruby) -i -p -e '$$_.gsub!(%r{[ \t]*$$},"")' $@
 ext/unicorn/http11/Makefile: ext/unicorn/http11/extconf.rb $(http11_deps)

@@ -308,14 +308,6 @@ static VALUE HttpParser_alloc(VALUE klass)
   VALUE obj;
   http_parser *hp = ALLOC_N(http_parser, 1);
   TRACE();
-  hp->http_field = http_field;
-  hp->request_method = request_method;
-  hp->request_uri = request_uri;
-  hp->fragment = fragment;
-  hp->request_path = request_path;
-  hp->query_string = query_string;
-  hp->http_version = http_version;
-  hp->header_done = header_done;
   http_parser_init(hp);
 
   obj = Data_Wrap_Struct(klass, NULL, HttpParser_free, hp);
