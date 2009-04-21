@@ -13,10 +13,10 @@
  */
 static void snake_upcase_char(char *c)
 {
-    if (*c >= 'a' && *c <= 'z')
-      *c &= ~0x20;
-    else if (*c == '-')
-      *c = '_';
+  if (*c >= 'a' && *c <= 'z')
+    *c &= ~0x20;
+  else if (*c == '-')
+    *c = '_';
 }
 
 static void downcase_char(char *c)
@@ -32,11 +32,9 @@ static void downcase_char(char *c)
 /** Machine **/
 
 %%{
-
   machine http_parser;
 
   action mark {MARK(mark, fpc); }
-
 
   action start_field { MARK(field_start, fpc); }
   action snake_upcase_field { snake_upcase_char((char *)fpc); }
@@ -88,7 +86,6 @@ static void downcase_char(char *c)
   }
 
   include http_parser_common "http11_parser_common.rl";
-
 }%%
 
 /** Data **/
@@ -106,7 +103,6 @@ int http_parser_init(http_parser *parser)  {
 
   return(1);
 }
-
 
 /** exec **/
 size_t http_parser_execute(http_parser *parser, const char *buffer, size_t len)  {

@@ -15,10 +15,10 @@
  */
 static void snake_upcase_char(char *c)
 {
-    if (*c >= 'a' && *c <= 'z')
-      *c &= ~0x20;
-    else if (*c == '-')
-      *c = '_';
+  if (*c >= 'a' && *c <= 'z')
+    *c &= ~0x20;
+  else if (*c == '-')
+    *c = '_';
 }
 
 static void downcase_char(char *c)
@@ -34,7 +34,7 @@ static void downcase_char(char *c)
 /** Machine **/
 
 
-#line 92 "http11_parser.rl"
+#line 89 "http11_parser.rl"
 
 
 /** Data **/
@@ -47,7 +47,7 @@ static const int http_parser_error = 0;
 static const int http_parser_en_main = 1;
 
 
-#line 96 "http11_parser.rl"
+#line 93 "http11_parser.rl"
 
 int http_parser_init(http_parser *parser)  {
   int cs = 0;
@@ -57,7 +57,7 @@ int http_parser_init(http_parser *parser)  {
 	cs = http_parser_start;
 	}
 
-#line 100 "http11_parser.rl"
+#line 97 "http11_parser.rl"
   parser->cs = cs;
   parser->body_start = 0;
   parser->mark = 0;
@@ -67,7 +67,6 @@ int http_parser_init(http_parser *parser)  {
 
   return(1);
 }
-
 
 /** exec **/
 size_t http_parser_execute(http_parser *parser, const char *buffer, size_t len)  {
@@ -84,7 +83,7 @@ size_t http_parser_execute(http_parser *parser, const char *buffer, size_t len) 
   assert(pe - p == len - off && "pointers aren't same distance");
 
 
-#line 88 "http11_parser.c"
+#line 87 "http11_parser.c"
 	{
 	if ( p == pe )
 		goto _test_eof;
@@ -108,14 +107,14 @@ st0:
 cs = 0;
 	goto _out;
 tr0:
-#line 38 "http11_parser.rl"
+#line 37 "http11_parser.rl"
 	{MARK(mark, p); }
 	goto st2;
 st2:
 	if ( ++p == pe )
 		goto _test_eof2;
 case 2:
-#line 119 "http11_parser.c"
+#line 118 "http11_parser.c"
 	switch( (*p) ) {
 		case 32: goto tr2;
 		case 36: goto st44;
@@ -131,7 +130,7 @@ case 2:
 		goto st44;
 	goto st0;
 tr2:
-#line 54 "http11_parser.rl"
+#line 52 "http11_parser.rl"
 	{
     if(parser->request_method != NULL)
       parser->request_method(parser->data, PTR_TO(mark), LEN(mark, p));
@@ -141,7 +140,7 @@ st3:
 	if ( ++p == pe )
 		goto _test_eof3;
 case 3:
-#line 145 "http11_parser.c"
+#line 144 "http11_parser.c"
 	switch( (*p) ) {
 		case 42: goto tr4;
 		case 47: goto tr5;
@@ -150,75 +149,75 @@ case 3:
 	}
 	goto st0;
 tr4:
-#line 38 "http11_parser.rl"
+#line 37 "http11_parser.rl"
 	{MARK(mark, p); }
 	goto st4;
 st4:
 	if ( ++p == pe )
 		goto _test_eof4;
 case 4:
-#line 161 "http11_parser.c"
+#line 160 "http11_parser.c"
 	switch( (*p) ) {
 		case 32: goto tr7;
 		case 35: goto tr8;
 	}
 	goto st0;
 tr7:
-#line 58 "http11_parser.rl"
+#line 56 "http11_parser.rl"
 	{
     if(parser->request_uri != NULL)
       parser->request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st5;
 tr30:
-#line 38 "http11_parser.rl"
+#line 37 "http11_parser.rl"
 	{MARK(mark, p); }
-#line 62 "http11_parser.rl"
+#line 60 "http11_parser.rl"
 	{
     if(parser->fragment != NULL)
       parser->fragment(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st5;
 tr33:
-#line 62 "http11_parser.rl"
+#line 60 "http11_parser.rl"
 	{
     if(parser->fragment != NULL)
       parser->fragment(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st5;
 tr37:
-#line 78 "http11_parser.rl"
+#line 76 "http11_parser.rl"
 	{
     if(parser->request_path != NULL)
       parser->request_path(parser->data, PTR_TO(mark), LEN(mark,p));
   }
-#line 58 "http11_parser.rl"
+#line 56 "http11_parser.rl"
 	{
     if(parser->request_uri != NULL)
       parser->request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st5;
 tr48:
-#line 67 "http11_parser.rl"
+#line 65 "http11_parser.rl"
 	{MARK(query_start, p); }
-#line 68 "http11_parser.rl"
+#line 66 "http11_parser.rl"
 	{
     if(parser->query_string != NULL)
       parser->query_string(parser->data, PTR_TO(query_start), LEN(query_start, p));
   }
-#line 58 "http11_parser.rl"
+#line 56 "http11_parser.rl"
 	{
     if(parser->request_uri != NULL)
       parser->request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st5;
 tr52:
-#line 68 "http11_parser.rl"
+#line 66 "http11_parser.rl"
 	{
     if(parser->query_string != NULL)
       parser->query_string(parser->data, PTR_TO(query_start), LEN(query_start, p));
   }
-#line 58 "http11_parser.rl"
+#line 56 "http11_parser.rl"
 	{
     if(parser->request_uri != NULL)
       parser->request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
@@ -228,19 +227,19 @@ st5:
 	if ( ++p == pe )
 		goto _test_eof5;
 case 5:
-#line 232 "http11_parser.c"
+#line 231 "http11_parser.c"
 	if ( (*p) == 72 )
 		goto tr9;
 	goto st0;
 tr9:
-#line 38 "http11_parser.rl"
+#line 37 "http11_parser.rl"
 	{MARK(mark, p); }
 	goto st6;
 st6:
 	if ( ++p == pe )
 		goto _test_eof6;
 case 6:
-#line 244 "http11_parser.c"
+#line 243 "http11_parser.c"
 	if ( (*p) == 84 )
 		goto st7;
 	goto st0;
@@ -298,16 +297,16 @@ case 13:
 		goto st13;
 	goto st0;
 tr17:
-#line 73 "http11_parser.rl"
+#line 71 "http11_parser.rl"
 	{
     if(parser->http_version != NULL)
       parser->http_version(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st14;
 tr25:
-#line 48 "http11_parser.rl"
+#line 46 "http11_parser.rl"
 	{ MARK(mark, p); }
-#line 49 "http11_parser.rl"
+#line 47 "http11_parser.rl"
 	{
     if(parser->http_field != NULL) {
       parser->http_field(parser->data, PTR_TO(field_start), parser->field_len, PTR_TO(mark), LEN(mark, p));
@@ -315,7 +314,7 @@ tr25:
   }
 	goto st14;
 tr28:
-#line 49 "http11_parser.rl"
+#line 47 "http11_parser.rl"
 	{
     if(parser->http_field != NULL) {
       parser->http_field(parser->data, PTR_TO(field_start), parser->field_len, PTR_TO(mark), LEN(mark, p));
@@ -326,7 +325,7 @@ st14:
 	if ( ++p == pe )
 		goto _test_eof14;
 case 14:
-#line 330 "http11_parser.c"
+#line 329 "http11_parser.c"
 	if ( (*p) == 10 )
 		goto st15;
 	goto st0;
@@ -366,7 +365,7 @@ case 16:
 		goto tr21;
 	goto st0;
 tr21:
-#line 83 "http11_parser.rl"
+#line 81 "http11_parser.rl"
 	{
     parser->body_start = p - buffer + 1;
     if(parser->header_done != NULL)
@@ -378,23 +377,23 @@ st63:
 	if ( ++p == pe )
 		goto _test_eof63;
 case 63:
-#line 382 "http11_parser.c"
+#line 381 "http11_parser.c"
 	goto st0;
 tr20:
-#line 41 "http11_parser.rl"
+#line 39 "http11_parser.rl"
 	{ MARK(field_start, p); }
-#line 42 "http11_parser.rl"
+#line 40 "http11_parser.rl"
 	{ snake_upcase_char((char *)p); }
 	goto st17;
 tr22:
-#line 42 "http11_parser.rl"
+#line 40 "http11_parser.rl"
 	{ snake_upcase_char((char *)p); }
 	goto st17;
 st17:
 	if ( ++p == pe )
 		goto _test_eof17;
 case 17:
-#line 398 "http11_parser.c"
+#line 397 "http11_parser.c"
 	switch( (*p) ) {
 		case 33: goto tr22;
 		case 58: goto tr23;
@@ -420,77 +419,77 @@ case 17:
 		goto tr22;
 	goto st0;
 tr23:
-#line 44 "http11_parser.rl"
+#line 42 "http11_parser.rl"
 	{
     parser->field_len = LEN(field_start, p);
   }
 	goto st18;
 tr26:
-#line 48 "http11_parser.rl"
+#line 46 "http11_parser.rl"
 	{ MARK(mark, p); }
 	goto st18;
 st18:
 	if ( ++p == pe )
 		goto _test_eof18;
 case 18:
-#line 437 "http11_parser.c"
+#line 436 "http11_parser.c"
 	switch( (*p) ) {
 		case 13: goto tr25;
 		case 32: goto tr26;
 	}
 	goto tr24;
 tr24:
-#line 48 "http11_parser.rl"
+#line 46 "http11_parser.rl"
 	{ MARK(mark, p); }
 	goto st19;
 st19:
 	if ( ++p == pe )
 		goto _test_eof19;
 case 19:
-#line 451 "http11_parser.c"
+#line 450 "http11_parser.c"
 	if ( (*p) == 13 )
 		goto tr28;
 	goto st19;
 tr8:
-#line 58 "http11_parser.rl"
+#line 56 "http11_parser.rl"
 	{
     if(parser->request_uri != NULL)
       parser->request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st20;
 tr38:
-#line 78 "http11_parser.rl"
+#line 76 "http11_parser.rl"
 	{
     if(parser->request_path != NULL)
       parser->request_path(parser->data, PTR_TO(mark), LEN(mark,p));
   }
-#line 58 "http11_parser.rl"
+#line 56 "http11_parser.rl"
 	{
     if(parser->request_uri != NULL)
       parser->request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st20;
 tr49:
-#line 67 "http11_parser.rl"
+#line 65 "http11_parser.rl"
 	{MARK(query_start, p); }
-#line 68 "http11_parser.rl"
+#line 66 "http11_parser.rl"
 	{
     if(parser->query_string != NULL)
       parser->query_string(parser->data, PTR_TO(query_start), LEN(query_start, p));
   }
-#line 58 "http11_parser.rl"
+#line 56 "http11_parser.rl"
 	{
     if(parser->request_uri != NULL)
       parser->request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st20;
 tr53:
-#line 68 "http11_parser.rl"
+#line 66 "http11_parser.rl"
 	{
     if(parser->query_string != NULL)
       parser->query_string(parser->data, PTR_TO(query_start), LEN(query_start, p));
   }
-#line 58 "http11_parser.rl"
+#line 56 "http11_parser.rl"
 	{
     if(parser->request_uri != NULL)
       parser->request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
@@ -500,7 +499,7 @@ st20:
 	if ( ++p == pe )
 		goto _test_eof20;
 case 20:
-#line 504 "http11_parser.c"
+#line 503 "http11_parser.c"
 	switch( (*p) ) {
 		case 32: goto tr30;
 		case 35: goto st0;
@@ -511,14 +510,14 @@ case 20:
 		goto st0;
 	goto tr29;
 tr29:
-#line 38 "http11_parser.rl"
+#line 37 "http11_parser.rl"
 	{MARK(mark, p); }
 	goto st21;
 st21:
 	if ( ++p == pe )
 		goto _test_eof21;
 case 21:
-#line 522 "http11_parser.c"
+#line 521 "http11_parser.c"
 	switch( (*p) ) {
 		case 32: goto tr33;
 		case 35: goto st0;
@@ -529,14 +528,14 @@ case 21:
 		goto st0;
 	goto st21;
 tr31:
-#line 38 "http11_parser.rl"
+#line 37 "http11_parser.rl"
 	{MARK(mark, p); }
 	goto st22;
 st22:
 	if ( ++p == pe )
 		goto _test_eof22;
 case 22:
-#line 540 "http11_parser.c"
+#line 539 "http11_parser.c"
 	if ( (*p) < 65 ) {
 		if ( 48 <= (*p) && (*p) <= 57 )
 			goto st23;
@@ -560,14 +559,14 @@ case 23:
 		goto st21;
 	goto st0;
 tr5:
-#line 38 "http11_parser.rl"
+#line 37 "http11_parser.rl"
 	{MARK(mark, p); }
 	goto st24;
 st24:
 	if ( ++p == pe )
 		goto _test_eof24;
 case 24:
-#line 571 "http11_parser.c"
+#line 570 "http11_parser.c"
 	switch( (*p) ) {
 		case 32: goto tr37;
 		case 35: goto tr38;
@@ -606,7 +605,7 @@ case 26:
 		goto st24;
 	goto st0;
 tr40:
-#line 78 "http11_parser.rl"
+#line 76 "http11_parser.rl"
 	{
     if(parser->request_path != NULL)
       parser->request_path(parser->data, PTR_TO(mark), LEN(mark,p));
@@ -616,7 +615,7 @@ st27:
 	if ( ++p == pe )
 		goto _test_eof27;
 case 27:
-#line 620 "http11_parser.c"
+#line 619 "http11_parser.c"
 	switch( (*p) ) {
 		case 32: goto tr7;
 		case 35: goto tr8;
@@ -654,7 +653,7 @@ case 29:
 		goto st27;
 	goto st0;
 tr41:
-#line 78 "http11_parser.rl"
+#line 76 "http11_parser.rl"
 	{
     if(parser->request_path != NULL)
       parser->request_path(parser->data, PTR_TO(mark), LEN(mark,p));
@@ -664,7 +663,7 @@ st30:
 	if ( ++p == pe )
 		goto _test_eof30;
 case 30:
-#line 668 "http11_parser.c"
+#line 667 "http11_parser.c"
 	switch( (*p) ) {
 		case 32: goto tr48;
 		case 35: goto tr49;
@@ -675,14 +674,14 @@ case 30:
 		goto st0;
 	goto tr47;
 tr47:
-#line 67 "http11_parser.rl"
+#line 65 "http11_parser.rl"
 	{MARK(query_start, p); }
 	goto st31;
 st31:
 	if ( ++p == pe )
 		goto _test_eof31;
 case 31:
-#line 686 "http11_parser.c"
+#line 685 "http11_parser.c"
 	switch( (*p) ) {
 		case 32: goto tr52;
 		case 35: goto tr53;
@@ -693,14 +692,14 @@ case 31:
 		goto st0;
 	goto st31;
 tr50:
-#line 67 "http11_parser.rl"
+#line 65 "http11_parser.rl"
 	{MARK(query_start, p); }
 	goto st32;
 st32:
 	if ( ++p == pe )
 		goto _test_eof32;
 case 32:
-#line 704 "http11_parser.c"
+#line 703 "http11_parser.c"
 	if ( (*p) < 65 ) {
 		if ( 48 <= (*p) && (*p) <= 57 )
 			goto st33;
@@ -724,56 +723,56 @@ case 33:
 		goto st31;
 	goto st0;
 tr6:
-#line 43 "http11_parser.rl"
+#line 41 "http11_parser.rl"
 	{ downcase_char((char *)p); }
 	goto st34;
 st34:
 	if ( ++p == pe )
 		goto _test_eof34;
 case 34:
-#line 735 "http11_parser.c"
+#line 734 "http11_parser.c"
 	switch( (*p) ) {
 		case 84: goto tr56;
 		case 116: goto tr56;
 	}
 	goto st0;
 tr56:
-#line 43 "http11_parser.rl"
+#line 41 "http11_parser.rl"
 	{ downcase_char((char *)p); }
 	goto st35;
 st35:
 	if ( ++p == pe )
 		goto _test_eof35;
 case 35:
-#line 749 "http11_parser.c"
+#line 748 "http11_parser.c"
 	switch( (*p) ) {
 		case 84: goto tr57;
 		case 116: goto tr57;
 	}
 	goto st0;
 tr57:
-#line 43 "http11_parser.rl"
+#line 41 "http11_parser.rl"
 	{ downcase_char((char *)p); }
 	goto st36;
 st36:
 	if ( ++p == pe )
 		goto _test_eof36;
 case 36:
-#line 763 "http11_parser.c"
+#line 762 "http11_parser.c"
 	switch( (*p) ) {
 		case 80: goto tr58;
 		case 112: goto tr58;
 	}
 	goto st0;
 tr58:
-#line 43 "http11_parser.rl"
+#line 41 "http11_parser.rl"
 	{ downcase_char((char *)p); }
 	goto st37;
 st37:
 	if ( ++p == pe )
 		goto _test_eof37;
 case 37:
-#line 777 "http11_parser.c"
+#line 776 "http11_parser.c"
 	switch( (*p) ) {
 		case 58: goto st38;
 		case 83: goto tr60;
@@ -837,14 +836,14 @@ case 42:
 		goto st42;
 	goto st0;
 tr60:
-#line 43 "http11_parser.rl"
+#line 41 "http11_parser.rl"
 	{ downcase_char((char *)p); }
 	goto st43;
 st43:
 	if ( ++p == pe )
 		goto _test_eof43;
 case 43:
-#line 848 "http11_parser.c"
+#line 847 "http11_parser.c"
 	if ( (*p) == 58 )
 		goto st38;
 	goto st0;
@@ -1247,7 +1246,7 @@ case 62:
 	_out: {}
 	}
 
-#line 126 "http11_parser.rl"
+#line 122 "http11_parser.rl"
 
   if (!http_parser_has_error(parser))
     parser->cs = cs;
