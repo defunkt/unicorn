@@ -173,13 +173,11 @@ static void http_field(void *data, const char *field,
                        size_t flen, const char *value, size_t vlen)
 {
   VALUE req = (VALUE)data;
-  VALUE v = Qnil;
   VALUE f = Qnil;
 
   VALIDATE_MAX_LENGTH(flen, FIELD_NAME);
   VALIDATE_MAX_LENGTH(vlen, FIELD_VALUE);
 
-  v = rb_str_new(value, vlen);
   f = find_common_field_value(field, flen);
 
   if (f == Qnil) {
@@ -198,9 +196,11 @@ static void http_field(void *data, const char *field,
     memcpy(RSTRING_PTR(f) + HTTP_PREFIX_LEN, field, flen);
     assert(*(RSTRING_PTR(f) + RSTRING_LEN(f)) == '\0'); /* paranoia */
     /* fprintf(stderr, "UNKNOWN HEADER <%s>\n", RSTRING_PTR(f)); */
+  } else if (f == global_http_host && rb_hash_aref(req, f) != Qnil) {
+    return;
   }
 
-  rb_hash_aset(req, f, v);
+  rb_hash_aset(req, f, rb_str_new(value, vlen));
 }
 
 static void request_method(void *data, const char *at, size_t length)
@@ -210,6 +210,16 @@ static void request_method(void *data, const char *at, size_t length)
 
   val = rb_str_new(at, length);
   rb_hash_aset(req, global_request_method, val);
+}
+
+static void scheme(void *data, const char *at, size_t length)
+{
+  rb_hash_aset((VALUE)data, global_rack_url_scheme, rb_str_new(at, length));
+}
+
+static void host(void *data, const char *at, size_t length)
+{
+  rb_hash_aset((VALUE)data, global_http_host, rb_str_new(at, length));
 }
 
 static void request_uri(void *data, const char *at, size_t length)
@@ -287,13 +297,17 @@ static void header_done(void *data, const char *at, size_t length)
     rb_hash_aset(req, global_query_string, rb_str_new(NULL, 0));
 
   /* set rack.url_scheme to "https" or "http", no others are allowed by Rack */
-  if ((temp = rb_hash_aref(req, global_http_x_forwarded_proto)) != Qnil &&
-      RSTRING_LEN(temp) == 5 &&
-      !memcmp("https", RSTRING_PTR(temp), 5))
+  if ((temp = rb_hash_aref(req, global_rack_url_scheme)) == Qnil) {
+    if ((temp = rb_hash_aref(req, global_http_x_forwarded_proto)) != Qnil &&
+        RSTRING_LEN(temp) == 5 &&
+        !memcmp("https", RSTRING_PTR(temp), 5))
+      server_port = global_port_443;
+    else
+      temp = global_http;
+    rb_hash_aset(req, global_rack_url_scheme, temp);
+  } else if (RSTRING_LEN(temp) == 5 && !memcmp("https", RSTRING_PTR(temp), 5)) {
     server_port = global_port_443;
-  else
-    temp = global_http;
-  rb_hash_aset(req, global_rack_url_scheme, temp);
+  }
 
   /* parse and set the SERVER_NAME and SERVER_PORT variables */
   if ((temp = rb_hash_aref(req, global_http_host)) != Qnil) {
@@ -416,7 +430,6 @@ void Init_http11(void)
   DEF_GLOBAL(server_port, "SERVER_PORT");
   DEF_GLOBAL(server_protocol, "SERVER_PROTOCOL");
   DEF_GLOBAL(server_protocol_value, "HTTP/1.1");
-  DEF_GLOBAL(http_host, "HTTP_HOST");
   DEF_GLOBAL(http_x_forwarded_proto, "HTTP_X_FORWARDED_PROTO");
   DEF_GLOBAL(port_80, "80");
   DEF_GLOBAL(port_443, "443");
@@ -432,4 +445,6 @@ void Init_http11(void)
   rb_define_method(cHttpParser, "execute", HttpParser_execute,2);
   sym_http_body = ID2SYM(rb_intern("http_body"));
   init_common_fields();
+  global_http_host = find_common_field_value("HOST", 4);
+  assert(global_http_host != Qnil);
 }

@@ -146,8 +146,43 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal '/foo', req['REQUEST_PATH']
     assert_equal 'q=bar', req['QUERY_STRING']
 
-    # assert_equal 'example.com', req['HTTP_HOST'] # TODO
-    # assert_equal 'example.com', req['SERVER_NAME'] # TODO
+    assert_equal 'example.com', req['HTTP_HOST']
+    assert_equal 'example.com', req['SERVER_NAME']
+    assert_equal '80', req['SERVER_PORT']
+  end
+
+  # X-Forwarded-Proto is not in rfc2616, absolute URIs are, however...
+  def test_absolute_uri_https
+    parser = HttpParser.new
+    req = {}
+    http = "GET https://example.com/foo?q=bar HTTP/1.1\r\n" \
+           "X-Forwarded-Proto: http\r\n\r\n"
+    assert parser.execute(req, http)
+    assert_equal 'https', req['rack.url_scheme']
+    assert_equal '/foo?q=bar', req['REQUEST_URI']
+    assert_equal '/foo', req['REQUEST_PATH']
+    assert_equal 'q=bar', req['QUERY_STRING']
+
+    assert_equal 'example.com', req['HTTP_HOST']
+    assert_equal 'example.com', req['SERVER_NAME']
+    assert_equal '443', req['SERVER_PORT']
+  end
+
+  # Host: header should be ignored for absolute URIs
+  def test_absolute_uri_with_port
+    parser = HttpParser.new
+    req = {}
+    http = "GET http://example.com:8080/foo?q=bar HTTP/1.2\r\n" \
+           "Host: bad.example.com\r\n\r\n"
+    assert parser.execute(req, http)
+    assert_equal 'http', req['rack.url_scheme']
+    assert_equal '/foo?q=bar', req['REQUEST_URI']
+    assert_equal '/foo', req['REQUEST_PATH']
+    assert_equal 'q=bar', req['QUERY_STRING']
+
+    assert_equal 'example.com:8080', req['HTTP_HOST']
+    assert_equal 'example.com', req['SERVER_NAME']
+    assert_equal '8080', req['SERVER_PORT']
   end
 
   def test_put_body_oneshot

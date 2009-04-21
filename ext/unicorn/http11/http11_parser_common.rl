@@ -24,9 +24,9 @@
   token = (ascii -- (CTL | tspecials));
 
 # URI schemes and absolute paths
-  scheme = ( "http"i ("s"i)? ) $downcase_char;
+  scheme = ( "http"i ("s"i)? ) $downcase_char >mark %scheme;
   hostname = (alnum | "-" | ".")+;
-  host_with_port = (hostname (":" digit*)?);
+  host_with_port = (hostname (":" digit*)?) >mark %host;
 
   path = ( pchar+ ( "/" pchar* )* ) ;
   query = ( uchar | reserved )* %query_string ;

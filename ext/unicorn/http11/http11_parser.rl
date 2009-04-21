@@ -10,6 +10,8 @@
 static void http_field(void *data, const char *field,
                        size_t flen, const char *value, size_t vlen);
 static void request_method(void *data, const char *at, size_t length);
+static void scheme(void *data, const char *at, size_t length);
+static void host(void *data, const char *at, size_t length);
 static void request_uri(void *data, const char *at, size_t length);
 static void fragment(void *data, const char *at, size_t length);
 static void request_path(void *data, const char *at, size_t length);
@@ -75,6 +77,8 @@ static void downcase_char(char *c)
   action request_method {
     request_method(parser->data, PTR_TO(mark), LEN(mark, fpc));
   }
+  action scheme { scheme(parser->data, PTR_TO(mark), LEN(mark, fpc)); }
+  action host { host(parser->data, PTR_TO(mark), LEN(mark, fpc)); }
   action request_uri {
     request_uri(parser->data, PTR_TO(mark), LEN(mark, fpc));
   }
