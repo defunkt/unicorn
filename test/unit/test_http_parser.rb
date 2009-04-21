@@ -136,6 +136,22 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal '', req['QUERY_STRING']
   end
 
+  # not common, but underscores do appear in practice
+  def test_absolute_uri_underscores
+    parser = HttpParser.new
+    req = {}
+    http = "GET http://under_score.example.com/foo?q=bar HTTP/1.0\r\n\r\n"
+    assert parser.execute(req, http)
+    assert_equal 'http', req['rack.url_scheme']
+    assert_equal '/foo?q=bar', req['REQUEST_URI']
+    assert_equal '/foo', req['REQUEST_PATH']
+    assert_equal 'q=bar', req['QUERY_STRING']
+
+    assert_equal 'under_score.example.com', req['HTTP_HOST']
+    assert_equal 'under_score.example.com', req['SERVER_NAME']
+    assert_equal '80', req['SERVER_PORT']
+  end
+
   def test_absolute_uri
     parser = HttpParser.new
     req = {}

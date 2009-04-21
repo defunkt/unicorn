@@ -808,6 +808,8 @@ st40:
 	if ( ++p == pe )
 		goto _test_eof40;
 case 40:
+	if ( (*p) == 95 )
+		goto tr63;
 	if ( (*p) < 48 ) {
 		if ( 45 <= (*p) && (*p) <= 46 )
 			goto tr63;
@@ -828,10 +830,11 @@ st41:
 	if ( ++p == pe )
 		goto _test_eof41;
 case 41:
-#line 832 "http11_parser.h"
+#line 834 "http11_parser.h"
 	switch( (*p) ) {
 		case 47: goto tr65;
 		case 58: goto st42;
+		case 95: goto st41;
 	}
 	if ( (*p) < 65 ) {
 		if ( 45 <= (*p) && (*p) <= 57 )
@@ -859,7 +862,7 @@ st43:
 	if ( ++p == pe )
 		goto _test_eof43;
 case 43:
-#line 863 "http11_parser.h"
+#line 866 "http11_parser.h"
 	if ( (*p) == 58 )
 		goto tr59;
 	goto st0;

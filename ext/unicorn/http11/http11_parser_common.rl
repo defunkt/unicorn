@@ -25,7 +25,7 @@
 
 # URI schemes and absolute paths
   scheme = ( "http"i ("s"i)? ) $downcase_char >mark %scheme;
-  hostname = (alnum | "-" | ".")+;
+  hostname = (alnum | "-" | "." | "_")+;
   host_with_port = (hostname (":" digit*)?) >mark %host;
 
   path = ( pchar+ ( "/" pchar* )* ) ;
