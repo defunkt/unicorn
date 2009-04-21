@@ -32,6 +32,7 @@ static VALUE global_query_string;
 static VALUE global_http_version;
 static VALUE global_content_length;
 static VALUE global_request_path;
+static VALUE global_path_info;
 static VALUE global_content_type;
 static VALUE global_server_name;
 static VALUE global_server_port;
@@ -202,6 +203,13 @@ static void request_uri(void *data, const char *at, size_t length)
 
   val = rb_str_new(at, length);
   rb_hash_aset(req, global_request_uri, val);
+
+  /* "OPTIONS * HTTP/1.1\r\n" is a valid request */
+  if (length == 1 && *at == '*') {
+    val = rb_str_new(NULL, 0);
+    rb_hash_aset(req, global_request_path, val);
+    rb_hash_aset(req, global_path_info, val);
+  }
 }
 
 static void fragment(void *data, const char *at, size_t length)
@@ -224,6 +232,10 @@ static void request_path(void *data, const char *at, size_t length)
 
   val = rb_str_new(at, length);
   rb_hash_aset(req, global_request_path, val);
+
+  /* rack says PATH_INFO must start with "/" or be empty */
+  if (!(length == 1 && *at == '*'))
+    rb_hash_aset(req, global_path_info, val);
 }
 
 static void query_string(void *data, const char *at, size_t length)
@@ -390,6 +402,7 @@ void Init_http11()
   DEF_GLOBAL(query_string, "QUERY_STRING");
   DEF_GLOBAL(http_version, "HTTP_VERSION");
   DEF_GLOBAL(request_path, "REQUEST_PATH");
+  DEF_GLOBAL(path_info, "PATH_INFO");
   DEF_GLOBAL(content_length, "CONTENT_LENGTH");
   DEF_GLOBAL(content_type, "CONTENT_TYPE");
   DEF_GLOBAL(server_name, "SERVER_NAME");

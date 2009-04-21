@@ -1,5 +1,4 @@
 require 'tempfile'
-require 'uri'
 require 'stringio'
 
 # compiled extension
@@ -129,13 +128,6 @@ module Unicorn
       #  that client may be a proxy, gateway, or other intermediary
       #  acting on behalf of the actual source client."
       @params[Const::REMOTE_ADDR] = socket.unicorn_peeraddr
-
-      # It might be a dumbass full host request header
-      @params[Const::PATH_INFO] = (
-          @params[Const::REQUEST_PATH] ||=
-              URI.parse(@params[Const::REQUEST_URI]).path) or
-         raise "No REQUEST_PATH"
-
       @params[Const::QUERY_STRING] ||= ''
       @params[Const::RACK_INPUT] = @body
       @params.update(DEF_PARAMS)

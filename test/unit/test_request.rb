@@ -38,21 +38,54 @@ class RequestTest < Test::Unit::TestCase
                              "Host: foo\r\n\r\n")
     res = env = nil
     assert_nothing_raised { env = @request.read(client) }
-    assert_equal '*', env['REQUEST_PATH']
-    assert_equal '*', env['PATH_INFO']
+    assert_equal '', env['REQUEST_PATH']
+    assert_equal '', env['PATH_INFO']
     assert_equal '*', env['REQUEST_URI']
-
-    # assert_nothing_raised { res = @lint.call(env) } # fails Rack lint
+    assert_nothing_raised { res = @lint.call(env) }
   end
 
-  def test_full_url_path
+  def test_absolute_uri_with_query
     client = MockRequest.new("GET http://e:3/x?y=z HTTP/1.1\r\n" \
                              "Host: foo\r\n\r\n")
     res = env = nil
     assert_nothing_raised { env = @request.read(client) }
     assert_equal '/x', env['REQUEST_PATH']
     assert_equal '/x', env['PATH_INFO']
+    assert_equal 'y=z', env['QUERY_STRING']
     assert_nothing_raised { res = @lint.call(env) }
+  end
+
+  def test_absolute_uri_with_fragment
+    client = MockRequest.new("GET http://e:3/x#frag HTTP/1.1\r\n" \
+                             "Host: foo\r\n\r\n")
+    res = env = nil
+    assert_nothing_raised { env = @request.read(client) }
+    assert_equal '/x', env['REQUEST_PATH']
+    assert_equal '/x', env['PATH_INFO']
+    assert_equal '', env['QUERY_STRING']
+    assert_equal 'frag', env['FRAGMENT']
+    assert_nothing_raised { res = @lint.call(env) }
+  end
+
+  def test_absolute_uri_with_query_and_fragment
+    client = MockRequest.new("GET http://e:3/x?a=b#frag HTTP/1.1\r\n" \
+                             "Host: foo\r\n\r\n")
+    res = env = nil
+    assert_nothing_raised { env = @request.read(client) }
+    assert_equal '/x', env['REQUEST_PATH']
+    assert_equal '/x', env['PATH_INFO']
+    assert_equal 'a=b', env['QUERY_STRING']
+    assert_equal 'frag', env['FRAGMENT']
+    assert_nothing_raised { res = @lint.call(env) }
+  end
+
+  def test_absolute_uri_unsupported_schemes
+    %w(ssh+http://e/ ftp://e/x http+ssh://e/x).each do |abs_uri|
+      client = MockRequest.new("GET #{abs_uri} HTTP/1.1\r\n" \
+                               "Host: foo\r\n\r\n")
+      assert_raises(HttpParserError) { @request.read(client) }
+      @request.reset
+    end
   end
 
   def test_x_forwarded_proto_https

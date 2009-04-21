@@ -103,6 +103,20 @@ class HttpParserTest < Test::Unit::TestCase
     assert_nil req['QUERY_STRING']
   end
 
+  def test_absolute_uri
+    parser = HttpParser.new
+    req = {}
+    http = "GET http://example.com/foo?q=bar HTTP/1.0\r\n\r\n"
+    assert parser.execute(req, http)
+    assert_equal 'http', req['rack.url_scheme']
+    assert_equal '/foo?q=bar', req['REQUEST_URI']
+    assert_equal '/foo', req['REQUEST_PATH']
+    assert_equal 'q=bar', req['QUERY_STRING']
+
+    # assert_equal 'example.com', req['HTTP_HOST'] # TODO
+    # assert_equal 'example.com', req['SERVER_NAME'] # TODO
+  end
+
   def test_put_body_oneshot
     parser = HttpParser.new
     req = {}

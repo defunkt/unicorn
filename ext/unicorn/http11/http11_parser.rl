@@ -19,6 +19,12 @@ static void snake_upcase_char(char *c)
       *c = '_';
 }
 
+static void downcase_char(char *c)
+{
+  if (*c >= 'A' && *c <= 'Z')
+    *c |= 0x20;
+}
+
 #define LEN(AT, FPC) (FPC - buffer - parser->AT)
 #define MARK(M,FPC) (parser->M = (FPC) - buffer)
 #define PTR_TO(F) (buffer + parser->F)
@@ -34,6 +40,7 @@ static void snake_upcase_char(char *c)
 
   action start_field { MARK(field_start, fpc); }
   action snake_upcase_field { snake_upcase_char((char *)fpc); }
+  action downcase_char { downcase_char((char *)fpc); }
   action write_field {
     parser->field_len = LEN(field_start, fpc);
   }
