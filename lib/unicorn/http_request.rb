@@ -18,11 +18,11 @@ module Unicorn
        "rack.multiprocess" => true,
        "rack.multithread" => false,
        "rack.run_once" => false,
-       "rack.version" => [0, 1],
-       "SCRIPT_NAME" => "",
+       "rack.version" => [0, 1].freeze,
+       "SCRIPT_NAME" => "".freeze,
 
        # this is not in the Rack spec, but some apps may rely on it
-       "SERVER_SOFTWARE" => "Unicorn #{Const::UNICORN_VERSION}"
+       "SERVER_SOFTWARE" => "Unicorn #{Const::UNICORN_VERSION}".freeze
      }.freeze
 
     def initialize(logger)
