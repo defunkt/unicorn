@@ -123,49 +123,4 @@ class TestSocketHelper < Test::Unit::TestCase
     sock_name(@unix_server)
   end
 
-  def test_tcp_unicorn_peeraddr
-    test_bind_listen_tcp
-    @tcp_server = server_cast(@tcp_listener)
-    tmp = Tempfile.new 'shared'
-    pid = fork do
-      client = @tcp_server.accept
-      IO.select([client])
-      assert_equal GET_SLASH, client.sysread(GET_SLASH.size)
-      tmp.syswrite "#{client.unicorn_peeraddr}"
-      exit 0
-    end
-    host, port = sock_name(@tcp_server).split(/:/)
-    client = TCPSocket.new(host, port.to_i)
-    client.syswrite(GET_SLASH)
-
-    pid, status = Process.waitpid2(pid)
-    assert_nothing_raised { client.close }
-    assert status.success?
-    tmp.sysseek 0
-    assert_equal @test_addr, tmp.sysread(4096)
-    tmp.sysseek 0
-  end
-
-  def test_unix_unicorn_peeraddr
-    test_bind_listen_unix
-    @unix_server = server_cast(@unix_listener)
-    tmp = Tempfile.new 'shared'
-    pid = fork do
-      client = @unix_server.accept
-      IO.select([client])
-      assert_equal GET_SLASH, client.sysread(4096)
-      tmp.syswrite "#{client.unicorn_peeraddr}"
-      exit 0
-    end
-    client = UNIXSocket.new(@unix_listener_path)
-    client.syswrite(GET_SLASH)
-
-    pid, status = Process.waitpid2(pid)
-    assert_nothing_raised { client.close }
-    assert status.success?
-    tmp.sysseek 0
-    assert_equal '127.0.0.1', tmp.sysread(4096)
-    tmp.sysseek 0
-  end
-
 end

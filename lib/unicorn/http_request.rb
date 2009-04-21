@@ -55,6 +55,16 @@ module Unicorn
     # This does minimal exception trapping and it is up to the caller
     # to handle any socket errors (e.g. user aborted upload).
     def read(socket)
+      # From http://www.ietf.org/rfc/rfc3875:
+      # "Script authors should be aware that the REMOTE_ADDR and
+      #  REMOTE_HOST meta-variables (see sections 4.1.8 and 4.1.9)
+      #  may not identify the ultimate source of the request.  They
+      #  identify the client for the immediate request to the server;
+      #  that client may be a proxy, gateway, or other intermediary
+      #  acting on behalf of the actual source client."
+      @params[Const::REMOTE_ADDR] =
+                    TCPSocket === socket ? socket.peeraddr.last : '127.0.0.1'
+
       # short circuit the common case with small GET requests first
       @parser.execute(@params, read_socket(socket)) and
           return handle_body(socket)
@@ -70,7 +80,7 @@ module Unicorn
       rescue HttpParserError => e
         @logger.error "HTTP parse error, malformed request " \
                       "(#{@params[Const::HTTP_X_FORWARDED_FOR] ||
-                          socket.unicorn_peeraddr}): #{e.inspect}"
+                          @params[Const::REMOTE_ADDR]}): #{e.inspect}"
         @logger.error "REQUEST DATA: #{data.inspect}\n---\n" \
                       "PARAMS: #{@params.inspect}\n---\n"
         raise e
@@ -120,14 +130,6 @@ module Unicorn
       # over the HTTP response.
       # @params["unicorn.client"] = socket
 
-      # From http://www.ietf.org/rfc/rfc3875:
-      # "Script authors should be aware that the REMOTE_ADDR and
-      #  REMOTE_HOST meta-variables (see sections 4.1.8 and 4.1.9)
-      #  may not identify the ultimate source of the request.  They
-      #  identify the client for the immediate request to the server;
-      #  that client may be a proxy, gateway, or other intermediary
-      #  acting on behalf of the actual source client."
-      @params[Const::REMOTE_ADDR] = socket.unicorn_peeraddr
       @params[Const::RACK_INPUT] = @body
       @params.update(DEF_PARAMS)
     end

@@ -19,11 +19,7 @@ include Unicorn
 
 class RequestTest < Test::Unit::TestCase
 
-  class MockRequest < StringIO
-    def unicorn_peeraddr
-      '666.666.666.666'
-    end
-  end
+  class MockRequest < StringIO; end
 
   def setup
     @request = HttpRequest.new(Logger.new($stderr))
@@ -123,7 +119,7 @@ class RequestTest < Test::Unit::TestCase
     res = env = nil
     assert_nothing_raised { env = @request.read(client) }
     assert_equal "http", env['rack.url_scheme']
-    assert_equal '666.666.666.666', env['REMOTE_ADDR']
+    assert_equal '127.0.0.1', env['REMOTE_ADDR']
     assert_nothing_raised { res = @lint.call(env) }
   end
 
@@ -146,9 +142,6 @@ class RequestTest < Test::Unit::TestCase
     buf = (' ' * bs).freeze
     length = bs * count
     client = Tempfile.new('big_put')
-    def client.unicorn_peeraddr
-      '1.1.1.1'
-    end
     client.syswrite(
       "PUT / HTTP/1.1\r\n" \
       "Host: foo\r\n" \

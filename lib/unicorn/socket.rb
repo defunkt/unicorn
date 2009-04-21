@@ -1,18 +1,5 @@
 require 'socket'
 
-class UNIXSocket
-  UNICORN_PEERADDR = '127.0.0.1'.freeze
-  def unicorn_peeraddr
-    UNICORN_PEERADDR
-  end
-end
-
-class TCPSocket
-  def unicorn_peeraddr
-    peeraddr.last
-  end
-end
-
 module Unicorn
   module SocketHelper
     include Socket::Constants
