@@ -107,21 +107,15 @@ static void downcase_char(char *c)
 /** Data **/
 %% write data;
 
-static int http_parser_init(http_parser *parser) {
+static void http_parser_init(http_parser *parser) {
   int cs = 0;
+  memset(parser, 0, sizeof(*parser));
   %% write init;
   parser->cs = cs;
-  parser->body_start = 0;
-  parser->mark = 0;
-  parser->nread = 0;
-  parser->field_len = 0;
-  parser->field_start = 0;
-
-  return(1);
 }
 
 /** exec **/
-static size_t http_parser_execute(
+static void http_parser_execute(
   http_parser *parser, const char *buffer, size_t len)
 {
   const char *p, *pe;
@@ -148,8 +142,6 @@ static size_t http_parser_execute(
   assert(parser->mark < len && "mark is after buffer end");
   assert(parser->field_len <= len && "field has length longer than whole buffer");
   assert(parser->field_start < len && "field starts after buffer end");
-
-  return(parser->nread);
 }
 
 static int http_parser_has_error(http_parser *parser) {

@@ -169,7 +169,6 @@ static void http_field(void *data, const char *field,
   VALIDATE_MAX_LENGTH(vlen, FIELD_VALUE);
 
   v = rb_str_new(value, vlen);
-
   f = find_common_field_value(field, flen);
 
   if (f == Qnil) {
@@ -388,9 +387,8 @@ static VALUE HttpParser_execute(VALUE self, VALUE req_hash, VALUE data)
   rb_raise(eHttpParserError, "Requested start is after data buffer end.");
 }
 
-void Init_http11()
+void Init_http11(void)
 {
-
   mUnicorn = rb_define_module("Unicorn");
 
   DEF_GLOBAL(rack_url_scheme, "rack.url_scheme");
