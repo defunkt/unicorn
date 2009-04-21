@@ -201,6 +201,22 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal '8080', req['SERVER_PORT']
   end
 
+  def test_absolute_uri_with_empty_port
+    parser = HttpParser.new
+    req = {}
+    http = "GET https://example.com:/foo?q=bar HTTP/1.1\r\n" \
+           "Host: bad.example.com\r\n\r\n"
+    assert parser.execute(req, http)
+    assert_equal 'https', req['rack.url_scheme']
+    assert_equal '/foo?q=bar', req['REQUEST_URI']
+    assert_equal '/foo', req['REQUEST_PATH']
+    assert_equal 'q=bar', req['QUERY_STRING']
+
+    assert_equal 'example.com:', req['HTTP_HOST']
+    assert_equal 'example.com', req['SERVER_NAME']
+    assert_equal '443', req['SERVER_PORT']
+  end
+
   def test_put_body_oneshot
     parser = HttpParser.new
     req = {}
