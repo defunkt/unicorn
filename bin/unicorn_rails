@@ -3,8 +3,7 @@ require 'unicorn/launcher'
 require 'optparse'
 require 'fileutils'
 
-rails_pid = File.join(Unicorn::HttpServer::DEFAULT_START_CTX[:cwd],
-                      "/tmp/pids/unicorn.pid")
+rails_pid = "#{Unicorn::HttpServer::START_CTX[:cwd]}/tmp/pids/unicorn.pid"
 cmd = File.basename($0)
 daemonize = false
 listeners = []

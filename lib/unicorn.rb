@@ -27,13 +27,13 @@ module Unicorn
     include ::Unicorn::SocketHelper
 
     SIG_QUEUE = []
-    DEFAULT_START_CTX = {
+    START_CTX = {
       :argv => ARGV.map { |arg| arg.dup },
       # don't rely on Dir.pwd here since it's not symlink-aware, and
       # symlink dirs are the default with Capistrano...
       :cwd => `/bin/sh -c pwd`.chomp("\n"),
       :zero => $0.dup,
-    }.freeze
+    }
 
     Worker = Struct.new(:nr, :tempfile) unless defined?(Worker)
     class Worker
@@ -48,9 +48,6 @@ module Unicorn
     # HttpServer.workers.join to join the thread that's processing
     # incoming requests on the socket.
     def initialize(app, options = {})
-      start_ctx = options.delete(:start_ctx)
-      @start_ctx = DEFAULT_START_CTX.dup
-      @start_ctx.merge!(start_ctx) if start_ctx
       @app = app
       @workers = Hash.new
       @io_purgatory = [] # prevents IO objects in here from being GC-ed
@@ -307,7 +304,7 @@ module Unicorn
       end
     end
 
-    # reexecutes the @start_ctx with a new binary
+    # reexecutes the START_CTX with a new binary
     def reexec
       if @reexec_pid > 0
         begin
@@ -337,8 +334,8 @@ module Unicorn
       @reexec_pid = fork do
         listener_fds = @listeners.map { |sock| sock.fileno }
         ENV['UNICORN_FD'] = listener_fds.join(',')
-        Dir.chdir(@start_ctx[:cwd])
-        cmd = [ @start_ctx[:zero] ] + @start_ctx[:argv]
+        Dir.chdir(START_CTX[:cwd])
+        cmd = [ START_CTX[:zero] ] + START_CTX[:argv]
 
         # avoid leaking FDs we don't know about, but let before_exec
         # unset FD_CLOEXEC, if anything else in the app eventually
@@ -379,9 +376,9 @@ module Unicorn
       (0...@worker_processes).each do |worker_nr|
         @workers.values.include?(worker_nr) and next
         begin
-          Dir.chdir(@start_ctx[:cwd])
+          Dir.chdir(START_CTX[:cwd])
         rescue Errno::ENOENT => err
-          logger.fatal "#{err.inspect} (#{@start_ctx[:cwd]})"
+          logger.fatal "#{err.inspect} (#{START_CTX[:cwd]})"
           SIG_QUEUE << :QUIT # forcibly emulate SIGQUIT
           return
         end
@@ -431,10 +428,11 @@ module Unicorn
       trap(:CHLD, 'DEFAULT')
       SIG_QUEUE.clear
       proc_name "worker[#{worker.nr}]"
+      START_CTX.clear
       @rd_sig.close if @rd_sig
       @wr_sig.close if @wr_sig
       @workers.values.each { |other| other.tempfile.close rescue nil }
-      @start_ctx = @workers = @rd_sig = @wr_sig = nil
+      @workers = @rd_sig = @wr_sig = nil
       @listeners.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
       worker.tempfile.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       @after_fork.call(self, worker) # can drop perms
@@ -588,8 +586,8 @@ module Unicorn
     end
 
     def proc_name(tag)
-      $0 = ([ File.basename(@start_ctx[:zero]), tag ] +
-              @start_ctx[:argv]).join(' ')
+      $0 = ([ File.basename(START_CTX[:zero]), tag ] +
+              START_CTX[:argv]).join(' ')
     end
 
   end
