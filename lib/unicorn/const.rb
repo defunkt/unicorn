@@ -82,7 +82,6 @@ module Unicorn
     CONTENT_LENGTH="CONTENT_LENGTH".freeze
     REMOTE_ADDR="REMOTE_ADDR".freeze
     HTTP_X_FORWARDED_FOR="HTTP_X_FORWARDED_FOR".freeze
-    QUERY_STRING="QUERY_STRING".freeze
     RACK_INPUT="rack.input".freeze
   end
 
