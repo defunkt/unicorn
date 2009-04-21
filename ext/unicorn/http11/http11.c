@@ -262,6 +262,10 @@ static void header_done(void *data, const char *at, size_t length)
   VALUE server_port = global_port_80;
   VALUE temp;
 
+  /* rack requires QUERY_STRING */
+  if (rb_hash_aref(req, global_query_string) == Qnil)
+    rb_hash_aset(req, global_query_string, rb_str_new(NULL, 0));
+
   /* set rack.url_scheme to "https" or "http", no others are allowed by Rack */
   if ((temp = rb_hash_aref(req, global_http_x_forwarded_proto)) != Qnil &&
       RSTRING_LEN(temp) == 5 &&

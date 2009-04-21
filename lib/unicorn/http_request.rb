@@ -128,7 +128,6 @@ module Unicorn
       #  that client may be a proxy, gateway, or other intermediary
       #  acting on behalf of the actual source client."
       @params[Const::REMOTE_ADDR] = socket.unicorn_peeraddr
-      @params[Const::QUERY_STRING] ||= ''
       @params[Const::RACK_INPUT] = @body
       @params.update(DEF_PARAMS)
     end

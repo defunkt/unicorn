@@ -22,7 +22,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal '/', req['REQUEST_URI']
     assert_equal 'GET', req['REQUEST_METHOD']
     assert_nil req['FRAGMENT']
-    assert_nil req['QUERY_STRING']
+    assert_equal '', req['QUERY_STRING']
 
     parser.reset
     req.clear
@@ -40,7 +40,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal '/hello-world', req['REQUEST_URI']
     assert_equal 'GET', req['REQUEST_METHOD']
     assert_nil req['FRAGMENT']
-    assert_nil req['QUERY_STRING']
+    assert_equal '', req['QUERY_STRING']
   end
 
   def test_parse_strange_headers
@@ -100,7 +100,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert parser.execute(req, http << "\n")
     assert_equal 'HTTP/1.1', req['SERVER_PROTOCOL']
     assert_nil req['FRAGMENT']
-    assert_nil req['QUERY_STRING']
+    assert_equal '', req['QUERY_STRING']
   end
 
   def test_absolute_uri
