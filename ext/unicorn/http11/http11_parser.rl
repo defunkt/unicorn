@@ -99,7 +99,6 @@ int http_parser_init(http_parser *parser)  {
   %% write init;
   parser->cs = cs;
   parser->body_start = 0;
-  parser->content_len = 0;
   parser->mark = 0;
   parser->nread = 0;
   parser->field_len = 0;
