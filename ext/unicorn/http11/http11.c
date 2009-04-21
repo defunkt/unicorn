@@ -9,6 +9,16 @@
 #include <string.h>
 #include "http11_parser.h"
 
+static http_parser *data_get(VALUE self)
+{
+  http_parser *http;
+
+  Data_Get_Struct(self, http_parser, http);
+  if (!http)
+    rb_raise(rb_eArgError, "NULL found for http when shouldn't be.");
+  return http;
+}
+
 #ifndef RSTRING_PTR
 #define RSTRING_PTR(s) (RSTRING(s)->ptr)
 #endif
@@ -324,9 +334,7 @@ static VALUE HttpParser_alloc(VALUE klass)
  */
 static VALUE HttpParser_init(VALUE self)
 {
-  http_parser *http = NULL;
-  DATA_GET(self, http_parser, http);
-  http_parser_init(http);
+  http_parser_init(data_get(self));
 
   return self;
 }
@@ -341,9 +349,7 @@ static VALUE HttpParser_init(VALUE self)
  */
 static VALUE HttpParser_reset(VALUE self)
 {
-  http_parser *http = NULL;
-  DATA_GET(self, http_parser, http);
-  http_parser_init(http);
+  http_parser_init(data_get(self));
 
   return Qnil;
 }
@@ -364,11 +370,9 @@ static VALUE HttpParser_reset(VALUE self)
 
 static VALUE HttpParser_execute(VALUE self, VALUE req_hash, VALUE data)
 {
-  http_parser *http;
+  http_parser *http = data_get(self);
   char *dptr = RSTRING_PTR(data);
   long dlen = RSTRING_LEN(data);
-
-  DATA_GET(self, http_parser, http);
 
   if (http->nread < dlen) {
     http->data = (void *)req_hash;
