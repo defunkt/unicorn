@@ -54,14 +54,25 @@ static VALUE global_localhost;
 static VALUE global_http;
 
 /** Defines common length and error messages for input length validation. */
-#define DEF_MAX_LENGTH(N,length) const size_t MAX_##N##_LENGTH = length; const char *MAX_##N##_LENGTH_ERR = "HTTP element " # N  " is longer than the " # length " allowed length."
+#define DEF_MAX_LENGTH(N, length) \
+  static const size_t MAX_##N##_LENGTH = length; \
+  static const char * const MAX_##N##_LENGTH_ERR = \
+    "HTTP element " # N  " is longer than the " # length " allowed length."
 
-/** Validates the max length of given input and throws an HttpParserError exception if over. */
-#define VALIDATE_MAX_LENGTH(len, N) if(len > MAX_##N##_LENGTH) { rb_raise(eHttpParserError, MAX_##N##_LENGTH_ERR); }
+/**
+ * Validates the max length of given input and throws an HttpParserError
+ * exception if over.
+ */
+#define VALIDATE_MAX_LENGTH(len, N) do { \
+  if (len > MAX_##N##_LENGTH) \
+    rb_raise(eHttpParserError, MAX_##N##_LENGTH_ERR); \
+} while (0)
 
 /** Defines global strings in the init method. */
-#define DEF_GLOBAL(N, val)   global_##N = rb_obj_freeze(rb_str_new2(val)); rb_global_variable(&global_##N)
-
+#define DEF_GLOBAL(N, val) do { \
+  global_##N = rb_obj_freeze(rb_str_new(val, sizeof(val) - 1)); \
+  rb_global_variable(&global_##N); \
+} while (0)
 
 /* Defines the maximum allowed lengths for various input elements.*/
 DEF_MAX_LENGTH(FIELD_NAME, 256);
