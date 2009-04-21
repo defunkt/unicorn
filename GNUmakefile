@@ -30,8 +30,8 @@ http11_deps := $(addprefix ext/unicorn/http11/, \
 inst_deps := $(wildcard bin/*) $(wildcard lib/*.rb) \
   $(wildcard lib/*/*.rb) $(http11_deps)
 
-ext/unicorn/http11/http11_parser.c: ext/unicorn/http11/http11_parser.rl
-	cd $(@D) && ragel $(<F) -C -G2 -o $(@F)
+ext/unicorn/http11/http11_parser.c: $(wildcard ext/unicorn/http11/*.rl)
+	cd $(@D) && ragel http11_parser.rl -C -G2 -o $(@F)
 ext/unicorn/http11/Makefile: ext/unicorn/http11/extconf.rb $(http11_deps)
 	cd $(@D) && $(ruby) $(<F)
 ext/unicorn/http11/http11.$(DLEXT): ext/unicorn/http11/Makefile
