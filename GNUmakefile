@@ -32,6 +32,7 @@ inst_deps := $(wildcard bin/*) $(wildcard lib/*.rb) \
 
 ext/unicorn/http11/http11_parser.c: $(wildcard ext/unicorn/http11/*.rl)
 	cd $(@D) && ragel http11_parser.rl -C -G2 -o $(@F)
+	$(ruby) -i -p -e '$$_.gsub!(%r{[ \t]*$$},"")' $@
 ext/unicorn/http11/Makefile: ext/unicorn/http11/extconf.rb $(http11_deps)
 	cd $(@D) && $(ruby) $(<F)
 ext/unicorn/http11/http11.$(DLEXT): ext/unicorn/http11/Makefile
