@@ -288,9 +288,11 @@ static void header_done(void *data, const char *at, size_t length)
   if ((temp = rb_hash_aref(req, global_http_host)) != Qnil) {
     char *colon = memchr(RSTRING_PTR(temp), ':', RSTRING_LEN(temp));
     if (colon) {
+      long port_start = colon - RSTRING_PTR(temp) + 1;
+
       server_name = rb_str_substr(temp, 0, colon - RSTRING_PTR(temp));
-      server_port = rb_str_substr(temp, colon - RSTRING_PTR(temp)+1,
-                                  RSTRING_LEN(temp));
+      if ((RSTRING_LEN(temp) - port_start) > 0)
+        server_port = rb_str_substr(temp, port_start, RSTRING_LEN(temp));
     } else {
       server_name = temp;
     }

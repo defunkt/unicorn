@@ -43,6 +43,39 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal '', req['QUERY_STRING']
   end
 
+  def test_parse_server_host_default_port
+    parser = HttpParser.new
+    req = {}
+    assert parser.execute(req, "GET / HTTP/1.1\r\nHost: foo\r\n\r\n")
+    assert_equal 'foo', req['SERVER_NAME']
+    assert_equal '80', req['SERVER_PORT']
+  end
+
+  def test_parse_server_host_alt_port
+    parser = HttpParser.new
+    req = {}
+    assert parser.execute(req, "GET / HTTP/1.1\r\nHost: foo:999\r\n\r\n")
+    assert_equal 'foo', req['SERVER_NAME']
+    assert_equal '999', req['SERVER_PORT']
+  end
+
+  def test_parse_server_host_empty_port
+    parser = HttpParser.new
+    req = {}
+    assert parser.execute(req, "GET / HTTP/1.1\r\nHost: foo:\r\n\r\n")
+    assert_equal 'foo', req['SERVER_NAME']
+    assert_equal '80', req['SERVER_PORT']
+  end
+
+  def test_parse_server_host_xfp_https
+    parser = HttpParser.new
+    req = {}
+    assert parser.execute(req, "GET / HTTP/1.1\r\nHost: foo:\r\n" \
+                          "X-Forwarded-Proto: https\r\n\r\n")
+    assert_equal 'foo', req['SERVER_NAME']
+    assert_equal '443', req['SERVER_PORT']
+  end
+
   def test_parse_strange_headers
     parser = HttpParser.new
     req = {}
