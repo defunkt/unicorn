@@ -14,7 +14,8 @@ endif
 awk_slow := awk '/def test_/{print FILENAME"--"$$2".n"}' 2>/dev/null
 
 rails_vers := $(subst test/rails/app-,,$(wildcard test/rails/app-*))
-slow_tests := test/unit/test_server.rb test/exec/test_exec.rb
+slow_tests := test/unit/test_server.rb test/exec/test_exec.rb \
+  test/unit/test_signals.rb
 log_suffix = .$(RUBY_VERSION).log
 T_r := $(wildcard test/rails/test*.rb)
 T := $(filter-out $(slow_tests) $(T_r), $(wildcard test/*/test*.rb))
