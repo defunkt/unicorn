@@ -16,7 +16,6 @@ bin/unicorn_rails
 ext/unicorn/http11/ext_help.h
 ext/unicorn/http11/extconf.rb
 ext/unicorn/http11/http11.c
-ext/unicorn/http11/http11_parser.c
 ext/unicorn/http11/http11_parser.h
 ext/unicorn/http11/http11_parser.rl
 ext/unicorn/http11/http11_parser_common.rl
@@ -30,7 +29,7 @@ lib/unicorn/const.rb
 lib/unicorn/http_request.rb
 lib/unicorn/http_response.rb
 lib/unicorn/launcher.rb
-lib/unicorn/socket.rb
+lib/unicorn/socket_helper.rb
 lib/unicorn/util.rb
 local.mk.sample
 setup.rb

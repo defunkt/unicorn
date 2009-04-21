@@ -1,7 +1,7 @@
 require 'logger'
 require 'fcntl'
 
-require 'unicorn/socket'
+require 'unicorn/socket_helper'
 require 'unicorn/const'
 require 'unicorn/http_request'
 require 'unicorn/http_response'

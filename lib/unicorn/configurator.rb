@@ -1,4 +1,4 @@
-require 'unicorn/socket'
+require 'socket'
 require 'unicorn/const'
 require 'logger'
 
