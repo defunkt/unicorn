@@ -1,6 +1,8 @@
 # use GNU Make to run tests in parallel, and without depending on Rubygems
 all:: test
 ruby = ruby
+ragel = ragel
+RLFLAGS = -G2
 -include local.mk
 ruby_bin := $(shell which $(ruby))
 ifeq ($(DLEXT),) # "so" for Linux
@@ -25,33 +27,31 @@ T_n_log := $(subst .n,$(log_suffix),$(T_n))
 T_r_log := $(subst .r,$(log_suffix),$(T_r))
 test_prefix = $(CURDIR)/test/install-$(RUBY_VERSION)
 
-http11_deps := $(addprefix ext/unicorn/http11/, \
-                 ext_help.h http11.c http11_parser.h \
-                 http11_parser.rl http11_parser_common.rl)
-inst_deps := $(wildcard bin/*) $(wildcard lib/*.rb) \
-  $(wildcard lib/*/*.rb) $(http11_deps)
+ext := ext/unicorn/http11
+c_files := $(addprefix $(ext)/,ext_help.h http11.c http11_parser.h)
+rl_files := $(addprefix $(ext)/,http11_parser.rl http11_parser_common.rl)
+rb_files := $(shell grep '^\(bin\|lib\)' Manifest)
+inst_deps := $(c_files) $(rb_files)
 
-ext/unicorn/http11/http11_parser.h: $(wildcard ext/unicorn/http11/*.rl)
-	cd $(@D) && ragel http11_parser.rl -C -G2 -o $(@F)
+ragel: $(ext)/http11_parser.h
+$(ext)/http11_parser.h: $(rl_files)
+	cd $(@D) && $(ragel) http11_parser.rl -C $(RLFLAGS) -o $(@F)
 	$(ruby) -i -p -e '$$_.gsub!(%r{[ \t]*$$},"")' $@
-ext/unicorn/http11/Makefile: ext/unicorn/http11/extconf.rb $(http11_deps)
-	cd $(@D) && $(ruby) $(<F)
-ext/unicorn/http11/http11.$(DLEXT): ext/unicorn/http11/Makefile
+$(ext)/Makefile: $(ext)/extconf.rb $(c_files)
+	cd $(@D) && $(ruby) extconf.rb
+$(ext)/http11.$(DLEXT): $(ext)/Makefile
 	$(MAKE) -C $(@D)
-lib/unicorn/http11.$(DLEXT): ext/unicorn/http11/http11.$(DLEXT)
+lib/unicorn/http11.$(DLEXT): $(ext)/http11.$(DLEXT)
 	@mkdir -p lib
 	install -m644 $< $@
 http11: lib/unicorn/http11.$(DLEXT)
 
-$(test_prefix)/.stamp: install-test
-	> $@
-
-install-test: $(inst_deps)
-	test -n "$(test_prefix)"
+$(test_prefix)/.stamp: $(inst_deps)
 	mkdir -p $(test_prefix)/.ccache
-	tar c bin ext lib GNUmakefile | (cd $(test_prefix) && tar x)
+	tar c bin ext lib GNUmakefile Manifest | (cd $(test_prefix) && tar x)
 	$(MAKE) -C $(test_prefix) clean
 	$(MAKE) -C $(test_prefix) http11 shebang
+	> $@
 
 # this is only intended to be run within $(test_prefix)
 shebang: bin/unicorn bin/unicorn_rails
@@ -108,16 +108,13 @@ install: bin/unicorn bin/unicorn_rails
 	$(RM) -r .install-tmp
 	$(prep_setup_rb)
 
-clean-http11:
-	-$(MAKE) -C ext/unicorn/http11 clean
-	$(RM) ext/unicorn/http11/Makefile lib/unicorn/http11.$(DLEXT)
-
 setup_rb_files := .config InstalledFiles
-prep_setup_rb := @-$(RM) $(setup_rb_files);$(MAKE) -C ext/unicorn/http11 clean
+prep_setup_rb := @-$(RM) $(setup_rb_files);$(MAKE) -C $(ext) clean
 
-clean: clean-http11
-	$(RM) $(setup_rb_files)
-	$(RM) $(t_log)
+clean:
+	-$(MAKE) -C $(ext) clean
+	$(RM) $(ext)/Makefile lib/unicorn/http11.$(DLEXT)
+	$(RM) $(setup_rb_files) $(t_log)
 	$(RM) -r $(test_prefix)
 
 Manifest:
