@@ -1,4 +1,3 @@
-require 'logger'
 require 'fcntl'
 
 require 'unicorn/socket_helper'

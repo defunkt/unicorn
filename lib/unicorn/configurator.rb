@@ -1,5 +1,4 @@
 require 'socket'
-require 'unicorn/const'
 require 'logger'
 
 module Unicorn
