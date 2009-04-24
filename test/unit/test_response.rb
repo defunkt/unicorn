@@ -43,7 +43,7 @@ class ResponseTest < Test::Unit::TestCase
     HttpResponse.write(io, [code, {}, []])
     assert io.closed?
     lines = io.string.split(/\r\n/)
-    assert_match(/.* #{HTTP_STATUS_CODES[code]}$/, lines.first,
+    assert_match(/.* Bad Request$/, lines.first,
                  "wrong default reason phrase")
   end
 

@@ -25,22 +25,23 @@ module Unicorn
     # Connection: and Date: headers no matter what (if anything) our
     # Rack application sent us.
     SKIP = { 'connection' => true, 'date' => true, 'status' => true }.freeze
-    CONNECTION_CLOSE = "Connection: close".freeze #:nodoc
+    EMPTY = ''.freeze # :nodoc
+    OUT = [] # :nodoc
 
     # writes the rack_response to socket as an HTTP response
     def self.write(socket, rack_response)
       status, headers, body = rack_response
-      status = "#{status} #{HTTP_STATUS_CODES[status]}"
-      out = [ CONNECTION_CLOSE ]
+      status = HTTP_STATUS_CODES[status]
+      OUT.clear
 
       # Don't bother enforcing duplicate supression, it's a Hash most of
       # the time anyways so just hope our app knows what it's doing
       headers.each do |key, value|
         next if SKIP.include?(key.downcase)
         if value =~ /\n/
-          value.split(/\n/).each { |v| out << "#{key}: #{v}" }
+          value.split(/\n/).each { |v| OUT << "#{key}: #{v}\r\n" }
         else
-          out << "#{key}: #{value}"
+          OUT << "#{key}: #{value}\r\n"
         end
       end
 
@@ -52,7 +53,8 @@ module Unicorn
                    "HTTP/1.1 #{status}\r\n" \
                    "Date: #{Time.now.httpdate}\r\n" \
                    "Status: #{status}\r\n" \
-                   "#{out.join("\r\n")}\r\n\r\n")
+                   "Connection: close\r\n" \
+                   "#{OUT.join(EMPTY)}\r\n")
       body.each { |chunk| socket_write(socket, chunk) }
       socket.close # uncorks the socket immediately
       ensure

@@ -42,6 +42,9 @@ module Unicorn
     503  => 'Service Unavailable',
     504  => 'Gateway Time-out',
     505  => 'HTTP Version not supported'
+  }.inject({}) { |hash,(code,msg)|
+      hash[code] = "#{code} #{msg}"
+      hash
   }
 
   # Frequently used constants when constructing requests or responses.  Many times
