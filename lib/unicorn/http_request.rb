@@ -25,20 +25,24 @@ module Unicorn
        "SERVER_SOFTWARE" => "Unicorn #{Const::UNICORN_VERSION}".freeze
      }.freeze
 
+    LOCALHOST = '127.0.0.1'.freeze
+
+    # Being explicitly single-threaded, we have certain advantages in
+    # not having to worry about variables being clobbered :)
+    BUFFER = ' ' * Const::CHUNK_SIZE # initial size, may grow
+    PARSER = HttpParser.new
+    PARAMS = Hash.new
+
     def initialize(logger)
       @logger = logger
-      @body = nil
-      @buffer = ' ' * Const::CHUNK_SIZE # initial size, may grow
-      @parser = HttpParser.new
-      @params = Hash.new
+      reset
     end
 
     def reset
-      @parser.reset
-      @params.clear
-      @body.close rescue nil
-      @body.close! rescue nil
-      @body = nil
+      PARAMS[Const::RACK_INPUT].close rescue nil
+      PARAMS[Const::RACK_INPUT].close! rescue nil
+      PARSER.reset
+      PARAMS.clear
     end
 
     # Does the majority of the IO processing.  It has been written in
@@ -62,27 +66,27 @@ module Unicorn
       #  identify the client for the immediate request to the server;
       #  that client may be a proxy, gateway, or other intermediary
       #  acting on behalf of the actual source client."
-      @params[Const::REMOTE_ADDR] =
-                    TCPSocket === socket ? socket.peeraddr.last : '127.0.0.1'
+      PARAMS[Const::REMOTE_ADDR] =
+                    TCPSocket === socket ? socket.peeraddr.last : LOCALHOST
 
       # short circuit the common case with small GET requests first
-      @parser.execute(@params, read_socket(socket)) and
+      PARSER.execute(PARAMS, read_socket(socket)) and
           return handle_body(socket)
 
-      data = @buffer.dup # read_socket will clobber @buffer
+      data = BUFFER.dup # read_socket will clobber BUFFER
 
       # Parser is not done, queue up more data to read and continue parsing
-      # an Exception thrown from the @parser will throw us out of the loop
-      loop do
+      # an Exception thrown from the PARSER will throw us out of the loop
+      begin
         data << read_socket(socket)
-        @parser.execute(@params, data) and return handle_body(socket)
-      end
+        PARSER.execute(PARAMS, data) and return handle_body(socket)
+      end while true
       rescue HttpParserError => e
         @logger.error "HTTP parse error, malformed request " \
-                      "(#{@params[Const::HTTP_X_FORWARDED_FOR] ||
-                          @params[Const::REMOTE_ADDR]}): #{e.inspect}"
+                      "(#{PARAMS[Const::HTTP_X_FORWARDED_FOR] ||
+                          PARAMS[Const::REMOTE_ADDR]}): #{e.inspect}"
         @logger.error "REQUEST DATA: #{data.inspect}\n---\n" \
-                      "PARAMS: #{@params.inspect}\n---\n"
+                      "PARAMS: #{PARAMS.inspect}\n---\n"
         raise e
     end
 
@@ -91,59 +95,54 @@ module Unicorn
     # Handles dealing with the rest of the request
     # returns a Rack environment if successful, raises an exception if not
     def handle_body(socket)
-      http_body = @params.delete(:http_body)
-      content_length = @params[Const::CONTENT_LENGTH].to_i
-      remain = content_length - http_body.length
+      http_body = PARAMS.delete(:http_body)
+      content_length = PARAMS[Const::CONTENT_LENGTH].to_i
+
+      if content_length == 0 # short circuit the common case
+        PARAMS[Const::RACK_INPUT] = StringIO.new
+        return PARAMS.update(DEF_PARAMS)
+      end
 
       # must read more data to complete body
-      @body = remain < Const::MAX_BODY ? StringIO.new : Tempfile.new('unicorn')
-      @body.binmode
-      @body.sync = true
-      @body.syswrite(http_body)
+      remain = content_length - http_body.length
+
+      body = PARAMS[Const::RACK_INPUT] = (remain < Const::MAX_BODY) ?
+          StringIO.new : Tempfile.new('unicorn')
+
+      body.binmode
+      body.sync = true
+      body.syswrite(http_body)
 
       # Some clients (like FF1.0) report 0 for body and then send a body.
       # This will probably truncate them but at least the request goes through
       # usually.
-      read_body(socket, remain) if remain > 0
-      @body.rewind
-      @body.sysseek(0) if @body.respond_to?(:sysseek)
+      read_body(socket, remain, body) if remain > 0
+      body.rewind
+      body.sysseek(0) if body.respond_to?(:sysseek)
 
       # in case read_body overread because the client tried to pipeline
       # another request, we'll truncate it.  Again, we don't do pipelining
       # or keepalive
-      @body.truncate(content_length)
-      rack_env(socket)
+      body.truncate(content_length)
+      PARAMS.update(DEF_PARAMS)
     end
 
-    # Returns an environment which is rackable:
-    # http://rack.rubyforge.org/doc/files/SPEC.html
-    # Based on Rack's old Mongrel handler.
-    def rack_env(socket)
-      # I'm considering enabling "unicorn.client".  It gives
-      # applications some rope to do some "interesting" things like
-      # replacing a worker with another process that has full control
-      # over the HTTP response.
-      # @params["unicorn.client"] = socket
-
-      @params[Const::RACK_INPUT] = @body
-      @params.update(DEF_PARAMS)
-    end
-
-    # Does the heavy lifting of properly reading the larger body requests in
-    # small chunks.  It expects @body to be an IO object, socket to be valid,
-    # It also expects any initial part of the body that has been read to be in
-    # the @body already.  It will return true if successful and false if not.
-    def read_body(socket, remain)
+    # Does the heavy lifting of properly reading the larger body
+    # requests in small chunks.  It expects PARAMS['rack.input'] to be
+    # an IO object, socket to be valid, It also expects any initial part
+    # of the body that has been read to be in the PARAMS['rack.input']
+    # already.  It will return true if successful and false if not.
+    def read_body(socket, remain, body)
       while remain > 0
         # writes always write the requested amount on a POSIX filesystem
-        remain -= @body.syswrite(read_socket(socket))
+        remain -= body.syswrite(read_socket(socket))
       end
     rescue Object => e
       @logger.error "Error reading HTTP body: #{e.inspect}"
 
       # Any errors means we should delete the file, including if the file
       # is dumped.  Truncate it ASAP to help avoid page flushes to disk.
-      @body.truncate(0) rescue nil
+      body.truncate(0) rescue nil
       reset
       raise e
     end
@@ -151,7 +150,7 @@ module Unicorn
     # read(2) on "slow" devices like sockets can be interrupted by signals
     def read_socket(socket)
       begin
-        socket.sysread(Const::CHUNK_SIZE, @buffer)
+        socket.sysread(Const::CHUNK_SIZE, BUFFER)
       rescue Errno::EINTR
         retry
       end
