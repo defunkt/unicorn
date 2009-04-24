@@ -458,7 +458,7 @@ module Unicorn
       master_pid = Process.ppid # slightly racy, but less memory usage
       init_worker_process(worker)
       nr = 0 # this becomes negative if we need to reopen logs
-      tempfile = worker.tempfile
+      alive = worker.tempfile # tempfile is our lifeline to the master process
       ready = LISTENERS
       client = nil
       rd, wr = IO.pipe
@@ -467,11 +467,11 @@ module Unicorn
 
       # closing anything we IO.select on will raise EBADF
       trap(:USR1) { nr = -65536; rd.close rescue nil }
-      trap(:QUIT) { LISTENERS.each { |sock| sock.close rescue nil } }
+      trap(:QUIT) { alive = nil; LISTENERS.each { |s| s.close rescue nil } }
       [:TERM, :INT].each { |sig| trap(sig) { exit(0) } } # instant shutdown
       @logger.info "worker=#{worker.nr} ready"
 
-      while master_pid == Process.ppid
+      while alive && master_pid == Process.ppid
         if nr < 0
           @logger.info "worker=#{worker.nr} reopening logs..."
           Unicorn::Util.reopen_logs
@@ -481,7 +481,7 @@ module Unicorn
           rd.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
           wr.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
         end
-        # we're a goner in @timeout seconds anyways if tempfile.chmod
+        # we're a goner in @timeout seconds anyways if alive.chmod
         # breaks, so don't trap the exception.  Using fchmod() since
         # futimes() is not available in base Ruby and I very strongly
         # prefer temporary files to be unlinked for security,
@@ -489,7 +489,7 @@ module Unicorn
         # changes with chmod doesn't update ctime on all filesystems; so
         # we change our counter each and every time (after process_client
         # and before IO.select).
-        tempfile.chmod(nr = 0)
+        alive.chmod(nr = 0)
 
         begin
           ready.each do |sock|
@@ -504,7 +504,7 @@ module Unicorn
               # client closed the socket even before accept
               client.close rescue nil
             ensure
-              tempfile.chmod(nr += 1) if client
+              alive.chmod(nr += 1) if client
               break if nr < 0
             end
           end
@@ -518,14 +518,14 @@ module Unicorn
             ready = LISTENERS
           else
             begin
-              tempfile.chmod(nr += 1)
+              alive.chmod(nr += 1)
               # timeout used so we can detect parent death:
               ret = IO.select(LISTENERS, nil, [rd], @timeout/2.0) or next
               ready = ret[0]
             rescue Errno::EINTR
               ready = LISTENERS
             rescue Errno::EBADF => e
-              nr < 0 or exit(LISTENERS[0].closed? ? 0 : 1)
+              nr < 0 or exit(alive ? 1 : 0)
             end
           end
         rescue SignalException, SystemExit => e
