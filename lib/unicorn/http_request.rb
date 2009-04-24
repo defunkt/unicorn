@@ -87,15 +87,10 @@ module Unicorn
       remain = content_length - http_body.length
 
       # must read more data to complete body
-      if remain < Const::MAX_BODY
-        # small body, just use that
-        @body = StringIO.new(http_body)
-      else # huge body, put it in a tempfile
-        @body = Tempfile.new(Const::UNICORN_TMP_BASE)
-        @body.binmode
-        @body.sync = true
-        @body.syswrite(http_body)
-      end
+      @body = remain < Const::MAX_BODY ? StringIO.new : Tempfile.new('')
+      @body.binmode
+      @body.sync = true
+      @body.syswrite(http_body)
 
       # Some clients (like FF1.0) report 0 for body and then send a body.
       # This will probably truncate them but at least the request goes through

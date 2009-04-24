@@ -50,6 +50,29 @@ class UploadTest < Test::Unit::TestCase
     assert_equal @sha1.hexdigest, resp[:sha1]
   end
 
+  def test_put_trickle_small
+    @count, @bs = 2, 128
+    start_server(@sha1_app)
+    assert_equal 256, length
+    sock = TCPSocket.new(@addr, @port)
+    hdr = "PUT / HTTP/1.0\r\nContent-Length: #{length}\r\n\r\n"
+    @count.times do
+      buf = @random.sysread(@bs)
+      @sha1.update(buf)
+      hdr << buf
+      sock.syswrite(hdr)
+      hdr = ''
+      sleep 0.6
+    end
+    read = sock.read.split(/\r\n/)
+    assert_equal "HTTP/1.1 200 OK", read[0]
+    resp = eval(read.grep(/^X-Resp: /).first.sub!(/X-Resp: /, ''))
+    assert_equal length, resp[:size]
+    assert_equal 0, resp[:pos]
+    assert_equal @sha1.hexdigest, resp[:sha1]
+    assert_equal StringIO, resp[:class]
+  end
+
   def test_tempfile_unlinked
     spew_path = lambda do |env|
       if orig = env['HTTP_X_OLD_PATH']
