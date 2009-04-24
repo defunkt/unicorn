@@ -179,7 +179,7 @@ module Unicorn
     def join
       # this pipe is used to wake us up from select(2) in #join when signals
       # are trapped.  See trap_deferred
-      SELF_PIPE.replace(IO.pipe)
+      init_self_pipe!
       respawn = true
 
       QUEUE_SIGS.each { |sig| trap_deferred(sig) }
@@ -449,7 +449,7 @@ module Unicorn
       SIG_QUEUE.clear
       proc_name "worker[#{worker.nr}]"
       START_CTX.clear
-      SELF_PIPE.each { |x| x.close rescue nil }
+      init_self_pipe!
       WORKERS.values.each { |other| other.tempfile.close! rescue nil }
       WORKERS.clear
       LISTENERS.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
@@ -463,9 +463,7 @@ module Unicorn
       @logger.info "worker=#{worker_nr} reopening logs..."
       Unicorn::Util.reopen_logs
       @logger.info "worker=#{worker_nr} done reopening logs"
-      SELF_PIPE.last.close rescue nil
-      SELF_PIPE.replace(IO.pipe)
-      SELF_PIPE.each { |io| io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
+      init_self_pipe!
     end
 
     # runs inside each forked worker, this sits around and waits
@@ -478,8 +476,6 @@ module Unicorn
       alive = worker.tempfile # tempfile is our lifeline to the master process
       ready = LISTENERS
       client = nil
-      SELF_PIPE.replace(IO.pipe)
-      SELF_PIPE.each { |io| io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
 
       # closing anything we IO.select on will raise EBADF
       trap(:USR1) { nr = -65536; rd.close rescue nil }
@@ -613,6 +609,12 @@ module Unicorn
     def redirect_io(io, path)
       File.open(path, 'a') { |fp| io.reopen(fp) } if path
       io.sync = true
+    end
+
+    def init_self_pipe!
+      SELF_PIPE.each { |io| io.close rescue nil }
+      SELF_PIPE.replace(IO.pipe)
+      SELF_PIPE.each { |io| io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
     end
 
   end
