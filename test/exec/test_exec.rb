@@ -459,6 +459,7 @@ end
     results = nil
     sock = Tempfile.new('unicorn_test_sock')
     sock_path = sock.path
+    @sockets << sock_path
     sock.close!
     ucfg = Tempfile.new('unicorn_test_config')
     ucfg.syswrite("listen \"#{sock_path}\"\n")
