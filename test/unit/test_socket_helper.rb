@@ -10,6 +10,11 @@ class TestSocketHelper < Test::Unit::TestCase
     @log_tmp = Tempfile.new 'logger'
     @logger = Logger.new(@log_tmp.path)
     @test_addr = ENV['UNICORN_TEST_ADDR'] || '127.0.0.1'
+    GC.disable
+  end
+
+  def teardown
+    GC.enable
   end
 
   def test_bind_listen_tcp
