@@ -29,6 +29,7 @@ module Unicorn
     SIG_QUEUE = []
     LISTENERS = []
     WORKERS = {}
+    SELF_PIPE = []
     START_CTX = {
       :argv => ARGV.map { |arg| arg.dup },
       # don't rely on Dir.pwd here since it's not symlink-aware, and
@@ -51,7 +52,7 @@ module Unicorn
     # incoming requests on the socket.
     def initialize(app, options = {})
       @app = app
-      @request = @rd_sig = @wr_sig = nil
+      @request = nil
       @reexec_pid = 0
       @init_listeners = options[:listeners] ? options[:listeners].dup : []
       @config = Configurator.new(options.merge(:use_defaults => true))
@@ -166,7 +167,7 @@ module Unicorn
     def join
       # this pipe is used to wake us up from select(2) in #join when signals
       # are trapped.  See trap_deferred
-      @rd_sig, @wr_sig = IO.pipe unless (@rd_sig && @wr_sig)
+      SELF_PIPE.replace(IO.pipe)
       mode = nil
       respawn = true
 
@@ -265,16 +266,16 @@ module Unicorn
     # Wake up every second anyways to run murder_lazy_workers
     def master_sleep
       begin
-        ready = IO.select([@rd_sig], nil, nil, 1)
+        ready = IO.select([SELF_PIPE.first], nil, nil, 1)
         ready && ready[0] && ready[0][0] or return
-        loop { @rd_sig.read_nonblock(Const::CHUNK_SIZE) }
+        loop { SELF_PIPE.first.read_nonblock(Const::CHUNK_SIZE) }
       rescue Errno::EAGAIN, Errno::EINTR
       end
     end
 
     def awaken_master
       begin
-        @wr_sig.write_nonblock('.') # wakeup master process from IO.select
+        SELF_PIPE.last.write_nonblock('.') # wakeup master process from select
       rescue Errno::EAGAIN, Errno::EINTR
         # pipe is full, master should wake up anyways
         retry
@@ -427,11 +428,10 @@ module Unicorn
       SIG_QUEUE.clear
       proc_name "worker[#{worker.nr}]"
       START_CTX.clear
-      @rd_sig.close if @rd_sig
-      @wr_sig.close if @wr_sig
+      SELF_PIPE.each { |x| x.close rescue nil }
+      SELF_PIPE.clear
       WORKERS.values.each { |other| other.tempfile.close rescue nil }
       WORKERS.clear
-      @rd_sig = @wr_sig = nil
       LISTENERS.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
       worker.tempfile.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       @after_fork.call(self, worker) # can drop perms
