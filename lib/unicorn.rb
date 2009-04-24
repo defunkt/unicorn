@@ -471,7 +471,7 @@ module Unicorn
       [:TERM, :INT].each { |sig| trap(sig) { exit(0) } } # instant shutdown
       @logger.info "worker=#{worker.nr} ready"
 
-      while alive && master_pid == Process.ppid
+      while alive
         if nr < 0
           @logger.info "worker=#{worker.nr} reopening logs..."
           Unicorn::Util.reopen_logs
@@ -517,6 +517,7 @@ module Unicorn
           if nr != 0 # (nr < 0) => reopen logs
             ready = LISTENERS
           else
+            master_pid == Process.ppid or exit(0)
             begin
               alive.chmod(nr += 1)
               # timeout used so we can detect parent death:
