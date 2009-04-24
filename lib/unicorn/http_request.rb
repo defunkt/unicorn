@@ -96,7 +96,7 @@ module Unicorn
       remain = content_length - http_body.length
 
       # must read more data to complete body
-      @body = remain < Const::MAX_BODY ? StringIO.new : Tempfile.new('')
+      @body = remain < Const::MAX_BODY ? StringIO.new : Tempfile.new('unicorn')
       @body.binmode
       @body.sync = true
       @body.syswrite(http_body)
