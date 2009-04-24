@@ -101,7 +101,7 @@ module Unicorn
       raise ArgumentError, "no listeners" if LISTENERS.empty?
       self.pid = @config[:pid]
       build_app! if @preload_app
-      spawn_missing_workers
+      maintain_worker_count
       self
     end
 
@@ -192,7 +192,7 @@ module Unicorn
           case SIG_QUEUE.shift
           when nil
             murder_lazy_workers
-            spawn_missing_workers if respawn
+            maintain_worker_count if respawn
             master_sleep
           when :QUIT # graceful shutdown
             break
@@ -214,6 +214,10 @@ module Unicorn
             else
               logger.info "SIGWINCH ignored because we're not daemonized"
             end
+          when :TTIN
+            @worker_processes += 1
+          when :TTOU
+            @worker_processes -= 1 if @worker_processes > 0
           when :HUP
             respawn = true
             if @config.config_file
@@ -257,7 +261,8 @@ module Unicorn
     private
 
     # list of signals we care about and trap in master.
-    QUEUE_SIGS = [ :WINCH, :QUIT, :INT, :TERM, :USR1, :USR2, :HUP ].freeze
+    QUEUE_SIGS = [ :WINCH, :QUIT, :INT, :TERM, :USR1, :USR2, :HUP,
+                   :TTIN, :TTOU ].freeze
 
     # defer a signal for later processing in #join (master process)
     def trap_deferred(signal)
@@ -380,7 +385,6 @@ module Unicorn
     end
 
     def spawn_missing_workers
-      return if WORKERS.size == @worker_processes
       (0...@worker_processes).each do |worker_nr|
         WORKERS.values.include?(worker_nr) and next
         begin
@@ -397,6 +401,14 @@ module Unicorn
         pid = fork { worker_loop(worker) }
         WORKERS[pid] = worker
       end
+    end
+
+    def maintain_worker_count
+      (off = WORKERS.size - @worker_processes) == 0 and return
+      off < 0 and return spawn_missing_workers
+      WORKERS.each_pair { |pid,w|
+        w.nr >= @worker_processes and kill_worker(:QUIT, pid) rescue nil
+      }
     end
 
     # once a client is accepted, it is processed in its entirety here

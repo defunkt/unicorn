@@ -25,6 +25,10 @@ processes are documented here as well.
  * WINCH - gracefully stops workers but keep the master running.
    This will only work for daemonized processes.
 
+ * TTIN - increment the number of worker processes by one
+
+ * TTOU - decrement the number of worker processes by one
+
 === Worker Processes
 
 Sending signals directly to the worker processes should not normally be

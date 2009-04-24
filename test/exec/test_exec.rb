@@ -98,6 +98,28 @@ end
     assert_shutdown(pid)
   end
 
+  def test_ttin_ttou
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+    pid = fork { redirect_test_io { exec($unicorn_bin, "-l#@addr:#@port") } }
+    log = "test_stderr.#{pid}.log"
+    wait_master_ready(log)
+    [ 2, 3].each { |i|
+      assert_nothing_raised { Process.kill(:TTIN, pid) }
+      wait_workers_ready(log, i)
+    }
+    File.truncate(log, 0)
+    reaped = nil
+    [ 2, 1, 0].each { |i|
+      assert_nothing_raised { Process.kill(:TTOU, pid) }
+      DEFAULT_TRIES.times {
+        sleep DEFAULT_RES
+        reaped = File.readlines(log).grep(/reaped.*\s*worker=#{i}$/)
+        break if reaped.size == 1
+      }
+      assert_equal 1, reaped.size
+    }
+  end
+
   def test_help
     redirect_test_io do
       assert(system($unicorn_bin, "-h"), "help text returns true")
