@@ -25,6 +25,7 @@ module Unicorn
     attr_reader :logger
     include ::Unicorn::SocketHelper
 
+    IO_PURGATORY = [] # prevents IO objects in here from being GC-ed
     SIG_QUEUE = []
     START_CTX = {
       :argv => ARGV.map { |arg| arg.dup },
@@ -49,7 +50,6 @@ module Unicorn
     def initialize(app, options = {})
       @app = app
       @workers = Hash.new
-      @io_purgatory = [] # prevents IO objects in here from being GC-ed
       @request = @rd_sig = @wr_sig = nil
       @reexec_pid = 0
       @init_listeners = options[:listeners] ? options[:listeners].dup : []
@@ -68,7 +68,7 @@ module Unicorn
       inherited = ENV['UNICORN_FD'].to_s.split(/,/).map do |fd|
         io = Socket.for_fd(fd.to_i)
         set_server_sockopt(io, @listener_opts[sock_name(io)])
-        @io_purgatory << io
+        IO_PURGATORY << io
         logger.info "inherited addr=#{sock_name(io)} fd=#{fd}"
         server_cast(io)
       end
@@ -113,7 +113,7 @@ module Unicorn
 
       @listeners.delete_if do |io|
         if dead_names.include?(sock_name(io))
-          @io_purgatory.delete_if do |pio|
+          IO_PURGATORY.delete_if do |pio|
             pio.fileno == io.fileno && (pio.close rescue nil).nil? # true
           end
           (io.close rescue nil).nil? # true
@@ -148,7 +148,7 @@ module Unicorn
 
       if io = bind_listen(address, opt)
         unless TCPServer === io || UNIXServer === io
-          @io_purgatory << io
+          IO_PURGATORY << io
           io = server_cast(io)
         end
         logger.info "listening on addr=#{sock_name(io)} fd=#{io.fileno}"
@@ -339,12 +339,11 @@ module Unicorn
         # avoid leaking FDs we don't know about, but let before_exec
         # unset FD_CLOEXEC, if anything else in the app eventually
         # relies on FD inheritence.
-        purgatory = [] # prevent GC of IO objects
         (3..1024).each do |io|
           next if listener_fds.include?(io)
           io = IO.for_fd(io) rescue nil
           io or next
-          purgatory << io
+          IO_PURGATORY << io
           io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
         end
         logger.info "executing #{cmd.inspect} (in #{Dir.pwd})"
