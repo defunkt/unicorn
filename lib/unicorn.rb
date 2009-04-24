@@ -27,6 +27,8 @@ module Unicorn
 
     IO_PURGATORY = [] # prevents IO objects in here from being GC-ed
     SIG_QUEUE = []
+    LISTENERS = []
+    WORKERS = {}
     START_CTX = {
       :argv => ARGV.map { |arg| arg.dup },
       # don't rely on Dir.pwd here since it's not symlink-aware, and
@@ -45,18 +47,16 @@ module Unicorn
 
     # Creates a working server on host:port (strange things happen if
     # port isn't a Number).  Use HttpServer::run to start the server and
-    # HttpServer.workers.join to join the thread that's processing
+    # HttpServer.run.join to join the thread that's processing
     # incoming requests on the socket.
     def initialize(app, options = {})
       @app = app
-      @workers = Hash.new
       @request = @rd_sig = @wr_sig = nil
       @reexec_pid = 0
       @init_listeners = options[:listeners] ? options[:listeners].dup : []
       @config = Configurator.new(options.merge(:use_defaults => true))
       @listener_opts = {}
       @config.commit!(self, :skip => [:listeners, :pid])
-      @listeners = []
     end
 
     # Runs the thing.  Returns self so you can run join on it
@@ -74,18 +74,18 @@ module Unicorn
       end
 
       config_listeners = @config[:listeners].dup
-      @listeners.replace(inherited)
+      LISTENERS.replace(inherited)
 
       # we start out with generic Socket objects that get cast to either
       # TCPServer or UNIXServer objects; but since the Socket objects
       # share the same OS-level file descriptor as the higher-level *Server
       # objects; we need to prevent Socket objects from being garbage-collected
       config_listeners -= listener_names
-      if config_listeners.empty? && @listeners.empty?
+      if config_listeners.empty? && LISTENERS.empty?
         config_listeners << Unicorn::Const::DEFAULT_LISTEN
       end
       config_listeners.each { |addr| listen(addr) }
-      raise ArgumentError, "no listeners" if @listeners.empty?
+      raise ArgumentError, "no listeners" if LISTENERS.empty?
       self.pid = @config[:pid]
       build_app! if @preload_app
       File.open(@stderr_path, "a") { |fp| $stderr.reopen(fp) } if @stderr_path
@@ -111,7 +111,7 @@ module Unicorn
       dead_names += cur_names - set_names
       dead_names.uniq!
 
-      @listeners.delete_if do |io|
+      LISTENERS.delete_if do |io|
         if dead_names.include?(sock_name(io))
           IO_PURGATORY.delete_if do |pio|
             pio.fileno == io.fileno && (pio.close rescue nil).nil? # true
@@ -152,7 +152,7 @@ module Unicorn
           io = server_cast(io)
         end
         logger.info "listening on addr=#{sock_name(io)} fd=#{io.fileno}"
-        @listeners << io
+        LISTENERS << io
       else
         logger.error "adding listener failed addr=#{address} (in use)"
         raise Errno::EADDRINUSE, address
@@ -234,7 +234,7 @@ module Unicorn
       timeleft = @timeout
       step = 0.2
       reap_all_workers
-      until @workers.empty?
+      until WORKERS.empty?
         sleep(step)
         reap_all_workers
         (timeleft -= step) > 0 and next
@@ -293,7 +293,7 @@ module Unicorn
             self.pid = @pid.chomp('.oldbin') if @pid
             proc_name 'master'
           else
-            worker = @workers.delete(pid)
+            worker = WORKERS.delete(pid)
             worker.tempfile.close rescue nil
             logger.info "reaped #{status.inspect} " \
                         "worker=#{worker.nr rescue 'unknown'}"
@@ -331,7 +331,7 @@ module Unicorn
       end
 
       @reexec_pid = fork do
-        listener_fds = @listeners.map { |sock| sock.fileno }
+        listener_fds = LISTENERS.map { |sock| sock.fileno }
         ENV['UNICORN_FD'] = listener_fds.join(',')
         Dir.chdir(START_CTX[:cwd])
         cmd = [ START_CTX[:zero] ] + START_CTX[:argv]
@@ -361,7 +361,7 @@ module Unicorn
     # worker.
     def murder_lazy_workers
       now = Time.now
-      @workers.each_pair do |pid, worker|
+      WORKERS.each_pair do |pid, worker|
         (now - worker.tempfile.ctime) <= @timeout and next
         logger.error "worker=#{worker.nr} PID:#{pid} is too old, killing"
         kill_worker(:KILL, pid) # take no prisoners for @timeout violations
@@ -370,9 +370,9 @@ module Unicorn
     end
 
     def spawn_missing_workers
-      return if @workers.size == @worker_processes
+      return if WORKERS.size == @worker_processes
       (0...@worker_processes).each do |worker_nr|
-        @workers.values.include?(worker_nr) and next
+        WORKERS.values.include?(worker_nr) and next
         begin
           Dir.chdir(START_CTX[:cwd])
         rescue Errno::ENOENT => err
@@ -385,7 +385,7 @@ module Unicorn
         worker = Worker.new(worker_nr, tempfile)
         @before_fork.call(self, worker)
         pid = fork { worker_loop(worker) }
-        @workers[pid] = worker
+        WORKERS[pid] = worker
       end
     end
 
@@ -429,9 +429,10 @@ module Unicorn
       START_CTX.clear
       @rd_sig.close if @rd_sig
       @wr_sig.close if @wr_sig
-      @workers.values.each { |other| other.tempfile.close rescue nil }
-      @workers = @rd_sig = @wr_sig = nil
-      @listeners.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
+      WORKERS.values.each { |other| other.tempfile.close rescue nil }
+      WORKERS.clear
+      @rd_sig = @wr_sig = nil
+      LISTENERS.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
       worker.tempfile.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       @after_fork.call(self, worker) # can drop perms
       @request = HttpRequest.new(logger)
@@ -446,7 +447,7 @@ module Unicorn
       init_worker_process(worker)
       nr = 0 # this becomes negative if we need to reopen logs
       tempfile = worker.tempfile
-      ready = @listeners
+      ready = LISTENERS
       client = nil
       rd, wr = IO.pipe
       rd.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
@@ -454,7 +455,7 @@ module Unicorn
 
       # closing anything we IO.select on will raise EBADF
       trap(:USR1) { nr = -65536; rd.close rescue nil }
-      trap(:QUIT) { @listeners.each { |sock| sock.close rescue nil } }
+      trap(:QUIT) { LISTENERS.each { |sock| sock.close rescue nil } }
       [:TERM, :INT].each { |sig| trap(sig) { exit(0) } } # instant shutdown
       @logger.info "worker=#{worker.nr} ready"
 
@@ -502,17 +503,17 @@ module Unicorn
           # and do a speculative accept_nonblock on every listener
           # before we sleep again in select().
           if nr != 0 # (nr < 0) => reopen logs
-            ready = @listeners
+            ready = LISTENERS
           else
             begin
               tempfile.chmod(nr += 1)
               # timeout used so we can detect parent death:
-              ret = IO.select(@listeners, nil, [rd], @timeout/2.0) or next
+              ret = IO.select(LISTENERS, nil, [rd], @timeout/2.0) or next
               ready = ret[0]
             rescue Errno::EINTR
-              ready = @listeners
+              ready = LISTENERS
             rescue Errno::EBADF => e
-              nr < 0 or exit(@listeners[0].closed? ? 0 : 1)
+              nr < 0 or exit(LISTENERS[0].closed? ? 0 : 1)
             end
           end
         rescue SignalException, SystemExit => e
@@ -532,13 +533,13 @@ module Unicorn
       begin
         Process.kill(signal, pid)
       rescue Errno::ESRCH
-        worker = @workers.delete(pid) and worker.tempfile.close rescue nil
+        worker = WORKERS.delete(pid) and worker.tempfile.close rescue nil
       end
     end
 
     # delivers a signal to each worker
     def kill_each_worker(signal)
-      @workers.keys.each { |pid| kill_worker(signal, pid) }
+      WORKERS.keys.each { |pid| kill_worker(signal, pid) }
     end
 
     # unlinks a PID file at given +path+ if it contains the current PID
@@ -575,7 +576,7 @@ module Unicorn
     end
 
     # returns an array of string names for the given listener array
-    def listener_names(listeners = @listeners)
+    def listener_names(listeners = LISTENERS)
       listeners.map { |io| sock_name(io) }
     end
 
