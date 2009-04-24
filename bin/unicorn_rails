@@ -114,10 +114,9 @@ end
 
 require 'pp' if $DEBUG
 
-# Loads Rails and the private version of Rack it bundles. Returns a
-# lambda of arity==0 that will return *another* lambda of arity==1
-# suitable for using inside Rack::Builder.new block.
-rails_loader = lambda do ||
+# this won't run until after forking if preload_app is false
+app = lambda do ||
+  # Load Rails and the private version of Rack it bundles.
   begin
     require 'config/boot'
   rescue LoadError => err
@@ -128,7 +127,7 @@ rails_loader = lambda do ||
   defined?(::Rails::VERSION::STRING) or
     abort "Rails::VERSION::STRING not defined by config/boot"
 
-  case config
+  inner_app = case config
   when nil
     require 'config/environment'
 
@@ -154,12 +153,8 @@ rails_loader = lambda do ||
     require config
     Object.const_get(File.basename(config, '.rb').capitalize)
   end
-end
 
-# this won't run until after forking if preload_app is false
-app = lambda do ||
   map_path ||= '/'
-  inner_app = rails_loader.call
   Rack::Builder.new do
     if inner_app.class.to_s == "Unicorn::App::OldRails"
       if map_path != '/'
