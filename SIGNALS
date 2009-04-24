@@ -6,28 +6,28 @@ processes are documented here as well.
 
 === Master Process
 
- * HUP - reload config file and gracefully restart all workers
-   If "preload_app" is false (the default), the application code
-   will be reloaded when workers are restarted as well.
+* HUP - reload config file and gracefully restart all workers
+  If "preload_app" is false (the default), the application code
+  will be reloaded when workers are restarted as well.
 
- * INT/TERM - quick shutdown, kills all workers immediately
+* INT/TERM - quick shutdown, kills all workers immediately
 
- * QUIT - graceful shutdown, waits for workers to finish their
-   current request before finishing.
+* QUIT - graceful shutdown, waits for workers to finish their
+  current request before finishing.
 
- * USR1 - reopen all logs owned by the master and all workers
-   See Unicorn::Util.reopen_logs for what is considered a log.
+* USR1 - reopen all logs owned by the master and all workers
+  See Unicorn::Util.reopen_logs for what is considered a log.
 
- * USR2 - reexecute the running binary.  A separate QUIT
-   should be sent to the original process once the child is verified to
-   be up and running.
+* USR2 - reexecute the running binary.  A separate QUIT
+  should be sent to the original process once the child is verified to
+  be up and running.
 
- * WINCH - gracefully stops workers but keep the master running.
-   This will only work for daemonized processes.
+* WINCH - gracefully stops workers but keep the master running.
+  This will only work for daemonized processes.
 
- * TTIN - increment the number of worker processes by one
+* TTIN - increment the number of worker processes by one
 
- * TTOU - decrement the number of worker processes by one
+* TTOU - decrement the number of worker processes by one
 
 === Worker Processes
 
@@ -35,19 +35,19 @@ Sending signals directly to the worker processes should not normally be
 needed.  If the master process is running, any exited worker will be
 automatically respawned.
 
- * INT/TERM - Quick shutdown, immediately exit.
-   Unless WINCH has been sent to the master (or the master is killed),
-   the master process will respawn a worker to replace this one.
+* INT/TERM - Quick shutdown, immediately exit.
+  Unless WINCH has been sent to the master (or the master is killed),
+  the master process will respawn a worker to replace this one.
 
- * QUIT - Gracefully exit after finishing the current request.
-   Unless WINCH has been sent to the master (or the master is killed),
-   the master process will respawn a worker to replace this one.
+* QUIT - Gracefully exit after finishing the current request.
+  Unless WINCH has been sent to the master (or the master is killed),
+  the master process will respawn a worker to replace this one.
 
- * USR1 - Reopen all logs owned by the worker process.
-   See Unicorn::Util.reopen_logs for what is considered a log.
-   Log files are not reopened until it is done processing
-   the current request, so multiple log lines for one request
-   (as done by Rails) will not be split across multiple logs.
+* USR1 - Reopen all logs owned by the worker process.
+  See Unicorn::Util.reopen_logs for what is considered a log.
+  Log files are not reopened until it is done processing
+  the current request, so multiple log lines for one request
+  (as done by Rails) will not be split across multiple logs.
 
 === Procedure to replace a running unicorn executable
 
