@@ -101,9 +101,6 @@ module Unicorn
       raise ArgumentError, "no listeners" if LISTENERS.empty?
       self.pid = @config[:pid]
       build_app! if @preload_app
-      File.open(@stderr_path, "a") { |fp| $stderr.reopen(fp) } if @stderr_path
-      File.open(@stdout_path, "a") { |fp| $stdout.reopen(fp) } if @stdout_path
-      $stderr.sync = $stdout.sync = true
       spawn_missing_workers
       self
     end
@@ -138,6 +135,9 @@ module Unicorn
 
       (set_names - cur_names).each { |addr| listen(addr) }
     end
+
+    def stdout_path=(path); redirect_io($stdout, path); end
+    def stderr_path=(path); redirect_io($stderr, path); end
 
     # sets the path for the PID file of the master process
     def pid=(path)
@@ -596,6 +596,11 @@ module Unicorn
     def proc_name(tag)
       $0 = ([ File.basename(START_CTX[:zero]), tag ] +
               START_CTX[:argv]).join(' ')
+    end
+
+    def redirect_io(io, path)
+      File.open(path, 'a') { |fp| io.reopen(fp) } if path
+      io.sync = true
     end
 
   end
