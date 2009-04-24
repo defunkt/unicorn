@@ -26,6 +26,8 @@ class TestConfigurator < Test::Unit::TestCase
     assert_equal "0.0.0.0:2007", meth.call('0.0.0.0:2007')
     assert_equal "0.0.0.0:2007", meth.call(':2007')
     assert_equal "0.0.0.0:2007", meth.call('*:2007')
+    assert_equal "0.0.0.0:2007", meth.call('2007')
+    assert_equal "0.0.0.0:2007", meth.call(2007)
     assert_match %r{\A\d+\.\d+\.\d+\.\d+:2007\z}, meth.call('1:2007')
     assert_match %r{\A\d+\.\d+\.\d+\.\d+:2007\z}, meth.call('2:2007')
   end

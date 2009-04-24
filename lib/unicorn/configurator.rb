@@ -297,6 +297,7 @@ module Unicorn
     # expands pathnames of sockets if relative to "~" or "~username"
     # expands "*:port and ":port" to "0.0.0.0:port"
     def expand_addr(address) #:nodoc
+      return "0.0.0.0:#{address}" if Integer === address
       return address unless String === address
 
       case address
@@ -304,7 +305,7 @@ module Unicorn
         File.expand_path($1)
       when %r{\A~}
         File.expand_path(address)
-      when %r{\A\*:(\d+)\z}
+      when %r{\A(?:\*:)?(\d+)\z}
         "0.0.0.0:#$1"
       when %r{\A(.*):(\d+)\z}
         # canonicalize the name
