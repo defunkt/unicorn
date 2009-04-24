@@ -25,13 +25,13 @@ module Unicorn
     # Connection: and Date: headers no matter what (if anything) our
     # Rack application sent us.
     SKIP = { 'connection' => true, 'date' => true, 'status' => true }.freeze
-    HEADER_OUT = [ "Connection: close" ] # :nodoc
+    CONNECTION_CLOSE = "Connection: close".freeze #:nodoc
 
     # writes the rack_response to socket as an HTTP response
     def self.write(socket, rack_response)
       status, headers, body = rack_response
       status = "#{status} #{HTTP_STATUS_CODES[status]}"
-      out = HEADER_OUT.dup # shallow copy
+      out = [ CONNECTION_CLOSE ]
 
       # Don't bother enforcing duplicate supression, it's a Hash most of
       # the time anyways so just hope our app knows what it's doing
