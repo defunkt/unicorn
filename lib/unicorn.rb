@@ -64,12 +64,12 @@ module Unicorn
     # incoming requests on the socket.
     def initialize(app, options = {})
       @app = app
-      @request = nil
       @reexec_pid = 0
       @init_listeners = options[:listeners] ? options[:listeners].dup : []
       @config = Configurator.new(options.merge(:use_defaults => true))
       @listener_opts = {}
       @config.commit!(self, :skip => [:listeners, :pid])
+      @request = HttpRequest.new(@logger)
     end
 
     # Runs the thing.  Returns self so you can run join on it
@@ -180,7 +180,6 @@ module Unicorn
       # this pipe is used to wake us up from select(2) in #join when signals
       # are trapped.  See trap_deferred
       SELF_PIPE.replace(IO.pipe)
-      mode = nil
       respawn = true
 
       QUEUE_SIGS.each { |sig| trap_deferred(sig) }
@@ -190,7 +189,7 @@ module Unicorn
       begin
         loop do
           reap_all_workers
-          case (mode = SIG_QUEUE.shift)
+          case SIG_QUEUE.shift
           when nil
             murder_lazy_workers
             spawn_missing_workers if respawn
@@ -225,8 +224,6 @@ module Unicorn
               reexec
               break
             end
-          else
-            logger.error "master process in unknown mode: #{mode}"
           end
         end
       rescue Errno::EINTR
@@ -278,8 +275,8 @@ module Unicorn
     # Wake up every second anyways to run murder_lazy_workers
     def master_sleep
       begin
-        ready = IO.select([SELF_PIPE.first], nil, nil, 1)
-        ready && ready[0] && ready[0][0] or return
+        ready = IO.select([SELF_PIPE.first], nil, nil, 1) or return
+        ready.first && ready.first.first or return
         loop { SELF_PIPE.first.read_nonblock(Const::CHUNK_SIZE) }
       rescue Errno::EAGAIN, Errno::EINTR
       end
@@ -393,7 +390,7 @@ module Unicorn
           SIG_QUEUE << :QUIT # forcibly emulate SIGQUIT
           return
         end
-        tempfile = Tempfile.new('') # as short as possible to save dir space
+        tempfile = Tempfile.new(nil) # as short as possible to save dir space
         tempfile.unlink # don't allow other processes to find or see it
         worker = Worker.new(worker_nr, tempfile)
         @before_fork.call(self, worker)
@@ -441,14 +438,22 @@ module Unicorn
       proc_name "worker[#{worker.nr}]"
       START_CTX.clear
       SELF_PIPE.each { |x| x.close rescue nil }
-      SELF_PIPE.clear
-      WORKERS.values.each { |other| other.tempfile.close rescue nil }
+      WORKERS.values.each { |other| other.tempfile.close! rescue nil }
       WORKERS.clear
       LISTENERS.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
       worker.tempfile.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       @after_fork.call(self, worker) # can drop perms
-      @request = HttpRequest.new(logger)
-      build_app! unless @preload_app
+      @timeout /= 2.0 # halve it for select()
+      build_app! unless @config[:preload_app]
+    end
+
+    def reopen_worker_logs(worker_nr)
+      @logger.info "worker=#{worker_nr} reopening logs..."
+      Unicorn::Util.reopen_logs
+      @logger.info "worker=#{worker_nr} done reopening logs"
+      SELF_PIPE.last.close rescue nil
+      SELF_PIPE.replace(IO.pipe)
+      SELF_PIPE.each { |io| io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
     end
 
     # runs inside each forked worker, this sits around and waits
@@ -461,9 +466,8 @@ module Unicorn
       alive = worker.tempfile # tempfile is our lifeline to the master process
       ready = LISTENERS
       client = nil
-      rd, wr = IO.pipe
-      rd.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
-      wr.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+      SELF_PIPE.replace(IO.pipe)
+      SELF_PIPE.each { |io| io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
 
       # closing anything we IO.select on will raise EBADF
       trap(:USR1) { nr = -65536; rd.close rescue nil }
@@ -472,15 +476,7 @@ module Unicorn
       @logger.info "worker=#{worker.nr} ready"
 
       while alive
-        if nr < 0
-          @logger.info "worker=#{worker.nr} reopening logs..."
-          Unicorn::Util.reopen_logs
-          @logger.info "worker=#{worker.nr} done reopening logs"
-          wr.close rescue nil
-          rd, wr = IO.pipe
-          rd.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
-          wr.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
-        end
+        reopen_worker_logs(worker.nr) if nr < 0
         # we're a goner in @timeout seconds anyways if alive.chmod
         # breaks, so don't trap the exception.  Using fchmod() since
         # futimes() is not available in base Ruby and I very strongly
@@ -518,11 +514,11 @@ module Unicorn
             ready = LISTENERS
           else
             master_pid == Process.ppid or exit(0)
+            alive.chmod(nr += 1)
             begin
-              alive.chmod(nr += 1)
               # timeout used so we can detect parent death:
-              ret = IO.select(LISTENERS, nil, [rd], @timeout/2.0) or next
-              ready = ret[0]
+              ret = IO.select(LISTENERS, nil, SELF_PIPE, @timeout) or next
+              ready = ret.first
             rescue Errno::EINTR
               ready = LISTENERS
             rescue Errno::EBADF => e
