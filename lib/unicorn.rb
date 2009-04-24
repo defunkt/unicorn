@@ -25,11 +25,23 @@ module Unicorn
     attr_reader :logger
     include ::Unicorn::SocketHelper
 
-    IO_PURGATORY = [] # prevents IO objects in here from being GC-ed
-    SIG_QUEUE = []
+    # prevents IO objects in here from being GC-ed
+    IO_PURGATORY = []
+
+    # all bound listener sockets
     LISTENERS = []
+
+    # This hash maps PIDs to Workers
     WORKERS = {}
+
+    # See: http://cr.yp.to/docs/selfpipe.html
     SELF_PIPE = []
+
+    # signal queue used for self-piping
+    SIG_QUEUE = []
+
+    # We populate this at startup so we can figure out how to reexecute
+    # and upgrade the currently running instance of Unicorn
     START_CTX = {
       :argv => ARGV.map { |arg| arg.dup },
       # don't rely on Dir.pwd here since it's not symlink-aware, and
