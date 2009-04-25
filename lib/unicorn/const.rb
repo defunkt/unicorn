@@ -59,7 +59,7 @@ module Unicorn
     REQUEST_URI='REQUEST_URI'.freeze
     REQUEST_PATH='REQUEST_PATH'.freeze
 
-    UNICORN_VERSION="0.6.0".freeze
+    UNICORN_VERSION="0.7.0".freeze
 
     DEFAULT_HOST = "0.0.0.0".freeze # default TCP listen host address
     DEFAULT_PORT = "8080".freeze    # default TCP listen port
