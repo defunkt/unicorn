@@ -18,7 +18,7 @@ module Unicorn
        "rack.multiprocess" => true,
        "rack.multithread" => false,
        "rack.run_once" => false,
-       "rack.version" => [0, 1].freeze,
+       "rack.version" => [1, 0].freeze,
        "SCRIPT_NAME" => "".freeze,
 
        # this is not in the Rack spec, but some apps may rely on it
