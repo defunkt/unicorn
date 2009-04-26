@@ -504,13 +504,12 @@ module Unicorn
                 next
               end
               process_client(client)
+              alive.chmod(nr += 1)
             rescue Errno::ECONNABORTED
               # client closed the socket even before accept
               client.close rescue nil
-            ensure
-              alive.chmod(nr += 1) if client
-              break if nr < 0
             end
+            break if nr < 0
           end
           client = nil
 
