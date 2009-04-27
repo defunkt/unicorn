@@ -19,12 +19,28 @@ class UploadTest < Test::Unit::TestCase
     @sha1_app = lambda do |env|
       input = env['rack.input']
       resp = { :pos => input.pos, :size => input.size, :class => input.class }
+
+      # sysread
       @sha1.reset
       begin
         loop { @sha1.update(input.sysread(@bs)) }
       rescue EOFError
       end
       resp[:sha1] = @sha1.hexdigest
+
+      # read
+      input.sysseek(0) if input.respond_to?(:sysseek)
+      input.rewind
+      @sha1.reset
+      loop {
+        buf = input.read(@bs) or break
+        @sha1.update(buf)
+      }
+
+      if resp[:sha1] == @sha1.hexdigest
+        resp[:sysread_read_byte_match] = true
+      end
+
       [ 200, @hdr.merge({'X-Resp' => resp.inspect}), [] ]
     end
   end
@@ -218,6 +234,7 @@ class UploadTest < Test::Unit::TestCase
     assert $?.success?, 'curl ran OK'
     assert_match(%r!\b#{sha1}\b!, resp)
     assert_match(/Tempfile/, resp)
+    assert_match(/sysread_read_byte_match/, resp)
 
     # small StringIO path
     assert(system("dd", "if=#{@random.path}", "of=#{tmp.path}",
@@ -233,6 +250,7 @@ class UploadTest < Test::Unit::TestCase
     assert $?.success?, 'curl ran OK'
     assert_match(%r!\b#{sha1}\b!, resp)
     assert_match(/StringIO/, resp)
+    assert_match(/sysread_read_byte_match/, resp)
   end
 
   private
