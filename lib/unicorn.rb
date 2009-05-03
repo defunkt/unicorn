@@ -414,8 +414,6 @@ module Unicorn
     # once a client is accepted, it is processed in its entirety here
     # in 3 easy steps: read request, call app, write app response
     def process_client(client)
-      # one syscall less than "client.nonblock = false":
-      client.fcntl(Fcntl::F_SETFL, File::RDWR)
       HttpResponse.write(client, @app.call(@request.read(client)))
     # if we get any error, try to write something back to the client
     # assuming we haven't closed the socket, but don't get hung up
