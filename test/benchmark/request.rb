@@ -10,6 +10,9 @@ class TestClient
     buf.replace(@response)
   end
 
+  alias readpartial sysread
+
+  # old versions of Unicorn used this
   def unicorn_peeraddr
     '127.0.0.1'
   end

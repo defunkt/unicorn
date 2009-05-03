@@ -8,7 +8,11 @@ length = bs * count
 slice = (' ' * bs).freeze
 
 big = Tempfile.new('')
-def big.unicorn_peeraddr; '127.0.0.1'; end
+
+def big.unicorn_peeraddr # old versions of Unicorn used this
+  '127.0.0.1'
+end
+
 big.syswrite(
 "PUT /hello/world/puturl?abcd=efg&hi#anchor HTTP/1.0\r\n" \
 "Host: localhost\r\n" \
