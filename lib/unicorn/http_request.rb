@@ -25,6 +25,9 @@ module Unicorn
        "SERVER_SOFTWARE" => "Unicorn #{Const::UNICORN_VERSION}".freeze
      }.freeze
 
+    # Optimize for the common case where there's no request body
+    # (GET/HEAD) requests.
+    NULL_IO = StringIO.new
     LOCALHOST = '127.0.0.1'.freeze
 
     # Being explicitly single-threaded, we have certain advantages in
@@ -39,10 +42,13 @@ module Unicorn
     end
 
     def reset
-      PARAMS[Const::RACK_INPUT].close rescue nil
-      PARAMS[Const::RACK_INPUT].close! rescue nil
-      PARSER.reset
+      input = PARAMS[Const::RACK_INPUT]
+      if input != NULL_IO
+        input.close rescue nil
+        input.close! rescue nil
+      end
       PARAMS.clear
+      PARSER.reset
     end
 
     # Does the majority of the IO processing.  It has been written in
@@ -99,7 +105,7 @@ module Unicorn
       content_length = PARAMS[Const::CONTENT_LENGTH].to_i
 
       if content_length == 0 # short circuit the common case
-        PARAMS[Const::RACK_INPUT] = StringIO.new
+        PARAMS[Const::RACK_INPUT] = NULL_IO.closed? ? NULL_IO.reopen : NULL_IO
         return PARAMS.update(DEF_PARAMS)
       end
 
