@@ -443,7 +443,7 @@ module Unicorn
     # traps for USR1, USR2, and HUP may be set in the @after_fork Proc
     # by the user.
     def init_worker_process(worker)
-      QUEUE_SIGS.each { |sig| trap(sig, 'DEFAULT') }
+      QUEUE_SIGS.each { |sig| trap(sig, 'IGNORE') }
       trap(:CHLD, 'DEFAULT')
       SIG_QUEUE.clear
       proc_name "worker[#{worker.nr}]"
