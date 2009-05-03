@@ -76,15 +76,15 @@ module Unicorn
                     TCPSocket === socket ? socket.peeraddr.last : LOCALHOST
 
       # short circuit the common case with small GET requests first
-      PARSER.execute(PARAMS, read_socket(socket)) and
+      PARSER.execute(PARAMS, socket.readpartial(Const::CHUNK_SIZE, BUFFER)) and
           return handle_body(socket)
 
-      data = BUFFER.dup # read_socket will clobber BUFFER
+      data = BUFFER.dup # socket.readpartial will clobber BUFFER
 
       # Parser is not done, queue up more data to read and continue parsing
       # an Exception thrown from the PARSER will throw us out of the loop
       begin
-        data << read_socket(socket)
+        data << socket.readpartial(Const::CHUNK_SIZE, BUFFER)
         PARSER.execute(PARAMS, data) and return handle_body(socket)
       end while true
       rescue HttpParserError => e
@@ -141,7 +141,7 @@ module Unicorn
     def read_body(socket, remain, body)
       while remain > 0
         # writes always write the requested amount on a POSIX filesystem
-        remain -= body.syswrite(read_socket(socket))
+        remain -= body.syswrite(socket.readpartial(Const::CHUNK_SIZE, BUFFER))
       end
     rescue Object => e
       @logger.error "Error reading HTTP body: #{e.inspect}"
@@ -151,15 +151,6 @@ module Unicorn
       body.truncate(0) rescue nil
       reset
       raise e
-    end
-
-    # read(2) on "slow" devices like sockets can be interrupted by signals
-    def read_socket(socket)
-      begin
-        socket.sysread(Const::CHUNK_SIZE, BUFFER)
-      rescue Errno::EINTR
-        retry
-      end
     end
 
   end

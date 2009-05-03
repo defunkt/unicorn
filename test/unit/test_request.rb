@@ -14,7 +14,9 @@ include Unicorn
 
 class RequestTest < Test::Unit::TestCase
 
-  class MockRequest < StringIO; end
+  class MockRequest < StringIO
+    alias_method :readpartial, :sysread
+  end
 
   def setup
     @request = HttpRequest.new(Logger.new($stderr))
