@@ -3,6 +3,7 @@ require 'unicorn'
 
 class NullWriter
   def syswrite(buf); buf.size; end
+  alias write syswrite
   def close; end
 end
 
