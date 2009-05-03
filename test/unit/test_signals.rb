@@ -37,6 +37,32 @@ class SignalsTest < Test::Unit::TestCase
     @server = nil
   end
 
+  def test_timeout_slow_response
+    pid = fork {
+      app = lambda { |env| sleep }
+      opts = @server_opts.merge(:timeout => 2)
+      redirect_test_io { HttpServer.new(app, opts).start.join }
+    }
+    t0 = Time.now
+    sock = nil
+    assert_nothing_raised do
+      sock = TCPSocket.new('127.0.0.1', @port)
+      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+    end
+
+    buf = nil
+    assert_raises(EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,
+                  Errno::EBADF) do
+      buf = sock.sysread(4096)
+    end
+    diff = Time.now - t0
+    assert_nil buf
+    assert diff > 1.0, "diff was #{diff.inspect}"
+    assert diff < 60.0
+    ensure
+      Process.kill(:QUIT, pid) rescue nil
+  end
+
   def test_response_write
     app = lambda { |env|
       [ 200, { 'Content-Type' => 'text/plain', 'X-Pid' => Process.pid.to_s },
