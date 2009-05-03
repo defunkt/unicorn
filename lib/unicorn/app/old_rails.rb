@@ -19,8 +19,8 @@ class Unicorn::App::OldRails
           cgi.body)
     rescue Object => e
       err = env['rack.errors']
-      out.write("#{e} #{e.message}\n")
-      e.backtrace.each { |line| out.write("#{line}\n") }
+      err.write("#{e} #{e.message}\n")
+      e.backtrace.each { |line| err.write("#{line}\n") }
     end
     cgi.out  # finalize the response
     cgi.rack_response
