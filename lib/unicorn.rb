@@ -517,9 +517,7 @@ module Unicorn
           # we're probably reasonably busy, so avoid calling select()
           # and do a speculative accept_nonblock on every listener
           # before we sleep again in select().
-          if nr != 0 # (nr < 0) => reopen logs
-            ready = LISTENERS
-          else
+          if nr == 0 # (nr < 0) => reopen logs
             master_pid == Process.ppid or exit(0)
             alive.chmod(nr += 1)
             begin
