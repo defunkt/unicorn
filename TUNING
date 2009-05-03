@@ -1,0 +1,59 @@
+= Tuning Unicorn
+
+Unicorn performance is generally as good as a (mostly) Ruby web server
+can provide.  Most often the performance bottleneck is in the web
+application running on Unicorn rather than Unicorn itself.
+
+== Unicorn Configuration
+
+See Unicorn::Configurator for details on the config file format.
+
+* Setting a very low value for the :backlog parameter in "listen"
+  directives can allow failover to happen more quickly if your
+  cluster is configured for it.
+
+* :rcvbuf and :sndbuf parameters generally do not need to be set for TCP
+  listeners under Linux 2.6 because auto-tuning is enabled.  UNIX domain
+  sockets do not have auto-tuning buffer sizes; so increasing those will
+  allow syscalls and task switches to be saved for larger requests
+  and responses.
+
+* Setting "preload_app true" can allow copy-on-write-friendly GC to
+  be used to save memory.  It will probably not work out of the box with
+  applications that open sockets or perform random I/O on files.
+  Databases like TokyoCabinet use concurrency-safe pread()/pwrite()
+  functions for safe sharing of database file descriptors across
+  processes.
+
+* On POSIX-compliant filesystems, it is safe for multiple threads or
+  processes to append to one log file as long as all the processes are
+  have them unbuffered (File#sync = true) or they are
+  record(line)-buffered in userspace.
+
+* worker_processes should be scaled to the number of processes your
+  backend system(s) can support.  DO NOT scale it to the number of
+  external network clients your application expects to be serving.
+  Unicorn is NOT for serving slow clients, that is the job of nginx.
+
+== Kernel Parameters (Linux sysctl)
+
+WARNING: Do not change system parameters unless you know what you're doing!
+
+* net.core.rmem_max and net.core.wmem_max can increase the allowed
+  size of :rcvbuf and :sndbuf respectively. This is mostly only useful
+  for UNIX domain sockets which do not have auto-tuning buffer sizes.
+
+* If you're running out of local ports, consider lowering
+  net.ipv4.tcp_fin_timeout to 20-30 (default: 60 seconds).  Also
+  consider widening the usable port range by changing
+  net.ipv4.ip_local_port_range.
+
+* Setting net.ipv4.tcp_timestamps=1 will also allow setting
+  net.ipv4.tcp_tw_reuse=1 and net.ipv4.tcp_tw_recycle=1, which along
+  with the above settings can slow down port exhaustion.  Not all
+  networks are compatible with these settings, check with your friendly
+  network administrator before changing these.
+
+* Increasing the MTU size can reduce framing overhead for larger
+  transfers.  One often-overlooked detail is that the loopback
+  device (usually "lo") can have its MTU increased, too.
