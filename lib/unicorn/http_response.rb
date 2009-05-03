@@ -49,30 +49,16 @@ module Unicorn
       # so don't worry or care about them.
       # Date is required by HTTP/1.1 as long as our clock can be trusted.
       # Some broken clients require a "Status" header so we accomodate them
-      socket_write(socket,
-                   "HTTP/1.1 #{status}\r\n" \
+      socket.write("HTTP/1.1 #{status}\r\n" \
                    "Date: #{Time.now.httpdate}\r\n" \
                    "Status: #{status}\r\n" \
                    "Connection: close\r\n" \
                    "#{OUT.join(EMPTY)}\r\n")
-      body.each { |chunk| socket_write(socket, chunk) }
-      socket.close # uncorks the socket immediately
+      body.each { |chunk| socket.write(chunk) }
+      socket.close # flushes and uncorks the socket immediately
       ensure
         body.respond_to?(:close) and body.close rescue nil
     end
-
-    private
-
-      # write(2) can return short on slow devices like sockets as well
-      # as fail with EINTR if a signal was caught.
-      def self.socket_write(socket, buffer)
-        begin
-          written = socket.syswrite(buffer)
-          return written if written == buffer.length
-          buffer = buffer[written..-1]
-        rescue Errno::EINTR
-        end while true
-      end
 
   end
 end
