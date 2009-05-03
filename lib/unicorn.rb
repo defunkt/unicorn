@@ -375,9 +375,8 @@ module Unicorn
     # is stale for >@timeout seconds, then we'll kill the corresponding
     # worker.
     def murder_lazy_workers
-      now = Time.now
       WORKERS.each_pair do |pid, worker|
-        (now - worker.tempfile.ctime) <= @timeout and next
+        Time.now - worker.tempfile.ctime <= @timeout and next
         logger.error "worker=#{worker.nr} PID:#{pid} is too old, killing"
         kill_worker(:KILL, pid) # take no prisoners for @timeout violations
         worker.tempfile.close rescue nil

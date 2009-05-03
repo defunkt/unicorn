@@ -143,12 +143,14 @@ module Unicorn
     # handling the request/app.call/response cycle taking longer than
     # this time period will be forcibly killed (via SIGKILL).  This
     # timeout is enforced by the master process itself and not subject
-    # to the scheduling limitations by the worker process.
+    # to the scheduling limitations by the worker process.  Due the
+    # low-complexity, low-overhead implementation, timeouts of less
+    # than 2.0 seconds can be considered inaccurate and unsafe.
     def timeout(seconds)
       Numeric === seconds or raise ArgumentError,
                                   "not numeric: timeout=#{seconds.inspect}"
-      seconds > 0 or raise ArgumentError,
-                                  "not positive: timeout=#{seconds.inspect}"
+      seconds >= 2 or raise ArgumentError,
+                                  "too low: timeout=#{seconds.inspect}"
       @set[:timeout] = seconds
     end
 
