@@ -469,7 +469,7 @@ module Unicorn
       nr = 0 # this becomes negative if we need to reopen logs
       alive = worker.tempfile # tempfile is our lifeline to the master process
       ready = LISTENERS
-      client = nil
+      t = ti = Time.now.to_i
 
       # closing anything we IO.select on will raise EBADF
       trap(:USR1) { nr = -65536; SELF_PIPE.first.close rescue nil }
@@ -477,8 +477,10 @@ module Unicorn
       [:TERM, :INT].each { |sig| trap(sig) { exit!(0) } } # instant shutdown
       @logger.info "worker=#{worker.nr} ready"
 
-      while alive
-        reopen_worker_logs(worker.nr) if nr < 0
+      begin
+        nr < 0 and reopen_worker_logs(worker.nr)
+        nr = 0
+
         # we're a goner in @timeout seconds anyways if alive.chmod
         # breaks, so don't trap the exception.  Using fchmod() since
         # futimes() is not available in base Ruby and I very strongly
@@ -487,50 +489,41 @@ module Unicorn
         # changes with chmod doesn't update ctime on all filesystems; so
         # we change our counter each and every time (after process_client
         # and before IO.select).
-        alive.chmod(nr = 0)
+        t == (ti = Time.now.to_i) or alive.chmod(t = ti)
 
-        begin
-          ready.each do |sock|
-            begin
-              client = begin
-                sock.accept_nonblock
-              rescue Errno::EAGAIN
-                next
-              end
-              process_client(client)
-              alive.chmod(nr += 1)
-            rescue Errno::ECONNABORTED
-              # client closed the socket even before accept
-              client.close rescue nil
-            end
-            break if nr < 0
+        ready.each do |sock|
+          begin
+            process_client(sock.accept_nonblock)
+            nr += 1
+            t == (ti = Time.now.to_i) or alive.chmod(t = ti)
+          rescue Errno::EAGAIN, Errno::ECONNABORTED
           end
-          client = nil
-
-          # make the following bet: if we accepted clients this round,
-          # we're probably reasonably busy, so avoid calling select()
-          # and do a speculative accept_nonblock on every listener
-          # before we sleep again in select().
-          if nr == 0 # (nr < 0) => reopen logs
-            master_pid == Process.ppid or return
-            alive.chmod(nr += 1)
-            begin
-              # timeout used so we can detect parent death:
-              ret = IO.select(LISTENERS, nil, SELF_PIPE, @timeout) or next
-              ready = ret.first
-            rescue Errno::EINTR
-              ready = LISTENERS
-            rescue Errno::EBADF => e
-              nr < 0 or exit(alive ? 1 : 0)
-            end
-          end
-        rescue Object => e
-          if alive
-            logger.error "Unhandled listen loop exception #{e.inspect}."
-            logger.error e.backtrace.join("\n")
-          end
+          break if nr < 0
         end
-      end
+
+        # make the following bet: if we accepted clients this round,
+        # we're probably reasonably busy, so avoid calling select()
+        # and do a speculative accept_nonblock on every listener
+        # before we sleep again in select().
+        redo unless nr == 0 # (nr < 0) => reopen logs
+
+        master_pid == Process.ppid or return
+        t == (ti = Time.now.to_i) or alive.chmod(t = ti)
+        begin
+          # timeout used so we can detect parent death:
+          ret = IO.select(LISTENERS, nil, SELF_PIPE, @timeout) or redo
+          ready = ret.first
+        rescue Errno::EINTR
+          ready = LISTENERS
+        rescue Errno::EBADF
+          nr < 0 or return
+        end
+      rescue Object => e
+        if alive
+          logger.error "Unhandled listen loop exception #{e.inspect}."
+          logger.error e.backtrace.join("\n")
+        end
+      end while alive
     end
 
     # delivers a signal to a worker and fails gracefully if the worker
