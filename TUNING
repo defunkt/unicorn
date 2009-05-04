@@ -43,6 +43,10 @@ WARNING: Do not change system parameters unless you know what you're doing!
   size of :rcvbuf and :sndbuf respectively. This is mostly only useful
   for UNIX domain sockets which do not have auto-tuning buffer sizes.
 
+* For load testing/benchmarking with UNIX domain sockets, you should
+  consider increasing net.core.somaxconn or else nginx will start
+  failing to connect under heavy load.
+
 * If you're running out of local ports, consider lowering
   net.ipv4.tcp_fin_timeout to 20-30 (default: 60 seconds).  Also
   consider widening the usable port range by changing
