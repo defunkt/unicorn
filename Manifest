@@ -129,3 +129,4 @@ test/unit/test_server.rb
 test/unit/test_signals.rb
 test/unit/test_socket_helper.rb
 test/unit/test_upload.rb
+test/unit/test_util.rb
