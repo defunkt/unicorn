@@ -77,7 +77,6 @@ class RequestTest < Test::Unit::TestCase
       client = MockRequest.new("GET #{abs_uri} HTTP/1.1\r\n" \
                                "Host: foo\r\n\r\n")
       assert_raises(HttpParserError) { @request.read(client) }
-      @request.reset
     end
   end
 

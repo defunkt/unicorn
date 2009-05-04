@@ -38,17 +38,6 @@ module Unicorn
 
     def initialize(logger)
       @logger = logger
-      reset
-    end
-
-    def reset
-      input = PARAMS[Const::RACK_INPUT]
-      if input != NULL_IO
-        input.close rescue nil
-        input.close! rescue nil
-      end
-      PARAMS.clear
-      PARSER.reset
     end
 
     # Does the majority of the IO processing.  It has been written in
@@ -65,6 +54,14 @@ module Unicorn
     # This does minimal exception trapping and it is up to the caller
     # to handle any socket errors (e.g. user aborted upload).
     def read(socket)
+      # reset the parser
+      unless NULL_IO == (input = PARAMS[Const::RACK_INPUT]) # unlikely
+        input.close rescue nil
+        input.close! rescue nil
+      end
+      PARAMS.clear
+      PARSER.reset
+
       # From http://www.ietf.org/rfc/rfc3875:
       # "Script authors should be aware that the REMOTE_ADDR and
       #  REMOTE_HOST meta-variables (see sections 4.1.8 and 4.1.9)

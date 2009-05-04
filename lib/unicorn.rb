@@ -430,8 +430,6 @@ module Unicorn
       client.close rescue nil
       logger.error "Read error: #{e.inspect}"
       logger.error e.backtrace.join("\n")
-    ensure
-      @request.reset
     end
 
     # gets rid of stuff the worker has no business keeping track of
