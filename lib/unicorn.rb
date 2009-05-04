@@ -474,7 +474,7 @@ module Unicorn
       # closing anything we IO.select on will raise EBADF
       trap(:USR1) { nr = -65536; SELF_PIPE.first.close rescue nil }
       trap(:QUIT) { alive = nil; LISTENERS.each { |s| s.close rescue nil } }
-      [:TERM, :INT].each { |sig| trap(sig) { exit(0) } } # instant shutdown
+      [:TERM, :INT].each { |sig| trap(sig) { exit!(0) } } # instant shutdown
       @logger.info "worker=#{worker.nr} ready"
 
       while alive
@@ -512,7 +512,7 @@ module Unicorn
           # and do a speculative accept_nonblock on every listener
           # before we sleep again in select().
           if nr == 0 # (nr < 0) => reopen logs
-            master_pid == Process.ppid or exit(0)
+            master_pid == Process.ppid or return
             alive.chmod(nr += 1)
             begin
               # timeout used so we can detect parent death:
@@ -524,8 +524,6 @@ module Unicorn
               nr < 0 or exit(alive ? 1 : 0)
             end
           end
-        rescue SignalException, SystemExit => e
-          raise e
         rescue Object => e
           if alive
             logger.error "Unhandled listen loop exception #{e.inspect}."

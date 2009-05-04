@@ -37,6 +37,58 @@ class SignalsTest < Test::Unit::TestCase
     @server = nil
   end
 
+  def test_worker_dies_on_dead_master
+    pid = fork {
+      app = lambda { |env| [ 200, {'X-Pid' => "#$$" }, [] ] }
+      opts = @server_opts.merge(:timeout => 2)
+      redirect_test_io { HttpServer.new(app, opts).start.join }
+    }
+    child = sock = buf = t0 = nil
+    assert_nothing_raised do
+      wait_master_ready("test_stderr.#{pid}.log")
+      sock = TCPSocket.new('127.0.0.1', @port)
+      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+      buf = sock.readpartial(4096)
+      sock.close
+      buf =~ /\bX-Pid: (\d+)\b/ or raise Exception
+      child = $1.to_i
+      Process.kill(:KILL, pid)
+      Process.waitpid(pid)
+      t0 = Time.now
+    end
+    assert child
+    assert t0
+    assert_raises(Errno::ESRCH) { loop { Process.kill(0, child); sleep 0.2 } }
+    assert((Time.now - t0) < 60)
+  end
+
+  def test_sleepy_kill
+    rd, wr = IO.pipe
+    pid = fork {
+      rd.close
+      app = lambda { |env| wr.syswrite('.'); sleep; [ 200, {}, [] ] }
+      redirect_test_io { HttpServer.new(app, @server_opts).start.join }
+    }
+    sock = buf = nil
+    wr.close
+    assert_nothing_raised do
+      sock = TCPSocket.new('127.0.0.1', @port)
+      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+      buf = rd.readpartial(1)
+      wait_master_ready("test_stderr.#{pid}.log")
+      Process.kill(:INT, pid)
+      Process.waitpid(pid)
+    end
+    assert_equal '.', buf
+    buf = nil
+    assert_raises(EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,
+                  Errno::EBADF) do
+      buf = sock.sysread(4096)
+    end
+    assert_nil buf
+    ensure
+  end
+
   def test_timeout_slow_response
     pid = fork {
       app = lambda { |env| sleep }
