@@ -4,6 +4,8 @@ module Unicorn
   class Util
     class << self
 
+      APPEND_FLAGS = File::WRONLY | File::APPEND
+
       # this reopens logs that have been rotated (using logrotate(8) or
       # similar).  It is recommended that you install
       # A +File+ object is considered for reopening if it is:
@@ -17,17 +19,20 @@ module Unicorn
         ObjectSpace.each_object(File) do |fp|
           next if fp.closed?
           next unless (fp.sync && fp.path[0..0] == "/")
-
-          flags = fp.fcntl(Fcntl::F_GETFL)
-          open_flags = File::WRONLY | File::APPEND
-          next unless (flags & open_flags) == open_flags
+          next unless (fp.fcntl(Fcntl::F_GETFL) & APPEND_FLAGS) == APPEND_FLAGS
 
           begin
             a, b = fp.stat, File.stat(fp.path)
             next if a.ino == b.ino && a.dev == b.dev
           rescue Errno::ENOENT
           end
-          fp.reopen(fp.path, "a")
+
+          open_arg = 'a'
+          if fp.respond_to?(:external_encoding) && enc = fp.external_encoding
+            open_arg << ":#{enc.to_s}"
+            enc = fp.internal_encoding and open_arg << ":#{enc.to_s}"
+          end
+          fp.reopen(fp.path, open_arg)
           fp.sync = true
           nr += 1
         end # each_object
