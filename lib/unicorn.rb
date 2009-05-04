@@ -420,19 +420,16 @@ module Unicorn
     # the socket is closed at the end of this function
     rescue EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF
       client.write_nonblock(Const::ERROR_500_RESPONSE) rescue nil
+      client.close rescue nil
     rescue HttpParserError # try to tell the client they're bad
       client.write_nonblock(Const::ERROR_400_RESPONSE) rescue nil
+      client.close rescue nil
     rescue Object => e
       client.write_nonblock(Const::ERROR_500_RESPONSE) rescue nil
+      client.close rescue nil
       logger.error "Read error: #{e.inspect}"
       logger.error e.backtrace.join("\n")
     ensure
-      begin
-        client.closed? or client.close
-      rescue Object => e
-        logger.error "Client error: #{e.inspect}"
-        logger.error e.backtrace.join("\n")
-      end
       @request.reset
     end
 
