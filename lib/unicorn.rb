@@ -64,6 +64,7 @@ module Unicorn
     # incoming requests on the socket.
     def initialize(app, options = {})
       @app = app
+      @pid = nil
       @reexec_pid = 0
       @init_listeners = options[:listeners] ? options[:listeners].dup : []
       @config = Configurator.new(options.merge(:use_defaults => true))
