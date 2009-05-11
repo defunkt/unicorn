@@ -12,18 +12,18 @@ module Unicorn
   # 
   class HttpRequest
 
-     # default parameters we merge into the request env for Rack handlers
-     DEF_PARAMS = {
-       "rack.errors" => $stderr,
-       "rack.multiprocess" => true,
-       "rack.multithread" => false,
-       "rack.run_once" => false,
-       "rack.version" => [1, 0].freeze,
-       "SCRIPT_NAME" => "".freeze,
+    # default parameters we merge into the request env for Rack handlers
+    DEFAULTS = {
+      "rack.errors" => $stderr,
+      "rack.multiprocess" => true,
+      "rack.multithread" => false,
+      "rack.run_once" => false,
+      "rack.version" => [1, 0].freeze,
+      "SCRIPT_NAME" => "".freeze,
 
-       # this is not in the Rack spec, but some apps may rely on it
-       "SERVER_SOFTWARE" => "Unicorn #{Const::UNICORN_VERSION}".freeze
-     }.freeze
+      # this is not in the Rack spec, but some apps may rely on it
+      "SERVER_SOFTWARE" => "Unicorn #{Const::UNICORN_VERSION}".freeze
+    }
 
     # Optimize for the common case where there's no request body
     # (GET/HEAD) requests.
@@ -103,7 +103,7 @@ module Unicorn
 
       if content_length == 0 # short circuit the common case
         PARAMS[Const::RACK_INPUT] = NULL_IO.closed? ? NULL_IO.reopen : NULL_IO
-        return PARAMS.update(DEF_PARAMS)
+        return PARAMS.update(DEFAULTS)
       end
 
       # must read more data to complete body
@@ -125,7 +125,7 @@ module Unicorn
       # another request, we'll truncate it.  Again, we don't do pipelining
       # or keepalive
       body.truncate(content_length)
-      PARAMS.update(DEF_PARAMS)
+      PARAMS.update(DEFAULTS)
     end
 
     # Does the heavy lifting of properly reading the larger body
