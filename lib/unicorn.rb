@@ -377,7 +377,9 @@ module Unicorn
     # worker.
     def murder_lazy_workers
       WORKERS.each_pair do |pid, worker|
-        Time.now - worker.tempfile.ctime <= @timeout and next
+        stat = worker.tempfile.stat
+        stat.mode == 0100000 and next
+        Time.now - stat.ctime <= @timeout and next
         logger.error "worker=#{worker.nr} PID:#{pid} is too old, killing"
         kill_worker(:KILL, pid) # take no prisoners for @timeout violations
         worker.tempfile.close rescue nil
@@ -468,7 +470,7 @@ module Unicorn
       nr = 0 # this becomes negative if we need to reopen logs
       alive = worker.tempfile # tempfile is our lifeline to the master process
       ready = LISTENERS
-      t = ti = Time.now.to_i
+      t = ti = 0
 
       # closing anything we IO.select on will raise EBADF
       trap(:USR1) { nr = -65536; SELF_PIPE.first.close rescue nil }
@@ -507,7 +509,7 @@ module Unicorn
         redo unless nr == 0 # (nr < 0) => reopen logs
 
         master_pid == Process.ppid or return
-        t == (ti = Time.now.to_i) or alive.chmod(t = ti)
+        alive.chmod(t = 0)
         begin
           # timeout used so we can detect parent death:
           ret = IO.select(LISTENERS, nil, SELF_PIPE, @timeout) or redo
