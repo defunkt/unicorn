@@ -145,11 +145,11 @@ module Unicorn
     # timeout is enforced by the master process itself and not subject
     # to the scheduling limitations by the worker process.  Due the
     # low-complexity, low-overhead implementation, timeouts of less
-    # than 2.0 seconds can be considered inaccurate and unsafe.
+    # than 3.0 seconds can be considered inaccurate and unsafe.
     def timeout(seconds)
       Numeric === seconds or raise ArgumentError,
                                   "not numeric: timeout=#{seconds.inspect}"
-      seconds >= 2 or raise ArgumentError,
+      seconds >= 3 or raise ArgumentError,
                                   "too low: timeout=#{seconds.inspect}"
       @set[:timeout] = seconds
     end
