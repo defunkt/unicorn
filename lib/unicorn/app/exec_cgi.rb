@@ -95,8 +95,9 @@ module Unicorn::App
       # Allows +out+ to be used as a Rack body.
       def out.each
         sysseek(@unicorn_app_exec_cgi_offset)
+        buf = ''
         begin
-          loop { yield(sysread(CHUNK_SIZE)) }
+          loop { yield(sysread(CHUNK_SIZE, buf)) }
         rescue EOFError
         end
       end
@@ -126,7 +127,8 @@ module Unicorn::App
         tmp.binmode
 
         # Rack::Lint::InputWrapper doesn't allow sysread :(
-        while buf = inp.read(CHUNK_SIZE)
+        buf = ''
+        while inp.read(CHUNK_SIZE, buf)
           tmp.syswrite(buf)
         end
         tmp.sysseek(0)
