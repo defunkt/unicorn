@@ -40,7 +40,7 @@ class SignalsTest < Test::Unit::TestCase
   def test_worker_dies_on_dead_master
     pid = fork {
       app = lambda { |env| [ 200, {'X-Pid' => "#$$" }, [] ] }
-      opts = @server_opts.merge(:timeout => 2)
+      opts = @server_opts.merge(:timeout => 3)
       redirect_test_io { HttpServer.new(app, opts).start.join }
     }
     child = sock = buf = t0 = nil
@@ -94,7 +94,7 @@ class SignalsTest < Test::Unit::TestCase
   def test_timeout_slow_response
     pid = fork {
       app = lambda { |env| sleep }
-      opts = @server_opts.merge(:timeout => 2)
+      opts = @server_opts.merge(:timeout => 3)
       redirect_test_io { HttpServer.new(app, opts).start.join }
     }
     t0 = Time.now
