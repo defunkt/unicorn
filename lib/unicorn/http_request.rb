@@ -113,15 +113,13 @@ module Unicorn
           StringIO.new : Tempfile.new('unicorn')
 
       body.binmode
-      body.sync = true
-      body.syswrite(http_body)
+      body.write(http_body)
 
       # Some clients (like FF1.0) report 0 for body and then send a body.
       # This will probably truncate them but at least the request goes through
       # usually.
       read_body(socket, remain, body) if remain > 0
       body.rewind
-      body.sysseek(0) if body.respond_to?(:sysseek)
 
       # in case read_body overread because the client tried to pipeline
       # another request, we'll truncate it.  Again, we don't do pipelining
@@ -136,10 +134,10 @@ module Unicorn
     # of the body that has been read to be in the PARAMS['rack.input']
     # already.  It will return true if successful and false if not.
     def read_body(socket, remain, body)
-      while remain > 0
-        # writes always write the requested amount on a POSIX filesystem
-        remain -= body.syswrite(socket.readpartial(Const::CHUNK_SIZE, BUFFER))
-      end
+      begin
+        # write always writes the requested amount on a POSIX filesystem
+        remain -= body.write(socket.readpartial(Const::CHUNK_SIZE, BUFFER))
+      end while remain > 0
     rescue Object => e
       @logger.error "Error reading HTTP body: #{e.inspect}"
 
