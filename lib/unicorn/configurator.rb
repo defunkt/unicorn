@@ -181,32 +181,32 @@ module Unicorn
     #
     # +backlog+: this is the backlog of the listen() syscall.
     #
-    #   Some operating systems allow negative values here to specify the
-    #   maximum allowable value.  In most cases, this number is only
-    #   recommendation and there are other OS-specific tunables and
-    #   variables that can affect this number.  See the listen(2)
-    #   syscall documentation of your OS for the exact semantics of
-    #   this.
+    # Some operating systems allow negative values here to specify the
+    # maximum allowable value.  In most cases, this number is only
+    # recommendation and there are other OS-specific tunables and
+    # variables that can affect this number.  See the listen(2)
+    # syscall documentation of your OS for the exact semantics of
+    # this.
     #
-    #   If you are running unicorn on multiple machines, lowering this number
-    #   can help your load balancer detect when a machine is overloaded
-    #   and give requests to a different machine.
+    # If you are running unicorn on multiple machines, lowering this number
+    # can help your load balancer detect when a machine is overloaded
+    # and give requests to a different machine.
     #
-    #   Default: 1024
+    # Default: 1024
     #
     # +rcvbuf+, +sndbuf+: maximum send and receive buffer sizes of sockets
     #
-    #   These correspond to the SO_RCVBUF and SO_SNDBUF settings which
-    #   can be set via the setsockopt(2) syscall.  Some kernels
-    #   (e.g. Linux 2.4+) have intelligent auto-tuning mechanisms and
-    #   there is no need (and it is sometimes detrimental) to specify them.
+    # These correspond to the SO_RCVBUF and SO_SNDBUF settings which
+    # can be set via the setsockopt(2) syscall.  Some kernels
+    # (e.g. Linux 2.4+) have intelligent auto-tuning mechanisms and
+    # there is no need (and it is sometimes detrimental) to specify them.
     #
-    #   See the socket API documentation of your operating system
-    #   to determine the exact semantics of these settings and
-    #   other operating system-specific knobs where they can be
-    #   specified.
+    # See the socket API documentation of your operating system
+    # to determine the exact semantics of these settings and
+    # other operating system-specific knobs where they can be
+    # specified.
     #
-    #   Defaults: operating system defaults
+    # Defaults: operating system defaults
     def listen(address, opt = { :backlog => 1024 })
       address = expand_addr(address)
       if String === address
