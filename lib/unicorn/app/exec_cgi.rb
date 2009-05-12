@@ -95,11 +95,15 @@ module Unicorn::App
       # Allows +out+ to be used as a Rack body.
       def out.each
         sysseek(@unicorn_app_exec_cgi_offset)
-        buf = ''
+
+        # don't use a preallocated buffer for sysread since we can't
+        # guarantee an actual socket is consuming the yielded string
+        # (or if somebody is pushing to an array for eventual concatenation
         begin
-          loop { yield(sysread(CHUNK_SIZE, buf)) }
+          yield(sysread(CHUNK_SIZE))
         rescue EOFError
-        end
+          return
+        end while true
       end
 
       prev = nil
