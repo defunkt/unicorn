@@ -16,6 +16,7 @@ Echoe.new("unicorn") do |p|
   p.ignore_pattern = /^(pkg|site|projects|doc|log)|CVS|\.log/
   p.need_tar_gz = false
   p.need_tgz = true
+  p.dependencies = [ 'rack' ]
 
   p.extension_pattern = ["ext/**/extconf.rb"]
 

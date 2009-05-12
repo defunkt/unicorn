@@ -21,6 +21,12 @@ module Unicorn
 
   class HttpResponse
 
+    # Every standard HTTP code mapped to the appropriate message.
+    CODES = Rack::Utils::HTTP_STATUS_CODES.inject({}) { |hash,(code,msg)|
+      hash[code] = "#{code} #{msg}"
+      hash
+    }
+
     # Rack does not set/require a Date: header.  We always override the
     # Connection: and Date: headers no matter what (if anything) our
     # Rack application sent us.
@@ -31,7 +37,7 @@ module Unicorn
     # writes the rack_response to socket as an HTTP response
     def self.write(socket, rack_response)
       status, headers, body = rack_response
-      status = HTTP_STATUS_CODES[status]
+      status = CODES[status]
       OUT.clear
 
       # Don't bother enforcing duplicate supression, it's a Hash most of
