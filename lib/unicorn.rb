@@ -568,6 +568,7 @@ module Unicorn
         @config.reload
         @config.commit!(self)
         kill_each_worker(:QUIT)
+        Unicorn::Util.reopen_logs
         logger.info "done reloading config_file=#{@config.config_file}"
       rescue Object => e
         logger.error "error reloading config_file=#{@config.config_file}: " \
