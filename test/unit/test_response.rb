@@ -30,7 +30,7 @@ class ResponseTest < Test::Unit::TestCase
     old_ofs = $,
     $, = "\f\v"
     out = StringIO.new
-    HttpResponse.write(out,[200, {"X-Whatever" => "stuff"}, ["cool"]])
+    HttpResponse.write(out,[200, {"X-k" => "cd","X-y" => "z"}, ["cool"]])
     assert out.closed?
     resp = out.string
     assert ! resp.include?("\f\v"), "output didn't use $, ($OFS)"
