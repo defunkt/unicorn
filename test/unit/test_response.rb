@@ -18,6 +18,14 @@ class ResponseTest < Test::Unit::TestCase
     assert out.length > 0, "output didn't have data"
   end
 
+  def test_response_string_status
+    out = StringIO.new
+    HttpResponse.write(out,['200', {}, []])
+    assert out.closed?
+    assert out.length > 0, "output didn't have data"
+    assert_equal 1, out.string.split(/\r\n/).grep(/^Status: 200 OK/).size
+  end
+
   def test_response_OFS_set
     old_ofs = $,
     $, = "\f\v"
