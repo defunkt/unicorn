@@ -22,6 +22,8 @@ require 'rack/file'
 class Unicorn::App::OldRails::Static
   FILE_METHODS = { 'GET' => true, 'HEAD' => true }.freeze
   REQUEST_METHOD = 'REQUEST_METHOD'.freeze
+  REQUEST_URI = 'REQUEST_URI'.freeze
+  PATH_INFO = 'PATH_INFO'.freeze
 
   def initialize(app)
     @app = app
@@ -34,10 +36,10 @@ class Unicorn::App::OldRails::Static
     FILE_METHODS.include?(env[REQUEST_METHOD]) or return @app.call(env)
 
     # first try the path as-is
-    path_info = env[Unicorn::Const::PATH_INFO].chomp("/")
+    path_info = env[PATH_INFO].chomp("/")
     if File.file?("#@root/#{::Rack::Utils.unescape(path_info)}")
       # File exists as-is so serve it up
-      env[Unicorn::Const::PATH_INFO] = path_info
+      env[PATH_INFO] = path_info
       return @file_server.call(env)
     end
 
@@ -45,11 +47,11 @@ class Unicorn::App::OldRails::Static
 
     # grab the semi-colon REST operator used by old versions of Rails
     # this is the reason we didn't just copy the new Rails::Rack::Static
-    env[Unicorn::Const::REQUEST_URI] =~ /^#{Regexp.escape(path_info)}(;[^\?]+)/
+    env[REQUEST_URI] =~ /^#{Regexp.escape(path_info)}(;[^\?]+)/
     path_info << "#$1#{ActionController::Base.page_cache_extension}"
 
     if File.file?("#@root/#{::Rack::Utils.unescape(path_info)}")
-      env[Unicorn::Const::PATH_INFO] = path_info
+      env[PATH_INFO] = path_info
       return @file_server.call(env)
     end
 

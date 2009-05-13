@@ -8,13 +8,6 @@ module Unicorn
   # gave about a 3% to 10% performance improvement over using the strings directly.
   # Symbols did not really improve things much compared to constants.
   module Const
-    # This is the part of the path after the SCRIPT_NAME.
-    PATH_INFO="PATH_INFO".freeze
-
-    # The original URI requested by the client.
-    REQUEST_URI='REQUEST_URI'.freeze
-    REQUEST_PATH='REQUEST_PATH'.freeze
-
     UNICORN_VERSION="0.7.0".freeze
 
     DEFAULT_HOST = "0.0.0.0".freeze # default TCP listen host address
