@@ -103,7 +103,7 @@ In RAILS_ROOT, run:
   unicorn_rails
 
 Unicorn will bind to all interfaces TCP port 8080 by default.
-You may use the '-l/--listen' switch to bind to a different
+You may use the +-l/--listen+ switch to bind to a different
 address:port or a UNIX socket.
 
 === Configuration File(s)
@@ -111,7 +111,7 @@ address:port or a UNIX socket.
 Unicorn will look for the config.ru file used by rackup in APP_ROOT.
 
 For deployments, it can use a config file for Unicorn-specific options
-specified by the --config-file/-c command-line switch.  See
+specified by the +--config-file/-c+ command-line switch.  See
 Unicorn::Configurator for the syntax of the Unicorn-specific options.
 The default settings are designed for maximum out-of-the-box
 compatibility with existing applications.
