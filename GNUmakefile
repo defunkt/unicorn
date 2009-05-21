@@ -53,8 +53,10 @@ $(test_prefix)/.stamp: $(inst_deps)
 	$(MAKE) -C $(test_prefix) http11 shebang
 	> $@
 
+bins := $(wildcard bin/*)
+
 # this is only intended to be run within $(test_prefix)
-shebang: bin/unicorn bin/unicorn_rails
+shebang: $(bins)
 	$(ruby) -i -p -e '$$_.gsub!(%r{^#!.*$$},"#!$(ruby_bin)")' $^
 
 t_log := $(T_log) $(T_n_log)
@@ -97,7 +99,7 @@ $(T): export RUBYLIB := $(test_prefix)/lib:$(RUBYLIB)
 $(T): $(test_prefix)/.stamp
 	$(run_test)
 
-install: bin/unicorn bin/unicorn_rails
+install: $(bins)
 	$(prep_setup_rb)
 	$(RM) -r .install-tmp
 	mkdir .install-tmp
