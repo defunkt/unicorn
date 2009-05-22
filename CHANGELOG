@@ -1,3 +1,4 @@
+v0.7.1 - minor fixes, cleanups and documentation improvements
 v0.7.0 - rack.version is 1.0
 v0.6.0 - cleanups + optimizations, signals to {in,de}crement processes
 v0.5.4 - fix data corruption with some small uploads (not curl)
