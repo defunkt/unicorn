@@ -26,6 +26,11 @@ big.fsync
 
 include Unicorn
 request = HttpRequest.new(Logger.new($stderr))
+unless request.respond_to?(:reset)
+  def request.reset
+    # no-op
+  end
+end
 
 Benchmark.bmbm do |x|
   x.report("big") do
