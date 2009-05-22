@@ -34,6 +34,12 @@ medium = TestClient.new([
 
 include Unicorn
 request = HttpRequest.new(Logger.new($stderr))
+unless request.respond_to?(:reset)
+  def request.reset
+    # no-op
+  end
+end
+
 Benchmark.bmbm do |x|
   x.report("small") do
     for i in 1..nr
