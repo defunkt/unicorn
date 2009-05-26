@@ -25,7 +25,9 @@ require 'stringio'
 require 'pathname'
 require 'tempfile'
 require 'fileutils'
+require 'logger'
 require 'unicorn'
+require 'unicorn/http11'
 
 if ENV['DEBUG']
   require 'ruby-debug'

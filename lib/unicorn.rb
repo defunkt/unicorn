@@ -1,16 +1,17 @@
 require 'fcntl'
-
 require 'unicorn/socket_helper'
-require 'unicorn/const'
-require 'unicorn/http_request'
-require 'unicorn/http_response'
-require 'unicorn/configurator'
-require 'unicorn/util'
+autoload :Rack, 'rack'
 
 # Unicorn module containing all of the classes (include C extensions) for running
 # a Unicorn web server.  It contains a minimalist HTTP server with just enough
 # functionality to service web application requests fast as possible.
 module Unicorn
+  autoload :Const, 'unicorn/const'
+  autoload :HttpRequest, 'unicorn/http_request'
+  autoload :HttpResponse, 'unicorn/http_response'
+  autoload :Configurator, 'unicorn/configurator'
+  autoload :Util, 'unicorn/util'
+
   class << self
     def run(app, options = {})
       HttpServer.new(app, options).start.join
