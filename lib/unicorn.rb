@@ -582,11 +582,13 @@ module Unicorn
     end
 
     def build_app!
-      if defined?(Gem) && Gem.respond_to?(:refresh)
-        logger.info "Refreshing Gem list"
-        Gem.refresh
+      if @app.respond_to?(:arity) && @app.arity == 0
+        if defined?(Gem) && Gem.respond_to?(:refresh)
+          logger.info "Refreshing Gem list"
+          Gem.refresh
+        end
+        @app = @app.call
       end
-      @app = @app.call if @app.respond_to?(:arity) && @app.arity == 0
     end
 
     def proc_name(tag)
