@@ -120,7 +120,6 @@ test/rails/app-2.3.2.1/public/404.html
 test/rails/app-2.3.2.1/public/500.html
 test/rails/test_rails.rb
 test/test_helper.rb
-test/tools/trickletest.rb
 test/unit/test_configurator.rb
 test/unit/test_http_parser.rb
 test/unit/test_request.rb
