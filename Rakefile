@@ -3,7 +3,7 @@ require 'rubygems'
 require 'echoe'
 
 Echoe.new("unicorn") do |p|
-  p.summary = "A small fast HTTP library and server for Rack applications."
+  p.summary = "Rack HTTP server for Unix, fast clients and nothing else"
   p.author = "Eric Wong"
   p.email = "normalperson@yhbt.net"
   p.clean_pattern = ['ext/unicorn/http11/*.{bundle,so,o,obj,pdb,lib,def,exp}',
@@ -12,7 +12,7 @@ Echoe.new("unicorn") do |p|
                      'pkg', 'lib/*.bundle', '*.gem',
                      'site/output', '.config', 'coverage',
                      'test_*.log', 'log', 'doc']
-  p.url = "http://unicorn.bogomips.org"
+  p.url = "http://unicorn.bogomips.org/"
   p.ignore_pattern = /^(pkg|site|projects|doc|log)|CVS|\.log/
   p.need_tar_gz = false
   p.need_tgz = true

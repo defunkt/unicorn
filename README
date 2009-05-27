@@ -1,4 +1,4 @@
-= Unicorn: Unix + LAN/localhost-only fork of Mongrel
+= Unicorn: Rack HTTP server for Unix, fast clients and nothing else
 
 == Features
 
@@ -81,9 +81,8 @@ You can get the latest source via git from the following locations
   git://repo.or.cz/unicorn.git (mirror)
   http://repo.or.cz/r/unicorn.git (mirror)
 
-If you have web browser software for the World Wide Web
-(on the Information Superhighway), you may browse the code from
-your web browser and download the latest snapshot tarballs here:
+You may browse the code from the web and download the latest snapshot
+tarballs here:
 
 * http://git.bogomips.org/cgit/unicorn.git (cgit)
 * http://repo.or.cz/w/unicorn.git (gitweb)
@@ -102,8 +101,8 @@ In RAILS_ROOT, run:
 
   unicorn_rails
 
-Unicorn will bind to all interfaces TCP port 8080 by default.
-You may use the +-l/--listen+ switch to bind to a different
+Unicorn will bind to all interfaces on TCP port 8080 by default.
+You may use the +--listen/-l+ switch to bind to a different
 address:port or a UNIX socket.
 
 === Configuration File(s)
@@ -126,10 +125,9 @@ Like the creatures themselves, production deployments of Unicorn are
 rare or even non-existent.  There is NO WARRANTY whatsoever if anything
 goes wrong, but let us know and we'll try our best to fix it.
 
-Unicorn is designed to only serve fast clients.  See the PHILOSOPHY
-and DESIGN documents for more details regarding this.
-
-Rainbows are NOT included.
+Unicorn is designed to only serve fast clients either on the local host
+or a fast LAN.  See the PHILOSOPHY and DESIGN documents for more details
+regarding this.
 
 == Known Issues
 
