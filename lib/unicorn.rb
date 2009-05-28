@@ -310,8 +310,7 @@ module Unicorn
             self.pid = @pid.chomp('.oldbin') if @pid
             proc_name 'master'
           else
-            worker = WORKERS.delete(pid)
-            worker.tempfile.close rescue nil
+            worker = WORKERS.delete(pid) and worker.tempfile.close rescue nil
             logger.info "reaped #{status.inspect} " \
                         "worker=#{worker.nr rescue 'unknown'}"
           end
@@ -377,13 +376,20 @@ module Unicorn
     # is stale for >@timeout seconds, then we'll kill the corresponding
     # worker.
     def murder_lazy_workers
-      WORKERS.each_pair do |pid, worker|
-        stat = worker.tempfile.stat
+      diff = stat = nil
+      WORKERS.dup.each_pair do |pid, worker|
+        stat = begin
+          worker.tempfile.stat
+        rescue => e
+          logger.warn "worker=#{worker.nr} PID:#{pid} stat error: #{e.inspect}"
+          kill_worker(:QUIT, pid)
+          next
+        end
         stat.mode == 0100000 and next
-        Time.now - stat.ctime <= @timeout and next
-        logger.error "worker=#{worker.nr} PID:#{pid} is too old, killing"
+        (diff = (Time.now - stat.ctime)) <= @timeout and next
+        logger.error "worker=#{worker.nr} PID:#{pid} timeout " \
+                     "(#{diff}s > #{@timeout}s), killing"
         kill_worker(:KILL, pid) # take no prisoners for @timeout violations
-        worker.tempfile.close rescue nil
       end
     end
 
@@ -409,7 +415,7 @@ module Unicorn
     def maintain_worker_count
       (off = WORKERS.size - @worker_processes) == 0 and return
       off < 0 and return spawn_missing_workers
-      WORKERS.each_pair { |pid,w|
+      WORKERS.dup.each_pair { |pid,w|
         w.nr >= @worker_processes and kill_worker(:QUIT, pid) rescue nil
       }
     end
