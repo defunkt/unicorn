@@ -425,8 +425,8 @@ module Unicorn
 
     # once a client is accepted, it is processed in its entirety here
     # in 3 easy steps: read request, call app, write app response
-    def process_client(client)
-      HttpResponse.write(client, @app.call(REQUEST.read(client)))
+    def process_client(app, client)
+      HttpResponse.write(client, app.call(REQUEST.read(client)))
     # if we get any error, try to write something back to the client
     # assuming we haven't closed the socket, but don't get hung up
     # if the socket is already closed or broken.  We'll always ensure
@@ -487,6 +487,7 @@ module Unicorn
       trap(:QUIT) { alive = nil; LISTENERS.each { |s| s.close rescue nil } }
       [:TERM, :INT].each { |sig| trap(sig) { exit!(0) } } # instant shutdown
       @logger.info "worker=#{worker.nr} ready"
+      app = @app
 
       begin
         nr < 0 and reopen_worker_logs(worker.nr)
@@ -504,7 +505,7 @@ module Unicorn
 
         ready.each do |sock|
           begin
-            process_client(sock.accept_nonblock)
+            process_client(app, sock.accept_nonblock)
             nr += 1
             t == (ti = Time.now.to_i) or alive.chmod(t = ti)
           rescue Errno::EAGAIN, Errno::ECONNABORTED
