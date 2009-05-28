@@ -144,6 +144,10 @@ module Unicorn
     def stdout_path=(path); redirect_io($stdout, path); end
     def stderr_path=(path); redirect_io($stderr, path); end
 
+    def logger=(obj)
+      REQUEST.logger = @logger = obj
+    end
+
     # sets the path for the PID file of the master process
     def pid=(path)
       if path
@@ -580,7 +584,6 @@ module Unicorn
         @config.commit!(self)
         kill_each_worker(:QUIT)
         Unicorn::Util.reopen_logs
-        REQUEST.logger = @logger
         @app = @orig_app
         build_app! if @preload_app
         logger.info "done reloading config_file=#{@config.config_file}"
