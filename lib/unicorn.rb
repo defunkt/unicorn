@@ -72,6 +72,7 @@ module Unicorn
       @listener_opts = {}
       @config.commit!(self, :skip => [:listeners, :pid])
       @request = HttpRequest.new(@logger)
+      @orig_app = app
     end
 
     # Runs the thing.  Returns self so you can run join on it
@@ -458,7 +459,7 @@ module Unicorn
       worker.tempfile.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       @after_fork.call(self, worker) # can drop perms
       @timeout /= 2.0 # halve it for select()
-      build_app! unless @config[:preload_app]
+      build_app! unless @preload_app
     end
 
     def reopen_worker_logs(worker_nr)
@@ -576,6 +577,8 @@ module Unicorn
         @config.commit!(self)
         kill_each_worker(:QUIT)
         Unicorn::Util.reopen_logs
+        @app = @orig_app
+        build_app! if @preload_app
         logger.info "done reloading config_file=#{@config.config_file}"
       rescue Object => e
         logger.error "error reloading config_file=#{@config.config_file}: " \
