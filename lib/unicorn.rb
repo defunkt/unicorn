@@ -41,6 +41,9 @@ module Unicorn
     # signal queue used for self-piping
     SIG_QUEUE = []
 
+    # constant lookups are faster and we're single-threaded/non-reentrant
+    REQUEST = HttpRequest.new
+
     # We populate this at startup so we can figure out how to reexecute
     # and upgrade the currently running instance of Unicorn
     START_CTX = {
@@ -71,7 +74,6 @@ module Unicorn
       @config = Configurator.new(options.merge(:use_defaults => true))
       @listener_opts = {}
       @config.commit!(self, :skip => [:listeners, :pid])
-      @request = HttpRequest.new(@logger)
       @orig_app = app
     end
 
@@ -424,7 +426,7 @@ module Unicorn
     # once a client is accepted, it is processed in its entirety here
     # in 3 easy steps: read request, call app, write app response
     def process_client(client)
-      HttpResponse.write(client, @app.call(@request.read(client)))
+      HttpResponse.write(client, @app.call(REQUEST.read(client)))
     # if we get any error, try to write something back to the client
     # assuming we haven't closed the socket, but don't get hung up
     # if the socket is already closed or broken.  We'll always ensure
@@ -577,6 +579,7 @@ module Unicorn
         @config.commit!(self)
         kill_each_worker(:QUIT)
         Unicorn::Util.reopen_logs
+        REQUEST.logger = @logger
         @app = @orig_app
         build_app! if @preload_app
         logger.info "done reloading config_file=#{@config.config_file}"

@@ -12,6 +12,8 @@ module Unicorn
   # 
   class HttpRequest
 
+    attr_accessor :logger
+
     # default parameters we merge into the request env for Rack handlers
     DEFAULTS = {
       "rack.errors" => $stderr,
@@ -36,7 +38,7 @@ module Unicorn
     PARSER = HttpParser.new
     PARAMS = Hash.new
 
-    def initialize(logger)
+    def initialize(logger = Configurator::DEFAULT_LOGGER)
       @logger = logger
     end
 
