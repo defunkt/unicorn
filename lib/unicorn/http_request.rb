@@ -29,7 +29,9 @@ module Unicorn
 
     # Optimize for the common case where there's no request body
     # (GET/HEAD) requests.
-    NULL_IO = StringIO.new
+    Z = ''
+    Z.force_encoding(Encoding::Binary) if Z.respond_to?(:force_encoding)
+    NULL_IO = StringIO.new(Z)
     LOCALHOST = '127.0.0.1'.freeze
 
     # Being explicitly single-threaded, we have certain advantages in
@@ -104,7 +106,8 @@ module Unicorn
       content_length = PARAMS[Const::CONTENT_LENGTH].to_i
 
       if content_length == 0 # short circuit the common case
-        PARAMS[Const::RACK_INPUT] = NULL_IO.closed? ? NULL_IO.reopen : NULL_IO
+        PARAMS[Const::RACK_INPUT] =
+            NULL_IO.closed? ? NULL_IO.reopen(Z) : NULL_IO
         return PARAMS.update(DEFAULTS)
       end
 
