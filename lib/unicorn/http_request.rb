@@ -146,7 +146,6 @@ module Unicorn
       # Any errors means we should delete the file, including if the file
       # is dumped.  Truncate it ASAP to help avoid page flushes to disk.
       body.truncate(0) rescue nil
-      reset
       raise e
     end
 
