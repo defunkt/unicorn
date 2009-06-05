@@ -30,7 +30,7 @@ module Unicorn
     # Optimize for the common case where there's no request body
     # (GET/HEAD) requests.
     Z = ''
-    Z.force_encoding(Encoding::Binary) if Z.respond_to?(:force_encoding)
+    Z.force_encoding(Encoding::BINARY) if Z.respond_to?(:force_encoding)
     NULL_IO = StringIO.new(Z)
     LOCALHOST = '127.0.0.1'.freeze
 
