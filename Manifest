@@ -14,7 +14,9 @@ TODO
 TUNING
 bin/unicorn
 bin/unicorn_rails
+examples/cat-chunk-proxy.rb
 examples/echo.ru
+examples/git.ru
 examples/init.sh
 ext/unicorn/http11/ext_help.h
 ext/unicorn/http11/extconf.rb
@@ -24,6 +26,7 @@ ext/unicorn/http11/http11_parser.rl
 ext/unicorn/http11/http11_parser_common.rl
 lib/unicorn.rb
 lib/unicorn/app/exec_cgi.rb
+lib/unicorn/app/inetd.rb
 lib/unicorn/app/old_rails.rb
 lib/unicorn/app/old_rails/static.rb
 lib/unicorn/cgi_wrapper.rb
