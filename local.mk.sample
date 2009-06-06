@@ -38,7 +38,7 @@ publish_doc:
 # Create gzip variants of the same timestamp as the original so nginx
 # "gzip_static on" can serve the gzipped versions directly.
 doc_gz: suf := html js css
-doc_gz: globs := $(addprefix doc/*.,$(suf)) $(addprefix doc/*/*.,$(suf))
-doc_gz: docs := $(wildcard $(globs))
+doc_gz: docs = $(shell find doc/ -regex '^.*\.\(html\|js\|css\)$$')
 doc_gz:
-	for i in $(docs); do gzip < $$i > $$i.gz; touch -r $$i $$i.gz; done
+	for i in $(docs); do \
+	  gzip --rsyncable < $$i > $$i.gz; touch -r $$i $$i.gz; done
