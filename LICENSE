@@ -1,6 +1,6 @@
-Unicorn Web Server (unicorn) is copyrighted free software by Eric Wong
-(normalperson@yhbt.net) and contributors. You can redistribute it
-and/or modify it under either the terms of the GPL2 or the conditions below:
+Unicorn is copyrighted free software by Eric Wong (normalperson@yhbt.net)
+and contributors. You can redistribute it and/or modify it under either
+the terms of the GPL2 (see COPYING file) or the conditions below:
 
 1. You may make and give away verbatim copies of the source form of the
    software without restriction, provided that you duplicate all of the
