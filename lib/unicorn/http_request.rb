@@ -1,15 +1,9 @@
-require 'tempfile'
 require 'stringio'
 
 # compiled extension
 require 'unicorn/http11'
 
 module Unicorn
-  #
-  # The HttpRequest.initialize method will convert any request that is larger than
-  # Const::MAX_BODY into a Tempfile and use that as the body.  Otherwise it uses 
-  # a StringIO object.  To be safe, you should assume it works like a file.
-  # 
   class HttpRequest
 
     attr_accessor :logger
@@ -23,15 +17,20 @@ module Unicorn
       "rack.version" => [1, 0].freeze,
       "SCRIPT_NAME" => "".freeze,
 
+      # some applications (like Echo) may want to change this to true
+      # We disable streaming by default since some (arguably broken)
+      # applications may not ever read the entire body and be confused
+      # when it receives a response after nothing has been sent to it.
+      Const::STREAM_INPUT => false,
       # this is not in the Rack spec, but some apps may rely on it
       "SERVER_SOFTWARE" => "Unicorn #{Const::UNICORN_VERSION}".freeze
     }
 
-    # Optimize for the common case where there's no request body
-    # (GET/HEAD) requests.
     Z = ''
     Z.force_encoding(Encoding::BINARY) if Z.respond_to?(:force_encoding)
     NULL_IO = StringIO.new(Z)
+    TEE = TeeInput.new
+    DECHUNKER = ChunkedReader.new
     LOCALHOST = '127.0.0.1'.freeze
 
     # Being explicitly single-threaded, we have certain advantages in
@@ -58,11 +57,6 @@ module Unicorn
     # This does minimal exception trapping and it is up to the caller
     # to handle any socket errors (e.g. user aborted upload).
     def read(socket)
-      # reset the parser
-      unless NULL_IO == (input = PARAMS[Const::RACK_INPUT]) # unlikely
-        input.close rescue nil
-        input.close! rescue nil
-      end
       PARAMS.clear
       PARSER.reset
 
@@ -100,56 +94,22 @@ module Unicorn
     private
 
     # Handles dealing with the rest of the request
-    # returns a Rack environment if successful, raises an exception if not
+    # returns a Rack environment if successful
     def handle_body(socket)
       http_body = PARAMS.delete(:http_body)
-      content_length = PARAMS[Const::CONTENT_LENGTH].to_i
 
-      if content_length == 0 # short circuit the common case
-        PARAMS[Const::RACK_INPUT] =
-            NULL_IO.closed? ? NULL_IO.reopen(Z) : NULL_IO
-        return PARAMS.update(DEFAULTS)
+      length = PARAMS[Const::CONTENT_LENGTH].to_i
+      if te = PARAMS[Const::HTTP_TRANSFER_ENCODING]
+        if /chunked/i =~ te
+          socket = DECHUNKER.reopen(socket, http_body)
+          length = http_body = nil
+        end
       end
 
-      # must read more data to complete body
-      remain = content_length - http_body.length
-
-      body = PARAMS[Const::RACK_INPUT] = (remain < Const::MAX_BODY) ?
-          StringIO.new : Tempfile.new('unicorn')
-
-      body.binmode
-      body.write(http_body)
-
-      # Some clients (like FF1.0) report 0 for body and then send a body.
-      # This will probably truncate them but at least the request goes through
-      # usually.
-      read_body(socket, remain, body) if remain > 0
-      body.rewind
-
-      # in case read_body overread because the client tried to pipeline
-      # another request, we'll truncate it.  Again, we don't do pipelining
-      # or keepalive
-      body.truncate(content_length)
+      inp = TEE.reopen(socket, length, http_body)
+      PARAMS[Const::RACK_INPUT] =
+                          DEFAULTS[Const::STREAM_INPUT] ? inp : inp.consume
       PARAMS.update(DEFAULTS)
-    end
-
-    # Does the heavy lifting of properly reading the larger body
-    # requests in small chunks.  It expects PARAMS['rack.input'] to be
-    # an IO object, socket to be valid, It also expects any initial part
-    # of the body that has been read to be in the PARAMS['rack.input']
-    # already.  It will return true if successful and false if not.
-    def read_body(socket, remain, body)
-      begin
-        # write always writes the requested amount on a POSIX filesystem
-        remain -= body.write(socket.readpartial(Const::CHUNK_SIZE, BUFFER))
-      end while remain > 0
-    rescue Object => e
-      @logger.error "Error reading HTTP body: #{e.inspect}"
-
-      # Any errors means we should delete the file, including if the file
-      # is dumped.  Truncate it ASAP to help avoid page flushes to disk.
-      body.truncate(0) rescue nil
-      raise e
     end
 
   end

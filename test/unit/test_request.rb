@@ -16,6 +16,7 @@ class RequestTest < Test::Unit::TestCase
 
   class MockRequest < StringIO
     alias_method :readpartial, :sysread
+    alias_method :read_nonblock, :sysread
   end
 
   def setup

@@ -26,10 +26,12 @@ module Unicorn
     ERROR_500_RESPONSE = "HTTP/1.1 500 Internal Server Error\r\n\r\n".freeze
 
     # A frozen format for this is about 15% faster
+    HTTP_TRANSFER_ENCODING = 'HTTP_TRANSFER_ENCODING'.freeze
     CONTENT_LENGTH="CONTENT_LENGTH".freeze
     REMOTE_ADDR="REMOTE_ADDR".freeze
     HTTP_X_FORWARDED_FOR="HTTP_X_FORWARDED_FOR".freeze
     RACK_INPUT="rack.input".freeze
+    STREAM_INPUT="unicorn.stream_input".freeze
   end
 
 end

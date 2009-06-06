@@ -18,24 +18,20 @@ class UploadTest < Test::Unit::TestCase
     @sha1 = Digest::SHA1.new
     @sha1_app = lambda do |env|
       input = env['rack.input']
-      resp = { :pos => input.pos, :size => input.size, :class => input.class }
+      resp = { :size => input.size }
 
-      # sysread
       @sha1.reset
-      begin
-        loop { @sha1.update(input.sysread(@bs)) }
-      rescue EOFError
+      while buf = input.read(@bs)
+        @sha1.update(buf)
       end
       resp[:sha1] = @sha1.hexdigest
 
-      # read
-      input.sysseek(0) if input.respond_to?(:sysseek)
+      # rewind and read again
       input.rewind
       @sha1.reset
-      loop {
-        buf = input.read(@bs) or break
+      while buf = input.read(@bs)
         @sha1.update(buf)
-      }
+      end
 
       if resp[:sha1] == @sha1.hexdigest
         resp[:sysread_read_byte_match] = true
@@ -54,7 +50,7 @@ class UploadTest < Test::Unit::TestCase
     start_server(@sha1_app)
     sock = TCPSocket.new(@addr, @port)
     sock.syswrite("PUT / HTTP/1.0\r\nContent-Length: #{length}\r\n\r\n")
-    @count.times do
+    @count.times do |i|
       buf = @random.sysread(@bs)
       @sha1.update(buf)
       sock.syswrite(buf)
@@ -63,7 +59,6 @@ class UploadTest < Test::Unit::TestCase
     assert_equal "HTTP/1.1 200 OK", read[0]
     resp = eval(read.grep(/^X-Resp: /).first.sub!(/X-Resp: /, ''))
     assert_equal length, resp[:size]
-    assert_equal 0, resp[:pos]
     assert_equal @sha1.hexdigest, resp[:sha1]
   end
 
@@ -85,42 +80,7 @@ class UploadTest < Test::Unit::TestCase
     assert_equal "HTTP/1.1 200 OK", read[0]
     resp = eval(read.grep(/^X-Resp: /).first.sub!(/X-Resp: /, ''))
     assert_equal length, resp[:size]
-    assert_equal 0, resp[:pos]
     assert_equal @sha1.hexdigest, resp[:sha1]
-    assert_equal StringIO, resp[:class]
-  end
-
-  def test_tempfile_unlinked
-    spew_path = lambda do |env|
-      if orig = env['HTTP_X_OLD_PATH']
-        assert orig != env['rack.input'].path
-      end
-      assert_equal length, env['rack.input'].size
-      [ 200, @hdr.merge('X-Tempfile-Path' => env['rack.input'].path), [] ]
-    end
-    start_server(spew_path)
-    sock = TCPSocket.new(@addr, @port)
-    sock.syswrite("PUT / HTTP/1.0\r\nContent-Length: #{length}\r\n\r\n")
-    @count.times { sock.syswrite(' ' * @bs) }
-    path = sock.read[/^X-Tempfile-Path: (\S+)/, 1]
-    sock.close
-
-    # send another request to ensure we hit the next request
-    sock = TCPSocket.new(@addr, @port)
-    sock.syswrite("PUT / HTTP/1.0\r\nX-Old-Path: #{path}\r\n" \
-                  "Content-Length: #{length}\r\n\r\n")
-    @count.times { sock.syswrite(' ' * @bs) }
-    path2 = sock.read[/^X-Tempfile-Path: (\S+)/, 1]
-    sock.close
-    assert path != path2
-
-    # make sure the next request comes in so the unlink got processed
-    sock = TCPSocket.new(@addr, @port)
-    sock.syswrite("GET ?lasdf\r\n\r\n\r\n\r\n")
-    sock.sysread(4096) rescue nil
-    sock.close
-
-    assert ! File.exist?(path)
   end
 
   def test_put_keepalive_truncates_small_overwrite
@@ -140,7 +100,6 @@ class UploadTest < Test::Unit::TestCase
     assert_equal "HTTP/1.1 200 OK", read[0]
     resp = eval(read.grep(/^X-Resp: /).first.sub!(/X-Resp: /, ''))
     assert_equal to_upload, resp[:size]
-    assert_equal 0, resp[:pos]
     assert_equal @sha1.hexdigest, resp[:sha1]
   end
 
@@ -153,58 +112,6 @@ class UploadTest < Test::Unit::TestCase
     assert_raise(Errno::ECONNRESET, Errno::EPIPE) do
       ::Unicorn::Const::CHUNK_SIZE.times { sock.syswrite(buf) }
     end
-  end
-
-  def test_put_handler_closed_file
-    nr = '0'
-    start_server(lambda { |env|
-      env['rack.input'].close
-      resp = { :nr => nr.succ! }
-      [ 200, @hdr.merge({ 'X-Resp' => resp.inspect}), [] ]
-    })
-    sock = TCPSocket.new(@addr, @port)
-    buf = ' ' * @bs
-    sock.syswrite("PUT / HTTP/1.0\r\nContent-Length: #{length}\r\n\r\n")
-    @count.times { sock.syswrite(buf) }
-    read = sock.read.split(/\r\n/)
-    assert_equal "HTTP/1.1 200 OK", read[0]
-    resp = eval(read.grep(/^X-Resp: /).first.sub!(/X-Resp: /, ''))
-    assert_equal '1', resp[:nr]
-
-    # server still alive?
-    sock = TCPSocket.new(@addr, @port)
-    sock.syswrite("GET / HTTP/1.0\r\n\r\n")
-    read = sock.read.split(/\r\n/)
-    assert_equal "HTTP/1.1 200 OK", read[0]
-    resp = eval(read.grep(/^X-Resp: /).first.sub!(/X-Resp: /, ''))
-    assert_equal '2', resp[:nr]
-  end
-
-  def test_renamed_file_not_closed
-    start_server(lambda { |env|
-      new_tmp = Tempfile.new('unicorn_test')
-      input = env['rack.input']
-      File.rename(input.path, new_tmp.path)
-      resp = {
-        :inode => input.stat.ino,
-        :size => input.stat.size,
-        :new_tmp => new_tmp.path,
-        :old_tmp => input.path,
-      }
-      [ 200, @hdr.merge({ 'X-Resp' => resp.inspect}), [] ]
-    })
-    sock = TCPSocket.new(@addr, @port)
-    buf = ' ' * @bs
-    sock.syswrite("PUT / HTTP/1.0\r\nContent-Length: #{length}\r\n\r\n")
-    @count.times { sock.syswrite(buf) }
-    read = sock.read.split(/\r\n/)
-    assert_equal "HTTP/1.1 200 OK", read[0]
-    resp = eval(read.grep(/^X-Resp: /).first.sub!(/X-Resp: /, ''))
-    new_tmp = File.open(resp[:new_tmp])
-    assert_equal resp[:inode], new_tmp.stat.ino
-    assert_equal length, resp[:size]
-    assert ! File.exist?(resp[:old_tmp])
-    assert_equal resp[:size], new_tmp.stat.size
   end
 
   # Despite reading numerous articles and inspecting the 1.9.1-p0 C
@@ -233,7 +140,6 @@ class UploadTest < Test::Unit::TestCase
     resp = `curl -isSfN -T#{tmp.path} http://#@addr:#@port/`
     assert $?.success?, 'curl ran OK'
     assert_match(%r!\b#{sha1}\b!, resp)
-    assert_match(/Tempfile/, resp)
     assert_match(/sysread_read_byte_match/, resp)
 
     # small StringIO path
@@ -249,7 +155,6 @@ class UploadTest < Test::Unit::TestCase
     resp = `curl -isSfN -T#{tmp.path} http://#@addr:#@port/`
     assert $?.success?, 'curl ran OK'
     assert_match(%r!\b#{sha1}\b!, resp)
-    assert_match(/StringIO/, resp)
     assert_match(/sysread_read_byte_match/, resp)
   end
 

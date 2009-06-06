@@ -10,6 +10,8 @@ module Unicorn
   autoload :HttpRequest, 'unicorn/http_request'
   autoload :HttpResponse, 'unicorn/http_response'
   autoload :Configurator, 'unicorn/configurator'
+  autoload :TeeInput, 'unicorn/tee_input'
+  autoload :ChunkedReader, 'unicorn/chunked_reader'
   autoload :Util, 'unicorn/util'
 
   class << self
@@ -465,6 +467,7 @@ module Unicorn
       worker.tempfile.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       @after_fork.call(self, worker) # can drop perms
       @timeout /= 2.0 # halve it for select()
+      HttpRequest::TEE.setup
       build_app! unless @preload_app
     end
 
