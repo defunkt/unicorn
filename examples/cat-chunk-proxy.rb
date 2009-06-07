@@ -1,10 +1,15 @@
 #!/home/ew/bin/ruby
-# I wish I could just use curl -sfNT- http://host:port/, but
+# I wish I could just use curl --no-buffer -sSfT- http://host:port/, but
 # unfortunately curl will attempt to read stdin in blocking mode,
-# preventing it from getting responses from the server until
-# stdin has been written to.
+# preventing it from getting responses from the server until stdin has
+# been written to.
 #
-# Usage: GIT_PROXY_COMMAND=/path/to/here git clone git://host:port/project
+# For a patch that enables using curl(1) instead of this script:
+#
+#   http://mid.gmane.org/20090607101700.GB19407@dcvr.yhbt.net
+#
+# Usage: GIT_PROXY_COMMAND=/path/to/here git clone
+# git://host:port/project
 #
 # Where host:port is what the Unicorn server is bound to
 
