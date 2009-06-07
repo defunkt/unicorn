@@ -1,17 +1,17 @@
-== 1.0.0
+* "Trailers:" support with TE:chunked requests
 
-  * integration tests with nginx including bad client handling
+* Handling of "Expect: 100-continue" header to speed up "curl -T"
 
-  * manpages (why do so few Ruby executables come with proper manpages?)
+* Support HTTP/1.1 keepalive if (and probably only if) pipelining.
+  We can do this by testing readability of socket immediately after
+  the response is written.
 
-== 1.1.0
+* integration tests with nginx including bad client handling
 
-  * Transfer-Encoding: chunked request handling.  Testcase:
+* manpages (why do so few Ruby executables come with proper manpages?)
 
-      curl -T- http://host:port/path < file_from_stdin
+* code cleanups (launchers)
 
-  * code cleanups (launchers)
+* Pure Ruby HTTP parser
 
-  * Pure Ruby HTTP parser
-
-  * Rubinius support?
+* Rubinius support
