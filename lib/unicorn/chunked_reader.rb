@@ -6,9 +6,6 @@ module Unicorn; end
 module Unicorn
   class ChunkedReader
 
-    Z = ''
-    Z.force_encoding(Encoding::BINARY) if Z.respond_to?(:force_encoding)
-
     def initialize
       @input = @buf = nil
       @chunk_left = 0

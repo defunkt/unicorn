@@ -14,8 +14,6 @@ require 'tempfile'
 
 module Unicorn
   class TeeInput
-    Z = ''
-    Z.force_encoding(Encoding::BINARY) if Z.respond_to?(:force_encoding)
 
     def initialize
       @rd = @wr = @size = @input = nil

@@ -26,8 +26,6 @@ module Unicorn
       "SERVER_SOFTWARE" => "Unicorn #{Const::UNICORN_VERSION}".freeze
     }
 
-    Z = ''
-    Z.force_encoding(Encoding::BINARY) if Z.respond_to?(:force_encoding)
     NULL_IO = StringIO.new(Z)
     TEE = TeeInput.new
     DECHUNKER = ChunkedReader.new

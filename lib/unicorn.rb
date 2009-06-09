@@ -14,6 +14,10 @@ module Unicorn
   autoload :ChunkedReader, 'unicorn/chunked_reader'
   autoload :Util, 'unicorn/util'
 
+  Z = '' # the stock empty string we use everywhere...
+  Z.force_encoding(Encoding::BINARY) if Z.respond_to?(:force_encoding)
+  Z.freeze
+
   class << self
     def run(app, options = {})
       HttpServer.new(app, options).start.join

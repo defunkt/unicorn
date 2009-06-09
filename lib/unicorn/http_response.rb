@@ -31,7 +31,6 @@ module Unicorn
     # Connection: and Date: headers no matter what (if anything) our
     # Rack application sent us.
     SKIP = { 'connection' => true, 'date' => true, 'status' => true }.freeze
-    EMPTY = ''.freeze # :nodoc
     OUT = [] # :nodoc
 
     # writes the rack_response to socket as an HTTP response
@@ -59,7 +58,7 @@ module Unicorn
                    "Date: #{Time.now.httpdate}\r\n" \
                    "Status: #{status}\r\n" \
                    "Connection: close\r\n" \
-                   "#{OUT.join(EMPTY)}\r\n")
+                   "#{OUT.join(Z)}\r\n")
       body.each { |chunk| socket.write(chunk) }
       socket.close # flushes and uncorks the socket immediately
       ensure

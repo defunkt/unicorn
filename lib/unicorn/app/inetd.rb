@@ -6,9 +6,6 @@
 module Unicorn::App
   class Inetd
 
-    Z = ''
-    Z.force_encoding(Encoding::BINARY) if Z.respond_to?(:force_encoding)
-
     class CatBody
       def initialize(env, cmd)
         @cmd = cmd
