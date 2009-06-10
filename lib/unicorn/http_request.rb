@@ -94,19 +94,22 @@ module Unicorn
     # Handles dealing with the rest of the request
     # returns a Rack environment if successful
     def handle_body(socket)
-      http_body = PARAMS.delete(:http_body)
+      PARAMS[Const::RACK_INPUT] = if (body = PARAMS.delete(:http_body))
+        length = PARAMS[Const::CONTENT_LENGTH].to_i
 
-      length = PARAMS[Const::CONTENT_LENGTH].to_i
-      if te = PARAMS[Const::HTTP_TRANSFER_ENCODING]
-        if /chunked/i =~ te
-          socket = DECHUNKER.reopen(socket, http_body)
-          length = http_body = nil
+        if te = PARAMS[Const::HTTP_TRANSFER_ENCODING]
+          if /chunked/i =~ te
+            socket = DECHUNKER.reopen(socket, body)
+            length = body = nil
+          end
         end
+
+        inp = TEE.reopen(socket, length, body)
+        DEFAULTS[Const::STREAM_INPUT] ? inp : inp.consume
+      else
+        NULL_IO.closed? ? NULL_IO.reopen(Z) : NULL_IO
       end
 
-      inp = TEE.reopen(socket, length, http_body)
-      PARAMS[Const::RACK_INPUT] =
-                          DEFAULTS[Const::STREAM_INPUT] ? inp : inp.consume
       PARAMS.update(DEFAULTS)
     end
 

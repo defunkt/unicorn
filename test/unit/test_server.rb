@@ -152,8 +152,17 @@ class WebServerTest < Test::Unit::TestCase
 
   def test_file_streamed_request
     body = "a" * (Unicorn::Const::MAX_BODY * 2)
-    long = "GET /test HTTP/1.1\r\nContent-length: #{body.length}\r\n\r\n" + body
+    long = "PUT /test HTTP/1.1\r\nContent-length: #{body.length}\r\n\r\n" + body
     do_test(long, Unicorn::Const::CHUNK_SIZE * 2 -400)
+  end
+
+  def test_file_streamed_request_bad_method
+    body = "a" * (Unicorn::Const::MAX_BODY * 2)
+    long = "GET /test HTTP/1.1\r\nContent-length: #{body.length}\r\n\r\n" + body
+    assert_raises(EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,
+                  Errno::EBADF) {
+      do_test(long, Unicorn::Const::CHUNK_SIZE * 2 -400)
+    }
   end
 
 end

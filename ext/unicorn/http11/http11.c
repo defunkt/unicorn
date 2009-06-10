@@ -324,10 +324,17 @@ static void header_done(void *data, const char *at, size_t length)
   }
   rb_hash_aset(req, global_server_name, server_name);
   rb_hash_aset(req, global_server_port, server_port);
+  rb_hash_aset(req, global_server_protocol, global_server_protocol_value);
 
   /* grab the initial body and stuff it into the hash */
-  rb_hash_aset(req, sym_http_body, rb_str_new(at, length));
-  rb_hash_aset(req, global_server_protocol, global_server_protocol_value);
+  temp = rb_hash_aref(req, global_request_method);
+  if (temp != Qnil) {
+    long len = RSTRING_LEN(temp);
+    char *ptr = RSTRING_PTR(temp);
+
+    if (memcmp(ptr, "HEAD", len) && memcmp(ptr, "GET", len))
+      rb_hash_aset(req, sym_http_body, rb_str_new(at, length));
+  }
 }
 
 static void HttpParser_free(void *data) {

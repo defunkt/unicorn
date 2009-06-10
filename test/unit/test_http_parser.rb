@@ -23,6 +23,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'GET', req['REQUEST_METHOD']
     assert_nil req['FRAGMENT']
     assert_equal '', req['QUERY_STRING']
+    assert_nil req[:http_body]
 
     parser.reset
     req.clear
@@ -41,6 +42,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'GET', req['REQUEST_METHOD']
     assert_nil req['FRAGMENT']
     assert_equal '', req['QUERY_STRING']
+    assert_nil req[:http_body]
   end
 
   def test_parse_server_host_default_port
@@ -49,6 +51,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert parser.execute(req, "GET / HTTP/1.1\r\nHost: foo\r\n\r\n")
     assert_equal 'foo', req['SERVER_NAME']
     assert_equal '80', req['SERVER_PORT']
+    assert_nil req[:http_body]
   end
 
   def test_parse_server_host_alt_port
@@ -57,6 +60,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert parser.execute(req, "GET / HTTP/1.1\r\nHost: foo:999\r\n\r\n")
     assert_equal 'foo', req['SERVER_NAME']
     assert_equal '999', req['SERVER_PORT']
+    assert_nil req[:http_body]
   end
 
   def test_parse_server_host_empty_port
@@ -65,6 +69,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert parser.execute(req, "GET / HTTP/1.1\r\nHost: foo:\r\n\r\n")
     assert_equal 'foo', req['SERVER_NAME']
     assert_equal '80', req['SERVER_PORT']
+    assert_nil req[:http_body]
   end
 
   def test_parse_server_host_xfp_https
@@ -74,6 +79,7 @@ class HttpParserTest < Test::Unit::TestCase
                           "X-Forwarded-Proto: https\r\n\r\n")
     assert_equal 'foo', req['SERVER_NAME']
     assert_equal '443', req['SERVER_PORT']
+    assert_nil req[:http_body]
   end
 
   def test_parse_strange_headers
@@ -81,6 +87,7 @@ class HttpParserTest < Test::Unit::TestCase
     req = {}
     should_be_good = "GET / HTTP/1.1\r\naaaaaaaaaaaaa:++++++++++\r\n\r\n"
     assert parser.execute(req, should_be_good)
+    assert_nil req[:http_body]
 
     # ref: http://thread.gmane.org/gmane.comp.lang.ruby.mongrel.devel/37/focus=45
     # (note we got 'pen' mixed up with 'pound' in that thread,
@@ -104,6 +111,7 @@ class HttpParserTest < Test::Unit::TestCase
       req = {}
       sorta_safe = %(GET #{path} HTTP/1.1\r\n\r\n)
       assert parser.execute(req, sorta_safe)
+      assert_nil req[:http_body]
     end
   end
   
@@ -115,6 +123,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_raises(HttpParserError) { parser.execute(req, bad_http) }
     parser.reset
     assert(parser.execute({}, "GET / HTTP/1.0\r\n\r\n"))
+    assert_nil req[:http_body]
   end
 
   def test_piecemeal
@@ -134,6 +143,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'HTTP/1.1', req['SERVER_PROTOCOL']
     assert_nil req['FRAGMENT']
     assert_equal '', req['QUERY_STRING']
+    assert_nil req[:http_body]
   end
 
   # not common, but underscores do appear in practice
@@ -150,6 +160,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'under_score.example.com', req['HTTP_HOST']
     assert_equal 'under_score.example.com', req['SERVER_NAME']
     assert_equal '80', req['SERVER_PORT']
+    assert_nil req[:http_body]
   end
 
   def test_absolute_uri
@@ -243,6 +254,24 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal "", req[:http_body]
   end
 
+  def test_unknown_methods
+    %w(GETT HEADR XGET XHEAD).each { |m|
+      parser = HttpParser.new
+      req = {}
+      s = "#{m} /forums/1/topics/2375?page=1#posts-17408 HTTP/1.1\r\n\r\n"
+      ok = false
+      assert_nothing_raised do
+        ok = parser.execute(req, s)
+      end
+      assert ok
+      assert_equal '/forums/1/topics/2375?page=1', req['REQUEST_URI']
+      assert_equal 'posts-17408', req['FRAGMENT']
+      assert_equal 'page=1', req['QUERY_STRING']
+      assert_equal "", req[:http_body]
+      assert_equal m, req['REQUEST_METHOD']
+    }
+  end
+
   def test_fragment_in_uri
     parser = HttpParser.new
     req = {}
@@ -255,6 +284,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal '/forums/1/topics/2375?page=1', req['REQUEST_URI']
     assert_equal 'posts-17408', req['FRAGMENT']
     assert_equal 'page=1', req['QUERY_STRING']
+    assert_nil req[:http_body]
   end
 
   # lame random garbage maker
