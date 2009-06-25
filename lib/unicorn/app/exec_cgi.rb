@@ -42,11 +42,11 @@ module Unicorn::App
 
     # Calls the app
     def call(env)
-      out, err = Tempfile.new(''), Tempfile.new('')
+      out, err = Tempfile.new(nil), Tempfile.new(nil)
       out.unlink
       err.unlink
       inp = force_file_input(env)
-      inp.sync = out.sync = err.sync = true
+      out.sync = err.sync = true
       pid = fork { run_child(inp, out, err, env) }
       inp.close
       pid, status = Process.waitpid2(pid)
@@ -121,17 +121,15 @@ module Unicorn::App
     # ensures rack.input is a file handle that we can redirect stdin to
     def force_file_input(env)
       inp = env['rack.input']
-      if inp.respond_to?(:fileno) && Integer === inp.fileno
-        inp
-      elsif inp.size == 0 # inp could be a StringIO or StringIO-like object
-        ::File.open('/dev/null')
+      if inp.size == 0 # inp could be a StringIO or StringIO-like object
+        ::File.open('/dev/null', 'rb')
       else
-        tmp = Tempfile.new('')
+        tmp = Tempfile.new(nil)
         tmp.unlink
         tmp.binmode
+        tmp.sync = true
 
-        # Rack::Lint::InputWrapper doesn't allow sysread :(
-        buf = ''
+        buf = Z.dup
         while inp.read(CHUNK_SIZE, buf)
           tmp.syswrite(buf)
         end
