@@ -49,7 +49,7 @@ module Unicorn
       buf = Z.dup
       while tee(Const::CHUNK_SIZE, buf)
       end
-      @rd
+      self
     end
 
     # returns the size of the input.  This is what the Content-Length
