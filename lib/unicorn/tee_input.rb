@@ -28,9 +28,6 @@ module Unicorn
       @wr = File.open(tmp.path, 'wb')
       @rd.sync = @wr.sync = true
 
-      def @rd.size
-        stat.size
-      end
       tmp.close!
     end
 
