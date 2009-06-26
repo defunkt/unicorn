@@ -131,14 +131,19 @@ regarding this.
 
 == Known Issues
 
-* WONTFIX: code reloading with Sinatra 0.3.2 (and likely older
+* WONTFIX: code reloading and restarts with Sinatra 0.3.x (and likely older
   versions) apps is broken.  The workaround is to force production
-  mode to disable code reloading in your Sinatra application:
+  mode to disable code reloading as well as disabling "run" in your
+  Sinatra application:
     set :env, :production
-  Since this is no longer an issue with Sinatra 0.9.x apps and only
-  affected non-production instances, this will not be fixed on our end.
-  Also remember we're capable of replacing the running binary without
-  dropping any connections regardless of framework :)
+    set :run, false
+  Since this is no longer an issue with Sinatra 0.9.x apps, this will not be
+  fixed on our end.  Since Unicorn is itself the application launcher, the
+  at_exit handler used in old Sinatra always caused Mongrel to be launched
+  whenever a Unicorn worker was about to exit.
+
+  Also remember we're capable of replacing the running binary without dropping
+  any connections regardless of framework :)
 
 == Contact
 
