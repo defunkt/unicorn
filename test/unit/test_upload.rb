@@ -18,7 +18,7 @@ class UploadTest < Test::Unit::TestCase
     @sha1 = Digest::SHA1.new
     @sha1_app = lambda do |env|
       input = env['rack.input']
-      resp = { :size => input.size }
+      resp = {}
 
       @sha1.reset
       while buf = input.read(@bs)
@@ -36,6 +36,13 @@ class UploadTest < Test::Unit::TestCase
       if resp[:sha1] == @sha1.hexdigest
         resp[:sysread_read_byte_match] = true
       end
+
+      if expect_size = env['HTTP_X_EXPECT_SIZE']
+        if expect_size.to_i == input.size
+          resp[:expect_size_match] = true
+        end
+      end
+      resp[:size] = input.size
 
       [ 200, @hdr.merge({'X-Resp' => resp.inspect}), [] ]
     end
@@ -156,6 +163,84 @@ class UploadTest < Test::Unit::TestCase
     assert $?.success?, 'curl ran OK'
     assert_match(%r!\b#{sha1}\b!, resp)
     assert_match(/sysread_read_byte_match/, resp)
+  end
+
+  def test_chunked_upload_via_curl
+    # POSIX doesn't require all of these to be present on a system
+    which('curl') or return
+    which('sha1sum') or return
+    which('dd') or return
+
+    start_server(@sha1_app)
+
+    tmp = Tempfile.new('dd_dest')
+    assert(system("dd", "if=#{@random.path}", "of=#{tmp.path}",
+                        "bs=#{@bs}", "count=#{@count}"),
+           "dd #@random to #{tmp}")
+    sha1_re = %r!\b([a-f0-9]{40})\b!
+    sha1_out = `sha1sum #{tmp.path}`
+    assert $?.success?, 'sha1sum ran OK'
+
+    assert_match(sha1_re, sha1_out)
+    sha1 = sha1_re.match(sha1_out)[1]
+    cmd = "curl -H 'X-Expect-Size: #{tmp.size}' --tcp-nodelay \
+           -isSf --no-buffer -T- " \
+          "http://#@addr:#@port/"
+    resp = Tempfile.new('resp')
+    resp.sync = true
+
+    rd, wr = IO.pipe
+    wr.sync = rd.sync = true
+    pid = fork {
+      STDIN.reopen(rd)
+      rd.close
+      wr.close
+      STDOUT.reopen(resp)
+      exec cmd
+    }
+    rd.close
+
+    tmp.rewind
+    @count.times { |i|
+      wr.write(tmp.read(@bs))
+      sleep(rand / 10) if 0 == i % 8
+    }
+    wr.close
+    pid, status = Process.waitpid2(pid)
+
+    resp.rewind
+    resp = resp.read
+    assert status.success?, 'curl ran OK'
+    assert_match(%r!\b#{sha1}\b!, resp)
+    assert_match(/sysread_read_byte_match/, resp)
+    assert_match(/expect_size_match/, resp)
+  end
+
+  def test_curl_chunked_small
+    # POSIX doesn't require all of these to be present on a system
+    which('curl') or return
+    which('sha1sum') or return
+    which('dd') or return
+
+    start_server(@sha1_app)
+
+    tmp = Tempfile.new('dd_dest')
+    # small StringIO path
+    assert(system("dd", "if=#{@random.path}", "of=#{tmp.path}",
+                        "bs=1024", "count=1"),
+           "dd #@random to #{tmp}")
+    sha1_re = %r!\b([a-f0-9]{40})\b!
+    sha1_out = `sha1sum #{tmp.path}`
+    assert $?.success?, 'sha1sum ran OK'
+
+    assert_match(sha1_re, sha1_out)
+    sha1 = sha1_re.match(sha1_out)[1]
+    resp = `curl -H 'X-Expect-Size: #{tmp.size}' --tcp-nodelay \
+            -isSf --no-buffer -T- http://#@addr:#@port/ < #{tmp.path}`
+    assert $?.success?, 'curl ran OK'
+    assert_match(%r!\b#{sha1}\b!, resp)
+    assert_match(/sysread_read_byte_match/, resp)
+    assert_match(/expect_size_match/, resp)
   end
 
   private
