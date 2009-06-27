@@ -27,7 +27,6 @@ module Unicorn
     }
 
     NULL_IO = StringIO.new(Z)
-    TEE = TeeInput.new
     DECHUNKER = ChunkedReader.new
     LOCALHOST = '127.0.0.1'.freeze
 
@@ -104,7 +103,7 @@ module Unicorn
           end
         end
 
-        inp = TEE.reopen(socket, length, body)
+        inp = TeeInput.new(socket, length, body)
         DEFAULTS[Const::STREAM_INPUT] ? inp : inp.consume
       else
         NULL_IO.closed? ? NULL_IO.reopen(Z) : NULL_IO

@@ -1,4 +1,5 @@
 require 'fcntl'
+require 'tempfile'
 require 'unicorn/socket_helper'
 autoload :Rack, 'rack'
 
@@ -471,7 +472,6 @@ module Unicorn
       worker.tempfile.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       @after_fork.call(self, worker) # can drop perms
       @timeout /= 2.0 # halve it for select()
-      HttpRequest::TEE.setup
       build_app! unless @preload_app
     end
 

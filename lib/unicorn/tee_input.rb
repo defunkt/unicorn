@@ -15,30 +15,16 @@ require 'tempfile'
 module Unicorn
   class TeeInput
 
-    def initialize
-      @rd = @wr = @size = @input = nil
-      setup
-    end
-
-    def setup
-      @tmp = tmp = Tempfile.new(nil)
-      @rd.close if @rd
-      @rd = File.open(tmp.path, 'wb+')
-      @wr.close if @wr
-      @wr = File.open(tmp.path, 'wb')
+    def initialize(input, size = nil, buffer = nil)
+      @wr = Tempfile.new(nil)
+      @wr.binmode
+      @rd = File.open(@wr.path, 'rb')
+      @wr.unlink
       @rd.sync = @wr.sync = true
 
-      tmp.close!
-    end
-
-    def reopen(input, size = nil, buffer = nil)
-      @rd.seek(0)
-      @wr.seek(0)
-      @rd.truncate(0) # truncate read to flush luserspace read buffers
       @wr.write(buffer) if buffer
       @input = input
       @size = size # nil if chunked
-      self
     end
 
     def consume
