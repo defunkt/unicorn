@@ -83,7 +83,10 @@ else
        quiet_post = && > $(stamp) )2>&1 | tee $(t); \
          rm $(stamp) 2>/dev/null && $(check_test)
 endif
-run_test = $(quiet_pre) setsid $(ruby) -w $(arg) $(TEST_OPTS) $(quiet_post) || \
+
+# TRACER='strace -f -o $(t).strace -s 100000'
+run_test = $(quiet_pre) \
+  setsid $(TRACER) $(ruby) -w $(arg) $(TEST_OPTS) $(quiet_post) || \
   (sed "s,^,$(extra): ," >&2 < $(t); exit 1)
 
 %.n: arg = $(subst .n,,$(subst --, -n ,$@))
