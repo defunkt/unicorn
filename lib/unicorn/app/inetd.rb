@@ -33,7 +33,7 @@ module Unicorn::App
         # IO.select-able and attempting to make it so would trip Rack::Lint
         @inp_pid = fork {
           [ @err_rd, @out_rd ].each { |io| io.close }
-          buf = Z.dup
+          buf = Unicorn::Z.dup
 
           # this is dependent on @input.read having readpartial semantics:
           while @input.read(16384, buf)
@@ -45,7 +45,7 @@ module Unicorn::App
       end
 
       def each(&block)
-        buf = Z.dup
+        buf = Unicorn::Z.dup
         begin
           rd, = IO.select([@err_rd, @out_rd])
           rd && rd.first or next
