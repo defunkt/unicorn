@@ -1,6 +1,6 @@
 require 'test/unit'
 require 'tempfile'
-require 'unicorn/configurator'
+require 'unicorn'
 
 class TestConfigurator < Test::Unit::TestCase
 
@@ -53,6 +53,7 @@ class TestConfigurator < Test::Unit::TestCase
     cfg = Unicorn::Configurator.new(:use_defaults => true)
     assert_nothing_raised { cfg.commit!(self) }
     Unicorn::Configurator::DEFAULTS.each do |key,value|
+      next if key == :stream_input
       assert_equal value, instance_variable_get("@#{key.to_s}")
     end
   end
@@ -64,6 +65,7 @@ class TestConfigurator < Test::Unit::TestCase
     @logger = nil
     Unicorn::Configurator::DEFAULTS.each do |key,value|
       next if skip.include?(key)
+      next if key == :stream_input
       assert_equal value, instance_variable_get("@#{key.to_s}")
     end
     assert_nil @logger

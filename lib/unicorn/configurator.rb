@@ -44,6 +44,7 @@ module Unicorn
       :preload_app => false,
       :stderr_path => nil,
       :stdout_path => nil,
+      :stream_input => false,
     }
 
     attr_reader :config_file #:nodoc:
@@ -64,8 +65,12 @@ module Unicorn
 
     def commit!(server, options = {}) #:nodoc:
       skip = options[:skip] || []
+      stream_input = @set.delete(:stream_input)
+      unless stream_input.nil?
+        Unicorn::HttpRequest::DEFAULTS[Const::STREAM_INPUT] = stream_input
+      end
       @set.each do |key, value|
-        (Symbol === value && value == :unset) and next
+        value == :unset and next
         skip.include?(key) and next
         setter = "#{key}="
         if server.respond_to?(setter)
@@ -246,6 +251,28 @@ module Unicorn
         @set[:preload_app] = bool
       else
         raise ArgumentError, "preload_app=#{bool.inspect} not a boolean"
+      end
+    end
+
+    # Allow applications to stream input as it is being read from the
+    # network directly to the application.  Enabling this can allow
+    # real-time processing of request bodies as it is being sent by
+    # the client, useful for things like upload progress notification
+    # and tunneling arbitrary stream protocols via bidirectional chunked
+    # transfer encoding.
+    # This may not work with all applications because some broken
+    # applications assume env['rack.input'].read(size) always returns
+    # the requested amount of data.  This causes env['rack.input']#read
+    # to provide IO#readpartial semantics instead.  Some applications
+    # may also fully receive an input and never attempt to process it,
+    # causing clients confusion when they receive a response after
+    # only a partial request has been sent.
+    def stream_input(bool)
+      case bool
+      when TrueClass, FalseClass
+        @set[:stream_input] = bool
+      else
+        raise ArgumentError, "stream_input=#{bool.inspect} not a boolean"
       end
     end
 

@@ -17,11 +17,6 @@ module Unicorn
       "rack.version" => [1, 0].freeze,
       "SCRIPT_NAME" => "".freeze,
 
-      # some applications (like Echo) may want to change this to true
-      # We disable streaming by default since some (arguably broken)
-      # applications may not ever read the entire body and be confused
-      # when it receives a response after nothing has been sent to it.
-      Const::STREAM_INPUT => false,
       # this is not in the Rack spec, but some apps may rely on it
       "SERVER_SOFTWARE" => "Unicorn #{Const::UNICORN_VERSION}".freeze
     }
