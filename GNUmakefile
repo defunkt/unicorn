@@ -70,17 +70,18 @@ $(slow_tests): $(test_prefix)/.stamp
 	@$(MAKE) $(shell $(awk_slow) $@)
 
 TEST_OPTS = -v
-TEST_OPTS = -v
+check_test = grep '0 failures, 0 errors' $(t) >/dev/null
 ifndef V
        quiet_pre = @echo '* $(arg)$(extra)';
-       quiet_post = >$(t) 2>&1
+       quiet_post = >$(t) 2>&1 && $(check_test)
 else
        # we can't rely on -o pipefail outside of bash 3+,
        # so we use a stamp file to indicate success and
        # have rm fail if the stamp didn't get created
        stamp = $@$(log_suffix).ok
        quiet_pre = @echo $(ruby) $(arg) $(TEST_OPTS); ! test -f $(stamp) && (
-       quiet_post = && > $(stamp) )>&2 | tee $(t); rm $(stamp) 2>/dev/null
+       quiet_post = && > $(stamp) )2>&1 | tee $(t); \
+         rm $(stamp) 2>/dev/null && $(check_test)
 endif
 run_test = $(quiet_pre) setsid $(ruby) -w $(arg) $(TEST_OPTS) $(quiet_post) || \
   (sed "s,^,$(extra): ," >&2 < $(t); exit 1)
