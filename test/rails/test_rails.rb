@@ -142,18 +142,24 @@ logger Logger.new('#{COMMON_TMP.path}')
         end
       end
     end
-    resp = `curl -isSfN -Ffile=@#{tmp.path} http://#@addr:#@port/foo/xpost`
-    assert $?.success?
-    resp = resp.split(/\r?\n/)
-    grepped = resp.grep(/^sha1: (.{40})/)
-    assert_equal 1, grepped.size
-    assert_equal(sha1.hexdigest, /^sha1: (.{40})/.match(grepped.first)[1])
 
-    grepped = resp.grep(/^Content-Type:\s+(.+)/i)
-    assert_equal 1, grepped.size
-    assert_match %r{^text/plain}, grepped.first.split(/\s*:\s*/)[1]
+    # fixed in Rack commit 44ed4640f077504a49b7f1cabf8d6ad7a13f6441,
+    # no released version of Rails or Rack has this fix
+    if RB_V[0] >= 1 && RB_V[1] >= 9
+      warn "multipart broken with Rack 1.0.0 and Rails 2.3.2.1 under 1.9"
+    else
+      resp = `curl -isSfN -Ffile=@#{tmp.path} http://#@addr:#@port/foo/xpost`
+      assert $?.success?
+      resp = resp.split(/\r?\n/)
+      grepped = resp.grep(/^sha1: (.{40})/)
+      assert_equal 1, grepped.size
+      assert_equal(sha1.hexdigest, /^sha1: (.{40})/.match(grepped.first)[1])
 
-    assert_equal 1, resp.grep(/^Status:/i).size
+      grepped = resp.grep(/^Content-Type:\s+(.+)/i)
+      assert_equal 1, grepped.size
+      assert_match %r{^text/plain}, grepped.first.split(/\s*:\s*/)[1]
+      assert_equal 1, resp.grep(/^Status:/i).size
+    end
 
     # make sure we can get 403 responses, too
     uri = URI.parse("http://#@addr:#@port/foo/xpost")
