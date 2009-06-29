@@ -32,6 +32,7 @@ module Unicorn
       buf = Z.dup
       while tee(Const::CHUNK_SIZE, buf)
       end
+      @rd.rewind
       self
     end
 
@@ -58,7 +59,12 @@ module Unicorn
         rv
       else
         buf = args.shift || Z.dup
-        @rd.read(length, buf) || tee(length, buf)
+        diff = @wr.stat.size - @rd.pos
+        if 0 == diff
+          tee(length, buf)
+        else
+          @rd.read(diff > length ? length : diff, buf)
+        end
       end
     end
 
@@ -75,12 +81,14 @@ module Unicorn
         # half the line was already read, and the rest of has not been read
         if buf = @input.gets
           @wr.write(buf)
+          @rd.seek(@wr.stat.size)
           line << buf
         else
           @input = nil
         end
       elsif line = @input.gets
         @wr.write(line)
+        @rd.seek(@wr.stat.size)
       end
 
       line
@@ -122,6 +130,7 @@ module Unicorn
         return @input = nil
       end
       @wr.write(buf)
+      @rd.seek(@wr.stat.size)
       buf
     end
 
