@@ -119,9 +119,15 @@ class UploadTest < Test::Unit::TestCase
     sock = TCPSocket.new(@addr, @port)
     buf = ' ' * @bs
     sock.syswrite("PUT / HTTP/1.0\r\nContent-Length: #{length}\r\n\r\n")
-    @count.times { sock.syswrite(buf) }
-    assert_raise(Errno::ECONNRESET, Errno::EPIPE) do
-      ::Unicorn::Const::CHUNK_SIZE.times { sock.syswrite(buf) }
+    if Unicorn::HttpRequest::DEFAULTS['unicorn.stream_input']
+      assert_raise(Errno::ECONNRESET, Errno::EPIPE) do
+        @count.times { sock.syswrite(buf) }
+      end
+    else
+      @count.times { sock.syswrite(buf) }
+      assert_raise(Errno::ECONNRESET, Errno::EPIPE) do
+        ::Unicorn::Const::CHUNK_SIZE.times { sock.syswrite(buf) }
+      end
     end
   end
 

@@ -12,6 +12,8 @@ class TestHandler
 
   def call(env) 
   #   response.socket.write("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nhello!\n")
+    while env['rack.input'].read(4096)
+    end
     [200, { 'Content-Type' => 'text/plain' }, ['hello!\n']]
    end
 end

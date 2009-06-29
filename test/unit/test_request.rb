@@ -150,7 +150,11 @@ class RequestTest < Test::Unit::TestCase
     assert_nothing_raised { env = @request.read(client) }
     assert ! env.include?(:http_body)
     assert_equal length, env['rack.input'].size
-    count.times { assert_equal buf, env['rack.input'].read(bs) }
+    count.times {
+      tmp = env['rack.input'].read(bs)
+      tmp << env['rack.input'].read(bs - tmp.size) if tmp.size != bs
+      assert_equal buf, tmp
+    }
     assert_nil env['rack.input'].read(bs)
     assert_nothing_raised { env['rack.input'].rewind }
     assert_nothing_raised { res = @lint.call(env) }

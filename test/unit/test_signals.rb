@@ -158,6 +158,8 @@ class SignalsTest < Test::Unit::TestCase
 
   def test_request_read
     app = lambda { |env|
+      while env['rack.input'].read(4096)
+      end
       [ 200, {'Content-Type'=>'text/plain', 'X-Pid'=>Process.pid.to_s}, [] ]
     }
     redirect_test_io { @server = HttpServer.new(app, @server_opts).start }
