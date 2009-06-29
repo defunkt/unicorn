@@ -103,7 +103,11 @@ class UploadTest < Test::Unit::TestCase
     sock.syswrite('12345') # write 4 bytes more than we expected
     @sha1.update('1')
 
-    read = sock.read.split(/\r\n/)
+    buf = sock.readpartial(4096)
+    while buf !~ /\r\n\r\n/
+      buf << sock.readpartial(4096)
+    end
+    read = buf.split(/\r\n/)
     assert_equal "HTTP/1.1 200 OK", read[0]
     resp = eval(read.grep(/^X-Resp: /).first.sub!(/X-Resp: /, ''))
     assert_equal to_upload, resp[:size]
