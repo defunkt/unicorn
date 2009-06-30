@@ -88,10 +88,10 @@ module Unicorn
     # Handles dealing with the rest of the request
     # returns a Rack environment if successful
     def handle_body(socket)
-      if /\A100-continue\z/i =~ PARAMS[Const::HTTP_EXPECT]
-        socket.write(Const::EXPECT_100_RESPONSE)
-      end
       PARAMS[Const::RACK_INPUT] = if (body = PARAMS.delete(:http_body))
+        if 0 == body.size && /\A100-continue\z/i =~ PARAMS[Const::HTTP_EXPECT]
+          socket.write(Const::EXPECT_100_RESPONSE)
+        end
         length = PARAMS[Const::CONTENT_LENGTH].to_i
 
         if te = PARAMS[Const::HTTP_TRANSFER_ENCODING]
