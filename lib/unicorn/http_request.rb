@@ -95,7 +95,7 @@ module Unicorn
         length = PARAMS[Const::CONTENT_LENGTH].to_i
 
         if te = PARAMS[Const::HTTP_TRANSFER_ENCODING]
-          if /chunked/i =~ te
+          if /\Achunked\z/i =~ te
             socket = ChunkedReader.new(socket, body)
             length = body = nil
           end
