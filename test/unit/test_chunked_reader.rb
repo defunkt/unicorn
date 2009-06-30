@@ -7,7 +7,6 @@ require 'digest/sha1'
 class TestChunkedReader < Test::Unit::TestCase
 
   def setup
-    @cr = Unicorn::ChunkedReader.new
     @rd, @wr = IO.pipe
     @rd.binmode
     @wr.binmode
@@ -22,32 +21,32 @@ class TestChunkedReader < Test::Unit::TestCase
   end
 
   def test_eof1
-    @cr.reopen(@rd, "0\r\n")
-    assert_raises(EOFError) { @cr.readpartial(8192) }
+    cr = bin_reader(@rd, "0\r\n")
+    assert_raises(EOFError) { cr.readpartial(8192) }
   end
 
   def test_eof2
-    @cr.reopen(@rd, "0\r\n\r\n")
-    assert_raises(EOFError) { @cr.readpartial(8192) }
+    cr = bin_reader(@rd, "0\r\n\r\n")
+    assert_raises(EOFError) { cr.readpartial(8192) }
   end
 
   def test_readpartial1
-    @cr.reopen(@rd, "4\r\nasdf\r\n0\r\n")
-    assert_equal 'asdf', @cr.readpartial(8192)
-    assert_raises(EOFError) { @cr.readpartial(8192) }
+    cr = bin_reader(@rd, "4\r\nasdf\r\n0\r\n")
+    assert_equal 'asdf', cr.readpartial(8192)
+    assert_raises(EOFError) { cr.readpartial(8192) }
   end
 
   def test_gets1
-    @cr.reopen(@rd, "4\r\nasdf\r\n0\r\n")
+    cr = bin_reader(@rd, "4\r\nasdf\r\n0\r\n")
     STDOUT.sync = true
-    assert_equal 'asdf', @cr.gets
-    assert_raises(EOFError) { @cr.readpartial(8192) }
+    assert_equal 'asdf', cr.gets
+    assert_raises(EOFError) { cr.readpartial(8192) }
   end
 
   def test_gets2
-    @cr.reopen(@rd, "4\r\nasd\n\r\n0\r\n\r\n")
-    assert_equal "asd\n", @cr.gets
-    assert_nil @cr.gets
+    cr = bin_reader(@rd, "4\r\nasd\n\r\n0\r\n\r\n")
+    assert_equal "asd\n", cr.gets
+    assert_nil cr.gets
   end
 
   def test_gets3
@@ -55,12 +54,12 @@ class TestChunkedReader < Test::Unit::TestCase
     str = ('a' * max).freeze
     first = 5
     last = str.size - first
-    @cr.reopen(@rd,
+    cr = bin_reader(@rd,
       "#{'%x' % first}\r\n#{str[0, first]}\r\n" \
       "#{'%x' % last}\r\n#{str[-last, last]}\r\n" \
       "0\r\n")
-    assert_equal str, @cr.gets
-    assert_nil @cr.gets
+    assert_equal str, cr.gets
+    assert_nil cr.gets
   end
 
   def test_readpartial_gets_mixed1
@@ -68,17 +67,17 @@ class TestChunkedReader < Test::Unit::TestCase
     str = ('a' * max).freeze
     first = 5
     last = str.size - first
-    @cr.reopen(@rd,
+    cr = bin_reader(@rd,
       "#{'%x' % first}\r\n#{str[0, first]}\r\n" \
       "#{'%x' % last}\r\n#{str[-last, last]}\r\n" \
       "0\r\n")
-    partial = @cr.readpartial(16384)
+    partial = cr.readpartial(16384)
     assert String === partial
 
     len = max - partial.size
-    assert_equal(str[-len, len], @cr.gets)
-    assert_raises(EOFError) { @cr.readpartial(1) }
-    assert_nil @cr.gets
+    assert_equal(str[-len, len], cr.gets)
+    assert_raises(EOFError) { cr.readpartial(1) }
+    assert_nil cr.gets
   end
 
   def test_gets_mixed_readpartial
@@ -86,16 +85,16 @@ class TestChunkedReader < Test::Unit::TestCase
     str = ("z\n" * max).freeze
     first = 5
     last = str.size - first
-    @cr.reopen(@rd,
+    cr = bin_reader(@rd,
       "#{'%x' % first}\r\n#{str[0, first]}\r\n" \
       "#{'%x' % last}\r\n#{str[-last, last]}\r\n" \
       "0\r\n")
-    assert_equal("z\n", @cr.gets)
-    assert_equal("z\n", @cr.gets)
+    assert_equal("z\n", cr.gets)
+    assert_equal("z\n", cr.gets)
   end
 
   def test_dd
-    @cr.reopen(@rd, "6\r\nhello\n\r\n")
+    cr = bin_reader(@rd, "6\r\nhello\n\r\n")
     tmp = Tempfile.new('test_dd')
     tmp.sync = true
 
@@ -122,11 +121,11 @@ class TestChunkedReader < Test::Unit::TestCase
         exit 0
       end while true
     }
-    assert_equal "hello\n", @cr.gets
+    assert_equal "hello\n", cr.gets
     sha1 = Digest::SHA1.new
-    buf = ''
+    buf = Unicorn::Z.dup
     begin
-      @cr.readpartial(16384, buf)
+      cr.readpartial(16384, buf)
       sha1.update(buf)
     rescue EOFError
       break
@@ -140,6 +139,13 @@ class TestChunkedReader < Test::Unit::TestCase
       end
     }
     assert_equal sha1_file.hexdigest, sha1.hexdigest
+  end
+
+private
+
+  def bin_reader(sock, buf)
+    buf.force_encoding(Encoding::BINARY) if buf.respond_to?(:force_encoding)
+    Unicorn::ChunkedReader.new(sock, buf)
   end
 
 end

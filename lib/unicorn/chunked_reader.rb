@@ -6,22 +6,13 @@ module Unicorn; end
 module Unicorn
   class ChunkedReader
 
-    def initialize
-      @input = @buf = nil
-      @chunk_left = 0
-    end
-
-    def reopen(input, buf)
-      buf ||= Z.dup
-      buf.force_encoding(Encoding::BINARY) if buf.respond_to?(:force_encoding)
+    def initialize(input, buf)
       @input, @buf = input, buf
+      @chunk_left = 0
       parse_chunk_header
-      self
     end
 
     def readpartial(max, buf = Z.dup)
-      buf.force_encoding(Encoding::BINARY) if buf.respond_to?(:force_encoding)
-
       while @input && @chunk_left <= 0 && ! parse_chunk_header
         @buf << @input.readpartial(Const::CHUNK_SIZE, buf)
       end

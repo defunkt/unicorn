@@ -22,7 +22,6 @@ module Unicorn
     }
 
     NULL_IO = StringIO.new(Z)
-    DECHUNKER = ChunkedReader.new
     LOCALHOST = '127.0.0.1'.freeze
 
     # Being explicitly single-threaded, we have certain advantages in
@@ -93,7 +92,7 @@ module Unicorn
 
         if te = PARAMS[Const::HTTP_TRANSFER_ENCODING]
           if /chunked/i =~ te
-            socket = DECHUNKER.reopen(socket, body)
+            socket = ChunkedReader.new(socket, body)
             length = body = nil
           end
         end
