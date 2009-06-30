@@ -39,6 +39,7 @@ lib/unicorn/http_response.rb
 lib/unicorn/launcher.rb
 lib/unicorn/socket_helper.rb
 lib/unicorn/tee_input.rb
+lib/unicorn/trailer_parser.rb
 lib/unicorn/util.rb
 local.mk.sample
 setup.rb
