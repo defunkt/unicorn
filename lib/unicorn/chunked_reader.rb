@@ -1,7 +1,8 @@
 # Copyright (c) 2009 Eric Wong
 # You can redistribute it and/or modify it under the same terms as Ruby.
 
-module Unicorn; end
+require 'unicorn'
+require 'unicorn/http11'
 
 module Unicorn
   class ChunkedReader

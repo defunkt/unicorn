@@ -1,5 +1,6 @@
 require 'test/unit'
 require 'unicorn'
+require 'unicorn/http11'
 require 'tempfile'
 require 'io/nonblock'
 require 'digest/sha1'
@@ -18,6 +19,21 @@ class TestChunkedReader < Test::Unit::TestCase
     return if $$ != @start_pid
     @rd.close rescue nil
     @wr.close rescue nil
+    begin
+      Process.wait
+    rescue Errno::ECHILD
+      break
+    end while true
+  end
+
+  def test_error
+    cr = bin_reader(@rd, "8\r\nasdfasdf\r\n8\r\nasdfasdfa#{'a' * 1024}")
+    a = nil
+    assert_nothing_raised { a = cr.readpartial(8192) }
+    assert_equal 'asdfasdf', a
+    assert_nothing_raised { a = cr.readpartial(8192) }
+    assert_equal 'asdfasdf', a
+    assert_raises(Unicorn::HttpParserError) { cr.readpartial(8192) }
   end
 
   def test_eof1
