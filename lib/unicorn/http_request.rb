@@ -27,6 +27,7 @@ module Unicorn
     # Being explicitly single-threaded, we have certain advantages in
     # not having to worry about variables being clobbered :)
     BUFFER = ' ' * Const::CHUNK_SIZE # initial size, may grow
+    BUFFER.force_encoding(Encoding::BINARY) if Z.respond_to?(:force_encoding)
     PARSER = HttpParser.new
     PARAMS = Hash.new
 
