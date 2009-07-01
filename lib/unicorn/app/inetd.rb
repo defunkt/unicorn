@@ -97,6 +97,10 @@ module Unicorn::App
     end
 
     def call(env)
+      expect = env[Unicorn::Const::HTTP_EXPECT] and
+        /\A100-continue\z/i =~ expect and
+          return [ 100, {} , [] ]
+
       [ 200, { 'Content-Type' => 'application/octet-stream' },
        CatBody.new(env, @cmd) ]
     end

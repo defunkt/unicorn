@@ -444,7 +444,15 @@ module Unicorn
     # once a client is accepted, it is processed in its entirety here
     # in 3 easy steps: read request, call app, write app response
     def process_client(app, client)
-      HttpResponse.write(client, app.call(REQUEST.read(client)))
+      response = app.call(env = REQUEST.read(client))
+
+      if 100 == response.first.to_i
+        client.write(Const::EXPECT_100_RESPONSE)
+        env.delete(Const::HTTP_EXPECT)
+        response = app.call(env)
+      end
+
+      HttpResponse.write(client, response)
     # if we get any error, try to write something back to the client
     # assuming we haven't closed the socket, but don't get hung up
     # if the socket is already closed or broken.  We'll always ensure
