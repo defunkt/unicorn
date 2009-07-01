@@ -4,8 +4,56 @@ module Unicorn
   module SocketHelper
     include Socket::Constants
 
+    # configure platform-specific options (only tested on Linux 2.6 so far)
+    case RUBY_PLATFORM
+    when /linux/
+      # from /usr/include/linux/tcp.h
+      TCP_DEFER_ACCEPT = 9 unless defined?(TCP_DEFER_ACCEPT)
+      TCP_CORK = 3 unless defined?(TCP_CORK)
+    when /freebsd(([1-4]\..{1,2})|5\.[0-4])/
+      # Do nothing for httpready, just closing a bug when freebsd <= 5.4
+      TCP_NOPUSH = 4 unless defined?(TCP_NOPUSH)
+    when /freebsd/
+      TCP_NOPUSH = 4 unless defined?(TCP_NOPUSH)
+      # Use the HTTP accept filter if available.
+      # The struct made by pack() is defined in /usr/include/sys/socket.h
+      # as accept_filter_arg
+      # We won't be seupportin the "dataready" filter unlike nginx
+      # since we only support HTTP and no other protocols
+      unless `/sbin/sysctl -nq net.inet.accf.http`.empty?
+        HTTPREADY = ['httpready', nil].pack('a16a240').freeze
+      end
+    end
+
+    def set_tcp_sockopt(sock, opt)
+
+      # highly portable, but off by default because we don't do keepalive
+      if defined?(TCP_NODELAY) && ! (val = opt[:tcp_nodelay]).nil?
+        sock.setsockopt(IPPROTO_TCP, TCP_NODELAY, val ? 1 : 0) rescue nil
+      end
+
+      unless (val = opt[:tcp_nopush]).nil?
+        val = val ? 1 : 0
+        if defined?(TCP_CORK) # Linux
+          sock.setsockopt(IPPROTO_TCP, TCP_CORK, val) rescue nil
+        elsif defined?(TCP_NOPUSH) # TCP_NOPUSH is untested (FreeBSD)
+          sock.setsockopt(IPPROTO_TCP, TCP_NOPUSH, val) rescue nil
+        end
+      end
+
+      # No good reason to ever have deferred accepts off
+      if defined?(TCP_DEFER_ACCEPT)
+        sock.setsockopt(SOL_TCP, TCP_DEFER_ACCEPT, 1) rescue nil
+      elsif defined?(SO_ACCEPTFILTER) && defined?(HTTPREADY)
+        sock.setsockopt(SOL_SOCKET, SO_ACCEPTFILTER, HTTPREADY) rescue nil
+      end
+    end
+
     def set_server_sockopt(sock, opt)
       opt ||= {}
+
+      TCPSocket === sock and set_tcp_sockopt(sock, opt)
+
       if opt[:rcvbuf] || opt[:sndbuf]
         log_buffer_sizes(sock, "before: ")
         sock.setsockopt(SOL_SOCKET, SO_RCVBUF, opt[:rcvbuf]) if opt[:rcvbuf]
@@ -25,7 +73,7 @@ module Unicorn
     # creates a new server, socket. address may be a HOST:PORT or
     # an absolute path to a UNIX socket.  address can even be a Socket
     # object in which case it is immediately returned
-    def bind_listen(address = '0.0.0.0:8080', opt = { :backlog => 1024 })
+    def bind_listen(address = '0.0.0.0:8080', opt = {})
       return address unless String === address
 
       sock = if address[0..0] == "/"

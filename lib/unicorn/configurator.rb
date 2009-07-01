@@ -207,7 +207,24 @@ module Unicorn
     # specified.
     #
     # Defaults: operating system defaults
-    def listen(address, opt = { :backlog => 1024 })
+    #
+    # +tcp_nodelay+: disables Nagle's algorithm on TCP sockets
+    #
+    # This has no effect on UNIX sockets.
+    #
+    # Default: operating system defaults (usually Nagle's algorithm enabled)
+    #
+    # +tcp_nopush+: enables TCP_CORK in Linux or TCP_NOPUSH in FreeBSD
+    #
+    # This will prevent partial TCP frames from being sent out.
+    # Enabling +tcp_nopush+ is generally not needed or recommended as
+    # controlling +tcp_nodelay+ already provides sufficient latency
+    # reduction whereas Unicorn does not know when the best times are
+    # for flushing corked sockets.
+    #
+    # This has no effect on UNIX sockets.
+    #
+    def listen(address, opt = {})
       address = expand_addr(address)
       if String === address
         Hash === @set[:listener_opts] or
@@ -216,6 +233,11 @@ module Unicorn
           value = opt[key] or next
           Integer === value or
             raise ArgumentError, "not an integer: #{key}=#{value.inspect}"
+        end
+        [ :tcp_nodelay, :tcp_nopush ].each do |key|
+          (value = opt[key]).nil? and next
+          TrueClass === value || FalseClass === value or
+            raise ArgumentError, "not boolean: #{key}=#{value.inspect}"
         end
         @set[:listener_opts][address].merge!(opt)
       end
