@@ -98,8 +98,7 @@ module Unicorn
           end
         end
 
-        inp = TeeInput.new(socket, length, body)
-        DEFAULTS[Const::STREAM_INPUT] ? inp : inp.consume
+        TeeInput.new(socket, length, body)
       else
         NULL_IO.closed? ? NULL_IO.reopen(Z) : NULL_IO
       end

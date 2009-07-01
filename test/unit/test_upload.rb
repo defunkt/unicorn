@@ -142,20 +142,19 @@ class UploadTest < Test::Unit::TestCase
   end
 
   def test_put_excessive_overwrite_closed
-    start_server(lambda { |env| [ 200, @hdr, [] ] })
+    start_server(lambda { |env|
+      while env['rack.input'].read(65536); end
+      [ 200, @hdr, [] ]
+    })
     sock = TCPSocket.new(@addr, @port)
     buf = ' ' * @bs
     sock.syswrite("PUT / HTTP/1.0\r\nContent-Length: #{length}\r\n\r\n")
-    if Unicorn::HttpRequest::DEFAULTS['unicorn.stream_input']
-      assert_raise(Errno::ECONNRESET, Errno::EPIPE) do
-        @count.times { sock.syswrite(buf) }
-      end
-    else
-      @count.times { sock.syswrite(buf) }
-      assert_raise(Errno::ECONNRESET, Errno::EPIPE) do
-        ::Unicorn::Const::CHUNK_SIZE.times { sock.syswrite(buf) }
-      end
+
+    @count.times { sock.syswrite(buf) }
+    assert_raise(Errno::ECONNRESET, Errno::EPIPE) do
+      ::Unicorn::Const::CHUNK_SIZE.times { sock.syswrite(buf) }
     end
+    assert_equal "HTTP/1.1 200 OK\r\n", sock.gets
   end
 
   # Despite reading numerous articles and inspecting the 1.9.1-p0 C

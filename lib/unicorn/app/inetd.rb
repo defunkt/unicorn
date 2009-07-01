@@ -91,8 +91,6 @@ module Unicorn::App
     end
 
     def initialize(*cmd)
-      # enable streaming input mode in Unicorn
-      Unicorn::HttpRequest::DEFAULTS["unicorn.stream_input"] = true
       @cmd = cmd
     end
 

@@ -1,7 +1,3 @@
-* Support HTTP/1.1 keepalive if (and probably only if) pipelining.
-  We can do this by testing readability of socket immediately after
-  the response is written.
-
 * integration tests with nginx including bad client handling
 
 * manpages (why do so few Ruby executables come with proper manpages?)

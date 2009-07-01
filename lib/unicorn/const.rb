@@ -34,7 +34,6 @@ module Unicorn
     HTTP_EXPECT="HTTP_EXPECT".freeze
     HTTP_TRAILER="HTTP_TRAILER".freeze
     RACK_INPUT="rack.input".freeze
-    STREAM_INPUT="unicorn.stream_input".freeze
   end
 
 end

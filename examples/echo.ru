@@ -7,7 +7,6 @@
 #
 # Then type random stuff in your terminal to watch it get echoed back!
 
-Unicorn::HttpRequest::DEFAULTS["unicorn.stream_input"] = true
 class EchoBody
   def initialize(input)
     @input = input

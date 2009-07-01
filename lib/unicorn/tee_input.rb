@@ -29,22 +29,20 @@ module Unicorn
       @size = size # nil if chunked
     end
 
-    def consume
-      @input or return
-      buf = Z.dup
-      while tee(Const::CHUNK_SIZE, buf)
-      end
-      @tmp.rewind
-      self
-    end
-
     # returns the size of the input.  This is what the Content-Length
     # header value should be, and how large our input is expected to be.
     # For TE:chunked, this requires consuming all of the input stream
     # before returning since there's no other way
     def size
       @size and return @size
-      @input and consume
+
+      if @input
+        buf = Z.dup
+        while tee(Const::CHUNK_SIZE, buf)
+        end
+        @tmp.rewind
+      end
+
       @size = @tmp.stat.size
     end
 
