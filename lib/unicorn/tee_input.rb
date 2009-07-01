@@ -15,14 +15,13 @@ require 'tempfile'
 module Unicorn
   class TeeInput
 
-    def initialize(input, size = nil, buffer = nil)
-      @wr = Tempfile.new(nil)
-      @wr.binmode
-      @rd = File.open(@wr.path, 'rb')
-      @wr.unlink
-      @rd.sync = @wr.sync = true
+    def initialize(input, size, body)
+      @tmp = Tempfile.new(nil)
+      @tmp.unlink
+      @tmp.binmode
+      @tmp.sync = true
 
-      @wr.write(buffer) if buffer
+      @tmp.write(body) if body
       @input = input
       @size = size # nil if chunked
     end
@@ -32,7 +31,7 @@ module Unicorn
       buf = Z.dup
       while tee(Const::CHUNK_SIZE, buf)
       end
-      @rd.rewind
+      @tmp.rewind
       self
     end
 
@@ -43,15 +42,15 @@ module Unicorn
     def size
       @size and return @size
       @input and consume
-      @size = @wr.stat.size
+      @size = @tmp.stat.size
     end
 
     def read(*args)
-      @input or return @rd.read(*args)
+      @input or return @tmp.read(*args)
 
       length = args.shift
       if nil == length
-        rv = @rd.read || Z.dup
+        rv = @tmp.read || Z.dup
         tmp = Z.dup
         while tee(Const::CHUNK_SIZE, tmp)
           rv << tmp
@@ -59,36 +58,34 @@ module Unicorn
         rv
       else
         buf = args.shift || Z.dup
-        diff = @wr.stat.size - @rd.pos
+        diff = @tmp.stat.size - @tmp.pos
         if 0 == diff
           tee(length, buf)
         else
-          @rd.read(diff > length ? length : diff, buf)
+          @tmp.read(diff > length ? length : diff, buf)
         end
       end
     end
 
     # takes zero arguments for strict Rack::Lint compatibility, unlike IO#gets
     def gets
-      @input or return @rd.gets
+      @input or return @tmp.gets
       nil == $/ and return read
 
       line = nil
-      if @rd.pos < @wr.stat.size
-        line = @rd.gets # cannot be nil here
+      if @tmp.pos < @tmp.stat.size
+        line = @tmp.gets # cannot be nil here
         $/ == line[-$/.size, $/.size] and return line
 
         # half the line was already read, and the rest of has not been read
         if buf = @input.gets
-          @wr.write(buf)
-          @rd.seek(@wr.stat.size)
+          @tmp.write(buf)
           line << buf
         else
           @input = nil
         end
       elsif line = @input.gets
-        @wr.write(line)
-        @rd.seek(@wr.stat.size)
+        @tmp.write(line)
       end
 
       line
@@ -103,7 +100,7 @@ module Unicorn
     end
 
     def rewind
-      @rd.rewind # Rack does not specify what the return value here
+      @tmp.rewind # Rack does not specify what the return value here
     end
 
   private
@@ -114,7 +111,7 @@ module Unicorn
     def tee(length, buf)
       begin
         if @size
-          left = @size - @rd.stat.size
+          left = @size - @tmp.stat.size
           0 == left and return nil
           if length >= left
             @input.readpartial(left, buf) == left and @input = nil
@@ -129,8 +126,7 @@ module Unicorn
       rescue EOFError
         return @input = nil
       end
-      @wr.write(buf)
-      @rd.seek(@wr.stat.size)
+      @tmp.write(buf)
       buf
     end
 
