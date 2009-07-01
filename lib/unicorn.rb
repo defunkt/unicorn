@@ -261,6 +261,7 @@ module Unicorn
 
     # Terminates all workers, but does not exit master process
     def stop(graceful = true)
+      self.listeners = []
       kill_each_worker(graceful ? :QUIT : :TERM)
       timeleft = @timeout
       step = 0.2
@@ -271,8 +272,6 @@ module Unicorn
         (timeleft -= step) > 0 and next
         kill_each_worker(:KILL)
       end
-    ensure
-      self.listeners = []
     end
 
     private
