@@ -21,7 +21,10 @@ module Unicorn
       @tmp.binmode
       @tmp.sync = true
 
-      @tmp.write(body) if body
+      if body
+        @tmp.write(body)
+        @tmp.seek(0)
+      end
       @input = input
       @size = size # nil if chunked
     end
