@@ -15,7 +15,6 @@ TODO
 TUNING
 bin/unicorn
 bin/unicorn_rails
-examples/cat-chunk-proxy.rb
 examples/echo.ru
 examples/git.ru
 examples/init.sh
@@ -136,5 +135,6 @@ test/unit/test_response.rb
 test/unit/test_server.rb
 test/unit/test_signals.rb
 test/unit/test_socket_helper.rb
+test/unit/test_trailer_parser.rb
 test/unit/test_upload.rb
 test/unit/test_util.rb

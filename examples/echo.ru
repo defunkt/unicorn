@@ -1,9 +1,10 @@
 #\-E none
+#
 # Example application that echoes read data back to the HTTP client.
 # This emulates the old echo protocol people used to run.
 #
 # An example of using this in a client would be to run:
-#   curl -NT- http://host:port/
+#   curl --no-buffer -T- http://host:port/
 #
 # Then type random stuff in your terminal to watch it get echoed back!
 
