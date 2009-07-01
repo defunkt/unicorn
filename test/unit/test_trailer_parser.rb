@@ -11,7 +11,7 @@ class TestTrailerParser < Test::Unit::TestCase
     assert ! tp.execute!(env, "Content-MD5: asdf")
     assert env.empty?
     assert tp.execute!(env, "Content-MD5: asdf\r\n")
-    assert_equal 'asdf', env['CONTENT_MD5']
+    assert_equal 'asdf', env['HTTP_CONTENT_MD5']
     assert_equal 1, env.size
   end
 
@@ -29,8 +29,8 @@ class TestTrailerParser < Test::Unit::TestCase
     env = {}
     buf = "Bar: a\r\nFoo: b\r\n"
     assert tp.execute!(env, buf)
-    assert_equal 'a', env['BAR']
-    assert_equal 'b', env['FOO']
+    assert_equal 'a', env['HTTP_BAR']
+    assert_equal 'b', env['HTTP_FOO']
   end
 
   def test_too_big_key

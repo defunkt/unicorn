@@ -40,9 +40,9 @@ module Unicorn
 
         key.tr!(TR_FR, TR_TO)
 
-        @trailers.delete(key.freeze) or
+        @trailers.delete(key) or
           raise HttpParserError, "unknown trailer: #{key.inspect}"
-        env[key] = val
+        env["HTTP_#{key}"] = val
 
         @trailers.empty? and return true
       end while true
