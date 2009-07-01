@@ -7,8 +7,8 @@ require 'unicorn/http11'
 module Unicorn
   class ChunkedReader
 
-    def initialize(input, buf)
-      @input, @buf = input, buf
+    def initialize(env, input, buf)
+      @env, @input, @buf = env, input, buf
       @chunk_left = 0
       parse_chunk_header
     end
@@ -71,6 +71,12 @@ module Unicorn
         @chunk_left = $1.to_i(16)
         if 0 == @chunk_left # EOF
           buf.sub!(/\A\r\n(?:\r\n)?/, Z) # cleanup for future requests
+          if trailer = @env[Const::HTTP_TRAILER]
+            tp = TrailerParser.new(trailer)
+            while ! tp.execute!(@env, buf)
+              buf << @input.readpartial(Const::CHUNK_SIZE)
+            end
+          end
           @input = nil
         end
         return @chunk_left

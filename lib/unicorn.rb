@@ -13,6 +13,7 @@ module Unicorn
   autoload :Configurator, 'unicorn/configurator'
   autoload :TeeInput, 'unicorn/tee_input'
   autoload :ChunkedReader, 'unicorn/chunked_reader'
+  autoload :TrailerParser, 'unicorn/trailer_parser'
   autoload :Util, 'unicorn/util'
 
   Z = '' # the stock empty string we use everywhere...

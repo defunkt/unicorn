@@ -32,6 +32,7 @@ module Unicorn
     REMOTE_ADDR="REMOTE_ADDR".freeze
     HTTP_X_FORWARDED_FOR="HTTP_X_FORWARDED_FOR".freeze
     HTTP_EXPECT="HTTP_EXPECT".freeze
+    HTTP_TRAILER="HTTP_TRAILER".freeze
     RACK_INPUT="rack.input".freeze
     STREAM_INPUT="unicorn.stream_input".freeze
   end

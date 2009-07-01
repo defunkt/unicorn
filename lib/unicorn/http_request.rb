@@ -96,7 +96,7 @@ module Unicorn
 
         if te = PARAMS[Const::HTTP_TRANSFER_ENCODING]
           if /\Achunked\z/i =~ te
-            socket = ChunkedReader.new(socket, body)
+            socket = ChunkedReader.new(PARAMS, socket, body)
             length = body = nil
           end
         end

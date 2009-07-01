@@ -1,5 +1,6 @@
 # Copyright (c) 2009 Eric Wong
 require 'test/test_helper'
+require 'digest/md5'
 
 include Unicorn
 
@@ -43,6 +44,7 @@ class UploadTest < Test::Unit::TestCase
         end
       end
       resp[:size] = input.size
+      resp[:content_md5] = env['HTTP_CONTENT_MD5']
 
       [ 200, @hdr.merge({'X-Resp' => resp.inspect}), [] ]
     end
@@ -67,6 +69,31 @@ class UploadTest < Test::Unit::TestCase
     resp = eval(read.grep(/^X-Resp: /).first.sub!(/X-Resp: /, ''))
     assert_equal length, resp[:size]
     assert_equal @sha1.hexdigest, resp[:sha1]
+  end
+
+  def test_put_content_md5
+    md5 = Digest::MD5.new
+    start_server(@sha1_app)
+    sock = TCPSocket.new(@addr, @port)
+    sock.syswrite("PUT / HTTP/1.0\r\nTransfer-Encoding: chunked\r\n" \
+                  "Trailer: Content-MD5\r\n\r\n")
+    @count.times do |i|
+      buf = @random.sysread(@bs)
+      @sha1.update(buf)
+      md5.update(buf)
+      sock.syswrite("#{'%x' % buf.size}\r\n")
+      sock.syswrite(buf << "\r\n")
+    end
+    sock.syswrite("0\r\n")
+
+    content_md5 = [ md5.digest! ].pack('m').strip.freeze
+    sock.syswrite("Content-MD5: #{content_md5}\r\n")
+    read = sock.read.split(/\r\n/)
+    assert_equal "HTTP/1.1 200 OK", read[0]
+    resp = eval(read.grep(/^X-Resp: /).first.sub!(/X-Resp: /, ''))
+    assert_equal length, resp[:size]
+    assert_equal @sha1.hexdigest, resp[:sha1]
+    assert_equal content_md5, resp[:content_md5]
   end
 
   def test_put_trickle_small
