@@ -176,16 +176,23 @@ module Unicorn
     def listen(address, opt = {}.merge(@listener_opts[address] || {}))
       return if String === address && listener_names.include?(address)
 
-      if io = bind_listen(address, opt)
+      delay, tries = 0.5, 5
+      begin
+        io = bind_listen(address, opt)
         unless TCPServer === io || UNIXServer === io
           IO_PURGATORY << io
           io = server_cast(io)
         end
         logger.info "listening on addr=#{sock_name(io)} fd=#{io.fileno}"
         LISTENERS << io
-      else
+        return io
+      rescue Errno::EADDRINUSE => err
         logger.error "adding listener failed addr=#{address} (in use)"
-        raise Errno::EADDRINUSE, address
+        raise err if tries == 0
+        tries -= 1
+        logger.error "retrying in #{delay} seconds (#{tries} tries left)"
+        sleep(delay)
+        retry
       end
     end
 
