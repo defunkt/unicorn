@@ -131,8 +131,7 @@ module Unicorn
         end
       end
       set_names = listener_names(listeners)
-      dead_names += cur_names - set_names
-      dead_names.uniq!
+      dead_names.concat(cur_names - set_names).uniq!
 
       LISTENERS.delete_if do |io|
         if dead_names.include?(sock_name(io))
