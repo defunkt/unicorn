@@ -51,7 +51,7 @@ module Unicorn
       # don't rely on Dir.pwd here since it's not symlink-aware, and
       # symlink dirs are the default with Capistrano...
       :cwd => `/bin/sh -c pwd`.chomp("\n"),
-      :zero => $0.dup,
+      0 => $0.dup,
     }
 
     Worker = Struct.new(:nr, :tempfile) unless defined?(Worker)
@@ -363,7 +363,7 @@ module Unicorn
         listener_fds = LISTENERS.map { |sock| sock.fileno }
         ENV['UNICORN_FD'] = listener_fds.join(',')
         Dir.chdir(START_CTX[:cwd])
-        cmd = [ START_CTX[:zero] ] + START_CTX[:argv]
+        cmd = [ START_CTX[0] ].concat(START_CTX[:argv])
 
         # avoid leaking FDs we don't know about, but let before_exec
         # unset FD_CLOEXEC, if anything else in the app eventually
@@ -459,7 +459,7 @@ module Unicorn
     # traps for USR1, USR2, and HUP may be set in the @after_fork Proc
     # by the user.
     def init_worker_process(worker)
-      QUEUE_SIGS.each { |sig| trap(sig, 'IGNORE') }
+      QUEUE_SIGS.each { |sig| trap(sig, nil) }
       trap(:CHLD, 'DEFAULT')
       SIG_QUEUE.clear
       proc_name "worker[#{worker.nr}]"
@@ -615,8 +615,8 @@ module Unicorn
     end
 
     def proc_name(tag)
-      $0 = ([ File.basename(START_CTX[:zero]), tag ] +
-              START_CTX[:argv]).join(' ')
+      $0 = ([ File.basename(START_CTX[0]), tag
+            ]).concat(START_CTX[:argv]).join(' ')
     end
 
     def redirect_io(io, path)
