@@ -2,6 +2,8 @@ require 'test/unit'
 require 'tempfile'
 require 'unicorn'
 
+TestStruct = Struct.new(
+  *(Unicorn::Configurator::DEFAULTS.keys + %w(listener_opts listeners)))
 class TestConfigurator < Test::Unit::TestCase
 
   def test_config_init
@@ -51,22 +53,23 @@ class TestConfigurator < Test::Unit::TestCase
 
   def test_config_defaults
     cfg = Unicorn::Configurator.new(:use_defaults => true)
-    assert_nothing_raised { cfg.commit!(self) }
+    test_struct = TestStruct.new
+    assert_nothing_raised { cfg.commit!(test_struct) }
     Unicorn::Configurator::DEFAULTS.each do |key,value|
-      assert_equal value, instance_variable_get("@#{key.to_s}")
+      assert_equal value, test_struct.__send__(key)
     end
   end
 
   def test_config_defaults_skip
     cfg = Unicorn::Configurator.new(:use_defaults => true)
     skip = [ :logger ]
-    assert_nothing_raised { cfg.commit!(self, :skip => skip) }
-    @logger = nil
+    test_struct = TestStruct.new
+    assert_nothing_raised { cfg.commit!(test_struct, :skip => skip) }
     Unicorn::Configurator::DEFAULTS.each do |key,value|
       next if skip.include?(key)
-      assert_equal value, instance_variable_get("@#{key.to_s}")
+      assert_equal value, test_struct.__send__(key)
     end
-    assert_nil @logger
+    assert_nil test_struct.logger
   end
 
   def test_listen_options
@@ -78,8 +81,9 @@ class TestConfigurator < Test::Unit::TestCase
     assert_nothing_raised do
       cfg = Unicorn::Configurator.new(:config_file => tmp.path)
     end
-    assert_nothing_raised { cfg.commit!(self) }
-    assert(listener_opts = instance_variable_get("@listener_opts"))
+    test_struct = TestStruct.new
+    assert_nothing_raised { cfg.commit!(test_struct) }
+    assert(listener_opts = test_struct.listener_opts)
     assert_equal expect, listener_opts[listener]
   end
 
@@ -94,9 +98,10 @@ class TestConfigurator < Test::Unit::TestCase
   end
 
   def test_after_fork_proc
+    test_struct = TestStruct.new
     [ proc { |a,b| }, Proc.new { |a,b| }, lambda { |a,b| } ].each do |my_proc|
-      Unicorn::Configurator.new(:after_fork => my_proc).commit!(self)
-      assert_equal my_proc, @after_fork
+      Unicorn::Configurator.new(:after_fork => my_proc).commit!(test_struct)
+      assert_equal my_proc, test_struct.after_fork
     end
   end
 

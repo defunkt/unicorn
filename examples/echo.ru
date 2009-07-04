@@ -8,25 +8,20 @@
 #
 # Then type random stuff in your terminal to watch it get echoed back!
 
-class EchoBody
-  def initialize(input)
-    @input = input
-  end
+class EchoBody < Struct.new(:input)
 
   def each(&block)
-    while buf = @input.read(4096)
+    while buf = input.read(4096)
       yield buf
     end
     self
   end
 
-  def close
-    @input = nil
-  end
 end
 
 use Rack::Chunked
 run lambda { |env|
+  /\A100-continue\z/ =~ env['HTTP_EXPECT'] and return [100, {}, []]
   [ 200, { 'Content-Type' => 'application/octet-stream' },
     EchoBody.new(env['rack.input']) ]
 }

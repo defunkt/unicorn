@@ -14,14 +14,13 @@ module Unicorn
   #   after_fork do |server,worker|
   #     server.listen("127.0.0.1:#{9293 + worker.nr}") rescue nil
   #   end
-  class Configurator
+  class Configurator < Struct.new(:set, :config_file)
     # The default logger writes its output to $stderr
-    DEFAULT_LOGGER = Logger.new($stderr) unless defined?(DEFAULT_LOGGER)
+    DEFAULT_LOGGER = Logger.new($stderr)
 
     # Default settings for Unicorn
     DEFAULTS = {
       :timeout => 60,
-      :listeners => [],
       :logger => DEFAULT_LOGGER,
       :worker_processes => 1,
       :after_fork => lambda { |server, worker|
@@ -42,42 +41,32 @@ module Unicorn
         },
       :pid => nil,
       :preload_app => false,
-      :stderr_path => nil,
-      :stdout_path => nil,
     }
 
-    attr_reader :config_file #:nodoc:
-
     def initialize(defaults = {}) #:nodoc:
-      @set = Hash.new(:unset)
+      self.set = Hash.new(:unset)
       use_defaults = defaults.delete(:use_defaults)
-      @config_file = defaults.delete(:config_file)
-      @config_file.freeze
-      @set.merge!(DEFAULTS) if use_defaults
+      self.config_file = defaults.delete(:config_file)
+      set.merge!(DEFAULTS) if use_defaults
       defaults.each { |key, value| self.send(key, value) }
       reload
     end
 
     def reload #:nodoc:
-      instance_eval(File.read(@config_file)) if @config_file
+      instance_eval(File.read(config_file)) if config_file
     end
 
     def commit!(server, options = {}) #:nodoc:
       skip = options[:skip] || []
-      @set.each do |key, value|
+      set.each do |key, value|
         value == :unset and next
         skip.include?(key) and next
-        setter = "#{key}="
-        if server.respond_to?(setter)
-          server.send(setter, value)
-        else
-          server.instance_variable_set("@#{key}", value)
-        end
+        server.__send__("#{key}=", value)
       end
     end
 
     def [](key) # :nodoc:
-      @set[key]
+      set[key]
     end
 
     # sets object to the +new+ Logger-like object.  The new logger-like
@@ -89,7 +78,7 @@ module Unicorn
         raise ArgumentError, "logger=#{new} does not respond to method=#{m}"
       end
 
-      @set[:logger] = new
+      set[:logger] = new
     end
 
     # sets after_fork hook to a given block.  This block will be called by
@@ -151,7 +140,7 @@ module Unicorn
                                   "not numeric: timeout=#{seconds.inspect}"
       seconds >= 3 or raise ArgumentError,
                                   "too low: timeout=#{seconds.inspect}"
-      @set[:timeout] = seconds
+      set[:timeout] = seconds
     end
 
     # sets the current number of worker_processes to +nr+.  Each worker
@@ -161,7 +150,7 @@ module Unicorn
                              "not an integer: worker_processes=#{nr.inspect}"
       nr >= 0 or raise ArgumentError,
                              "not non-negative: worker_processes=#{nr.inspect}"
-      @set[:worker_processes] = nr
+      set[:worker_processes] = nr
     end
 
     # sets listeners to the given +addresses+, replacing or augmenting the
@@ -172,7 +161,7 @@ module Unicorn
     def listeners(addresses) # :nodoc:
       Array === addresses or addresses = Array(addresses)
       addresses.map! { |addr| expand_addr(addr) }
-      @set[:listeners] = addresses
+      set[:listeners] = addresses
     end
 
     # adds an +address+ to the existing listener set.
@@ -227,8 +216,8 @@ module Unicorn
     def listen(address, opt = {})
       address = expand_addr(address)
       if String === address
-        Hash === @set[:listener_opts] or
-          @set[:listener_opts] = Hash.new { |hash,key| hash[key] = {} }
+        Hash === set[:listener_opts] or
+          set[:listener_opts] = Hash.new { |hash,key| hash[key] = {} }
         [ :backlog, :sndbuf, :rcvbuf ].each do |key|
           value = opt[key] or next
           Integer === value or
@@ -239,11 +228,11 @@ module Unicorn
           TrueClass === value || FalseClass === value or
             raise ArgumentError, "not boolean: #{key}=#{value.inspect}"
         end
-        @set[:listener_opts][address].merge!(opt)
+        set[:listener_opts][address].merge!(opt)
       end
 
-      @set[:listeners] = [] unless Array === @set[:listeners]
-      @set[:listeners] << address
+      set[:listeners] = [] unless Array === set[:listeners]
+      set[:listeners] << address
     end
 
     # sets the +path+ for the PID file of the unicorn master process
@@ -265,7 +254,7 @@ module Unicorn
     def preload_app(bool)
       case bool
       when TrueClass, FalseClass
-        @set[:preload_app] = bool
+        set[:preload_app] = bool
       else
         raise ArgumentError, "preload_app=#{bool.inspect} not a boolean"
       end
@@ -298,7 +287,7 @@ module Unicorn
       else
         raise ArgumentError
       end
-      @set[var] = path
+      set[var] = path
     end
 
     def set_hook(var, my_proc, req_arity = 2) #:nodoc:
@@ -314,7 +303,7 @@ module Unicorn
       else
         raise ArgumentError, "invalid type: #{var}=#{my_proc.inspect}"
       end
-      @set[var] = my_proc
+      set[var] = my_proc
     end
 
     # expands "unix:path/to/foo" to a socket relative to the current path

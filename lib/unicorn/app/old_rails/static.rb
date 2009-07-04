@@ -19,28 +19,28 @@ require 'rack/file'
 # This means that if you are using page caching it will actually work
 # with Unicorn and you should see a decent speed boost (but not as
 # fast as if you use a static server like nginx).
-class Unicorn::App::OldRails::Static
+class Unicorn::App::OldRails::Static < Struct.new(:app, :root, :file_server)
   FILE_METHODS = { 'GET' => true, 'HEAD' => true }.freeze
   REQUEST_METHOD = 'REQUEST_METHOD'.freeze
   REQUEST_URI = 'REQUEST_URI'.freeze
   PATH_INFO = 'PATH_INFO'.freeze
 
   def initialize(app)
-    @app = app
-    @root = "#{::RAILS_ROOT}/public"
-    @file_server = ::Rack::File.new(@root)
+    self.app = app
+    self.root = "#{::RAILS_ROOT}/public"
+    self.file_server = ::Rack::File.new(root)
   end
 
   def call(env)
     # short circuit this ASAP if serving non-file methods
-    FILE_METHODS.include?(env[REQUEST_METHOD]) or return @app.call(env)
+    FILE_METHODS.include?(env[REQUEST_METHOD]) or return app.call(env)
 
     # first try the path as-is
     path_info = env[PATH_INFO].chomp("/")
-    if File.file?("#@root/#{::Rack::Utils.unescape(path_info)}")
+    if File.file?("#{root}/#{::Rack::Utils.unescape(path_info)}")
       # File exists as-is so serve it up
       env[PATH_INFO] = path_info
-      return @file_server.call(env)
+      return file_server.call(env)
     end
 
     # then try the cached version:
@@ -50,11 +50,11 @@ class Unicorn::App::OldRails::Static
     env[REQUEST_URI] =~ /^#{Regexp.escape(path_info)}(;[^\?]+)/
     path_info << "#$1#{ActionController::Base.page_cache_extension}"
 
-    if File.file?("#@root/#{::Rack::Utils.unescape(path_info)}")
+    if File.file?("#{root}/#{::Rack::Utils.unescape(path_info)}")
       env[PATH_INFO] = path_info
-      return @file_server.call(env)
+      return file_server.call(env)
     end
 
-    @app.call(env) # call OldRails
+    app.call(env) # call OldRails
   end
 end if defined?(Unicorn::App::OldRails)

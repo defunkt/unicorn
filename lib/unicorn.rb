@@ -30,8 +30,12 @@ module Unicorn
   # processes which in turn handle the I/O and application process.
   # Listener sockets are started in the master process and shared with
   # forked worker children.
-  class HttpServer
-    attr_reader :logger
+
+  class HttpServer < Struct.new(:listener_opts, :timeout, :worker_processes,
+                                :before_fork, :after_fork, :before_exec,
+                                :logger, :pid, :app, :preload_app,
+                                :reexec_pid, :orig_app, :init_listeners,
+                                :master_pid, :config)
     include ::Unicorn::SocketHelper
 
     # prevents IO objects in here from being GC-ed
@@ -62,8 +66,7 @@ module Unicorn
       :zero => $0.dup,
     }
 
-    Worker = Struct.new(:nr, :tempfile) unless defined?(Worker)
-    class Worker
+    class Worker < Struct.new(:nr, :tempfile)
       # worker objects may be compared to just plain numbers
       def ==(other_nr)
         self.nr == other_nr
@@ -75,14 +78,13 @@ module Unicorn
     # HttpServer.run.join to join the thread that's processing
     # incoming requests on the socket.
     def initialize(app, options = {})
-      @app = app
-      @pid = nil
-      @reexec_pid = 0
-      @init_listeners = options[:listeners] ? options[:listeners].dup : []
-      @config = Configurator.new(options.merge(:use_defaults => true))
-      @listener_opts = {}
-      @config.commit!(self, :skip => [:listeners, :pid])
-      @orig_app = app
+      self.app = app
+      self.reexec_pid = 0
+      self.init_listeners = options[:listeners] ? options[:listeners].dup : []
+      self.config = Configurator.new(options.merge(:use_defaults => true))
+      self.listener_opts = {}
+      config.commit!(self, :skip => [:listeners, :pid])
+      self.orig_app = app
     end
 
     # Runs the thing.  Returns self so you can run join on it
@@ -93,13 +95,13 @@ module Unicorn
       # before they become UNIXServer or TCPServer
       inherited = ENV['UNICORN_FD'].to_s.split(/,/).map do |fd|
         io = Socket.for_fd(fd.to_i)
-        set_server_sockopt(io, @listener_opts[sock_name(io)])
+        set_server_sockopt(io, listener_opts[sock_name(io)])
         IO_PURGATORY << io
         logger.info "inherited addr=#{sock_name(io)} fd=#{fd}"
         server_cast(io)
       end
 
-      config_listeners = @config[:listeners].dup
+      config_listeners = config[:listeners].dup
       LISTENERS.replace(inherited)
 
       # we start out with generic Socket objects that get cast to either
@@ -112,8 +114,9 @@ module Unicorn
       end
       config_listeners.each { |addr| listen(addr) }
       raise ArgumentError, "no listeners" if LISTENERS.empty?
-      self.pid = @config[:pid]
-      build_app! if @preload_app
+      self.pid = config[:pid]
+      self.master_pid = $$
+      build_app! if preload_app
       maintain_worker_count
       self
     end
@@ -140,7 +143,7 @@ module Unicorn
           end
           (io.close rescue nil).nil? # true
         else
-          set_server_sockopt(io, @listener_opts[sock_name(io)])
+          set_server_sockopt(io, listener_opts[sock_name(io)])
           false
         end
       end
@@ -151,28 +154,27 @@ module Unicorn
     def stdout_path=(path); redirect_io($stdout, path); end
     def stderr_path=(path); redirect_io($stderr, path); end
 
-    def logger=(obj)
-      REQUEST.logger = @logger = obj
-    end
+    alias_method :set_pid, :pid=
+    undef_method :pid=
 
     # sets the path for the PID file of the master process
     def pid=(path)
       if path
         if x = valid_pid?(path)
-          return path if @pid && path == @pid && x == $$
+          return path if pid && path == pid && x == $$
           raise ArgumentError, "Already running on PID:#{x} " \
                                "(or pid=#{path} is stale)"
         end
       end
-      unlink_pid_safe(@pid) if @pid
+      unlink_pid_safe(pid) if pid
       File.open(path, 'wb') { |fp| fp.syswrite("#$$\n") } if path
-      @pid = path
+      self.set_pid(path)
     end
 
     # add a given address to the +listeners+ set, idempotently
     # Allows workers to add a private, per-process listener via the
-    # @after_fork hook.  Very useful for debugging and testing.
-    def listen(address, opt = {}.merge(@listener_opts[address] || {}))
+    # after_fork hook.  Very useful for debugging and testing.
+    def listen(address, opt = {}.merge(listener_opts[address] || {}))
       return if String === address && listener_names.include?(address)
 
       delay, tries = 0.5, 5
@@ -238,12 +240,12 @@ module Unicorn
               logger.info "SIGWINCH ignored because we're not daemonized"
             end
           when :TTIN
-            @worker_processes += 1
+            self.worker_processes += 1
           when :TTOU
-            @worker_processes -= 1 if @worker_processes > 0
+            self.worker_processes -= 1 if self.worker_processes > 0
           when :HUP
             respawn = true
-            if @config.config_file
+            if config.config_file
               load_config!
               redo # immediate reaping since we may have QUIT workers
             else # exec binary and exit if there's no config file
@@ -262,14 +264,14 @@ module Unicorn
       end
       stop # gracefully shutdown all workers on our way out
       logger.info "master complete"
-      unlink_pid_safe(@pid) if @pid
+      unlink_pid_safe(pid) if pid
     end
 
     # Terminates all workers, but does not exit master process
     def stop(graceful = true)
       self.listeners = []
       kill_each_worker(graceful ? :QUIT : :TERM)
-      timeleft = @timeout
+      timeleft = timeout
       step = 0.2
       reap_all_workers
       until WORKERS.empty?
@@ -322,15 +324,15 @@ module Unicorn
     def reap_all_workers
       begin
         loop do
-          pid, status = Process.waitpid2(-1, Process::WNOHANG)
-          pid or break
-          if @reexec_pid == pid
+          wpid, status = Process.waitpid2(-1, Process::WNOHANG)
+          wpid or break
+          if reexec_pid == wpid
             logger.error "reaped #{status.inspect} exec()-ed"
-            @reexec_pid = 0
-            self.pid = @pid.chomp('.oldbin') if @pid
+            self.reexec_pid = 0
+            self.pid = pid.chomp('.oldbin') if pid
             proc_name 'master'
           else
-            worker = WORKERS.delete(pid) and worker.tempfile.close rescue nil
+            worker = WORKERS.delete(wpid) and worker.tempfile.close rescue nil
             logger.info "reaped #{status.inspect} " \
                         "worker=#{worker.nr rescue 'unknown'}"
           end
@@ -341,19 +343,19 @@ module Unicorn
 
     # reexecutes the START_CTX with a new binary
     def reexec
-      if @reexec_pid > 0
+      if reexec_pid > 0
         begin
-          Process.kill(0, @reexec_pid)
-          logger.error "reexec-ed child already running PID:#{@reexec_pid}"
+          Process.kill(0, reexec_pid)
+          logger.error "reexec-ed child already running PID:#{reexec_pid}"
           return
         rescue Errno::ESRCH
-          @reexec_pid = 0
+          reexec_pid = 0
         end
       end
 
-      if @pid
-        old_pid = "#{@pid}.oldbin"
-        prev_pid = @pid.dup
+      if pid
+        old_pid = "#{pid}.oldbin"
+        prev_pid = pid.dup
         begin
           self.pid = old_pid  # clear the path for a new pid file
         rescue ArgumentError
@@ -366,7 +368,7 @@ module Unicorn
         end
       end
 
-      @reexec_pid = fork do
+      self.reexec_pid = fork do
         listener_fds = LISTENERS.map { |sock| sock.fileno }
         ENV['UNICORN_FD'] = listener_fds.join(',')
         Dir.chdir(START_CTX[:cwd])
@@ -383,38 +385,38 @@ module Unicorn
           io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
         end
         logger.info "executing #{cmd.inspect} (in #{Dir.pwd})"
-        @before_exec.call(self)
+        before_exec.call(self)
         exec(*cmd)
       end
       proc_name 'master (old)'
     end
 
-    # forcibly terminate all workers that haven't checked in in @timeout
+    # forcibly terminate all workers that haven't checked in in timeout
     # seconds.  The timeout is implemented using an unlinked tempfile
     # shared between the parent process and each worker.  The worker
     # runs File#chmod to modify the ctime of the tempfile.  If the ctime
-    # is stale for >@timeout seconds, then we'll kill the corresponding
+    # is stale for >timeout seconds, then we'll kill the corresponding
     # worker.
     def murder_lazy_workers
       diff = stat = nil
-      WORKERS.dup.each_pair do |pid, worker|
+      WORKERS.dup.each_pair do |wpid, worker|
         stat = begin
           worker.tempfile.stat
         rescue => e
-          logger.warn "worker=#{worker.nr} PID:#{pid} stat error: #{e.inspect}"
-          kill_worker(:QUIT, pid)
+          logger.warn "worker=#{worker.nr} PID:#{wpid} stat error: #{e.inspect}"
+          kill_worker(:QUIT, wpid)
           next
         end
         stat.mode == 0100000 and next
-        (diff = (Time.now - stat.ctime)) <= @timeout and next
-        logger.error "worker=#{worker.nr} PID:#{pid} timeout " \
-                     "(#{diff}s > #{@timeout}s), killing"
-        kill_worker(:KILL, pid) # take no prisoners for @timeout violations
+        (diff = (Time.now - stat.ctime)) <= timeout and next
+        logger.error "worker=#{worker.nr} PID:#{wpid} timeout " \
+                     "(#{diff}s > #{timeout}s), killing"
+        kill_worker(:KILL, wpid) # take no prisoners for timeout violations
       end
     end
 
     def spawn_missing_workers
-      (0...@worker_processes).each do |worker_nr|
+      (0...worker_processes).each do |worker_nr|
         WORKERS.values.include?(worker_nr) and next
         begin
           Dir.chdir(START_CTX[:cwd])
@@ -426,23 +428,22 @@ module Unicorn
         tempfile = Tempfile.new(nil) # as short as possible to save dir space
         tempfile.unlink # don't allow other processes to find or see it
         worker = Worker.new(worker_nr, tempfile)
-        @before_fork.call(self, worker)
-        pid = fork { worker_loop(worker) }
-        WORKERS[pid] = worker
+        before_fork.call(self, worker)
+        WORKERS[fork { worker_loop(worker) }] = worker
       end
     end
 
     def maintain_worker_count
-      (off = WORKERS.size - @worker_processes) == 0 and return
+      (off = WORKERS.size - worker_processes) == 0 and return
       off < 0 and return spawn_missing_workers
-      WORKERS.dup.each_pair { |pid,w|
-        w.nr >= @worker_processes and kill_worker(:QUIT, pid) rescue nil
+      WORKERS.dup.each_pair { |wpid,w|
+        w.nr >= worker_processes and kill_worker(:QUIT, wpid) rescue nil
       }
     end
 
     # once a client is accepted, it is processed in its entirety here
     # in 3 easy steps: read request, call app, write app response
-    def process_client(app, client)
+    def process_client(client)
       response = app.call(env = REQUEST.read(client))
 
       if 100 == response.first.to_i
@@ -471,7 +472,7 @@ module Unicorn
 
     # gets rid of stuff the worker has no business keeping track of
     # to free some resources and drops all sig handlers.
-    # traps for USR1, USR2, and HUP may be set in the @after_fork Proc
+    # traps for USR1, USR2, and HUP may be set in the after_fork Proc
     # by the user.
     def init_worker_process(worker)
       QUEUE_SIGS.each { |sig| trap(sig, 'IGNORE') }
@@ -484,15 +485,15 @@ module Unicorn
       WORKERS.clear
       LISTENERS.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
       worker.tempfile.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
-      @after_fork.call(self, worker) # can drop perms
-      @timeout /= 2.0 # halve it for select()
-      build_app! unless @preload_app
+      after_fork.call(self, worker) # can drop perms
+      self.timeout /= 2.0 # halve it for select()
+      build_app! unless preload_app
     end
 
     def reopen_worker_logs(worker_nr)
-      @logger.info "worker=#{worker_nr} reopening logs..."
+      logger.info "worker=#{worker_nr} reopening logs..."
       Unicorn::Util.reopen_logs
-      @logger.info "worker=#{worker_nr} done reopening logs"
+      logger.info "worker=#{worker_nr} done reopening logs"
       init_self_pipe!
     end
 
@@ -500,7 +501,7 @@ module Unicorn
     # for connections and doesn't die until the parent dies (or is
     # given a INT, QUIT, or TERM signal)
     def worker_loop(worker)
-      master_pid = Process.ppid # slightly racy, but less memory usage
+      ppid = master_pid
       init_worker_process(worker)
       nr = 0 # this becomes negative if we need to reopen logs
       alive = worker.tempfile # tempfile is our lifeline to the master process
@@ -511,14 +512,13 @@ module Unicorn
       trap(:USR1) { nr = -65536; SELF_PIPE.first.close rescue nil }
       trap(:QUIT) { alive = nil; LISTENERS.each { |s| s.close rescue nil } }
       [:TERM, :INT].each { |sig| trap(sig) { exit!(0) } } # instant shutdown
-      @logger.info "worker=#{worker.nr} ready"
-      app = @app
+      logger.info "worker=#{worker.nr} ready"
 
       begin
         nr < 0 and reopen_worker_logs(worker.nr)
         nr = 0
 
-        # we're a goner in @timeout seconds anyways if alive.chmod
+        # we're a goner in timeout seconds anyways if alive.chmod
         # breaks, so don't trap the exception.  Using fchmod() since
         # futimes() is not available in base Ruby and I very strongly
         # prefer temporary files to be unlinked for security,
@@ -530,7 +530,7 @@ module Unicorn
 
         ready.each do |sock|
           begin
-            process_client(app, sock.accept_nonblock)
+            process_client(sock.accept_nonblock)
             nr += 1
             t == (ti = Time.now.to_i) or alive.chmod(t = ti)
           rescue Errno::EAGAIN, Errno::ECONNABORTED
@@ -544,11 +544,11 @@ module Unicorn
         # before we sleep again in select().
         redo unless nr == 0 # (nr < 0) => reopen logs
 
-        master_pid == Process.ppid or return
+        ppid == Process.ppid or return
         alive.chmod(t = 0)
         begin
           # timeout used so we can detect parent death:
-          ret = IO.select(LISTENERS, nil, SELF_PIPE, @timeout) or redo
+          ret = IO.select(LISTENERS, nil, SELF_PIPE, timeout) or redo
           ready = ret.first
         rescue Errno::EINTR
           ready = LISTENERS
@@ -565,17 +565,17 @@ module Unicorn
 
     # delivers a signal to a worker and fails gracefully if the worker
     # is no longer running.
-    def kill_worker(signal, pid)
+    def kill_worker(signal, wpid)
       begin
-        Process.kill(signal, pid)
+        Process.kill(signal, wpid)
       rescue Errno::ESRCH
-        worker = WORKERS.delete(pid) and worker.tempfile.close rescue nil
+        worker = WORKERS.delete(wpid) and worker.tempfile.close rescue nil
       end
     end
 
     # delivers a signal to each worker
     def kill_each_worker(signal)
-      WORKERS.keys.each { |pid| kill_worker(signal, pid) }
+      WORKERS.keys.each { |wpid| kill_worker(signal, wpid) }
     end
 
     # unlinks a PID file at given +path+ if it contains the current PID
@@ -587,10 +587,10 @@ module Unicorn
     # returns a PID if a given path contains a non-stale PID file,
     # nil otherwise.
     def valid_pid?(path)
-      if File.exist?(path) && (pid = File.read(path).to_i) > 1
+      if File.exist?(path) && (wpid = File.read(path).to_i) > 1
         begin
-          Process.kill(0, pid)
-          return pid
+          Process.kill(0, wpid)
+          return wpid
         rescue Errno::ESRCH
         end
       end
@@ -599,17 +599,17 @@ module Unicorn
 
     def load_config!
       begin
-        logger.info "reloading config_file=#{@config.config_file}"
-        @config[:listeners].replace(@init_listeners)
-        @config.reload
-        @config.commit!(self)
+        logger.info "reloading config_file=#{config.config_file}"
+        config[:listeners].replace(init_listeners)
+        config.reload
+        config.commit!(self)
         kill_each_worker(:QUIT)
         Unicorn::Util.reopen_logs
-        @app = @orig_app
-        build_app! if @preload_app
-        logger.info "done reloading config_file=#{@config.config_file}"
+        self.app = orig_app
+        build_app! if preload_app
+        logger.info "done reloading config_file=#{config.config_file}"
       rescue Object => e
-        logger.error "error reloading config_file=#{@config.config_file}: " \
+        logger.error "error reloading config_file=#{config.config_file}: " \
                      "#{e.class} #{e.message}"
       end
     end
@@ -620,12 +620,12 @@ module Unicorn
     end
 
     def build_app!
-      if @app.respond_to?(:arity) && @app.arity == 0
+      if app.respond_to?(:arity) && app.arity == 0
         if defined?(Gem) && Gem.respond_to?(:refresh)
           logger.info "Refreshing Gem list"
           Gem.refresh
         end
-        @app = @app.call
+        self.app = app.call
       end
     end
 

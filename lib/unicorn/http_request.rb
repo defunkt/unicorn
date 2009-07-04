@@ -6,8 +6,6 @@ require 'unicorn/http11'
 module Unicorn
   class HttpRequest
 
-    attr_accessor :logger
-
     # default parameters we merge into the request env for Rack handlers
     DEFAULTS = {
       "rack.errors" => $stderr,
@@ -24,16 +22,15 @@ module Unicorn
     NULL_IO = StringIO.new(Z)
     LOCALHOST = '127.0.0.1'.freeze
 
+    def initialize
+    end
+
     # Being explicitly single-threaded, we have certain advantages in
     # not having to worry about variables being clobbered :)
     BUFFER = ' ' * Const::CHUNK_SIZE # initial size, may grow
     BUFFER.force_encoding(Encoding::BINARY) if Z.respond_to?(:force_encoding)
     PARSER = HttpParser.new
     PARAMS = Hash.new
-
-    def initialize(logger = Configurator::DEFAULT_LOGGER)
-      @logger = logger
-    end
 
     # Does the majority of the IO processing.  It has been written in
     # Ruby using about 8 different IO processing strategies.
@@ -74,13 +71,6 @@ module Unicorn
         data << socket.readpartial(Const::CHUNK_SIZE, BUFFER)
         PARSER.execute(PARAMS, data) and return handle_body(socket)
       end while true
-      rescue HttpParserError => e
-        @logger.error "HTTP parse error, malformed request " \
-                      "(#{PARAMS[Const::HTTP_X_FORWARDED_FOR] ||
-                          PARAMS[Const::REMOTE_ADDR]}): #{e.inspect}"
-        @logger.error "REQUEST DATA: #{data.inspect}\n---\n" \
-                      "PARAMS: #{PARAMS.inspect}\n---\n"
-        raise e
     end
 
     private

@@ -5,7 +5,7 @@ module Unicorn::App
 
   # This class is highly experimental (even more so than the rest of Unicorn)
   # and has never run anything other than cgit.
-  class ExecCgi
+  class ExecCgi < Struct.new(:args)
 
     CHUNK_SIZE = 16384
     PASS_VARS = %w(
@@ -32,12 +32,12 @@ module Unicorn::App
     #     run Unicorn::App::ExecCgi.new("/path/to/cgit.cgi")
     #   end
     def initialize(*args)
-      @args = args.dup
-      first = @args[0] or
+      self.args = args
+      first = args[0] or
         raise ArgumentError, "need path to executable"
-      first[0..0] == "/" or @args[0] = ::File.expand_path(first)
-      File.executable?(@args[0]) or
-        raise ArgumentError, "#{@args[0]} is not executable"
+      first[0..0] == "/" or args[0] = ::File.expand_path(first)
+      File.executable?(args[0]) or
+        raise ArgumentError, "#{args[0]} is not executable"
     end
 
     # Calls the app
@@ -65,14 +65,14 @@ module Unicorn::App
         val = env[key] or next
         ENV[key] = val
       end
-      ENV['SCRIPT_NAME'] = @args[0]
+      ENV['SCRIPT_NAME'] = args[0]
       ENV['GATEWAY_INTERFACE'] = 'CGI/1.1'
       env.keys.grep(/^HTTP_/) { |key| ENV[key] = env[key] }
 
       a = IO.new(0).reopen(inp)
       b = IO.new(1).reopen(out)
       c = IO.new(2).reopen(err)
-      exec(*@args)
+      exec(*args)
     end
 
     # Extracts headers from CGI out, will change the offset of out.
@@ -89,23 +89,24 @@ module Unicorn::App
         offset = 4
       end
       offset += head.length
-      out.instance_variable_set('@unicorn_app_exec_cgi_offset', offset)
-      size -= offset
 
       # Allows +out+ to be used as a Rack body.
-      def out.each
-        sysseek(@unicorn_app_exec_cgi_offset)
+      out.instance_eval { class << self; self; end }.instance_eval {
+        define_method(:each) { |&blk|
+          sysseek(offset)
 
-        # don't use a preallocated buffer for sysread since we can't
-        # guarantee an actual socket is consuming the yielded string
-        # (or if somebody is pushing to an array for eventual concatenation
-        begin
-          yield(sysread(CHUNK_SIZE))
-        rescue EOFError
-          return
-        end while true
-      end
+          # don't use a preallocated buffer for sysread since we can't
+          # guarantee an actual socket is consuming the yielded string
+          # (or if somebody is pushing to an array for eventual concatenation
+          begin
+            blk.call(sysread(CHUNK_SIZE))
+          rescue EOFError
+            break
+          end while true
+        }
+      }
 
+      size -= offset
       prev = nil
       headers = Rack::Utils::HeaderHash.new
       head.split(/\r?\n/).each do |line|
@@ -144,7 +145,7 @@ module Unicorn::App
       err.seek(0)
       dst = env['rack.errors']
       pid = status.pid
-      dst.write("#{pid}: #{@args.inspect} status=#{status} stderr:\n")
+      dst.write("#{pid}: #{args.inspect} status=#{status} stderr:\n")
       err.each_line { |line| dst.write("#{pid}: #{line}") }
       dst.flush
     end

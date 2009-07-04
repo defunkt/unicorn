@@ -20,7 +20,7 @@ class RequestTest < Test::Unit::TestCase
   end
 
   def setup
-    @request = HttpRequest.new(Logger.new($stderr))
+    @request = HttpRequest.new
     @app = lambda do |env|
       [ 200, { 'Content-Length' => '0', 'Content-Type' => 'text/plain' }, [] ]
     end
