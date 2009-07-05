@@ -1,11 +1,11 @@
 
-#line 1 "http11_parser.rl"
+#line 1 "unicorn_http.rl"
 /**
  * Copyright (c) 2005 Zed A. Shaw
  * You can redistribute it and/or modify it under the same terms as Ruby.
  */
-#ifndef http11_parser_h
-#define http11_parser_h
+#ifndef unicorn_http_h
+#define unicorn_http_h
 
 #include <sys/types.h>
 
@@ -61,12 +61,12 @@ static void downcase_char(char *c)
 /** Machine **/
 
 
-#line 109 "http11_parser.rl"
+#line 109 "unicorn_http.rl"
 
 
 /** Data **/
 
-#line 70 "http11_parser.h"
+#line 70 "unicorn_http.h"
 static const int http_parser_start = 1;
 static const int http_parser_first_final = 63;
 static const int http_parser_error = 0;
@@ -74,18 +74,18 @@ static const int http_parser_error = 0;
 static const int http_parser_en_main = 1;
 
 
-#line 113 "http11_parser.rl"
+#line 113 "unicorn_http.rl"
 
 static void http_parser_init(http_parser *parser) {
   int cs = 0;
   memset(parser, 0, sizeof(*parser));
 
-#line 84 "http11_parser.h"
+#line 84 "unicorn_http.h"
 	{
 	cs = http_parser_start;
 	}
 
-#line 118 "http11_parser.rl"
+#line 118 "unicorn_http.rl"
   parser->cs = cs;
 }
 
@@ -106,7 +106,7 @@ static void http_parser_execute(
   assert(pe - p == len - off && "pointers aren't same distance");
 
 
-#line 110 "http11_parser.h"
+#line 110 "unicorn_http.h"
 	{
 	if ( p == pe )
 		goto _test_eof;
@@ -130,14 +130,14 @@ st0:
 cs = 0;
 	goto _out;
 tr0:
-#line 64 "http11_parser.rl"
+#line 64 "unicorn_http.rl"
 	{MARK(mark, p); }
 	goto st2;
 st2:
 	if ( ++p == pe )
 		goto _test_eof2;
 case 2:
-#line 141 "http11_parser.h"
+#line 141 "unicorn_http.h"
 	switch( (*p) ) {
 		case 32: goto tr2;
 		case 36: goto st44;
@@ -153,7 +153,7 @@ case 2:
 		goto st44;
 	goto st0;
 tr2:
-#line 77 "http11_parser.rl"
+#line 77 "unicorn_http.rl"
 	{
     request_method(parser->data, PTR_TO(mark), LEN(mark, p));
   }
@@ -162,7 +162,7 @@ st3:
 	if ( ++p == pe )
 		goto _test_eof3;
 case 3:
-#line 166 "http11_parser.h"
+#line 166 "unicorn_http.h"
 	switch( (*p) ) {
 		case 42: goto tr4;
 		case 47: goto tr5;
@@ -171,67 +171,67 @@ case 3:
 	}
 	goto st0;
 tr4:
-#line 64 "http11_parser.rl"
+#line 64 "unicorn_http.rl"
 	{MARK(mark, p); }
 	goto st4;
 st4:
 	if ( ++p == pe )
 		goto _test_eof4;
 case 4:
-#line 182 "http11_parser.h"
+#line 182 "unicorn_http.h"
 	switch( (*p) ) {
 		case 32: goto tr7;
 		case 35: goto tr8;
 	}
 	goto st0;
 tr7:
-#line 82 "http11_parser.rl"
+#line 82 "unicorn_http.rl"
 	{
     request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st5;
 tr30:
-#line 64 "http11_parser.rl"
+#line 64 "unicorn_http.rl"
 	{MARK(mark, p); }
-#line 85 "http11_parser.rl"
+#line 85 "unicorn_http.rl"
 	{
     fragment(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st5;
 tr33:
-#line 85 "http11_parser.rl"
+#line 85 "unicorn_http.rl"
 	{
     fragment(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st5;
 tr37:
-#line 98 "http11_parser.rl"
+#line 98 "unicorn_http.rl"
 	{
     request_path(parser->data, PTR_TO(mark), LEN(mark,p));
   }
-#line 82 "http11_parser.rl"
+#line 82 "unicorn_http.rl"
 	{
     request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st5;
 tr48:
-#line 89 "http11_parser.rl"
+#line 89 "unicorn_http.rl"
 	{MARK(query_start, p); }
-#line 90 "http11_parser.rl"
+#line 90 "unicorn_http.rl"
 	{
     query_string(parser->data, PTR_TO(query_start), LEN(query_start, p));
   }
-#line 82 "http11_parser.rl"
+#line 82 "unicorn_http.rl"
 	{
     request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st5;
 tr52:
-#line 90 "http11_parser.rl"
+#line 90 "unicorn_http.rl"
 	{
     query_string(parser->data, PTR_TO(query_start), LEN(query_start, p));
   }
-#line 82 "http11_parser.rl"
+#line 82 "unicorn_http.rl"
 	{
     request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
   }
@@ -240,19 +240,19 @@ st5:
 	if ( ++p == pe )
 		goto _test_eof5;
 case 5:
-#line 244 "http11_parser.h"
+#line 244 "unicorn_http.h"
 	if ( (*p) == 72 )
 		goto tr9;
 	goto st0;
 tr9:
-#line 64 "http11_parser.rl"
+#line 64 "unicorn_http.rl"
 	{MARK(mark, p); }
 	goto st6;
 st6:
 	if ( ++p == pe )
 		goto _test_eof6;
 case 6:
-#line 256 "http11_parser.h"
+#line 256 "unicorn_http.h"
 	if ( (*p) == 84 )
 		goto st7;
 	goto st0;
@@ -310,21 +310,21 @@ case 13:
 		goto st13;
 	goto st0;
 tr17:
-#line 94 "http11_parser.rl"
+#line 94 "unicorn_http.rl"
 	{
     http_version(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st14;
 tr25:
-#line 73 "http11_parser.rl"
+#line 73 "unicorn_http.rl"
 	{ MARK(mark, p); }
-#line 74 "http11_parser.rl"
+#line 74 "unicorn_http.rl"
 	{
     http_field(parser->data, PTR_TO(field_start), parser->field_len, PTR_TO(mark), LEN(mark, p));
   }
 	goto st14;
 tr28:
-#line 74 "http11_parser.rl"
+#line 74 "unicorn_http.rl"
 	{
     http_field(parser->data, PTR_TO(field_start), parser->field_len, PTR_TO(mark), LEN(mark, p));
   }
@@ -333,7 +333,7 @@ st14:
 	if ( ++p == pe )
 		goto _test_eof14;
 case 14:
-#line 337 "http11_parser.h"
+#line 337 "unicorn_http.h"
 	if ( (*p) == 10 )
 		goto st15;
 	goto st0;
@@ -373,7 +373,7 @@ case 16:
 		goto tr21;
 	goto st0;
 tr21:
-#line 102 "http11_parser.rl"
+#line 102 "unicorn_http.rl"
 	{
     parser->body_start = p - buffer + 1;
     header_done(parser->data, p + 1, pe - p - 1);
@@ -384,23 +384,23 @@ st63:
 	if ( ++p == pe )
 		goto _test_eof63;
 case 63:
-#line 388 "http11_parser.h"
+#line 388 "unicorn_http.h"
 	goto st0;
 tr20:
-#line 66 "http11_parser.rl"
+#line 66 "unicorn_http.rl"
 	{ MARK(field_start, p); }
-#line 67 "http11_parser.rl"
+#line 67 "unicorn_http.rl"
 	{ snake_upcase_char((char *)p); }
 	goto st17;
 tr22:
-#line 67 "http11_parser.rl"
+#line 67 "unicorn_http.rl"
 	{ snake_upcase_char((char *)p); }
 	goto st17;
 st17:
 	if ( ++p == pe )
 		goto _test_eof17;
 case 17:
-#line 404 "http11_parser.h"
+#line 404 "unicorn_http.h"
 	switch( (*p) ) {
 		case 33: goto tr22;
 		case 58: goto tr23;
@@ -426,71 +426,71 @@ case 17:
 		goto tr22;
 	goto st0;
 tr23:
-#line 69 "http11_parser.rl"
+#line 69 "unicorn_http.rl"
 	{
     parser->field_len = LEN(field_start, p);
   }
 	goto st18;
 tr26:
-#line 73 "http11_parser.rl"
+#line 73 "unicorn_http.rl"
 	{ MARK(mark, p); }
 	goto st18;
 st18:
 	if ( ++p == pe )
 		goto _test_eof18;
 case 18:
-#line 443 "http11_parser.h"
+#line 443 "unicorn_http.h"
 	switch( (*p) ) {
 		case 13: goto tr25;
 		case 32: goto tr26;
 	}
 	goto tr24;
 tr24:
-#line 73 "http11_parser.rl"
+#line 73 "unicorn_http.rl"
 	{ MARK(mark, p); }
 	goto st19;
 st19:
 	if ( ++p == pe )
 		goto _test_eof19;
 case 19:
-#line 457 "http11_parser.h"
+#line 457 "unicorn_http.h"
 	if ( (*p) == 13 )
 		goto tr28;
 	goto st19;
 tr8:
-#line 82 "http11_parser.rl"
+#line 82 "unicorn_http.rl"
 	{
     request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st20;
 tr38:
-#line 98 "http11_parser.rl"
+#line 98 "unicorn_http.rl"
 	{
     request_path(parser->data, PTR_TO(mark), LEN(mark,p));
   }
-#line 82 "http11_parser.rl"
+#line 82 "unicorn_http.rl"
 	{
     request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st20;
 tr49:
-#line 89 "http11_parser.rl"
+#line 89 "unicorn_http.rl"
 	{MARK(query_start, p); }
-#line 90 "http11_parser.rl"
+#line 90 "unicorn_http.rl"
 	{
     query_string(parser->data, PTR_TO(query_start), LEN(query_start, p));
   }
-#line 82 "http11_parser.rl"
+#line 82 "unicorn_http.rl"
 	{
     request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
   }
 	goto st20;
 tr53:
-#line 90 "http11_parser.rl"
+#line 90 "unicorn_http.rl"
 	{
     query_string(parser->data, PTR_TO(query_start), LEN(query_start, p));
   }
-#line 82 "http11_parser.rl"
+#line 82 "unicorn_http.rl"
 	{
     request_uri(parser->data, PTR_TO(mark), LEN(mark, p));
   }
@@ -499,7 +499,7 @@ st20:
 	if ( ++p == pe )
 		goto _test_eof20;
 case 20:
-#line 503 "http11_parser.h"
+#line 503 "unicorn_http.h"
 	switch( (*p) ) {
 		case 32: goto tr30;
 		case 35: goto st0;
@@ -510,14 +510,14 @@ case 20:
 		goto st0;
 	goto tr29;
 tr29:
-#line 64 "http11_parser.rl"
+#line 64 "unicorn_http.rl"
 	{MARK(mark, p); }
 	goto st21;
 st21:
 	if ( ++p == pe )
 		goto _test_eof21;
 case 21:
-#line 521 "http11_parser.h"
+#line 521 "unicorn_http.h"
 	switch( (*p) ) {
 		case 32: goto tr33;
 		case 35: goto st0;
@@ -528,14 +528,14 @@ case 21:
 		goto st0;
 	goto st21;
 tr31:
-#line 64 "http11_parser.rl"
+#line 64 "unicorn_http.rl"
 	{MARK(mark, p); }
 	goto st22;
 st22:
 	if ( ++p == pe )
 		goto _test_eof22;
 case 22:
-#line 539 "http11_parser.h"
+#line 539 "unicorn_http.h"
 	if ( (*p) < 65 ) {
 		if ( 48 <= (*p) && (*p) <= 57 )
 			goto st23;
@@ -559,20 +559,20 @@ case 23:
 		goto st21;
 	goto st0;
 tr5:
-#line 64 "http11_parser.rl"
+#line 64 "unicorn_http.rl"
 	{MARK(mark, p); }
 	goto st24;
 tr65:
-#line 81 "http11_parser.rl"
+#line 81 "unicorn_http.rl"
 	{ host(parser->data, PTR_TO(mark), LEN(mark, p)); }
-#line 64 "http11_parser.rl"
+#line 64 "unicorn_http.rl"
 	{MARK(mark, p); }
 	goto st24;
 st24:
 	if ( ++p == pe )
 		goto _test_eof24;
 case 24:
-#line 576 "http11_parser.h"
+#line 576 "unicorn_http.h"
 	switch( (*p) ) {
 		case 32: goto tr37;
 		case 35: goto tr38;
@@ -611,7 +611,7 @@ case 26:
 		goto st24;
 	goto st0;
 tr40:
-#line 98 "http11_parser.rl"
+#line 98 "unicorn_http.rl"
 	{
     request_path(parser->data, PTR_TO(mark), LEN(mark,p));
   }
@@ -620,7 +620,7 @@ st27:
 	if ( ++p == pe )
 		goto _test_eof27;
 case 27:
-#line 624 "http11_parser.h"
+#line 624 "unicorn_http.h"
 	switch( (*p) ) {
 		case 32: goto tr7;
 		case 35: goto tr8;
@@ -658,7 +658,7 @@ case 29:
 		goto st27;
 	goto st0;
 tr41:
-#line 98 "http11_parser.rl"
+#line 98 "unicorn_http.rl"
 	{
     request_path(parser->data, PTR_TO(mark), LEN(mark,p));
   }
@@ -667,7 +667,7 @@ st30:
 	if ( ++p == pe )
 		goto _test_eof30;
 case 30:
-#line 671 "http11_parser.h"
+#line 671 "unicorn_http.h"
 	switch( (*p) ) {
 		case 32: goto tr48;
 		case 35: goto tr49;
@@ -678,14 +678,14 @@ case 30:
 		goto st0;
 	goto tr47;
 tr47:
-#line 89 "http11_parser.rl"
+#line 89 "unicorn_http.rl"
 	{MARK(query_start, p); }
 	goto st31;
 st31:
 	if ( ++p == pe )
 		goto _test_eof31;
 case 31:
-#line 689 "http11_parser.h"
+#line 689 "unicorn_http.h"
 	switch( (*p) ) {
 		case 32: goto tr52;
 		case 35: goto tr53;
@@ -696,14 +696,14 @@ case 31:
 		goto st0;
 	goto st31;
 tr50:
-#line 89 "http11_parser.rl"
+#line 89 "unicorn_http.rl"
 	{MARK(query_start, p); }
 	goto st32;
 st32:
 	if ( ++p == pe )
 		goto _test_eof32;
 case 32:
-#line 707 "http11_parser.h"
+#line 707 "unicorn_http.h"
 	if ( (*p) < 65 ) {
 		if ( 48 <= (*p) && (*p) <= 57 )
 			goto st33;
@@ -727,58 +727,58 @@ case 33:
 		goto st31;
 	goto st0;
 tr6:
-#line 64 "http11_parser.rl"
+#line 64 "unicorn_http.rl"
 	{MARK(mark, p); }
-#line 68 "http11_parser.rl"
+#line 68 "unicorn_http.rl"
 	{ downcase_char((char *)p); }
 	goto st34;
 st34:
 	if ( ++p == pe )
 		goto _test_eof34;
 case 34:
-#line 740 "http11_parser.h"
+#line 740 "unicorn_http.h"
 	switch( (*p) ) {
 		case 84: goto tr56;
 		case 116: goto tr56;
 	}
 	goto st0;
 tr56:
-#line 68 "http11_parser.rl"
+#line 68 "unicorn_http.rl"
 	{ downcase_char((char *)p); }
 	goto st35;
 st35:
 	if ( ++p == pe )
 		goto _test_eof35;
 case 35:
-#line 754 "http11_parser.h"
+#line 754 "unicorn_http.h"
 	switch( (*p) ) {
 		case 84: goto tr57;
 		case 116: goto tr57;
 	}
 	goto st0;
 tr57:
-#line 68 "http11_parser.rl"
+#line 68 "unicorn_http.rl"
 	{ downcase_char((char *)p); }
 	goto st36;
 st36:
 	if ( ++p == pe )
 		goto _test_eof36;
 case 36:
-#line 768 "http11_parser.h"
+#line 768 "unicorn_http.h"
 	switch( (*p) ) {
 		case 80: goto tr58;
 		case 112: goto tr58;
 	}
 	goto st0;
 tr58:
-#line 68 "http11_parser.rl"
+#line 68 "unicorn_http.rl"
 	{ downcase_char((char *)p); }
 	goto st37;
 st37:
 	if ( ++p == pe )
 		goto _test_eof37;
 case 37:
-#line 782 "http11_parser.h"
+#line 782 "unicorn_http.h"
 	switch( (*p) ) {
 		case 58: goto tr59;
 		case 83: goto tr60;
@@ -786,14 +786,14 @@ case 37:
 	}
 	goto st0;
 tr59:
-#line 80 "http11_parser.rl"
+#line 80 "unicorn_http.rl"
 	{ scheme(parser->data, PTR_TO(mark), LEN(mark, p)); }
 	goto st38;
 st38:
 	if ( ++p == pe )
 		goto _test_eof38;
 case 38:
-#line 797 "http11_parser.h"
+#line 797 "unicorn_http.h"
 	if ( (*p) == 47 )
 		goto st39;
 	goto st0;
@@ -823,14 +823,14 @@ case 40:
 		goto tr63;
 	goto st0;
 tr63:
-#line 64 "http11_parser.rl"
+#line 64 "unicorn_http.rl"
 	{MARK(mark, p); }
 	goto st41;
 st41:
 	if ( ++p == pe )
 		goto _test_eof41;
 case 41:
-#line 834 "http11_parser.h"
+#line 834 "unicorn_http.h"
 	switch( (*p) ) {
 		case 47: goto tr65;
 		case 58: goto st42;
@@ -855,14 +855,14 @@ case 42:
 		goto st42;
 	goto st0;
 tr60:
-#line 68 "http11_parser.rl"
+#line 68 "unicorn_http.rl"
 	{ downcase_char((char *)p); }
 	goto st43;
 st43:
 	if ( ++p == pe )
 		goto _test_eof43;
 case 43:
-#line 866 "http11_parser.h"
+#line 866 "unicorn_http.h"
 	if ( (*p) == 58 )
 		goto tr59;
 	goto st0;
@@ -1265,7 +1265,7 @@ case 62:
 	_out: {}
 	}
 
-#line 138 "http11_parser.rl"
+#line 138 "unicorn_http.rl"
 
   if (!http_parser_has_error(parser))
     parser->cs = cs;
@@ -1286,4 +1286,4 @@ static int http_parser_has_error(http_parser *parser) {
 static int http_parser_is_finished(http_parser *parser) {
   return parser->cs == http_parser_first_final;
 }
-#endif /* http11_parser_h */
+#endif /* unicorn_http_h */

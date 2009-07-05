@@ -1,6 +1,6 @@
 require 'test/unit'
 require 'unicorn'
-require 'unicorn/http11'
+require 'unicorn_http'
 require 'unicorn/trailer_parser'
 
 class TestTrailerParser < Test::Unit::TestCase

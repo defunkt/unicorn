@@ -7,7 +7,7 @@
 /doc
 /local.mk
 /test/install-*
-ext/unicorn/http11/Makefile
+ext/unicorn_http/Makefile
 log/
 pkg/
 /vendor

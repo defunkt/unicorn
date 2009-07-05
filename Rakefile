@@ -6,9 +6,9 @@ Echoe.new("unicorn") do |p|
   p.summary = "Rack HTTP server for Unix, fast clients and nothing else"
   p.author = "Eric Wong"
   p.email = "normalperson@yhbt.net"
-  p.clean_pattern = ['ext/unicorn/http11/*.{bundle,so,o,obj,pdb,lib,def,exp}',
+  p.clean_pattern = ['ext/unicorn_http/*.{bundle,so,o,obj,pdb,lib,def,exp}',
                      'lib/*.{bundle,so,o,obj,pdb,lib,def,exp}',
-                     'ext/unicorn/http11/Makefile',
+                     'ext/unicorn_http/Makefile',
                      'pkg', 'lib/*.bundle', '*.gem',
                      'site/output', '.config', 'coverage',
                      'test_*.log', 'log', 'doc']
@@ -29,10 +29,10 @@ end
 
 desc "Rebuild the Ragel sources"
 task :ragel do
-  Dir.chdir "ext/unicorn/http11" do
-    target = "http11_parser.c"
+  Dir.chdir "ext/unicorn_http" do
+    target = "unicorn_http.c"
     File.unlink target if File.exist? target
-    sh "ragel http11_parser.rl -C -G2 -o #{target}"
+    sh "ragel unicorn_http.rl -C -G2 -o #{target}"
     raise "Failed to build C source" unless File.exist? target
   end
 end

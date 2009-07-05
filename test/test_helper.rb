@@ -27,7 +27,7 @@ require 'tempfile'
 require 'fileutils'
 require 'logger'
 require 'unicorn'
-require 'unicorn/http11'
+require 'unicorn_http'
 
 if ENV['DEBUG']
   require 'ruby-debug'

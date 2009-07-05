@@ -7,7 +7,7 @@
 #include "ext_help.h"
 #include <assert.h>
 #include <string.h>
-#include "http11_parser.h"
+#include "unicorn_http.h"
 
 static http_parser *data_get(VALUE self)
 {
@@ -421,7 +421,7 @@ static VALUE HttpParser_execute(VALUE self, VALUE req_hash, VALUE data)
   rb_raise(eHttpParserError, "Requested start is after data buffer end.");
 }
 
-void Init_http11(void)
+void Init_unicorn_http(void)
 {
   mUnicorn = rb_define_module("Unicorn");
 

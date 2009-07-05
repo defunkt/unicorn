@@ -2,8 +2,8 @@
  * Copyright (c) 2005 Zed A. Shaw
  * You can redistribute it and/or modify it under the same terms as Ruby.
  */
-#ifndef http11_parser_h
-#define http11_parser_h
+#ifndef unicorn_http_h
+#define unicorn_http_h
 
 #include <sys/types.h>
 
@@ -105,7 +105,7 @@ static void downcase_char(char *c)
     fbreak;
   }
 
-  include http_parser_common "http11_parser_common.rl";
+  include unicorn_http_common "unicorn_http_common.rl";
 }%%
 
 /** Data **/
@@ -155,4 +155,4 @@ static int http_parser_has_error(http_parser *parser) {
 static int http_parser_is_finished(http_parser *parser) {
   return parser->cs == http_parser_first_final;
 }
-#endif /* http11_parser_h */
+#endif /* unicorn_http_h */

@@ -1,6 +1,6 @@
 %%{
-  
-  machine http_parser_common;
+
+  machine unicorn_http_common;
 
 #### HTTP PROTOCOL GRAMMAR
 # line endings

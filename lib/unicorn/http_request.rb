@@ -1,7 +1,7 @@
 require 'stringio'
 
 # compiled extension
-require 'unicorn/http11'
+require 'unicorn_http'
 
 module Unicorn
   class HttpRequest

@@ -1,7 +1,7 @@
 # Copyright (c) 2009 Eric Wong
 # You can redistribute it and/or modify it under the same terms as Ruby.
 require 'unicorn'
-require 'unicorn/http11'
+require 'unicorn_http'
 
 # Eventually I should integrate this into HttpParser...
 module Unicorn

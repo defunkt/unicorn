@@ -2,7 +2,7 @@
 # You can redistribute it and/or modify it under the same terms as Ruby.
 
 require 'unicorn'
-require 'unicorn/http11'
+require 'unicorn_http'
 
 module Unicorn
   class ChunkedReader

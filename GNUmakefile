@@ -27,30 +27,30 @@ T_n_log := $(subst .n,$(log_suffix),$(T_n))
 T_r_log := $(subst .r,$(log_suffix),$(T_r))
 test_prefix = $(CURDIR)/test/install-$(RUBY_VERSION)
 
-ext := ext/unicorn/http11
-c_files := $(addprefix $(ext)/,ext_help.h http11.c http11_parser.h)
-rl_files := $(addprefix $(ext)/,http11_parser.rl http11_parser_common.rl)
+ext := ext/unicorn_http
+c_files := $(addprefix $(ext)/,ext_help.h unicorn_http.c unicorn_http.h)
+rl_files := $(addprefix $(ext)/,unicorn_http.rl unicorn_http_common.rl)
 rb_files := $(shell grep '^\(bin\|lib\)' Manifest)
 inst_deps := $(c_files) $(rb_files)
 
-ragel: $(ext)/http11_parser.h
-$(ext)/http11_parser.h: $(rl_files)
-	cd $(@D) && $(ragel) http11_parser.rl -C $(RLFLAGS) -o $(@F)
+ragel: $(ext)/unicorn_http.h
+$(ext)/unicorn_http.h: $(rl_files)
+	cd $(@D) && $(ragel) unicorn_http.rl -C $(RLFLAGS) -o $(@F)
 	$(ruby) -i -p -e '$$_.gsub!(%r{[ \t]*$$},"")' $@
 $(ext)/Makefile: $(ext)/extconf.rb $(c_files)
 	cd $(@D) && $(ruby) extconf.rb
-$(ext)/http11.$(DLEXT): $(ext)/Makefile
+$(ext)/unicorn_http.$(DLEXT): $(ext)/Makefile
 	$(MAKE) -C $(@D)
-lib/unicorn/http11.$(DLEXT): $(ext)/http11.$(DLEXT)
+lib/unicorn_http.$(DLEXT): $(ext)/unicorn_http.$(DLEXT)
 	@mkdir -p lib
 	install -m644 $< $@
-http11: lib/unicorn/http11.$(DLEXT)
+http: lib/unicorn_http.$(DLEXT)
 
 $(test_prefix)/.stamp: $(inst_deps)
 	mkdir -p $(test_prefix)/.ccache
 	tar c bin ext lib GNUmakefile Manifest | (cd $(test_prefix) && tar x)
 	$(MAKE) -C $(test_prefix) clean
-	$(MAKE) -C $(test_prefix) http11 shebang
+	$(MAKE) -C $(test_prefix) http shebang
 	> $@
 
 bins := $(wildcard bin/*)
@@ -119,7 +119,7 @@ prep_setup_rb := @-$(RM) $(setup_rb_files);$(MAKE) -C $(ext) clean
 
 clean:
 	-$(MAKE) -C $(ext) clean
-	$(RM) $(ext)/Makefile lib/unicorn/http11.$(DLEXT)
+	$(RM) $(ext)/Makefile lib/unicorn_http.$(DLEXT)
 	$(RM) $(setup_rb_files) $(t_log)
 	$(RM) -r $(test_prefix)
 
