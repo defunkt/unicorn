@@ -1,3 +1,4 @@
+v0.8.2 - socket handling bugfixes and usability tweaks
 v0.8.1 - safer timeout handling, more consistent reload behavior
 v0.8.0 - enforce Rack dependency, minor performance improvements and fixes
 v0.7.1 - minor fixes, cleanups and documentation improvements
