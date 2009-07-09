@@ -436,6 +436,7 @@ module Unicorn
     # once a client is accepted, it is processed in its entirety here
     # in 3 easy steps: read request, call app, write app response
     def process_client(app, client)
+      client.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       HttpResponse.write(client, app.call(REQUEST.read(client)))
     # if we get any error, try to write something back to the client
     # assuming we haven't closed the socket, but don't get hung up
