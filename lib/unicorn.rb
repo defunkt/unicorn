@@ -444,6 +444,7 @@ module Unicorn
     # once a client is accepted, it is processed in its entirety here
     # in 3 easy steps: read request, call app, write app response
     def process_client(client)
+      client.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       response = app.call(env = REQUEST.read(client))
 
       if 100 == response.first.to_i
