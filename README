@@ -48,6 +48,12 @@
   each worker process can also bind to a private port via the
   after_fork hook for easy debugging.
 
+== Versions
+
+{Stable v0.8.2}[http://git.bogomips.org/cgit/unicorn.git/tag/?id=v0.8.2]
+
+{Development v0.9.1}[http://git.bogomips.org/cgit/unicorn.git/tag/?id=v0.9.1]
+
 == License
 
 Unicorn is copyright 2009 Eric Wong and contributors.
@@ -61,8 +67,8 @@ Unicorn is 100% Free Software.
 
 == Install
 
-The library consists of a C extension so you'll need a C compiler or at
-least a friend who can build it for you.
+The library consists of a C extension so you'll need a C compiler
+and Ruby development libraries/headers.
 
 You may download the tarball from the Mongrel project page on Rubyforge
 and run setup.rb after unpacking it:
@@ -71,7 +77,7 @@ http://rubyforge.org/frs/?group_id=1306
 
 You may also install it via Rubygems on Rubyforge:
 
-  gem install unicorn
+  gem install unicorn -v0.8.2
 
 You can get the latest source via git from the following locations
 (these versions may not be stable):
