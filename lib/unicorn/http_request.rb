@@ -81,11 +81,9 @@ module Unicorn
       PARAMS[Const::RACK_INPUT] = if (body = PARAMS.delete(:http_body))
         length = PARAMS[Const::CONTENT_LENGTH].to_i
 
-        if te = PARAMS[Const::HTTP_TRANSFER_ENCODING]
-          if /\Achunked\z/i =~ te
-            socket = ChunkedReader.new(PARAMS, socket, body)
-            length = body = nil
-          end
+        if /\Achunked\z/i =~ PARAMS[Const::HTTP_TRANSFER_ENCODING]
+          socket = ChunkedReader.new(PARAMS, socket, body)
+          length = body = nil
         end
 
         TeeInput.new(socket, length, body)
