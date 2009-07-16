@@ -32,23 +32,6 @@ module Unicorn
       buf
     end
 
-    def gets
-      line = nil
-      begin
-        line = readpartial(Const::CHUNK_SIZE)
-        begin
-          if line.sub!(%r{\A(.*?#{$/})}, Z)
-            @chunk_left += line.size
-            @buf = @buf ? (line << @buf) : line
-            return $1.dup
-          end
-          line << readpartial(Const::CHUNK_SIZE)
-        end while true
-      rescue EOFError
-        return line
-      end
-    end
-
   private
 
     def last_block(max = nil)

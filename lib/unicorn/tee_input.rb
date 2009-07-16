@@ -73,21 +73,24 @@ module Unicorn
       @input or return @tmp.gets
       nil == $/ and return read
 
-      line = nil
-      if @tmp.pos < @tmp.stat.size
-        line = @tmp.gets # cannot be nil here
-        $/ == line[-$/.size, $/.size] and return line
-
-        # half the line was already read, and the rest of has not been read
-        if buf = @input.gets
-          @tmp.write(buf)
-          line << buf
-        else
-          @input = nil
-        end
-      elsif line = @input.gets
-        @tmp.write(line)
+      orig_size = @tmp.stat.size
+      if @tmp.pos == orig_size
+        tee(Const::CHUNK_SIZE, Z.dup) or return nil
+        @tmp.seek(orig_size)
       end
+
+      line = @tmp.gets # cannot be nil here since size > pos
+      $/ == line[-$/.size, $/.size] and return line
+
+      # unlikely, if we got here, then @tmp is at EOF
+      begin
+        orig_size = @tmp.stat.size
+        tee(Const::CHUNK_SIZE, Z.dup) or break
+        @tmp.seek(orig_size)
+        line << @tmp.gets
+        $/ == line[-$/.size, $/.size] and return line
+        # @tmp is at EOF again here, retry the loop
+      end while true
 
       line
     end
