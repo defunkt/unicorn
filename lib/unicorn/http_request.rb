@@ -90,7 +90,7 @@ module Unicorn
 
         TeeInput.new(socket, length, body)
       else
-        NULL_IO.closed? ? NULL_IO.reopen(Z) : NULL_IO
+        NULL_IO
       end
 
       PARAMS.update(DEFAULTS)
