@@ -43,20 +43,21 @@ class TestUtil < Test::Unit::TestCase
     tmp = Tempfile.new(nil)
     tmp_path = tmp.path.dup.freeze
     Encoding.list.each { |encoding|
-      tmp.reopen(tmp_path, "a:#{encoding.to_s}")
-      tmp.sync = true
-      assert_equal encoding, tmp.external_encoding
-      assert_nil tmp.internal_encoding
-      File.unlink(tmp_path)
-      assert ! File.exist?(tmp_path)
-      Unicorn::Util.reopen_logs
-      assert_equal tmp_path, tmp.path
-      assert File.exist?(tmp_path)
-      assert_equal tmp.stat.inspect, File.stat(tmp_path).inspect
-      assert_equal encoding, tmp.external_encoding
-      assert_nil tmp.internal_encoding
-      assert_equal(EXPECT_FLAGS, EXPECT_FLAGS & tmp.fcntl(Fcntl::F_GETFL))
-      assert tmp.sync
+      File.open(tmp_path, "a:#{encoding.to_s}") { |fp|
+        fp.sync = true
+        assert_equal encoding, fp.external_encoding
+        assert_nil fp.internal_encoding
+        File.unlink(tmp_path)
+        assert ! File.exist?(tmp_path)
+        Unicorn::Util.reopen_logs
+        assert_equal tmp_path, fp.path
+        assert File.exist?(tmp_path)
+        assert_equal fp.stat.inspect, File.stat(tmp_path).inspect
+        assert_equal encoding, fp.external_encoding
+        assert_nil fp.internal_encoding
+        assert_equal(EXPECT_FLAGS, EXPECT_FLAGS & fp.fcntl(Fcntl::F_GETFL))
+        assert fp.sync
+      }
     }
   end if STDIN.respond_to?(:external_encoding)
 
@@ -66,20 +67,21 @@ class TestUtil < Test::Unit::TestCase
     Encoding.list.each { |ext|
       Encoding.list.each { |int|
         next if ext == int
-        tmp.reopen(tmp_path, "a:#{ext.to_s}:#{int.to_s}")
-        tmp.sync = true
-        assert_equal ext, tmp.external_encoding
-        assert_equal int, tmp.internal_encoding
-        File.unlink(tmp_path)
-        assert ! File.exist?(tmp_path)
-        Unicorn::Util.reopen_logs
-        assert_equal tmp_path, tmp.path
-        assert File.exist?(tmp_path)
-        assert_equal tmp.stat.inspect, File.stat(tmp_path).inspect
-        assert_equal ext, tmp.external_encoding
-        assert_equal int, tmp.internal_encoding
-        assert_equal(EXPECT_FLAGS, EXPECT_FLAGS & tmp.fcntl(Fcntl::F_GETFL))
-        assert tmp.sync
+        File.open(tmp_path, "a:#{ext.to_s}:#{int.to_s}") { |fp|
+          fp.sync = true
+          assert_equal ext, fp.external_encoding
+          assert_equal int, fp.internal_encoding
+          File.unlink(tmp_path)
+          assert ! File.exist?(tmp_path)
+          Unicorn::Util.reopen_logs
+          assert_equal tmp_path, fp.path
+          assert File.exist?(tmp_path)
+          assert_equal fp.stat.inspect, File.stat(tmp_path).inspect
+          assert_equal ext, fp.external_encoding
+          assert_equal int, fp.internal_encoding
+          assert_equal(EXPECT_FLAGS, EXPECT_FLAGS & fp.fcntl(Fcntl::F_GETFL))
+          assert fp.sync
+        }
       }
     }
   end if STDIN.respond_to?(:external_encoding)
