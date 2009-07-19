@@ -48,7 +48,7 @@ http: lib/unicorn_http.$(DLEXT)
 
 $(test_prefix)/.stamp: $(inst_deps)
 	mkdir -p $(test_prefix)/.ccache
-	tar c bin ext lib GNUmakefile Manifest | (cd $(test_prefix) && tar x)
+	tar c `cat Manifest` | (cd $(test_prefix) && tar x)
 	$(MAKE) -C $(test_prefix) clean
 	$(MAKE) -C $(test_prefix) http shebang
 	> $@
@@ -92,14 +92,14 @@ run_test = $(quiet_pre) \
 %.n: arg = $(subst .n,,$(subst --, -n ,$@))
 %.n: t = $(subst .n,$(log_suffix),$@)
 %.n: export PATH := $(test_prefix)/bin:$(PATH)
-%.n: export RUBYLIB := $(test_prefix)/lib:$(RUBYLIB)
+%.n: export RUBYLIB := $(test_prefix):$(test_prefix)/lib:$(RUBYLIB)
 %.n: $(test_prefix)/.stamp
 	$(run_test)
 
 $(T): arg = $@
 $(T): t = $(subst .rb,$(log_suffix),$@)
 $(T): export PATH := $(test_prefix)/bin:$(PATH)
-$(T): export RUBYLIB := $(test_prefix)/lib:$(RUBYLIB)
+$(T): export RUBYLIB := $(test_prefix):$(test_prefix)/lib:$(RUBYLIB)
 $(T): $(test_prefix)/.stamp
 	$(run_test)
 
@@ -145,7 +145,7 @@ $(T_r).%.r: rv = $(subst .r,,$(subst $(T_r).,,$@))
 $(T_r).%.r: extra = ' 'v$(rv)
 $(T_r).%.r: arg = $(T_r)
 $(T_r).%.r: export PATH := $(test_prefix)/bin:$(PATH)
-$(T_r).%.r: export RUBYLIB := $(test_prefix)/lib:$(RUBYLIB)
+$(T_r).%.r: export RUBYLIB := $(test_prefix):$(test_prefix)/lib:$(RUBYLIB)
 $(T_r).%.r: export UNICORN_RAILS_TEST_VERSION = $(rv)
 $(T_r).%.r: export RAILS_GIT_REPO = $(CURDIR)/$(rails_git)
 $(T_r).%.r: $(test_prefix)/.stamp $(rails_git)/info/cloned-stamp
