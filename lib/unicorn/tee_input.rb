@@ -1,10 +1,8 @@
 # Copyright (c) 2009 Eric Wong
 # You can redistribute it and/or modify it under the same terms as Ruby.
 
-require 'tempfile'
-
 # acts like tee(1) on an input input to provide a input-like stream
-# while providing rewindable semantics through a Tempfile/StringIO
+# while providing rewindable semantics through a File/StringIO
 # backing store.  On the first pass, the input is only read on demand
 # so your Rack application can use input notification (upload progress
 # and like).  This should fully conform to the Rack::InputWrapper
@@ -16,10 +14,7 @@ module Unicorn
   class TeeInput
 
     def initialize(input, size, body)
-      @tmp = Tempfile.new(nil)
-      @tmp.unlink
-      @tmp.binmode
-      @tmp.sync = true
+      @tmp = Unicorn::Util.tmpio
 
       if body
         @tmp.write(body)

@@ -1,5 +1,4 @@
 require 'fcntl'
-require 'tempfile'
 require 'unicorn/socket_helper'
 autoload :Rack, 'rack'
 
@@ -66,7 +65,7 @@ module Unicorn
       0 => $0.dup,
     }
 
-    class Worker < Struct.new(:nr, :tempfile)
+    class Worker < Struct.new(:nr, :tmp)
       # worker objects may be compared to just plain numbers
       def ==(other_nr)
         self.nr == other_nr
@@ -332,7 +331,7 @@ module Unicorn
             self.pid = pid.chomp('.oldbin') if pid
             proc_name 'master'
           else
-            worker = WORKERS.delete(wpid) and worker.tempfile.close rescue nil
+            worker = WORKERS.delete(wpid) and worker.tmp.close rescue nil
             logger.info "reaped #{status.inspect} " \
                         "worker=#{worker.nr rescue 'unknown'}"
           end
@@ -392,16 +391,16 @@ module Unicorn
     end
 
     # forcibly terminate all workers that haven't checked in in timeout
-    # seconds.  The timeout is implemented using an unlinked tempfile
+    # seconds.  The timeout is implemented using an unlinked File
     # shared between the parent process and each worker.  The worker
-    # runs File#chmod to modify the ctime of the tempfile.  If the ctime
+    # runs File#chmod to modify the ctime of the File.  If the ctime
     # is stale for >timeout seconds, then we'll kill the corresponding
     # worker.
     def murder_lazy_workers
       diff = stat = nil
       WORKERS.dup.each_pair do |wpid, worker|
         stat = begin
-          worker.tempfile.stat
+          worker.tmp.stat
         rescue => e
           logger.warn "worker=#{worker.nr} PID:#{wpid} stat error: #{e.inspect}"
           kill_worker(:QUIT, wpid)
@@ -425,9 +424,7 @@ module Unicorn
           SIG_QUEUE << :QUIT # forcibly emulate SIGQUIT
           return
         end
-        tempfile = Tempfile.new(nil) # as short as possible to save dir space
-        tempfile.unlink # don't allow other processes to find or see it
-        worker = Worker.new(worker_nr, tempfile)
+        worker = Worker.new(worker_nr, Unicorn::Util.tmpio)
         before_fork.call(self, worker)
         WORKERS[fork { worker_loop(worker) }] = worker
       end
@@ -482,10 +479,10 @@ module Unicorn
       proc_name "worker[#{worker.nr}]"
       START_CTX.clear
       init_self_pipe!
-      WORKERS.values.each { |other| other.tempfile.close! rescue nil }
+      WORKERS.values.each { |other| other.tmp.close rescue nil }
       WORKERS.clear
       LISTENERS.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
-      worker.tempfile.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+      worker.tmp.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       after_fork.call(self, worker) # can drop perms
       self.timeout /= 2.0 # halve it for select()
       build_app! unless preload_app
@@ -505,7 +502,7 @@ module Unicorn
       ppid = master_pid
       init_worker_process(worker)
       nr = 0 # this becomes negative if we need to reopen logs
-      alive = worker.tempfile # tempfile is our lifeline to the master process
+      alive = worker.tmp # tmp is our lifeline to the master process
       ready = LISTENERS
       t = ti = 0
 
@@ -570,7 +567,7 @@ module Unicorn
       begin
         Process.kill(signal, wpid)
       rescue Errno::ESRCH
-        worker = WORKERS.delete(wpid) and worker.tempfile.close rescue nil
+        worker = WORKERS.delete(wpid) and worker.tmp.close rescue nil
       end
     end
 

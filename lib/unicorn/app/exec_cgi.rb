@@ -42,11 +42,8 @@ module Unicorn::App
 
     # Calls the app
     def call(env)
-      out, err = Tempfile.new(nil), Tempfile.new(nil)
-      out.unlink
-      err.unlink
+      out, err = Unicorn::Util.tmpio, Unicorn::Util.tmpio
       inp = force_file_input(env)
-      out.sync = err.sync = true
       pid = fork { run_child(inp, out, err, env) }
       inp.close
       pid, status = Process.waitpid2(pid)
@@ -125,10 +122,7 @@ module Unicorn::App
       if inp.size == 0 # inp could be a StringIO or StringIO-like object
         ::File.open('/dev/null', 'rb')
       else
-        tmp = Tempfile.new(nil)
-        tmp.unlink
-        tmp.binmode
-        tmp.sync = true
+        tmp = Unicorn::Util.tmpio
 
         buf = Z.dup
         while inp.read(CHUNK_SIZE, buf)
