@@ -124,7 +124,7 @@ module Unicorn::App
       else
         tmp = Unicorn::Util.tmpio
 
-        buf = Z.dup
+        buf = Unicorn::Z.dup
         while inp.read(CHUNK_SIZE, buf)
           tmp.syswrite(buf)
         end
