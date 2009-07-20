@@ -121,12 +121,12 @@ module Unicorn::App
       if inp.respond_to?(:fileno) && Integer === inp.fileno
         inp
       elsif inp.size == 0 # inp could be a StringIO or StringIO-like object
-        ::File.open('/dev/null')
+        ::File.open('/dev/null', 'rb')
       else
         tmp = Unicorn::Util.tmpio
 
         # Rack::Lint::InputWrapper doesn't allow sysread :(
-        buf = ''
+        buf = Unicorn::Z.dup
         while inp.read(CHUNK_SIZE, buf)
           tmp.syswrite(buf)
         end
