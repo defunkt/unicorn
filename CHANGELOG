@@ -1,3 +1,4 @@
+v0.8.3 - Ruby 1.9.2 preview1 compatibility
 v0.8.2 - socket handling bugfixes and usability tweaks
 v0.8.1 - safer timeout handling, more consistent reload behavior
 v0.8.0 - enforce Rack dependency, minor performance improvements and fixes
