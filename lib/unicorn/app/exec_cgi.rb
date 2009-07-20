@@ -42,11 +42,8 @@ module Unicorn::App
 
     # Calls the app
     def call(env)
-      out, err = Tempfile.new(''), Tempfile.new('')
-      out.unlink
-      err.unlink
+      out, err = Unicorn::Util.tmpio, Unicorn::Util.tmpio
       inp = force_file_input(env)
-      inp.sync = out.sync = err.sync = true
       pid = fork { run_child(inp, out, err, env) }
       inp.close
       pid, status = Process.waitpid2(pid)
@@ -126,9 +123,7 @@ module Unicorn::App
       elsif inp.size == 0 # inp could be a StringIO or StringIO-like object
         ::File.open('/dev/null')
       else
-        tmp = Tempfile.new('')
-        tmp.unlink
-        tmp.binmode
+        tmp = Unicorn::Util.tmpio
 
         # Rack::Lint::InputWrapper doesn't allow sysread :(
         buf = ''
