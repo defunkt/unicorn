@@ -7,11 +7,11 @@
 #include <string.h>
 #include "unicorn_http.h"
 
-static http_parser *data_get(VALUE self)
+static struct http_parser *data_get(VALUE self)
 {
-  http_parser *http;
+  struct http_parser *http;
 
-  Data_Get_Struct(self, http_parser, http);
+  Data_Get_Struct(self, struct http_parser, http);
   assert(http);
   return http;
 }
@@ -308,8 +308,8 @@ static void header_done(VALUE req, const char *at, size_t length)
 
 static VALUE HttpParser_alloc(VALUE klass)
 {
-  http_parser *hp;
-  return Data_Make_Struct(klass, http_parser, NULL, NULL, hp);
+  struct http_parser *http;
+  return Data_Make_Struct(klass, struct http_parser, NULL, NULL, http);
 }
 
 
@@ -357,7 +357,7 @@ static VALUE HttpParser_reset(VALUE self)
 
 static VALUE HttpParser_execute(VALUE self, VALUE req, VALUE data)
 {
-  http_parser *http = data_get(self);
+  struct http_parser *http = data_get(self);
   char *dptr = RSTRING_PTR(data);
   long dlen = RSTRING_LEN(data);
 

@@ -21,7 +21,7 @@ static void query_string(VALUE req, const char *at, size_t length);
 static void http_version(VALUE req, const char *at, size_t length);
 static void header_done(VALUE req, const char *at, size_t length);
 
-typedef struct http_parser {
+struct http_parser {
   int cs;
   union {
     size_t body;
@@ -31,10 +31,10 @@ typedef struct http_parser {
   } start;
   size_t mark;
   size_t field_len;
-} http_parser;
+};
 
-static int http_parser_has_error(http_parser *parser);
-static int http_parser_is_finished(http_parser *parser);
+static int http_parser_has_error(struct http_parser *parser);
+static int http_parser_is_finished(struct http_parser *parser);
 
 /*
  * capitalizes all lower-case ASCII characters,
@@ -103,7 +103,7 @@ static void downcase_char(char *c)
 /** Data **/
 %% write data;
 
-static void http_parser_init(http_parser *parser) {
+static void http_parser_init(struct http_parser *parser) {
   int cs = 0;
   memset(parser, 0, sizeof(*parser));
   %% write init;
@@ -112,7 +112,7 @@ static void http_parser_init(http_parser *parser) {
 
 /** exec **/
 static void http_parser_execute(
-  http_parser *parser, VALUE req, const char *buffer, size_t len)
+  struct http_parser *parser, VALUE req, const char *buffer, size_t len)
 {
   const char *p, *pe;
   int cs = parser->cs;
@@ -138,11 +138,11 @@ static void http_parser_execute(
   assert(parser->field_len <= len && "field has length longer than whole buffer");
 }
 
-static int http_parser_has_error(http_parser *parser) {
+static int http_parser_has_error(struct http_parser *parser) {
   return parser->cs == http_parser_error;
 }
 
-static int http_parser_is_finished(http_parser *parser) {
+static int http_parser_is_finished(struct http_parser *parser) {
   return parser->cs == http_parser_first_final;
 }
 #endif /* unicorn_http_h */
