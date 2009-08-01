@@ -3,10 +3,11 @@
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
-#ifdef DEBUG
-#define TRACE()  fprintf(stderr, "> %s:%d:%s\n", __FILE__, __LINE__, __FUNCTION__)
-#else
-#define TRACE() 
+#ifndef RSTRING_PTR
+#define RSTRING_PTR(s) (RSTRING(s)->ptr)
+#endif
+#ifndef RSTRING_LEN
+#define RSTRING_LEN(s) (RSTRING(s)->len)
 #endif
 
 #endif

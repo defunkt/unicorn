@@ -5,30 +5,32 @@
 #ifndef unicorn_http_h
 #define unicorn_http_h
 
+#include "ruby.h"
+#include "ext_help.h"
 #include <sys/types.h>
 
-static void http_field(void *data, const char *field,
+static void http_field(VALUE req, const char *field,
                        size_t flen, const char *value, size_t vlen);
-static void request_method(void *data, const char *at, size_t length);
-static void scheme(void *data, const char *at, size_t length);
-static void host(void *data, const char *at, size_t length);
-static void request_uri(void *data, const char *at, size_t length);
-static void fragment(void *data, const char *at, size_t length);
-static void request_path(void *data, const char *at, size_t length);
-static void query_string(void *data, const char *at, size_t length);
-static void http_version(void *data, const char *at, size_t length);
-static void header_done(void *data, const char *at, size_t length);
+static void request_method(VALUE req, const char *at, size_t length);
+static void scheme(VALUE req, const char *at, size_t length);
+static void host(VALUE req, const char *at, size_t length);
+static void request_uri(VALUE req, const char *at, size_t length);
+static void fragment(VALUE req, const char *at, size_t length);
+static void request_path(VALUE req, const char *at, size_t length);
+static void query_string(VALUE req, const char *at, size_t length);
+static void http_version(VALUE req, const char *at, size_t length);
+static void header_done(VALUE req, const char *at, size_t length);
 
 typedef struct http_parser {
   int cs;
-  size_t body_start;
-  size_t nread;
+  union {
+    size_t body;
+    size_t field;
+    size_t query;
+    size_t offset;
+  } start;
   size_t mark;
-  size_t field_start;
   size_t field_len;
-  size_t query_start;
-
-  void *data;
 } http_parser;
 
 static int http_parser_has_error(http_parser *parser);
@@ -63,45 +65,35 @@ static void downcase_char(char *c)
 
   action mark {MARK(mark, fpc); }
 
-  action start_field { MARK(field_start, fpc); }
+  action start_field { MARK(start.field, fpc); }
   action snake_upcase_field { snake_upcase_char((char *)fpc); }
   action downcase_char { downcase_char((char *)fpc); }
   action write_field {
-    parser->field_len = LEN(field_start, fpc);
+    parser->field_len = LEN(start.field, fpc);
   }
 
   action start_value { MARK(mark, fpc); }
   action write_value {
-    http_field(parser->data, PTR_TO(field_start), parser->field_len, PTR_TO(mark), LEN(mark, fpc));
+    http_field(req, PTR_TO(start.field), parser->field_len,
+               PTR_TO(mark), LEN(mark, fpc));
   }
-  action request_method {
-    request_method(parser->data, PTR_TO(mark), LEN(mark, fpc));
-  }
-  action scheme { scheme(parser->data, PTR_TO(mark), LEN(mark, fpc)); }
-  action host { host(parser->data, PTR_TO(mark), LEN(mark, fpc)); }
-  action request_uri {
-    request_uri(parser->data, PTR_TO(mark), LEN(mark, fpc));
-  }
-  action fragment {
-    fragment(parser->data, PTR_TO(mark), LEN(mark, fpc));
-  }
+  action request_method { request_method(req, PTR_TO(mark), LEN(mark, fpc)); }
+  action scheme { scheme(req, PTR_TO(mark), LEN(mark, fpc)); }
+  action host { host(req, PTR_TO(mark), LEN(mark, fpc)); }
+  action request_uri { request_uri(req, PTR_TO(mark), LEN(mark, fpc)); }
+  action fragment { fragment(req, PTR_TO(mark), LEN(mark, fpc)); }
 
-  action start_query {MARK(query_start, fpc); }
+  action start_query {MARK(start.query, fpc); }
   action query_string {
-    query_string(parser->data, PTR_TO(query_start), LEN(query_start, fpc));
+    query_string(req, PTR_TO(start.query), LEN(start.query, fpc));
   }
 
-  action http_version {
-    http_version(parser->data, PTR_TO(mark), LEN(mark, fpc));
-  }
-
-  action request_path {
-    request_path(parser->data, PTR_TO(mark), LEN(mark,fpc));
-  }
+  action http_version { http_version(req, PTR_TO(mark), LEN(mark, fpc)); }
+  action request_path { request_path(req, PTR_TO(mark), LEN(mark,fpc)); }
 
   action done {
-    parser->body_start = fpc - buffer + 1;
-    header_done(parser->data, fpc + 1, pe - fpc - 1);
+    parser->start.body = fpc - buffer + 1;
+    header_done(req, fpc + 1, pe - fpc - 1);
     fbreak;
   }
 
@@ -120,11 +112,11 @@ static void http_parser_init(http_parser *parser) {
 
 /** exec **/
 static void http_parser_execute(
-  http_parser *parser, const char *buffer, size_t len)
+  http_parser *parser, VALUE req, const char *buffer, size_t len)
 {
   const char *p, *pe;
   int cs = parser->cs;
-  size_t off = parser->nread;
+  size_t off = parser->start.offset;
 
   assert(off <= len && "offset past end of buffer");
 
@@ -138,14 +130,12 @@ static void http_parser_execute(
 
   if (!http_parser_has_error(parser))
     parser->cs = cs;
-  parser->nread += p - (buffer + off);
+  parser->start.offset = p - buffer;
 
   assert(p <= pe && "buffer overflow after parsing execute");
-  assert(parser->nread <= len && "nread longer than length");
-  assert(parser->body_start <= len && "body starts after buffer end");
+  assert(parser->start.offset <= len && "start.offset longer than length");
   assert(parser->mark < len && "mark is after buffer end");
   assert(parser->field_len <= len && "field has length longer than whole buffer");
-  assert(parser->field_start < len && "field starts after buffer end");
 }
 
 static int http_parser_has_error(http_parser *parser) {

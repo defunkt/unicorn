@@ -3,8 +3,6 @@
  * Copyright (c) 2005 Zed A. Shaw
  * You can redistribute it and/or modify it under the same terms as Ruby.
  */
-#include "ruby.h"
-#include "ext_help.h"
 #include <assert.h>
 #include <string.h>
 #include "unicorn_http.h"
@@ -14,17 +12,9 @@ static http_parser *data_get(VALUE self)
   http_parser *http;
 
   Data_Get_Struct(self, http_parser, http);
-  if (!http)
-    rb_raise(rb_eArgError, "NULL found for http when shouldn't be.");
+  assert(http);
   return http;
 }
-
-#ifndef RSTRING_PTR
-#define RSTRING_PTR(s) (RSTRING(s)->ptr)
-#endif
-#ifndef RSTRING_LEN
-#define RSTRING_LEN(s) (RSTRING(s)->len)
-#endif
 
 static VALUE mUnicorn;
 static VALUE cHttpParser;
@@ -169,10 +159,9 @@ static VALUE find_common_field_value(const char *field, size_t flen)
   return Qnil;
 }
 
-static void http_field(void *data, const char *field,
+static void http_field(VALUE req, const char *field,
                        size_t flen, const char *value, size_t vlen)
 {
-  VALUE req = (VALUE)data;
   VALUE f = Qnil;
 
   VALIDATE_MAX_LENGTH(flen, FIELD_NAME);
@@ -203,57 +192,44 @@ static void http_field(void *data, const char *field,
   rb_hash_aset(req, f, rb_str_new(value, vlen));
 }
 
-static void request_method(void *data, const char *at, size_t length)
+static void request_method(VALUE req, const char *at, size_t length)
 {
-  VALUE req = (VALUE)data;
-  VALUE val = Qnil;
-
-  val = rb_str_new(at, length);
-  rb_hash_aset(req, global_request_method, val);
+  rb_hash_aset(req, global_request_method, rb_str_new(at, length));
 }
 
-static void scheme(void *data, const char *at, size_t length)
+static void scheme(VALUE req, const char *at, size_t length)
 {
-  rb_hash_aset((VALUE)data, global_rack_url_scheme, rb_str_new(at, length));
+  rb_hash_aset(req, global_rack_url_scheme, rb_str_new(at, length));
 }
 
-static void host(void *data, const char *at, size_t length)
+static void host(VALUE req, const char *at, size_t length)
 {
-  rb_hash_aset((VALUE)data, global_http_host, rb_str_new(at, length));
+  rb_hash_aset(req, global_http_host, rb_str_new(at, length));
 }
 
-static void request_uri(void *data, const char *at, size_t length)
+static void request_uri(VALUE req, const char *at, size_t length)
 {
-  VALUE req = (VALUE)data;
-  VALUE val = Qnil;
-
   VALIDATE_MAX_LENGTH(length, REQUEST_URI);
 
-  val = rb_str_new(at, length);
-  rb_hash_aset(req, global_request_uri, val);
+  rb_hash_aset(req, global_request_uri, rb_str_new(at, length));
 
   /* "OPTIONS * HTTP/1.1\r\n" is a valid request */
   if (length == 1 && *at == '*') {
-    val = rb_str_new(NULL, 0);
+    VALUE val = rb_str_new(NULL, 0);
     rb_hash_aset(req, global_request_path, val);
     rb_hash_aset(req, global_path_info, val);
   }
 }
 
-static void fragment(void *data, const char *at, size_t length)
+static void fragment(VALUE req, const char *at, size_t length)
 {
-  VALUE req = (VALUE)data;
-  VALUE val = Qnil;
-
   VALIDATE_MAX_LENGTH(length, FRAGMENT);
 
-  val = rb_str_new(at, length);
-  rb_hash_aset(req, global_fragment, val);
+  rb_hash_aset(req, global_fragment, rb_str_new(at, length));
 }
 
-static void request_path(void *data, const char *at, size_t length)
+static void request_path(VALUE req, const char *at, size_t length)
 {
-  VALUE req = (VALUE)data;
   VALUE val = Qnil;
 
   VALIDATE_MAX_LENGTH(length, REQUEST_PATH);
@@ -266,28 +242,21 @@ static void request_path(void *data, const char *at, size_t length)
     rb_hash_aset(req, global_path_info, val);
 }
 
-static void query_string(void *data, const char *at, size_t length)
+static void query_string(VALUE req, const char *at, size_t length)
 {
-  VALUE req = (VALUE)data;
-  VALUE val = Qnil;
-
   VALIDATE_MAX_LENGTH(length, QUERY_STRING);
 
-  val = rb_str_new(at, length);
-  rb_hash_aset(req, global_query_string, val);
+  rb_hash_aset(req, global_query_string, rb_str_new(at, length));
 }
 
-static void http_version(void *data, const char *at, size_t length)
+static void http_version(VALUE req, const char *at, size_t length)
 {
-  VALUE req = (VALUE)data;
-  VALUE val = rb_str_new(at, length);
-  rb_hash_aset(req, global_http_version, val);
+  rb_hash_aset(req, global_http_version, rb_str_new(at, length));
 }
 
 /** Finalizes the request header to have a bunch of stuff that's needed. */
-static void header_done(void *data, const char *at, size_t length)
+static void header_done(VALUE req, const char *at, size_t length)
 {
-  VALUE req = (VALUE)data;
   VALUE server_name = global_localhost;
   VALUE server_port = global_port_80;
   VALUE temp;
@@ -337,25 +306,10 @@ static void header_done(void *data, const char *at, size_t length)
   }
 }
 
-static void HttpParser_free(void *data) {
-  TRACE();
-
-  if(data) {
-    free(data);
-  }
-}
-
-
 static VALUE HttpParser_alloc(VALUE klass)
 {
-  VALUE obj;
-  http_parser *hp = ALLOC_N(http_parser, 1);
-  TRACE();
-  http_parser_init(hp);
-
-  obj = Data_Wrap_Struct(klass, NULL, HttpParser_free, hp);
-
-  return obj;
+  http_parser *hp;
+  return Data_Make_Struct(klass, http_parser, NULL, NULL, hp);
 }
 
 
@@ -390,7 +344,7 @@ static VALUE HttpParser_reset(VALUE self)
 
 /**
  * call-seq:
- *    parser.execute(req_hash, data) -> true/false
+ *    parser.execute(req, data) -> true/false
  *
  * Takes a Hash and a String of data, parses the String of data filling
  * in the Hash returning a boolean to indicate whether or not parsing
@@ -401,17 +355,16 @@ static VALUE HttpParser_reset(VALUE self)
  * will need to wrap the parser with an exception handling block.
  */
 
-static VALUE HttpParser_execute(VALUE self, VALUE req_hash, VALUE data)
+static VALUE HttpParser_execute(VALUE self, VALUE req, VALUE data)
 {
   http_parser *http = data_get(self);
   char *dptr = RSTRING_PTR(data);
   long dlen = RSTRING_LEN(data);
 
-  if (http->nread < dlen) {
-    http->data = (void *)req_hash;
-    http_parser_execute(http, dptr, dlen);
+  if (http->start.offset < dlen) {
+    http_parser_execute(http, req, dptr, dlen);
 
-    VALIDATE_MAX_LENGTH(http->nread, HEADER);
+    VALIDATE_MAX_LENGTH(http->start.offset, HEADER);
 
     if (!http_parser_has_error(http))
       return http_parser_is_finished(http) ? Qtrue : Qfalse;
