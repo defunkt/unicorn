@@ -1,4 +1,5 @@
 /**
+ * Copyright (c) 2009 Eric Wong (all bugs are Eric's fault)
  * Copyright (c) 2005 Zed A. Shaw
  * You can redistribute it and/or modify it under the same terms as Ruby.
  */
