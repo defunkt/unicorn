@@ -124,7 +124,7 @@ clean:
 	$(RM) -r $(test_prefix)
 
 Manifest:
-	git ls-files > $@+
+	(git ls-files && echo $(ext)/unicorn_http.h) | LC_ALL=C sort > $@+
 	cmp $@+ $@ || mv $@+ $@
 	$(RM) -f $@+
 
