@@ -28,13 +28,13 @@ static void http_field(VALUE req, const char *field,
                        size_t flen, const char *value, size_t vlen);
 static void header_done(VALUE req, const char *at, size_t length);
 
-static int http_parser_has_error(struct http_parser *parser);
-static int http_parser_is_finished(struct http_parser *parser);
+static int http_parser_has_error(struct http_parser *hp);
+static int http_parser_is_finished(struct http_parser *hp);
 
 
-#define LEN(AT, FPC) (FPC - buffer - parser->AT)
-#define MARK(M,FPC) (parser->M = (FPC) - buffer)
-#define PTR_TO(F) (buffer + parser->F)
+#define LEN(AT, FPC) (FPC - buffer - hp->AT)
+#define MARK(M,FPC) (hp->M = (FPC) - buffer)
+#define PTR_TO(F) (buffer + hp->F)
 #define STR_NEW(M,FPC) rb_str_new(PTR_TO(M), LEN(M, FPC))
 
 /** Machine **/
@@ -47,10 +47,10 @@ static int http_parser_is_finished(struct http_parser *parser);
   action start_field { MARK(start.field, fpc); }
   action snake_upcase_field { snake_upcase_char((char *)fpc); }
   action downcase_char { downcase_char((char *)fpc); }
-  action write_field { parser->field_len = LEN(start.field, fpc); }
+  action write_field { hp->field_len = LEN(start.field, fpc); }
   action start_value { MARK(mark, fpc); }
   action write_value {
-    http_field(req, PTR_TO(start.field), parser->field_len,
+    http_field(req, PTR_TO(start.field), hp->field_len,
                PTR_TO(mark), LEN(mark, fpc));
   }
   action request_method {
@@ -101,7 +101,7 @@ static int http_parser_is_finished(struct http_parser *parser);
       rb_hash_aset(req, g_path_info, val);
   }
   action done {
-    parser->start.body = fpc - buffer + 1;
+    hp->start.body = fpc - buffer + 1;
     header_done(req, fpc + 1, pe - fpc - 1);
     fbreak;
   }
@@ -112,21 +112,21 @@ static int http_parser_is_finished(struct http_parser *parser);
 /** Data **/
 %% write data;
 
-static void http_parser_init(struct http_parser *parser)
+static void http_parser_init(struct http_parser *hp)
 {
   int cs = 0;
-  memset(parser, 0, sizeof(*parser));
+  memset(hp, 0, sizeof(struct http_parser));
   %% write init;
-  parser->cs = cs;
+  hp->cs = cs;
 }
 
 /** exec **/
-static void http_parser_execute(struct http_parser *parser,
+static void http_parser_execute(struct http_parser *hp,
   VALUE req, const char *buffer, size_t len)
 {
   const char *p, *pe;
-  int cs = parser->cs;
-  size_t off = parser->start.offset;
+  int cs = hp->cs;
+  size_t off = hp->start.offset;
 
   assert(off <= len && "offset past end of buffer");
 
@@ -137,33 +137,33 @@ static void http_parser_execute(struct http_parser *parser,
 
   %% write exec;
 
-  if (!http_parser_has_error(parser))
-    parser->cs = cs;
-  parser->start.offset = p - buffer;
+  if (!http_parser_has_error(hp))
+    hp->cs = cs;
+  hp->start.offset = p - buffer;
 
   assert(p <= pe && "buffer overflow after parsing execute");
-  assert(parser->start.offset <= len && "start.offset longer than length");
-  assert(parser->mark < len && "mark is after buffer end");
-  assert(parser->field_len <= len && "field has length longer than whole buffer");
+  assert(hp->start.offset <= len && "start.offset longer than length");
+  assert(hp->mark < len && "mark is after buffer end");
+  assert(hp->field_len <= len && "field has length longer than whole buffer");
 }
 
-static int http_parser_has_error(struct http_parser *parser)
+static int http_parser_has_error(struct http_parser *hp)
 {
-  return parser->cs == http_parser_error;
+  return hp->cs == http_parser_error;
 }
 
-static int http_parser_is_finished(struct http_parser *parser)
+static int http_parser_is_finished(struct http_parser *hp)
 {
-  return parser->cs == http_parser_first_final;
+  return hp->cs == http_parser_first_final;
 }
 
 static struct http_parser *data_get(VALUE self)
 {
-  struct http_parser *http;
+  struct http_parser *hp;
 
-  Data_Get_Struct(self, struct http_parser, http);
-  assert(http);
-  return http;
+  Data_Get_Struct(self, struct http_parser, hp);
+  assert(hp);
+  return hp;
 }
 
 static void http_field(VALUE req, const char *field,
@@ -237,8 +237,8 @@ static void header_done(VALUE req, const char *at, size_t length)
 
 static VALUE HttpParser_alloc(VALUE klass)
 {
-  struct http_parser *http;
-  return Data_Make_Struct(klass, struct http_parser, NULL, NULL, http);
+  struct http_parser *hp;
+  return Data_Make_Struct(klass, struct http_parser, NULL, NULL, hp);
 }
 
 
@@ -286,17 +286,17 @@ static VALUE HttpParser_reset(VALUE self)
 
 static VALUE HttpParser_execute(VALUE self, VALUE req, VALUE data)
 {
-  struct http_parser *http = data_get(self);
+  struct http_parser *hp = data_get(self);
   char *dptr = RSTRING_PTR(data);
   long dlen = RSTRING_LEN(data);
 
-  if (http->start.offset < dlen) {
-    http_parser_execute(http, req, dptr, dlen);
+  if (hp->start.offset < dlen) {
+    http_parser_execute(hp, req, dptr, dlen);
 
-    VALIDATE_MAX_LENGTH(http->start.offset, HEADER);
+    VALIDATE_MAX_LENGTH(hp->start.offset, HEADER);
 
-    if (!http_parser_has_error(http))
-      return http_parser_is_finished(http) ? Qtrue : Qfalse;
+    if (!http_parser_has_error(hp))
+      return http_parser_is_finished(hp) ? Qtrue : Qfalse;
 
     rb_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
   }
