@@ -8,7 +8,7 @@
 /local.mk
 /test/install-*
 ext/unicorn_http/Makefile
-ext/unicorn_http/unicorn_http.h
+ext/unicorn_http/unicorn_http.c
 log/
 pkg/
 /vendor

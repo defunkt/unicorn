@@ -18,10 +18,12 @@ bin/unicorn_rails
 examples/echo.ru
 examples/git.ru
 examples/init.sh
+ext/unicorn_http/c_util.h
+ext/unicorn_http/common_field_optimization.h
 ext/unicorn_http/ext_help.h
 ext/unicorn_http/extconf.rb
+ext/unicorn_http/global_variables.h
 ext/unicorn_http/unicorn_http.c
-ext/unicorn_http/unicorn_http.h
 ext/unicorn_http/unicorn_http.rl
 ext/unicorn_http/unicorn_http_common.rl
 lib/unicorn.rb

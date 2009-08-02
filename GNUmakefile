@@ -28,13 +28,13 @@ T_r_log := $(subst .r,$(log_suffix),$(T_r))
 test_prefix = $(CURDIR)/test/install-$(RUBY_VERSION)
 
 ext := ext/unicorn_http
-c_files := $(addprefix $(ext)/,ext_help.h unicorn_http.c unicorn_http.h)
+c_files := $(ext)/unicorn_http.c $(wildcard $(ext)/*.h)
 rl_files := $(addprefix $(ext)/,unicorn_http.rl unicorn_http_common.rl)
 rb_files := $(shell grep '^\(bin\|lib\)' Manifest)
 inst_deps := $(c_files) $(rb_files)
 
-ragel: $(ext)/unicorn_http.h
-$(ext)/unicorn_http.h: $(rl_files)
+ragel: $(ext)/unicorn_http.c
+$(ext)/unicorn_http.c: $(rl_files)
 	cd $(@D) && $(ragel) unicorn_http.rl -C $(RLFLAGS) -o $(@F)
 	$(ruby) -i -p -e '$$_.gsub!(%r{[ \t]*$$},"")' $@
 $(ext)/Makefile: $(ext)/extconf.rb $(c_files)
@@ -124,7 +124,7 @@ clean:
 	$(RM) -r $(test_prefix)
 
 Manifest:
-	(git ls-files && echo $(ext)/unicorn_http.h) | LC_ALL=C sort > $@+
+	(git ls-files && echo $(ext)/unicorn_http.c) | LC_ALL=C sort > $@+
 	cmp $@+ $@ || mv $@+ $@
 	$(RM) -f $@+
 
