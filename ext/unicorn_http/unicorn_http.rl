@@ -24,8 +24,7 @@ struct http_parser {
   size_t field_len;
 };
 
-static void http_field(VALUE req, const char *field,
-                       size_t flen, const char *value, size_t vlen);
+static void http_field(VALUE req, const char *field, size_t flen, VALUE val);
 static void header_done(VALUE req, const char *at, size_t length);
 
 static int http_parser_has_error(struct http_parser *hp);
@@ -50,8 +49,8 @@ static int http_parser_is_finished(struct http_parser *hp);
   action write_field { hp->field_len = LEN(start.field, fpc); }
   action start_value { MARK(mark, fpc); }
   action write_value {
-    http_field(req, PTR_TO(start.field), hp->field_len,
-               PTR_TO(mark), LEN(mark, fpc));
+    VALIDATE_MAX_LENGTH(LEN(mark, fpc), FIELD_VALUE);
+    http_field(req, PTR_TO(start.field), hp->field_len, STR_NEW(mark, fpc));
   }
   action request_method {
     rb_hash_aset(req, g_request_method, STR_NEW(mark, fpc));
@@ -165,13 +164,9 @@ static struct http_parser *data_get(VALUE self)
   assert(hp);
   return hp;
 }
-
-static void http_field(VALUE req, const char *field,
-                       size_t flen, const char *value, size_t vlen)
+static void http_field(VALUE req, const char *field, size_t flen, VALUE val)
 {
   VALUE f = find_common_field(field, flen);
-
-  VALIDATE_MAX_LENGTH(vlen, FIELD_VALUE);
 
   if (f == Qnil) {
     VALIDATE_MAX_LENGTH(flen, FIELD_NAME);
@@ -180,7 +175,7 @@ static void http_field(VALUE req, const char *field,
     return;
   }
 
-  rb_hash_aset(req, f, rb_str_new(value, vlen));
+  rb_hash_aset(req, f, val);
 }
 
 static int is_https(VALUE str)
