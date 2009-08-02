@@ -27,10 +27,6 @@ struct http_parser {
 static void http_field(VALUE req, const char *field, size_t flen, VALUE val);
 static void header_done(VALUE req, const char *at, size_t length);
 
-static int http_parser_has_error(struct http_parser *hp);
-static int http_parser_is_finished(struct http_parser *hp);
-
-
 #define LEN(AT, FPC) (FPC - buffer - hp->AT)
 #define MARK(M,FPC) (hp->M = (FPC) - buffer)
 #define PTR_TO(F) (buffer + hp->F)
@@ -136,7 +132,7 @@ static void http_parser_execute(struct http_parser *hp,
 
   %% write exec;
 
-  if (!http_parser_has_error(hp))
+  if (hp->cs != http_parser_error)
     hp->cs = cs;
   hp->start.offset = p - buffer;
 
@@ -144,16 +140,6 @@ static void http_parser_execute(struct http_parser *hp,
   assert(hp->start.offset <= len && "start.offset longer than length");
   assert(hp->mark < len && "mark is after buffer end");
   assert(hp->field_len <= len && "field has length longer than whole buffer");
-}
-
-static int http_parser_has_error(struct http_parser *hp)
-{
-  return hp->cs == http_parser_error;
-}
-
-static int http_parser_is_finished(struct http_parser *hp)
-{
-  return hp->cs == http_parser_first_final;
 }
 
 static struct http_parser *data_get(VALUE self)
@@ -164,6 +150,7 @@ static struct http_parser *data_get(VALUE self)
   assert(hp);
   return hp;
 }
+
 static void http_field(VALUE req, const char *field, size_t flen, VALUE val)
 {
   VALUE f = find_common_field(field, flen);
@@ -302,8 +289,8 @@ static VALUE HttpParser_execute(VALUE self, VALUE req, VALUE data)
 
     VALIDATE_MAX_LENGTH(hp->start.offset, HEADER);
 
-    if (!http_parser_has_error(hp))
-      return http_parser_is_finished(hp) ? Qtrue : Qfalse;
+    if (hp->cs != http_parser_error)
+      return hp->cs == http_parser_first_final ? Qtrue : Qfalse;
 
     rb_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
   }
