@@ -148,7 +148,7 @@ static void http_field(VALUE req, const char *field,
   VALIDATE_MAX_LENGTH(flen, FIELD_NAME);
   VALIDATE_MAX_LENGTH(vlen, FIELD_VALUE);
 
-  f = find_common_field_value(field, flen);
+  f = find_common_field(field, flen);
 
   if (f == Qnil) {
     /*
@@ -386,6 +386,6 @@ void Init_unicorn_http(void)
   rb_define_method(cHttpParser, "execute", HttpParser_execute,2);
   sym_http_body = ID2SYM(rb_intern("http_body"));
   init_common_fields();
-  g_http_host = find_common_field_value("HOST", 4);
+  g_http_host = find_common_field("HOST", 4);
   assert(g_http_host != Qnil);
 }

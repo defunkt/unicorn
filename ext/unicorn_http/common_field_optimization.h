@@ -81,7 +81,7 @@ static void init_common_fields(void)
 }
 
 /* this function is called for every header set */
-static VALUE find_common_field_value(const char *field, size_t flen)
+static VALUE find_common_field(const char *field, size_t flen)
 {
   int i;
   struct common_field *cf = common_http_fields;
