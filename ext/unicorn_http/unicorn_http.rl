@@ -12,16 +12,28 @@
 #include "global_variables.h"
 #include "c_util.h"
 
+#define UH_FL_CHUNKED  0x1
+#define UH_FL_HASBODY  0x2
+#define UH_FL_INBODY   0x4
+#define UH_FL_HASTRAILER 0x8
+
 struct http_parser {
-  int cs;
-  union {
-    size_t body;
+  int cs; /* Ragel internal state */
+  unsigned int flags;
+  size_t mark;
+  union { /* these 3 fields don't nest */
     size_t field;
     size_t query;
     size_t offset;
   } start;
-  size_t mark;
-  size_t field_len;
+  union {
+    size_t field_len; /* only used during header processing */
+    long tmpfd; /* only used during body processing */
+  } s;
+  union {
+    off_t content;
+    off_t chunk;
+  } len;
 };
 
 static void http_field(VALUE req, const char *field, size_t flen, VALUE val);
@@ -42,11 +54,11 @@ static void header_done(VALUE req, const char *at, size_t length);
   action start_field { MARK(start.field, fpc); }
   action snake_upcase_field { snake_upcase_char((char *)fpc); }
   action downcase_char { downcase_char((char *)fpc); }
-  action write_field { hp->field_len = LEN(start.field, fpc); }
+  action write_field { hp->s.field_len = LEN(start.field, fpc); }
   action start_value { MARK(mark, fpc); }
   action write_value {
     VALIDATE_MAX_LENGTH(LEN(mark, fpc), FIELD_VALUE);
-    http_field(req, PTR_TO(start.field), hp->field_len, STR_NEW(mark, fpc));
+    http_field(req, PTR_TO(start.field), hp->s.field_len, STR_NEW(mark, fpc));
   }
   action request_method {
     rb_hash_aset(req, g_request_method, STR_NEW(mark, fpc));
@@ -96,7 +108,7 @@ static void header_done(VALUE req, const char *at, size_t length);
       rb_hash_aset(req, g_path_info, val);
   }
   action done {
-    hp->start.body = fpc - buffer + 1;
+    hp->start.offset = fpc - buffer + 1;
     header_done(req, fpc + 1, pe - fpc - 1);
     fbreak;
   }
@@ -139,7 +151,7 @@ static void http_parser_execute(struct http_parser *hp,
   assert(p <= pe && "buffer overflow after parsing execute");
   assert(hp->start.offset <= len && "start.offset longer than length");
   assert(hp->mark < len && "mark is after buffer end");
-  assert(hp->field_len <= len && "field has length longer than whole buffer");
+  assert(hp->s.field_len <= len && "field has length longer than whole buffer");
 }
 
 static struct http_parser *data_get(VALUE self)
