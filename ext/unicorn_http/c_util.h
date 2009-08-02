@@ -6,6 +6,21 @@
 #ifndef UH_util_h
 #define UH_util_h
 
+#define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
+
+#ifndef SIZEOF_OFF_T
+#  define SIZEOF_OFF_T 4
+#  warning SIZEOF_OFF_T not defined, guessing 4.  Did you run extconf.rb?
+#endif
+
+#if SIZEOF_OFF_T == 4
+#  define UH_OFF_T_MAX 0x7fffffff
+#elif SIZEOF_OFF_T == 8
+#  define UH_OFF_T_MAX 0x7fffffffffffffff
+#else
+#  error off_t size unknown for this platform!
+#endif
+
 /*
  * capitalizes all lower-case ASCII characters and converts dashes
  * to underscores for HTTP headers.  Locale-agnostic.

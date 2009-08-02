@@ -1,6 +1,7 @@
 #ifndef common_field_optimization
 #define common_field_optimization
 #include "ruby.h"
+#include "c_util.h"
 
 struct common_field {
   const signed long len;
