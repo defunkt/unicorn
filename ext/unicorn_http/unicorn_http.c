@@ -24,24 +24,24 @@ static VALUE sym_http_body;
 #define HTTP_PREFIX "HTTP_"
 #define HTTP_PREFIX_LEN (sizeof(HTTP_PREFIX) - 1)
 
-static VALUE global_rack_url_scheme;
-static VALUE global_request_method;
-static VALUE global_request_uri;
-static VALUE global_fragment;
-static VALUE global_query_string;
-static VALUE global_http_version;
-static VALUE global_request_path;
-static VALUE global_path_info;
-static VALUE global_server_name;
-static VALUE global_server_port;
-static VALUE global_server_protocol;
-static VALUE global_server_protocol_value;
-static VALUE global_http_host;
-static VALUE global_http_x_forwarded_proto;
-static VALUE global_port_80;
-static VALUE global_port_443;
-static VALUE global_localhost;
-static VALUE global_http;
+static VALUE g_rack_url_scheme;
+static VALUE g_request_method;
+static VALUE g_request_uri;
+static VALUE g_fragment;
+static VALUE g_query_string;
+static VALUE g_http_version;
+static VALUE g_request_path;
+static VALUE g_path_info;
+static VALUE g_server_name;
+static VALUE g_server_port;
+static VALUE g_server_protocol;
+static VALUE g_server_protocol_value;
+static VALUE g_http_host;
+static VALUE g_http_x_forwarded_proto;
+static VALUE g_port_80;
+static VALUE g_port_443;
+static VALUE g_localhost;
+static VALUE g_http;
 
 /** Defines common length and error messages for input length validation. */
 #define DEF_MAX_LENGTH(N, length) \
@@ -60,8 +60,8 @@ static VALUE global_http;
 
 /** Defines global strings in the init method. */
 #define DEF_GLOBAL(N, val) do { \
-  global_##N = rb_obj_freeze(rb_str_new(val, sizeof(val) - 1)); \
-  rb_global_variable(&global_##N); \
+  g_##N = rb_obj_freeze(rb_str_new(val, sizeof(val) - 1)); \
+  rb_global_variable(&g_##N); \
 } while (0)
 
 /* Defines the maximum allowed lengths for various input elements.*/
@@ -185,7 +185,7 @@ static void http_field(VALUE req, const char *field,
     memcpy(RSTRING_PTR(f) + HTTP_PREFIX_LEN, field, flen);
     assert(*(RSTRING_PTR(f) + RSTRING_LEN(f)) == '\0'); /* paranoia */
     /* fprintf(stderr, "UNKNOWN HEADER <%s>\n", RSTRING_PTR(f)); */
-  } else if (f == global_http_host && rb_hash_aref(req, f) != Qnil) {
+  } else if (f == g_http_host && rb_hash_aref(req, f) != Qnil) {
     return;
   }
 
@@ -194,30 +194,30 @@ static void http_field(VALUE req, const char *field,
 
 static void request_method(VALUE req, const char *at, size_t length)
 {
-  rb_hash_aset(req, global_request_method, rb_str_new(at, length));
+  rb_hash_aset(req, g_request_method, rb_str_new(at, length));
 }
 
 static void scheme(VALUE req, const char *at, size_t length)
 {
-  rb_hash_aset(req, global_rack_url_scheme, rb_str_new(at, length));
+  rb_hash_aset(req, g_rack_url_scheme, rb_str_new(at, length));
 }
 
 static void host(VALUE req, const char *at, size_t length)
 {
-  rb_hash_aset(req, global_http_host, rb_str_new(at, length));
+  rb_hash_aset(req, g_http_host, rb_str_new(at, length));
 }
 
 static void request_uri(VALUE req, const char *at, size_t length)
 {
   VALIDATE_MAX_LENGTH(length, REQUEST_URI);
 
-  rb_hash_aset(req, global_request_uri, rb_str_new(at, length));
+  rb_hash_aset(req, g_request_uri, rb_str_new(at, length));
 
   /* "OPTIONS * HTTP/1.1\r\n" is a valid request */
   if (length == 1 && *at == '*') {
     VALUE val = rb_str_new(NULL, 0);
-    rb_hash_aset(req, global_request_path, val);
-    rb_hash_aset(req, global_path_info, val);
+    rb_hash_aset(req, g_request_path, val);
+    rb_hash_aset(req, g_path_info, val);
   }
 }
 
@@ -225,7 +225,7 @@ static void fragment(VALUE req, const char *at, size_t length)
 {
   VALIDATE_MAX_LENGTH(length, FRAGMENT);
 
-  rb_hash_aset(req, global_fragment, rb_str_new(at, length));
+  rb_hash_aset(req, g_fragment, rb_str_new(at, length));
 }
 
 static void request_path(VALUE req, const char *at, size_t length)
@@ -235,51 +235,51 @@ static void request_path(VALUE req, const char *at, size_t length)
   VALIDATE_MAX_LENGTH(length, REQUEST_PATH);
 
   val = rb_str_new(at, length);
-  rb_hash_aset(req, global_request_path, val);
+  rb_hash_aset(req, g_request_path, val);
 
   /* rack says PATH_INFO must start with "/" or be empty */
   if (!(length == 1 && *at == '*'))
-    rb_hash_aset(req, global_path_info, val);
+    rb_hash_aset(req, g_path_info, val);
 }
 
 static void query_string(VALUE req, const char *at, size_t length)
 {
   VALIDATE_MAX_LENGTH(length, QUERY_STRING);
 
-  rb_hash_aset(req, global_query_string, rb_str_new(at, length));
+  rb_hash_aset(req, g_query_string, rb_str_new(at, length));
 }
 
 static void http_version(VALUE req, const char *at, size_t length)
 {
-  rb_hash_aset(req, global_http_version, rb_str_new(at, length));
+  rb_hash_aset(req, g_http_version, rb_str_new(at, length));
 }
 
 /** Finalizes the request header to have a bunch of stuff that's needed. */
 static void header_done(VALUE req, const char *at, size_t length)
 {
-  VALUE server_name = global_localhost;
-  VALUE server_port = global_port_80;
+  VALUE server_name = g_localhost;
+  VALUE server_port = g_port_80;
   VALUE temp;
 
   /* rack requires QUERY_STRING */
-  if (rb_hash_aref(req, global_query_string) == Qnil)
-    rb_hash_aset(req, global_query_string, rb_str_new(NULL, 0));
+  if (rb_hash_aref(req, g_query_string) == Qnil)
+    rb_hash_aset(req, g_query_string, rb_str_new(NULL, 0));
 
   /* set rack.url_scheme to "https" or "http", no others are allowed by Rack */
-  if ((temp = rb_hash_aref(req, global_rack_url_scheme)) == Qnil) {
-    if ((temp = rb_hash_aref(req, global_http_x_forwarded_proto)) != Qnil &&
+  if ((temp = rb_hash_aref(req, g_rack_url_scheme)) == Qnil) {
+    if ((temp = rb_hash_aref(req, g_http_x_forwarded_proto)) != Qnil &&
         RSTRING_LEN(temp) == 5 &&
         !memcmp("https", RSTRING_PTR(temp), 5))
-      server_port = global_port_443;
+      server_port = g_port_443;
     else
-      temp = global_http;
-    rb_hash_aset(req, global_rack_url_scheme, temp);
+      temp = g_http;
+    rb_hash_aset(req, g_rack_url_scheme, temp);
   } else if (RSTRING_LEN(temp) == 5 && !memcmp("https", RSTRING_PTR(temp), 5)) {
-    server_port = global_port_443;
+    server_port = g_port_443;
   }
 
   /* parse and set the SERVER_NAME and SERVER_PORT variables */
-  if ((temp = rb_hash_aref(req, global_http_host)) != Qnil) {
+  if ((temp = rb_hash_aref(req, g_http_host)) != Qnil) {
     char *colon = memchr(RSTRING_PTR(temp), ':', RSTRING_LEN(temp));
     if (colon) {
       long port_start = colon - RSTRING_PTR(temp) + 1;
@@ -291,12 +291,12 @@ static void header_done(VALUE req, const char *at, size_t length)
       server_name = temp;
     }
   }
-  rb_hash_aset(req, global_server_name, server_name);
-  rb_hash_aset(req, global_server_port, server_port);
-  rb_hash_aset(req, global_server_protocol, global_server_protocol_value);
+  rb_hash_aset(req, g_server_name, server_name);
+  rb_hash_aset(req, g_server_port, server_port);
+  rb_hash_aset(req, g_server_protocol, g_server_protocol_value);
 
   /* grab the initial body and stuff it into the hash */
-  temp = rb_hash_aref(req, global_request_method);
+  temp = rb_hash_aref(req, g_request_method);
   if (temp != Qnil) {
     long len = RSTRING_LEN(temp);
     char *ptr = RSTRING_PTR(temp);
@@ -405,6 +405,6 @@ void Init_unicorn_http(void)
   rb_define_method(cHttpParser, "execute", HttpParser_execute,2);
   sym_http_body = ID2SYM(rb_intern("http_body"));
   init_common_fields();
-  global_http_host = find_common_field_value("HOST", 4);
-  assert(global_http_host != Qnil);
+  g_http_host = find_common_field_value("HOST", 4);
+  assert(g_http_host != Qnil);
 }
