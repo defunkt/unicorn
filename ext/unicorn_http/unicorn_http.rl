@@ -310,6 +310,11 @@ static VALUE HttpParser_execute(VALUE self, VALUE req, VALUE data)
   rb_raise(eHttpParserError, "Requested start is after data buffer end.");
 }
 
+#define SET_GLOBAL(var,str) do { \
+  var = find_common_field(str, sizeof(str) - 1); \
+  assert(var != Qnil); \
+} while (0)
+
 void Init_unicorn_http(void)
 {
   init_globals();
@@ -318,6 +323,6 @@ void Init_unicorn_http(void)
   rb_define_method(cHttpParser, "reset", HttpParser_reset,0);
   rb_define_method(cHttpParser, "execute", HttpParser_execute,2);
   init_common_fields();
-  g_http_host = find_common_field("HOST", 4);
-  assert(g_http_host != Qnil);
+  SET_GLOBAL(g_http_host, "HOST");
 }
+#undef SET_GLOBAL
