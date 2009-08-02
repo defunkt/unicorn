@@ -183,21 +183,16 @@ static int is_https(VALUE str)
   return RSTRING_LEN(str) == 5 && !memcmp("https", RSTRING_PTR(str), 5);
 }
 
-/** Finalizes the request header to have a bunch of stuff that's needed. */
-static void header_done(VALUE req, const char *at, size_t length)
+static void set_server_params(VALUE req)
 {
+  VALUE temp = rb_hash_aref(req, g_rack_url_scheme);
   VALUE server_name = g_localhost;
   VALUE server_port = g_port_80;
-  VALUE temp;
-
-  /* rack requires QUERY_STRING */
-  if (rb_hash_aref(req, g_query_string) == Qnil)
-    rb_hash_aset(req, g_query_string, rb_str_new(NULL, 0));
 
   /* set rack.url_scheme to "https" or "http", no others are allowed by Rack */
-  if ((temp = rb_hash_aref(req, g_rack_url_scheme)) == Qnil) {
-    if ((temp = rb_hash_aref(req, g_http_x_forwarded_proto)) != Qnil &&
-        is_https(temp))
+  if (temp == Qnil) {
+    temp = rb_hash_aref(req, g_http_x_forwarded_proto);
+    if (temp != Qnil && is_https(temp))
       server_port = g_port_443;
     else
       temp = g_http;
@@ -207,7 +202,8 @@ static void header_done(VALUE req, const char *at, size_t length)
   }
 
   /* parse and set the SERVER_NAME and SERVER_PORT variables */
-  if ((temp = rb_hash_aref(req, g_http_host)) != Qnil) {
+  temp = rb_hash_aref(req, g_http_host);
+  if (temp != Qnil) {
     char *colon = memchr(RSTRING_PTR(temp), ':', RSTRING_LEN(temp));
     if (colon) {
       long port_start = colon - RSTRING_PTR(temp) + 1;
@@ -221,6 +217,18 @@ static void header_done(VALUE req, const char *at, size_t length)
   }
   rb_hash_aset(req, g_server_name, server_name);
   rb_hash_aset(req, g_server_port, server_port);
+}
+
+/** Finalizes the request header to have a bunch of stuff that's needed. */
+static void header_done(VALUE req, const char *at, size_t length)
+{
+  VALUE temp;
+
+  /* rack requires QUERY_STRING */
+  if (rb_hash_aref(req, g_query_string) == Qnil)
+    rb_hash_aset(req, g_query_string, rb_str_new(NULL, 0));
+
+  set_server_params(req);
   rb_hash_aset(req, g_server_protocol, g_server_protocol_value);
 
   /* grab the initial body and stuff it into the hash */
