@@ -143,29 +143,13 @@ static struct http_parser *data_get(VALUE self)
 static void http_field(VALUE req, const char *field,
                        size_t flen, const char *value, size_t vlen)
 {
-  VALUE f = Qnil;
+  VALUE f = find_common_field(field, flen);
 
-  VALIDATE_MAX_LENGTH(flen, FIELD_NAME);
   VALIDATE_MAX_LENGTH(vlen, FIELD_VALUE);
 
-  f = find_common_field(field, flen);
-
   if (f == Qnil) {
-    /*
-     * We got a strange header that we don't have a memoized value for.
-     * Fallback to creating a new string to use as a hash key.
-     *
-     * using rb_str_new(NULL, len) here is faster than rb_str_buf_new(len)
-     * in my testing, because: there's no minimum allocation length (and
-     * no check for it, either), RSTRING_LEN(f) does not need to be
-     * written twice, and and RSTRING_PTR(f) will already be
-     * null-terminated for us.
-     */
-    f = rb_str_new(NULL, HTTP_PREFIX_LEN + flen);
-    memcpy(RSTRING_PTR(f), HTTP_PREFIX, HTTP_PREFIX_LEN);
-    memcpy(RSTRING_PTR(f) + HTTP_PREFIX_LEN, field, flen);
-    assert(*(RSTRING_PTR(f) + RSTRING_LEN(f)) == '\0'); /* paranoia */
-    /* fprintf(stderr, "UNKNOWN HEADER <%s>\n", RSTRING_PTR(f)); */
+    VALIDATE_MAX_LENGTH(flen, FIELD_NAME);
+    f = uncommon_field(field, flen);
   } else if (f == g_http_host && rb_hash_aref(req, f) != Qnil) {
     return;
   }
