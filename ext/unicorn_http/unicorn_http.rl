@@ -26,14 +26,6 @@ struct http_parser {
 
 static void http_field(VALUE req, const char *field,
                        size_t flen, const char *value, size_t vlen);
-static void request_method(VALUE req, const char *at, size_t length);
-static void scheme(VALUE req, const char *at, size_t length);
-static void host(VALUE req, const char *at, size_t length);
-static void request_uri(VALUE req, const char *at, size_t length);
-static void fragment(VALUE req, const char *at, size_t length);
-static void request_path(VALUE req, const char *at, size_t length);
-static void query_string(VALUE req, const char *at, size_t length);
-static void http_version(VALUE req, const char *at, size_t length);
 static void header_done(VALUE req, const char *at, size_t length);
 
 static int http_parser_has_error(struct http_parser *parser);
@@ -43,6 +35,7 @@ static int http_parser_is_finished(struct http_parser *parser);
 #define LEN(AT, FPC) (FPC - buffer - parser->AT)
 #define MARK(M,FPC) (parser->M = (FPC) - buffer)
 #define PTR_TO(F) (buffer + parser->F)
+#define STR_NEW(M,FPC) rb_str_new(PTR_TO(M), LEN(M, FPC))
 
 /** Machine **/
 
@@ -60,20 +53,53 @@ static int http_parser_is_finished(struct http_parser *parser);
     http_field(req, PTR_TO(start.field), parser->field_len,
                PTR_TO(mark), LEN(mark, fpc));
   }
-  action request_method { request_method(req, PTR_TO(mark), LEN(mark, fpc)); }
-  action scheme { scheme(req, PTR_TO(mark), LEN(mark, fpc)); }
-  action host { host(req, PTR_TO(mark), LEN(mark, fpc)); }
-  action request_uri { request_uri(req, PTR_TO(mark), LEN(mark, fpc)); }
-  action fragment { fragment(req, PTR_TO(mark), LEN(mark, fpc)); }
-
+  action request_method {
+    rb_hash_aset(req, g_request_method, STR_NEW(mark, fpc));
+  }
+  action scheme {
+    rb_hash_aset(req, g_rack_url_scheme, STR_NEW(mark, fpc));
+  }
+  action host {
+    rb_hash_aset(req, g_http_host, STR_NEW(mark, fpc));
+  }
+  action request_uri {
+    size_t len = LEN(mark, fpc);
+    VALIDATE_MAX_LENGTH(len, REQUEST_URI);
+    rb_hash_aset(req, g_request_uri, STR_NEW(mark, fpc));
+    /*
+     * "OPTIONS * HTTP/1.1\r\n" is a valid request, but we can't have '*'
+     * in REQUEST_PATH or PATH_INFO or else Rack::Lint will complain
+     */
+    if (len == 1 && *PTR_TO(mark) == '*') {
+      VALUE val = rb_str_new(NULL, 0);
+      rb_hash_aset(req, g_request_path, val);
+      rb_hash_aset(req, g_path_info, val);
+    }
+  }
+  action fragment {
+    VALIDATE_MAX_LENGTH(LEN(mark, fpc), FRAGMENT);
+    rb_hash_aset(req, g_fragment, STR_NEW(mark, fpc));
+  }
   action start_query {MARK(start.query, fpc); }
   action query_string {
-    query_string(req, PTR_TO(start.query), LEN(start.query, fpc));
+    VALIDATE_MAX_LENGTH(LEN(start.query, fpc), QUERY_STRING);
+    rb_hash_aset(req, g_query_string, STR_NEW(start.query, fpc));
   }
+  action http_version {
+    rb_hash_aset(req, g_http_version, STR_NEW(mark, fpc));
+  }
+  action request_path {
+    VALUE val;
+    size_t len = LEN(mark, fpc);
 
-  action http_version { http_version(req, PTR_TO(mark), LEN(mark, fpc)); }
-  action request_path { request_path(req, PTR_TO(mark), LEN(mark,fpc)); }
+    VALIDATE_MAX_LENGTH(len, REQUEST_PATH);
+    val = STR_NEW(mark, fpc);
 
+    rb_hash_aset(req, g_request_path, val);
+    /* rack says PATH_INFO must start with "/" or be empty */
+    if (!(len == 1 && *PTR_TO(mark) == '*'))
+      rb_hash_aset(req, g_path_info, val);
+  }
   action done {
     parser->start.body = fpc - buffer + 1;
     header_done(req, fpc + 1, pe - fpc - 1);
@@ -155,68 +181,6 @@ static void http_field(VALUE req, const char *field,
   }
 
   rb_hash_aset(req, f, rb_str_new(value, vlen));
-}
-
-static void request_method(VALUE req, const char *at, size_t length)
-{
-  rb_hash_aset(req, g_request_method, rb_str_new(at, length));
-}
-
-static void scheme(VALUE req, const char *at, size_t length)
-{
-  rb_hash_aset(req, g_rack_url_scheme, rb_str_new(at, length));
-}
-
-static void host(VALUE req, const char *at, size_t length)
-{
-  rb_hash_aset(req, g_http_host, rb_str_new(at, length));
-}
-
-static void request_uri(VALUE req, const char *at, size_t length)
-{
-  VALIDATE_MAX_LENGTH(length, REQUEST_URI);
-
-  rb_hash_aset(req, g_request_uri, rb_str_new(at, length));
-
-  /* "OPTIONS * HTTP/1.1\r\n" is a valid request */
-  if (length == 1 && *at == '*') {
-    VALUE val = rb_str_new(NULL, 0);
-    rb_hash_aset(req, g_request_path, val);
-    rb_hash_aset(req, g_path_info, val);
-  }
-}
-
-static void fragment(VALUE req, const char *at, size_t length)
-{
-  VALIDATE_MAX_LENGTH(length, FRAGMENT);
-
-  rb_hash_aset(req, g_fragment, rb_str_new(at, length));
-}
-
-static void request_path(VALUE req, const char *at, size_t length)
-{
-  VALUE val = Qnil;
-
-  VALIDATE_MAX_LENGTH(length, REQUEST_PATH);
-
-  val = rb_str_new(at, length);
-  rb_hash_aset(req, g_request_path, val);
-
-  /* rack says PATH_INFO must start with "/" or be empty */
-  if (!(length == 1 && *at == '*'))
-    rb_hash_aset(req, g_path_info, val);
-}
-
-static void query_string(VALUE req, const char *at, size_t length)
-{
-  VALIDATE_MAX_LENGTH(length, QUERY_STRING);
-
-  rb_hash_aset(req, g_query_string, rb_str_new(at, length));
-}
-
-static void http_version(VALUE req, const char *at, size_t length)
-{
-  rb_hash_aset(req, g_http_version, rb_str_new(at, length));
 }
 
 /** Finalizes the request header to have a bunch of stuff that's needed. */
