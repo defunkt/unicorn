@@ -71,16 +71,18 @@ static void header_done(VALUE req, const char *at, size_t length);
   }
   action request_uri {
     size_t len = LEN(mark, fpc);
+    VALUE str;
+
     VALIDATE_MAX_LENGTH(len, REQUEST_URI);
-    rb_hash_aset(req, g_request_uri, STR_NEW(mark, fpc));
+    str = rb_hash_aset(req, g_request_uri, STR_NEW(mark, fpc));
     /*
      * "OPTIONS * HTTP/1.1\r\n" is a valid request, but we can't have '*'
      * in REQUEST_PATH or PATH_INFO or else Rack::Lint will complain
      */
-    if (len == 1 && *PTR_TO(mark) == '*') {
-      VALUE val = rb_str_new(NULL, 0);
-      rb_hash_aset(req, g_request_path, val);
-      rb_hash_aset(req, g_path_info, val);
+    if (STR_CSTR_EQ(str, "*")) {
+      str = rb_str_new(NULL, 0);
+      rb_hash_aset(req, g_path_info, str);
+      rb_hash_aset(req, g_request_path, str);
     }
   }
   action fragment {
@@ -100,11 +102,10 @@ static void header_done(VALUE req, const char *at, size_t length);
     size_t len = LEN(mark, fpc);
 
     VALIDATE_MAX_LENGTH(len, REQUEST_PATH);
-    val = STR_NEW(mark, fpc);
+    val = rb_hash_aset(req, g_request_path, STR_NEW(mark, fpc));
 
-    rb_hash_aset(req, g_request_path, val);
     /* rack says PATH_INFO must start with "/" or be empty */
-    if (!(len == 1 && *PTR_TO(mark) == '*'))
+    if (!STR_CSTR_EQ(val, "*"))
       rb_hash_aset(req, g_path_info, val);
   }
   action done {
@@ -177,11 +178,6 @@ static void http_field(VALUE req, const char *field, size_t flen, VALUE val)
   rb_hash_aset(req, f, val);
 }
 
-static int is_https(VALUE str)
-{
-  return RSTRING_LEN(str) == 5 && !memcmp("https", RSTRING_PTR(str), 5);
-}
-
 static void set_server_params(VALUE req)
 {
   VALUE temp = rb_hash_aref(req, g_rack_url_scheme);
@@ -191,12 +187,12 @@ static void set_server_params(VALUE req)
   /* set rack.url_scheme to "https" or "http", no others are allowed by Rack */
   if (temp == Qnil) {
     temp = rb_hash_aref(req, g_http_x_forwarded_proto);
-    if (temp != Qnil && is_https(temp))
+    if (temp != Qnil && STR_CSTR_EQ(temp, "https"))
       server_port = g_port_443;
     else
       temp = g_http;
     rb_hash_aset(req, g_rack_url_scheme, temp);
-  } else if (is_https(temp)) {
+  } else if (STR_CSTR_EQ(temp, "https")) {
     server_port = g_port_443;
   }
 
