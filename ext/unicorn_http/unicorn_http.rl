@@ -183,6 +183,11 @@ static void http_field(VALUE req, const char *field,
   rb_hash_aset(req, f, rb_str_new(value, vlen));
 }
 
+static int is_https(VALUE str)
+{
+  return RSTRING_LEN(str) == 5 && !memcmp("https", RSTRING_PTR(str), 5);
+}
+
 /** Finalizes the request header to have a bunch of stuff that's needed. */
 static void header_done(VALUE req, const char *at, size_t length)
 {
@@ -197,13 +202,12 @@ static void header_done(VALUE req, const char *at, size_t length)
   /* set rack.url_scheme to "https" or "http", no others are allowed by Rack */
   if ((temp = rb_hash_aref(req, g_rack_url_scheme)) == Qnil) {
     if ((temp = rb_hash_aref(req, g_http_x_forwarded_proto)) != Qnil &&
-        RSTRING_LEN(temp) == 5 &&
-        !memcmp("https", RSTRING_PTR(temp), 5))
+        is_https(temp))
       server_port = g_port_443;
     else
       temp = g_http;
     rb_hash_aset(req, g_rack_url_scheme, temp);
-  } else if (RSTRING_LEN(temp) == 5 && !memcmp("https", RSTRING_PTR(temp), 5)) {
+  } else if (is_https(temp)) {
     server_port = g_port_443;
   }
 
