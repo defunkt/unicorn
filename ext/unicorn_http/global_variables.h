@@ -54,4 +54,34 @@ DEF_MAX_LENGTH(REQUEST_PATH, 1024);
 DEF_MAX_LENGTH(QUERY_STRING, (1024 * 10));
 DEF_MAX_LENGTH(HEADER, (1024 * (80 + 32)));
 
+void init_globals(void)
+{
+  mUnicorn = rb_define_module("Unicorn");
+
+  DEF_GLOBAL(rack_url_scheme, "rack.url_scheme");
+  DEF_GLOBAL(request_method, "REQUEST_METHOD");
+  DEF_GLOBAL(request_uri, "REQUEST_URI");
+  DEF_GLOBAL(fragment, "FRAGMENT");
+  DEF_GLOBAL(query_string, "QUERY_STRING");
+  DEF_GLOBAL(http_version, "HTTP_VERSION");
+  DEF_GLOBAL(request_path, "REQUEST_PATH");
+  DEF_GLOBAL(path_info, "PATH_INFO");
+  DEF_GLOBAL(server_name, "SERVER_NAME");
+  DEF_GLOBAL(server_port, "SERVER_PORT");
+  DEF_GLOBAL(server_protocol, "SERVER_PROTOCOL");
+  DEF_GLOBAL(server_protocol_value, "HTTP/1.1");
+  DEF_GLOBAL(http_x_forwarded_proto, "HTTP_X_FORWARDED_PROTO");
+  DEF_GLOBAL(port_80, "80");
+  DEF_GLOBAL(port_443, "443");
+  DEF_GLOBAL(localhost, "localhost");
+  DEF_GLOBAL(http, "http");
+
+  eHttpParserError =
+         rb_define_class_under(mUnicorn, "HttpParserError", rb_eIOError);
+  cHttpParser = rb_define_class_under(mUnicorn, "HttpParser", rb_cObject);
+  sym_http_body = ID2SYM(rb_intern("http_body"));
+}
+
+#undef DEF_GLOBAL
+
 #endif /* global_variables_h */

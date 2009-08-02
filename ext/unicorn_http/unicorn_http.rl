@@ -312,34 +312,11 @@ static VALUE HttpParser_execute(VALUE self, VALUE req, VALUE data)
 
 void Init_unicorn_http(void)
 {
-  mUnicorn = rb_define_module("Unicorn");
-
-  DEF_GLOBAL(rack_url_scheme, "rack.url_scheme");
-  DEF_GLOBAL(request_method, "REQUEST_METHOD");
-  DEF_GLOBAL(request_uri, "REQUEST_URI");
-  DEF_GLOBAL(fragment, "FRAGMENT");
-  DEF_GLOBAL(query_string, "QUERY_STRING");
-  DEF_GLOBAL(http_version, "HTTP_VERSION");
-  DEF_GLOBAL(request_path, "REQUEST_PATH");
-  DEF_GLOBAL(path_info, "PATH_INFO");
-  DEF_GLOBAL(server_name, "SERVER_NAME");
-  DEF_GLOBAL(server_port, "SERVER_PORT");
-  DEF_GLOBAL(server_protocol, "SERVER_PROTOCOL");
-  DEF_GLOBAL(server_protocol_value, "HTTP/1.1");
-  DEF_GLOBAL(http_x_forwarded_proto, "HTTP_X_FORWARDED_PROTO");
-  DEF_GLOBAL(port_80, "80");
-  DEF_GLOBAL(port_443, "443");
-  DEF_GLOBAL(localhost, "localhost");
-  DEF_GLOBAL(http, "http");
-
-  eHttpParserError = rb_define_class_under(mUnicorn, "HttpParserError", rb_eIOError);
-
-  cHttpParser = rb_define_class_under(mUnicorn, "HttpParser", rb_cObject);
+  init_globals();
   rb_define_alloc_func(cHttpParser, HttpParser_alloc);
   rb_define_method(cHttpParser, "initialize", HttpParser_init,0);
   rb_define_method(cHttpParser, "reset", HttpParser_reset,0);
   rb_define_method(cHttpParser, "execute", HttpParser_execute,2);
-  sym_http_body = ID2SYM(rb_intern("http_body"));
   init_common_fields();
   g_http_host = find_common_field("HOST", 4);
   assert(g_http_host != Qnil);
