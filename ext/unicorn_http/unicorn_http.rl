@@ -36,13 +36,39 @@ struct http_parser {
   } len;
 };
 
-static void http_field(VALUE req, const char *field, size_t flen, VALUE val);
 static void header_done(VALUE req, const char *at, size_t length);
 
 #define LEN(AT, FPC) (FPC - buffer - hp->AT)
 #define MARK(M,FPC) (hp->M = (FPC) - buffer)
 #define PTR_TO(F) (buffer + hp->F)
 #define STR_NEW(M,FPC) rb_str_new(PTR_TO(M), LEN(M, FPC))
+
+static void write_value(VALUE req, struct http_parser *hp,
+                        const char *buffer, const char *p)
+{
+  VALUE f = find_common_field(PTR_TO(start.field), hp->s.field_len);
+  VALUE v;
+
+  VALIDATE_MAX_LENGTH(LEN(mark, p), FIELD_VALUE);
+  v = STR_NEW(mark, p);
+  if (f == Qnil) {
+    VALIDATE_MAX_LENGTH(hp->s.field_len, FIELD_NAME);
+    f = uncommon_field(PTR_TO(start.field), hp->s.field_len);
+  } else if (f == g_content_length) {
+    hp->len.content = parse_length(RSTRING_PTR(v), RSTRING_LEN(v));
+    if (hp->len.content < 0)
+      rb_raise(eHttpParserError, "invalid Content-Length");
+    hp->flags |= UH_FL_HASBODY;
+  } else if (f == g_http_transfer_encoding) {
+    if (STR_CSTR_CASE_EQ(v, "chunked"))
+      hp->flags |= UH_FL_CHUNKED | UH_FL_HASBODY;
+  } else if (f == g_http_trailer) {
+    hp->flags |= UH_FL_HASTRAILER;
+  } else if (f == g_http_host && rb_hash_aref(req, f) != Qnil) {
+    return; /* full URLs in REQUEST_URI take precedence */
+  }
+  rb_hash_aset(req, f, v);
+}
 
 /** Machine **/
 
@@ -56,10 +82,7 @@ static void header_done(VALUE req, const char *at, size_t length);
   action downcase_char { downcase_char((char *)fpc); }
   action write_field { hp->s.field_len = LEN(start.field, fpc); }
   action start_value { MARK(mark, fpc); }
-  action write_value {
-    VALIDATE_MAX_LENGTH(LEN(mark, fpc), FIELD_VALUE);
-    http_field(req, PTR_TO(start.field), hp->s.field_len, STR_NEW(mark, fpc));
-  }
+  action write_value { write_value(req, hp, buffer, fpc); }
   action request_method {
     rb_hash_aset(req, g_request_method, STR_NEW(mark, fpc));
   }
@@ -162,20 +185,6 @@ static struct http_parser *data_get(VALUE self)
   Data_Get_Struct(self, struct http_parser, hp);
   assert(hp);
   return hp;
-}
-
-static void http_field(VALUE req, const char *field, size_t flen, VALUE val)
-{
-  VALUE f = find_common_field(field, flen);
-
-  if (f == Qnil) {
-    VALIDATE_MAX_LENGTH(flen, FIELD_NAME);
-    f = uncommon_field(field, flen);
-  } else if (f == g_http_host && rb_hash_aref(req, f) != Qnil) {
-    return;
-  }
-
-  rb_hash_aset(req, f, val);
 }
 
 static void set_server_params(VALUE req)
@@ -319,5 +328,8 @@ void Init_unicorn_http(void)
   rb_define_method(cHttpParser, "execute", HttpParser_execute,2);
   init_common_fields();
   SET_GLOBAL(g_http_host, "HOST");
+  SET_GLOBAL(g_http_trailer, "TRAILER");
+  SET_GLOBAL(g_http_transfer_encoding, "TRANSFER_ENCODING");
+  SET_GLOBAL(g_content_length, "CONTENT_LENGTH");
 }
 #undef SET_GLOBAL

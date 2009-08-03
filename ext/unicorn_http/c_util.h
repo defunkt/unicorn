@@ -6,6 +6,9 @@
 #ifndef UH_util_h
 #define UH_util_h
 
+#include <unistd.h>
+#include <assert.h>
+
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
 #ifndef SIZEOF_OFF_T
@@ -38,6 +41,59 @@ static void downcase_char(char *c)
 {
   if (*c >= 'A' && *c <= 'Z')
     *c |= 0x20;
+}
+
+static int hexchar2int(int xdigit)
+{
+  if (xdigit >= 'A' && xdigit <= 'F')
+    return xdigit - 'A' + 10;
+  if (xdigit >= 'a' && xdigit <= 'f')
+    return xdigit - 'a' + 10;
+
+  /* Ragel already does runtime range checking for us in Unicorn: */
+  assert(xdigit >= '0' && xdigit <= '9');
+
+  return xdigit - '0';
+}
+
+/*
+ * multiplies +i+ by +base+ and increments the result by the parsed
+ * integer value of +xdigit+.  +xdigit+ is a character byte
+ * representing a number the range of 0..(base-1)
+ * returns the new value of +i+ on success
+ * returns -1 on errors (including overflow)
+ */
+static off_t step_incr(off_t i, int xdigit, const int base)
+{
+  static const off_t max = UH_OFF_T_MAX;
+  const off_t next_max = (max - (max % base)) / base;
+  off_t offset = hexchar2int(xdigit);
+
+  if (offset > (base - 1))
+    return -1;
+  if (i > next_max)
+    return -1;
+  i *= base;
+
+  if ((offset > (base - 1)) || ((max - i) < offset))
+    return -1;
+
+  return i + offset;
+}
+
+/*
+ * parses a non-negative length according to base-10 and
+ * returns it as an off_t value.  Returns -1 on errors
+ * (including overflow).
+ */
+static off_t parse_length(const char *value, size_t length)
+{
+  off_t rv;
+
+  for (rv = 0; length-- && rv >= 0; ++value)
+    rv = step_incr(rv, *value, 10);
+
+  return rv;
 }
 
 #endif /* UH_util_h */
