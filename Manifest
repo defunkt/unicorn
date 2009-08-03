@@ -132,6 +132,7 @@ test/test_helper.rb
 test/unit/test_chunked_reader.rb
 test/unit/test_configurator.rb
 test/unit/test_http_parser.rb
+test/unit/test_http_parser_ng.rb
 test/unit/test_request.rb
 test/unit/test_response.rb
 test/unit/test_server.rb

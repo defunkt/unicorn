@@ -16,6 +16,8 @@
 #define UH_FL_HASBODY  0x2
 #define UH_FL_INBODY   0x4
 #define UH_FL_HASTRAILER 0x8
+#define UH_FL_INTRAILER 0x10
+#define UH_FL_INCHUNK  0x20
 
 struct http_parser {
   int cs; /* Ragel internal state */
@@ -28,7 +30,7 @@ struct http_parser {
   } start;
   union {
     size_t field_len; /* only used during header processing */
-    long tmpfd; /* only used during body processing */
+    size_t dest_offset; /* only used during body processing */
   } s;
   union {
     off_t content;
@@ -38,10 +40,17 @@ struct http_parser {
 
 static void header_done(VALUE req, const char *at, size_t length);
 
+#define REMAINING (unsigned long)(pe - p)
 #define LEN(AT, FPC) (FPC - buffer - hp->AT)
 #define MARK(M,FPC) (hp->M = (FPC) - buffer)
 #define PTR_TO(F) (buffer + hp->F)
 #define STR_NEW(M,FPC) rb_str_new(PTR_TO(M), LEN(M, FPC))
+
+static void invalid_if_trailer(int flags)
+{
+  if (flags & UH_FL_INTRAILER)
+    rb_raise(eHttpParserError, "invalid Trailer");
+}
 
 static void write_value(VALUE req, struct http_parser *hp,
                         const char *buffer, const char *p)
@@ -59,11 +68,14 @@ static void write_value(VALUE req, struct http_parser *hp,
     if (hp->len.content < 0)
       rb_raise(eHttpParserError, "invalid Content-Length");
     hp->flags |= UH_FL_HASBODY;
+    invalid_if_trailer(hp->flags);
   } else if (f == g_http_transfer_encoding) {
     if (STR_CSTR_CASE_EQ(v, "chunked"))
       hp->flags |= UH_FL_CHUNKED | UH_FL_HASBODY;
+    invalid_if_trailer(hp->flags);
   } else if (f == g_http_trailer) {
     hp->flags |= UH_FL_HASTRAILER;
+    invalid_if_trailer(hp->flags);
   } else if (f == g_http_host && rb_hash_aref(req, f) != Qnil) {
     return; /* full URLs in REQUEST_URI take precedence */
   }
@@ -131,11 +143,60 @@ static void write_value(VALUE req, struct http_parser *hp,
     if (!STR_CSTR_EQ(val, "*"))
       rb_hash_aset(req, g_path_info, val);
   }
-  action done {
-    hp->start.offset = fpc - buffer + 1;
-    header_done(req, fpc + 1, pe - fpc - 1);
-    fbreak;
+  action add_to_chunk_size {
+    hp->len.chunk = step_incr(hp->len.chunk, fc, 16);
+    if (hp->len.chunk < 0)
+      rb_raise(eHttpParserError, "invalid chunk size");
   }
+  action header_done {
+    header_done(req, fpc + 1, pe - fpc - 1);
+    cs = http_parser_first_final;
+    if (hp->flags & UH_FL_HASBODY) {
+      hp->flags |= UH_FL_INBODY;
+      if (hp->flags & UH_FL_CHUNKED)
+        cs = http_parser_en_ChunkedBody;
+    } else {
+      assert(!(hp->flags & UH_FL_CHUNKED));
+    }
+    /*
+     * go back to Ruby so we can call the Rack application, we'll reenter
+     * the parser iff the body needs to be processed.
+     */
+    goto post_exec;
+  }
+
+  action end_trailers {
+    cs = http_parser_first_final;
+    goto post_exec;
+  }
+
+  action end_chunked_body {
+    if (hp->flags & UH_FL_HASTRAILER) {
+      hp->flags |= UH_FL_INTRAILER;
+      cs = http_parser_en_Trailers;
+    } else {
+      cs = http_parser_first_final;
+    }
+    ++p;
+    goto post_exec;
+  }
+
+  action skip_chunk_data {
+  skip_chunk_data_hack: {
+    size_t nr = MIN(hp->len.chunk, REMAINING);
+    memcpy(RSTRING_PTR(req) + hp->s.dest_offset, fpc, nr);
+    hp->s.dest_offset += nr;
+    hp->len.chunk -= nr;
+    p += nr;
+    assert(hp->len.chunk >= 0);
+    if (hp->len.chunk > REMAINING) {
+      hp->flags |= UH_FL_INCHUNK;
+      goto post_exec;
+    } else {
+      fhold;
+      fgoto chunk_end;
+    }
+  }}
 
   include unicorn_http_common "unicorn_http_common.rl";
 }%%
@@ -159,6 +220,9 @@ static void http_parser_execute(struct http_parser *hp,
   int cs = hp->cs;
   size_t off = hp->start.offset;
 
+  if (cs == http_parser_first_final)
+    return;
+
   assert(off <= len && "offset past end of buffer");
 
   p = buffer+off;
@@ -166,16 +230,18 @@ static void http_parser_execute(struct http_parser *hp,
 
   assert(pe - p == len - off && "pointers aren't same distance");
 
+  if (hp->flags & UH_FL_INCHUNK) {
+    hp->flags &= ~(UH_FL_INCHUNK);
+    goto skip_chunk_data_hack;
+  }
   %% write exec;
-
+post_exec: /* "_out:" also goes here */
   if (hp->cs != http_parser_error)
     hp->cs = cs;
   hp->start.offset = p - buffer;
 
   assert(p <= pe && "buffer overflow after parsing execute");
   assert(hp->start.offset <= len && "start.offset longer than length");
-  assert(hp->mark < len && "mark is after buffer end");
-  assert(hp->s.field_len <= len && "field has length longer than whole buffer");
 }
 
 static struct http_parser *data_get(VALUE self)
@@ -307,11 +373,144 @@ static VALUE HttpParser_execute(VALUE self, VALUE req, VALUE data)
     VALIDATE_MAX_LENGTH(hp->start.offset, HEADER);
 
     if (hp->cs != http_parser_error)
-      return hp->cs == http_parser_first_final ? Qtrue : Qfalse;
+      return ((hp->cs == http_parser_first_final) ||
+              (hp->cs == http_parser_en_ChunkedBody)) ? Qtrue : Qfalse;
 
     rb_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
   }
   rb_raise(eHttpParserError, "Requested start is after data buffer end.");
+}
+
+static void advance_str(VALUE str, off_t nr)
+{
+  long len = RSTRING_LEN(str);
+
+  if (len == 0)
+    return;
+
+  assert(nr <= len);
+  len -= nr;
+  if (len > 0) /* unlikely, len is usually 0 */
+    memmove(RSTRING_PTR(str), RSTRING_PTR(str) + nr, len);
+  rb_str_set_len(str, len);
+}
+
+static VALUE HttpParser_content_length(VALUE self)
+{
+  struct http_parser *hp = data_get(self);
+
+  return (hp->flags & UH_FL_CHUNKED) ? Qnil : OFFT2NUM(hp->len.content);
+}
+
+/**
+ * call-seq:
+ *    parser.headers(req, data) -> req or nil
+ *    parser.trailers(req, data) -> req or nil
+ *
+ * Takes a Hash and a String of data, parses the String of data filling
+ * in the Hash returning the Hash if parsing is finished, nil otherwise
+ * When returning the req Hash, it may modify data to point to where
+ * body processing should begin
+ *
+ * Raises HttpParserError if there are parsing errors
+ */
+static VALUE HttpParser_headers(VALUE self, VALUE req, VALUE data)
+{
+  struct http_parser *hp = data_get(self);
+
+  http_parser_execute(hp, req, RSTRING_PTR(data), RSTRING_LEN(data));
+  VALIDATE_MAX_LENGTH(hp->start.offset, HEADER);
+
+  if (hp->cs == http_parser_first_final ||
+      hp->cs == http_parser_en_ChunkedBody) {
+    advance_str(data, hp->start.offset + 1);
+    hp->start.offset = 0;
+
+    return req;
+  }
+
+  if (hp->cs == http_parser_error)
+    rb_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
+
+  return Qnil;
+}
+
+static int chunked_eof(struct http_parser *hp)
+{
+  return ((hp->cs == http_parser_first_final) ||
+          (hp->flags & UH_FL_INTRAILER));
+}
+
+static VALUE HttpParser_body_eof(VALUE self)
+{
+  struct http_parser *hp = data_get(self);
+
+  if (hp->flags & UH_FL_CHUNKED)
+    return chunked_eof(hp) ? Qtrue : Qfalse;
+
+  return hp->len.content == 0 ? Qtrue : Qfalse;
+}
+
+/**
+ * call-seq:
+ *    parser.read_body(buf, data) -> nil/data
+ *
+ * Takes a String of +data+, will modify data if dechunking is done.
+ * Returns +nil+ if there is more data left to process.  Returns
+ * +data+ if body processing is complete. When returning +data+,
+ * it may modify +data+ so the start of the string points to where
+ * the body ended so that trailer processing can begin.
+ *
+ * Raises HttpParserError if there are dechunking errors
+ * Basically this is a glorified memcpy(3) that copies +data+
+ * into +buf+ while filtering it through the dechunker.
+ */
+static VALUE HttpParser_read_body(VALUE self, VALUE buf, VALUE data)
+{
+  struct http_parser *hp = data_get(self);
+  char *dptr = RSTRING_PTR(data);
+  long dlen = RSTRING_LEN(data);
+
+  StringValue(buf);
+  rb_str_resize(buf, dlen); /* we can never copy more than dlen bytes */
+  OBJ_TAINT(buf); /* keep weirdo $SAFE users happy */
+
+  if (hp->flags & UH_FL_CHUNKED) {
+    if (chunked_eof(hp))
+      goto end_of_body;
+
+    hp->s.dest_offset = 0;
+    http_parser_execute(hp, buf, dptr, dlen);
+    if (hp->cs == http_parser_error)
+      rb_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
+
+    assert(hp->s.dest_offset <= hp->start.offset);
+    advance_str(data, hp->start.offset);
+    rb_str_set_len(buf, hp->s.dest_offset);
+
+    if (RSTRING_LEN(buf) == 0 && chunked_eof(hp)) {
+      assert(hp->len.chunk == 0);
+    } else {
+      data = Qnil;
+    }
+  } else {
+    /* no need to enter the Ragel machine for unchunked transfers */
+    assert(hp->len.content >= 0);
+    if (hp->len.content > 0) {
+      long nr = MIN(dlen, hp->len.content);
+
+      memcpy(RSTRING_PTR(buf), dptr, nr);
+      hp->len.content -= nr;
+      if (hp->len.content == 0)
+        hp->cs = http_parser_first_final;
+      advance_str(data, nr);
+      rb_str_set_len(buf, nr);
+      data = Qnil;
+    }
+  }
+end_of_body:
+  hp->start.offset = 0; /* for trailer parsing */
+  return data;
 }
 
 #define SET_GLOBAL(var,str) do { \
@@ -326,6 +525,11 @@ void Init_unicorn_http(void)
   rb_define_method(cHttpParser, "initialize", HttpParser_init,0);
   rb_define_method(cHttpParser, "reset", HttpParser_reset,0);
   rb_define_method(cHttpParser, "execute", HttpParser_execute,2);
+  rb_define_method(cHttpParser, "headers", HttpParser_headers, 2);
+  rb_define_method(cHttpParser, "read_body", HttpParser_read_body, 2);
+  rb_define_method(cHttpParser, "trailers", HttpParser_headers, 2);
+  rb_define_method(cHttpParser, "content_length", HttpParser_content_length, 0);
+  rb_define_method(cHttpParser, "body_eof?", HttpParser_body_eof, 0);
   init_common_fields();
   SET_GLOBAL(g_http_host, "HOST");
   SET_GLOBAL(g_http_trailer, "TRAILER");

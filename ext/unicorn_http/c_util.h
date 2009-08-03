@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <assert.h>
 
+#define MIN(a,b) (a < b ? a : b)
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
 #ifndef SIZEOF_OFF_T

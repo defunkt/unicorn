@@ -50,8 +50,19 @@
   field_value = any* >start_value %write_value;
 
   message_header = field_name ":" " "* field_value :> CRLF;
+  chunk_ext_val = token*;
+  chunk_ext_name = token*;
+  chunk_extension = ( ";" " "* chunk_ext_name ("=" chunk_ext_val)? )*;
+  last_chunk = "0"+ chunk_extension CRLF;
+  chunk_size = (xdigit* [1-9a-fA-F] xdigit*) $add_to_chunk_size;
+  chunk_end = CRLF;
+  chunk_body = any >skip_chunk_data;
+  chunk_begin = chunk_size chunk_extension CRLF;
+  chunk = chunk_begin chunk_body chunk_end;
+  ChunkedBody := chunk* last_chunk @end_chunked_body;
+  Trailers := (message_header)* CRLF @end_trailers;
 
-  Request = Request_Line ( message_header )* ( CRLF @done );
+  Request = Request_Line (message_header)* CRLF @header_done;
 
 main := Request;
 
