@@ -50,7 +50,7 @@
 
 == Versions
 
-{Stable v0.8.3}[http://git.bogomips.org/cgit/unicorn.git/tag/?id=v0.8.3]
+{Stable v0.8.4}[http://git.bogomips.org/cgit/unicorn.git/tag/?id=v0.8.4]
 
 {Development v0.9.2}[http://git.bogomips.org/cgit/unicorn.git/tag/?id=v0.9.2]
 
@@ -77,7 +77,7 @@ http://rubyforge.org/frs/?group_id=1306
 
 You may also install it via Rubygems on Rubyforge:
 
-  gem install unicorn -v0.8.3
+  gem install unicorn -v0.8.4
 
 You can get the latest source via git from the following locations
 (these versions may not be stable):
