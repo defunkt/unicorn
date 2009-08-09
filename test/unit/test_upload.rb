@@ -87,7 +87,7 @@ class UploadTest < Test::Unit::TestCase
     sock.syswrite("0\r\n")
 
     content_md5 = [ md5.digest! ].pack('m').strip.freeze
-    sock.syswrite("Content-MD5: #{content_md5}\r\n")
+    sock.syswrite("Content-MD5: #{content_md5}\r\n\r\n")
     read = sock.read.split(/\r\n/)
     assert_equal "HTTP/1.1 200 OK", read[0]
     resp = eval(read.grep(/^X-Resp: /).first.sub!(/X-Resp: /, ''))
