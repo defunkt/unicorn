@@ -252,4 +252,15 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_raise(HttpParserError) { @parser.trailers(req, str) }
   end
 
+  def test_repeat_headers
+    str = "PUT / HTTP/1.1\r\n" \
+          "Trailer: Content-MD5\r\n" \
+          "Trailer: Content-SHA1\r\n" \
+          "transfer-Encoding: chunked\r\n\r\n" \
+          "1\r\na\r\n2\r\n..\r\n0\r\n"
+    req = {}
+    assert_equal req, @parser.headers(req, str)
+    assert_equal 'Content-MD5,Content-SHA1', req['HTTP_TRAILER']
+  end
+
 end

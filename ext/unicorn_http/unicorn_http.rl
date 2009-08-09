@@ -57,6 +57,7 @@ static void write_value(VALUE req, struct http_parser *hp,
 {
   VALUE f = find_common_field(PTR_TO(start.field), hp->s.field_len);
   VALUE v;
+  VALUE e;
 
   VALIDATE_MAX_LENGTH(LEN(mark, p), FIELD_VALUE);
   v = STR_NEW(mark, p);
@@ -76,10 +77,16 @@ static void write_value(VALUE req, struct http_parser *hp,
   } else if (f == g_http_trailer) {
     hp->flags |= UH_FL_HASTRAILER;
     invalid_if_trailer(hp->flags);
-  } else if (f == g_http_host && rb_hash_aref(req, f) != Qnil) {
-    return; /* full URLs in REQUEST_URI take precedence */
   }
-  rb_hash_aset(req, f, v);
+
+  e = rb_hash_aref(req, f);
+  if (e == Qnil) {
+    rb_hash_aset(req, f, v);
+  } else if (f != g_http_host) {
+    /* full URLs in REQUEST_URI take precedence for the Host: header */
+    rb_str_buf_cat(e, ",", 1);
+    rb_str_buf_append(e, v);
+  }
 }
 
 /** Machine **/
