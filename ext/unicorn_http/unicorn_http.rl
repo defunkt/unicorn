@@ -478,6 +478,22 @@ void Init_unicorn_http(void)
   rb_define_method(cHttpParser, "trailers", HttpParser_headers, 2);
   rb_define_method(cHttpParser, "content_length", HttpParser_content_length, 0);
   rb_define_method(cHttpParser, "body_eof?", HttpParser_body_eof, 0);
+
+  /*
+   * The maximum size a single chunk when using chunked transfer encoding.
+   * This is only a theoretical maximum used to detect errors in clients,
+   * it is highly unlikely to encounter clients that send more than
+   * several kilobytes at once.
+   */
+  rb_define_const(cHttpParser, "CHUNK_MAX", OFFT2NUM(UH_OFF_T_MAX));
+
+  /*
+   * The maximum size of the body as specified by Content-Length.
+   * This is only a theoretical maximum, the actual limit is subject
+   * to the limits of the file system used for +Dir::tmpdir+
+   */
+  rb_define_const(cHttpParser, "LENGTH_MAX", OFFT2NUM(UH_OFF_T_MAX));
+
   init_common_fields();
   SET_GLOBAL(g_http_host, "HOST");
   SET_GLOBAL(g_http_trailer, "TRAILER");

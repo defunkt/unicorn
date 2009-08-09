@@ -186,4 +186,54 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal "GET / ", str
   end
 
+  def test_max_chunk
+    str = "PUT / HTTP/1.1\r\n" \
+          "transfer-Encoding: chunked\r\n\r\n" \
+          "#{HttpParser::CHUNK_MAX.to_s(16)}\r\na\r\n2\r\n..\r\n0\r\n"
+    req = {}
+    assert_equal req, @parser.headers(req, str)
+    assert_nil @parser.content_length
+    assert_nothing_raised { @parser.read_body('', str) }
+  end
+
+  def test_max_body
+    n = HttpParser::LENGTH_MAX
+    str = "PUT / HTTP/1.1\r\nContent-Length: #{n}\r\n\r\n"
+    req = {}
+    assert_nothing_raised { @parser.headers(req, str) }
+    assert_equal n, req['CONTENT_LENGTH'].to_i
+  end
+
+  def test_overflow_chunk
+    n = HttpParser::CHUNK_MAX + 1
+    str = "PUT / HTTP/1.1\r\n" \
+          "transfer-Encoding: chunked\r\n\r\n" \
+          "#{n.to_s(16)}\r\na\r\n2\r\n..\r\n0\r\n"
+    req = {}
+    assert_equal req, @parser.headers(req, str)
+    assert_nil @parser.content_length
+    assert_raise(HttpParserError) { @parser.read_body('', str) }
+  end
+
+  def test_overflow_content_length
+    n = HttpParser::LENGTH_MAX + 1
+    str = "PUT / HTTP/1.1\r\nContent-Length: #{n}\r\n\r\n"
+    assert_raise(HttpParserError) { @parser.headers({}, str) }
+  end
+
+  def test_bad_chunk
+    str = "PUT / HTTP/1.1\r\n" \
+          "transfer-Encoding: chunked\r\n\r\n" \
+          "#zzz\r\na\r\n2\r\n..\r\n0\r\n"
+    req = {}
+    assert_equal req, @parser.headers(req, str)
+    assert_nil @parser.content_length
+    assert_raise(HttpParserError) { @parser.read_body('', str) }
+  end
+
+  def test_bad_content_length
+    str = "PUT / HTTP/1.1\r\nContent-Length: 7ff\r\n\r\n"
+    assert_raise(HttpParserError) { @parser.headers({}, str) }
+  end
+
 end
