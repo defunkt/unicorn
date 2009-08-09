@@ -236,4 +236,20 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_raise(HttpParserError) { @parser.headers({}, str) }
   end
 
+  def test_bad_trailers
+    str = "PUT / HTTP/1.1\r\n" \
+          "Trailer: Transfer-Encoding\r\n" \
+          "transfer-Encoding: chunked\r\n\r\n" \
+          "1\r\na\r\n2\r\n..\r\n0\r\n"
+    req = {}
+    assert_equal req, @parser.headers(req, str)
+    assert_equal 'Transfer-Encoding', req['HTTP_TRAILER']
+    tmp = ''
+    assert_nil @parser.read_body(tmp, str)
+    assert_equal 'a..', tmp
+    assert_equal '', str
+    str << "Transfer-Encoding: identity\r\n\r\n"
+    assert_raise(HttpParserError) { @parser.trailers(req, str) }
+  end
+
 end
