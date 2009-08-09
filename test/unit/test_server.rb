@@ -33,6 +33,8 @@ class WebServerTest < Test::Unit::TestCase
 
   def teardown
     redirect_test_io do
+      wait_workers_ready("test_stderr.#$$.log", 1)
+      File.truncate("test_stderr.#$$.log", 0)
       @server.stop(true)
     end
   end
@@ -53,8 +55,10 @@ class WebServerTest < Test::Unit::TestCase
     end
     results = hit(["http://localhost:#@port/"])
     worker_pid = results[0].to_i
+    assert worker_pid != 0
     tmp.sysseek(0)
     loader_pid = tmp.sysread(4096).to_i
+    assert loader_pid != 0
     assert_equal worker_pid, loader_pid
     teardown
 
@@ -65,6 +69,7 @@ class WebServerTest < Test::Unit::TestCase
     end
     results = hit(["http://localhost:#@port/"])
     worker_pid = results[0].to_i
+    assert worker_pid != 0
     tmp.sysseek(0)
     loader_pid = tmp.sysread(4096).to_i
     assert_equal $$, loader_pid
@@ -158,9 +163,9 @@ class WebServerTest < Test::Unit::TestCase
     do_test(long, Unicorn::Const::CHUNK_SIZE * 2 -400)
   end
 
-  def test_file_streamed_request_bad_method
+  def test_file_streamed_request_bad_body
     body = "a" * (Unicorn::Const::MAX_BODY * 2)
-    long = "GET /test HTTP/1.1\r\nContent-length: #{body.length}\r\n\r\n" + body
+    long = "GET /test HTTP/1.1\r\nContent-ength: #{body.length}\r\n\r\n" + body
     assert_raises(EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,
                   Errno::EBADF) {
       do_test(long, Unicorn::Const::CHUNK_SIZE * 2 -400)

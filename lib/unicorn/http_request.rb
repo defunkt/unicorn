@@ -1,6 +1,4 @@
-require 'stringio'
-
-# compiled extension
+# coding:binary
 require 'unicorn_http'
 
 module Unicorn
@@ -19,18 +17,13 @@ module Unicorn
       "SERVER_SOFTWARE" => "Unicorn #{Const::UNICORN_VERSION}".freeze
     }
 
-    NULL_IO = StringIO.new(Z)
     LOCALHOST = '127.0.0.1'.freeze
-
-    def initialize
-    end
 
     # Being explicitly single-threaded, we have certain advantages in
     # not having to worry about variables being clobbered :)
-    BUFFER = ' ' * Const::CHUNK_SIZE # initial size, may grow
-    BUFFER.force_encoding(Encoding::BINARY) if Z.respond_to?(:force_encoding)
+    BUF = ' ' * Const::CHUNK_SIZE # initial size, may grow
     PARSER = HttpParser.new
-    PARAMS = Hash.new
+    REQ = {}
 
     # Does the majority of the IO processing.  It has been written in
     # Ruby using about 8 different IO processing strategies.
@@ -46,7 +39,7 @@ module Unicorn
     # This does minimal exception trapping and it is up to the caller
     # to handle any socket errors (e.g. user aborted upload).
     def read(socket)
-      PARAMS.clear
+      REQ.clear
       PARSER.reset
 
       # From http://www.ietf.org/rfc/rfc3875:
@@ -56,42 +49,30 @@ module Unicorn
       #  identify the client for the immediate request to the server;
       #  that client may be a proxy, gateway, or other intermediary
       #  acting on behalf of the actual source client."
-      PARAMS[Const::REMOTE_ADDR] =
+      REQ[Const::REMOTE_ADDR] =
                     TCPSocket === socket ? socket.peeraddr.last : LOCALHOST
 
       # short circuit the common case with small GET requests first
-      PARSER.execute(PARAMS, socket.readpartial(Const::CHUNK_SIZE, BUFFER)) and
+      PARSER.headers(REQ, socket.readpartial(Const::CHUNK_SIZE, BUF)) and
           return handle_body(socket)
 
-      data = BUFFER.dup # socket.readpartial will clobber BUFFER
+      data = BUF.dup # socket.readpartial will clobber data
 
       # Parser is not done, queue up more data to read and continue parsing
       # an Exception thrown from the PARSER will throw us out of the loop
       begin
-        data << socket.readpartial(Const::CHUNK_SIZE, BUFFER)
-        PARSER.execute(PARAMS, data) and return handle_body(socket)
+        BUF << socket.readpartial(Const::CHUNK_SIZE, data)
+        PARSER.headers(REQ, BUF) and return handle_body(socket)
       end while true
     end
 
     private
 
     # Handles dealing with the rest of the request
-    # returns a Rack environment if successful
+    # returns a # Rack environment if successful
     def handle_body(socket)
-      PARAMS[Const::RACK_INPUT] = if (body = PARAMS.delete(:http_body))
-        length = PARAMS[Const::CONTENT_LENGTH].to_i
-
-        if /\Achunked\z/i =~ PARAMS[Const::HTTP_TRANSFER_ENCODING]
-          socket = ChunkedReader.new(PARAMS, socket, body)
-          length = body = nil
-        end
-
-        TeeInput.new(socket, length, body)
-      else
-        NULL_IO
-      end
-
-      PARAMS.update(DEFAULTS)
+      REQ[Const::RACK_INPUT] = Unicorn::TeeInput.new(socket)
+      REQ.update(DEFAULTS)
     end
 
   end

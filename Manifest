@@ -32,7 +32,6 @@ lib/unicorn/app/inetd.rb
 lib/unicorn/app/old_rails.rb
 lib/unicorn/app/old_rails/static.rb
 lib/unicorn/cgi_wrapper.rb
-lib/unicorn/chunked_reader.rb
 lib/unicorn/configurator.rb
 lib/unicorn/const.rb
 lib/unicorn/http_request.rb
@@ -40,7 +39,6 @@ lib/unicorn/http_response.rb
 lib/unicorn/launcher.rb
 lib/unicorn/socket_helper.rb
 lib/unicorn/tee_input.rb
-lib/unicorn/trailer_parser.rb
 lib/unicorn/util.rb
 local.mk.sample
 setup.rb
@@ -129,7 +127,6 @@ test/rails/app-2.3.3.1/public/404.html
 test/rails/app-2.3.3.1/public/500.html
 test/rails/test_rails.rb
 test/test_helper.rb
-test/unit/test_chunked_reader.rb
 test/unit/test_configurator.rb
 test/unit/test_http_parser.rb
 test/unit/test_http_parser_ng.rb
@@ -139,6 +136,5 @@ test/unit/test_server.rb
 test/unit/test_signals.rb
 test/unit/test_socket_helper.rb
 test/unit/test_tee_input.rb
-test/unit/test_trailer_parser.rb
 test/unit/test_upload.rb
 test/unit/test_util.rb

@@ -3,7 +3,6 @@
 static VALUE mUnicorn;
 static VALUE cHttpParser;
 static VALUE eHttpParserError;
-static VALUE sym_http_body;
 
 static VALUE g_rack_url_scheme;
 static VALUE g_request_method;
@@ -82,7 +81,6 @@ void init_globals(void)
   eHttpParserError =
          rb_define_class_under(mUnicorn, "HttpParserError", rb_eIOError);
   cHttpParser = rb_define_class_under(mUnicorn, "HttpParser", rb_cObject);
-  sym_http_body = ID2SYM(rb_intern("http_body"));
 }
 
 #undef DEF_GLOBAL

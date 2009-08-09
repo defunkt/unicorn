@@ -13,15 +13,23 @@
 module Unicorn
   class TeeInput
 
-    def initialize(input, size, body)
-      @tmp = Unicorn::Util.tmpio
+    # it's so awesome to not have to care for thread safety...
 
-      if body
-        @tmp.write(body)
+    RAW = HttpRequest::BUF # :nodoc:
+    DST = RAW.dup # :nodoc:
+    PARSER = HttpRequest::PARSER # :nodoc:
+    REQ = HttpRequest::REQ # :nodoc:
+
+    def initialize(socket)
+      @tmp = Util.tmpio
+      @size = PARSER.content_length
+      return(@input = nil) if 0 == @size
+      @input = socket
+      if RAW.size > 0
+        PARSER.read_body(DST, RAW) and finalize_input
+        @tmp.write(DST)
         @tmp.seek(0)
       end
-      @input = input
-      @size = size # nil if chunked
     end
 
     # returns the size of the input.  This is what the Content-Length
@@ -32,10 +40,10 @@ module Unicorn
       @size and return @size
 
       if @input
-        buf = Z.dup
-        while tee(Const::CHUNK_SIZE, buf)
+        pos = @tmp.tell
+        while tee(Const::CHUNK_SIZE, DST)
         end
-        @tmp.rewind
+        @tmp.seek(pos)
       end
 
       @size = @tmp.stat.size
@@ -47,13 +55,12 @@ module Unicorn
       length = args.shift
       if nil == length
         rv = @tmp.read || Z.dup
-        tmp = Z.dup
-        while tee(Const::CHUNK_SIZE, tmp)
-          rv << tmp
+        while tee(Const::CHUNK_SIZE, DST)
+          rv << DST
         end
         rv
       else
-        buf = args.shift || Z.dup
+        buf = args.shift || DST.dup
         diff = @tmp.stat.size - @tmp.pos
         if 0 == diff
           tee(length, buf)
@@ -70,7 +77,7 @@ module Unicorn
 
       orig_size = @tmp.stat.size
       if @tmp.pos == orig_size
-        tee(Const::CHUNK_SIZE, Z.dup) or return nil
+        tee(Const::CHUNK_SIZE, DST) or return nil
         @tmp.seek(orig_size)
       end
 
@@ -79,8 +86,8 @@ module Unicorn
 
       # unlikely, if we got here, then @tmp is at EOF
       begin
-        orig_size = @tmp.stat.size
-        tee(Const::CHUNK_SIZE, Z.dup) or break
+        orig_size = @tmp.pos
+        tee(Const::CHUNK_SIZE, DST) or break
         @tmp.seek(orig_size)
         line << @tmp.gets
         $/ == line[-$/.size, $/.size] and return line
@@ -108,25 +115,23 @@ module Unicorn
     # backing store as well as returning it.  +buf+ must be specified.
     # returns nil if reading from the input returns nil
     def tee(length, buf)
-      begin
-        if @size
-          left = @size - @tmp.stat.size
-          0 == left and return nil
-          if length >= left
-            @input.readpartial(left, buf) == left and @input = nil
-          elsif @input.nil?
-            return nil
-          else
-            @input.readpartial(length, buf)
+      unless PARSER.body_eof?
+        begin
+          if PARSER.read_body(buf, @input.readpartial(length, RAW)).nil?
+            @tmp.write(buf)
+            return buf
           end
-        else # ChunkedReader#readpartial just raises EOFError when done
-          @input.readpartial(length, buf)
+        rescue EOFError
         end
-      rescue EOFError
-        return @input = nil
       end
-      @tmp.write(buf)
-      buf
+      finalize_input
+    end
+
+    def finalize_input
+      while PARSER.trailers(REQ, RAW).nil?
+        RAW << @input.readpartial(Const::CHUNK_SIZE, DST)
+      end
+      @input = nil
     end
 
   end

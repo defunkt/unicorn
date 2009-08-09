@@ -26,7 +26,8 @@ class TestTeeInput < Test::Unit::TestCase
   end
 
   def test_gets_long
-    ti = Unicorn::TeeInput.new(@rd, nil, "hello")
+    init_parser("hello", 5 + (4096 * 4 * 3) + "#$/foo#$/".size)
+    ti = Unicorn::TeeInput.new(@rd)
     status = line = nil
     pid = fork {
       @rd.close
@@ -46,7 +47,8 @@ class TestTeeInput < Test::Unit::TestCase
   end
 
   def test_gets_short
-    ti = Unicorn::TeeInput.new(@rd, nil, "hello")
+    init_parser("hello", 5 + "#$/foo".size)
+    ti = Unicorn::TeeInput.new(@rd)
     status = line = nil
     pid = fork {
       @rd.close
@@ -61,6 +63,21 @@ class TestTeeInput < Test::Unit::TestCase
     assert_nil ti.gets
     assert_nothing_raised { pid, status = Process.waitpid2(pid) }
     assert status.success?
+  end
+
+private
+
+  def init_parser(body, size = nil)
+    @parser = Unicorn::TeeInput::PARSER
+    @parser.reset
+    body = body.to_s.freeze
+    buf = "POST / HTTP/1.1\r\n" \
+          "Host: localhost\r\n" \
+          "Content-Length: #{size || body.size}\r\n" \
+          "\r\n#{body}"
+    buf = Unicorn::TeeInput::RAW.replace(buf)
+    assert_equal @env, @parser.headers(@env, buf)
+    assert_equal body, buf
   end
 
 end

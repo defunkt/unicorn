@@ -38,7 +38,7 @@ struct http_parser {
   } len;
 };
 
-static void header_done(VALUE req, const char *at, size_t length);
+static void finalize_header(VALUE req);
 
 #define REMAINING (unsigned long)(pe - p)
 #define LEN(AT, FPC) (FPC - buffer - hp->AT)
@@ -149,7 +149,8 @@ static void write_value(VALUE req, struct http_parser *hp,
       rb_raise(eHttpParserError, "invalid chunk size");
   }
   action header_done {
-    header_done(req, fpc + 1, pe - fpc - 1);
+    finalize_header(req);
+
     cs = http_parser_first_final;
     if (hp->flags & UH_FL_HASBODY) {
       hp->flags |= UH_FL_INBODY;
@@ -253,7 +254,7 @@ static struct http_parser *data_get(VALUE self)
   return hp;
 }
 
-static void set_server_params(VALUE req)
+static void finalize_header(VALUE req)
 {
   VALUE temp = rb_hash_aref(req, g_rack_url_scheme);
   VALUE server_name = g_localhost;
@@ -287,29 +288,11 @@ static void set_server_params(VALUE req)
   }
   rb_hash_aset(req, g_server_name, server_name);
   rb_hash_aset(req, g_server_port, server_port);
-}
-
-/** Finalizes the request header to have a bunch of stuff that's needed. */
-static void header_done(VALUE req, const char *at, size_t length)
-{
-  VALUE temp;
+  rb_hash_aset(req, g_server_protocol, g_server_protocol_value);
 
   /* rack requires QUERY_STRING */
   if (rb_hash_aref(req, g_query_string) == Qnil)
     rb_hash_aset(req, g_query_string, rb_str_new(NULL, 0));
-
-  set_server_params(req);
-  rb_hash_aset(req, g_server_protocol, g_server_protocol_value);
-
-  /* grab the initial body and stuff it into the hash */
-  temp = rb_hash_aref(req, g_request_method);
-  if (temp != Qnil) {
-    long len = RSTRING_LEN(temp);
-    char *ptr = RSTRING_PTR(temp);
-
-    if (memcmp(ptr, "HEAD", len) && memcmp(ptr, "GET", len))
-      rb_hash_aset(req, sym_http_body, rb_str_new(at, length));
-  }
 }
 
 static VALUE HttpParser_alloc(VALUE klass)
@@ -345,40 +328,6 @@ static VALUE HttpParser_reset(VALUE self)
   http_parser_init(data_get(self));
 
   return Qnil;
-}
-
-
-/**
- * call-seq:
- *    parser.execute(req, data) -> true/false
- *
- * Takes a Hash and a String of data, parses the String of data filling
- * in the Hash returning a boolean to indicate whether or not parsing
- * is finished.
- *
- * This function now throws an exception when there is a parsing error.
- * This makes the logic for working with the parser much easier.  You
- * will need to wrap the parser with an exception handling block.
- */
-
-static VALUE HttpParser_execute(VALUE self, VALUE req, VALUE data)
-{
-  struct http_parser *hp = data_get(self);
-  char *dptr = RSTRING_PTR(data);
-  long dlen = RSTRING_LEN(data);
-
-  if (hp->start.offset < dlen) {
-    http_parser_execute(hp, req, dptr, dlen);
-
-    VALIDATE_MAX_LENGTH(hp->start.offset, HEADER);
-
-    if (hp->cs != http_parser_error)
-      return ((hp->cs == http_parser_first_final) ||
-              (hp->cs == http_parser_en_ChunkedBody)) ? Qtrue : Qfalse;
-
-    rb_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
-  }
-  rb_raise(eHttpParserError, "Requested start is after data buffer end.");
 }
 
 static void advance_str(VALUE str, off_t nr)
@@ -524,7 +473,6 @@ void Init_unicorn_http(void)
   rb_define_alloc_func(cHttpParser, HttpParser_alloc);
   rb_define_method(cHttpParser, "initialize", HttpParser_init,0);
   rb_define_method(cHttpParser, "reset", HttpParser_reset,0);
-  rb_define_method(cHttpParser, "execute", HttpParser_execute,2);
   rb_define_method(cHttpParser, "headers", HttpParser_headers, 2);
   rb_define_method(cHttpParser, "read_body", HttpParser_read_body, 2);
   rb_define_method(cHttpParser, "trailers", HttpParser_headers, 2);

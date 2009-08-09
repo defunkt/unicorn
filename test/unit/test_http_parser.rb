@@ -14,7 +14,8 @@ class HttpParserTest < Test::Unit::TestCase
     parser = HttpParser.new
     req = {}
     http = "GET / HTTP/1.1\r\n\r\n"
-    assert parser.execute(req, http)
+    assert_equal req, parser.headers(req, http)
+    assert_equal '', http
 
     assert_equal 'HTTP/1.1', req['SERVER_PROTOCOL']
     assert_equal '/', req['REQUEST_PATH']
@@ -23,17 +24,18 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'GET', req['REQUEST_METHOD']
     assert_nil req['FRAGMENT']
     assert_equal '', req['QUERY_STRING']
-    assert_nil req[:http_body]
 
     parser.reset
     req.clear
 
-    assert ! parser.execute(req, "G")
+    http = "G"
+    assert_nil parser.headers(req, http)
+    assert_equal "G", http
     assert req.empty?
 
     # try parsing again to ensure we were reset correctly
     http = "GET /hello-world HTTP/1.1\r\n\r\n"
-    assert parser.execute(req, http)
+    assert parser.headers(req, http)
 
     assert_equal 'HTTP/1.1', req['SERVER_PROTOCOL']
     assert_equal '/hello-world', req['REQUEST_PATH']
@@ -42,52 +44,56 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'GET', req['REQUEST_METHOD']
     assert_nil req['FRAGMENT']
     assert_equal '', req['QUERY_STRING']
-    assert_nil req[:http_body]
+    assert_equal '', http
   end
 
   def test_parse_server_host_default_port
     parser = HttpParser.new
     req = {}
-    assert parser.execute(req, "GET / HTTP/1.1\r\nHost: foo\r\n\r\n")
+    tmp = "GET / HTTP/1.1\r\nHost: foo\r\n\r\n"
+    assert_equal req, parser.headers(req, tmp)
     assert_equal 'foo', req['SERVER_NAME']
     assert_equal '80', req['SERVER_PORT']
-    assert_nil req[:http_body]
+    assert_equal '', tmp
   end
 
   def test_parse_server_host_alt_port
     parser = HttpParser.new
     req = {}
-    assert parser.execute(req, "GET / HTTP/1.1\r\nHost: foo:999\r\n\r\n")
+    tmp = "GET / HTTP/1.1\r\nHost: foo:999\r\n\r\n"
+    assert_equal req, parser.headers(req, tmp)
     assert_equal 'foo', req['SERVER_NAME']
     assert_equal '999', req['SERVER_PORT']
-    assert_nil req[:http_body]
+    assert_equal '', tmp
   end
 
   def test_parse_server_host_empty_port
     parser = HttpParser.new
     req = {}
-    assert parser.execute(req, "GET / HTTP/1.1\r\nHost: foo:\r\n\r\n")
+    tmp = "GET / HTTP/1.1\r\nHost: foo:\r\n\r\n"
+    assert_equal req, parser.headers(req, tmp)
     assert_equal 'foo', req['SERVER_NAME']
     assert_equal '80', req['SERVER_PORT']
-    assert_nil req[:http_body]
+    assert_equal '', tmp
   end
 
   def test_parse_server_host_xfp_https
     parser = HttpParser.new
     req = {}
-    assert parser.execute(req, "GET / HTTP/1.1\r\nHost: foo:\r\n" \
-                          "X-Forwarded-Proto: https\r\n\r\n")
+    tmp = "GET / HTTP/1.1\r\nHost: foo:\r\n" \
+          "X-Forwarded-Proto: https\r\n\r\n"
+    assert_equal req, parser.headers(req, tmp)
     assert_equal 'foo', req['SERVER_NAME']
     assert_equal '443', req['SERVER_PORT']
-    assert_nil req[:http_body]
+    assert_equal '', tmp
   end
 
   def test_parse_strange_headers
     parser = HttpParser.new
     req = {}
     should_be_good = "GET / HTTP/1.1\r\naaaaaaaaaaaaa:++++++++++\r\n\r\n"
-    assert parser.execute(req, should_be_good)
-    assert_nil req[:http_body]
+    assert_equal req, parser.headers(req, should_be_good)
+    assert_equal '', should_be_good
 
     # ref: http://thread.gmane.org/gmane.comp.lang.ruby.mongrel.devel/37/focus=45
     # (note we got 'pen' mixed up with 'pound' in that thread,
@@ -110,8 +116,9 @@ class HttpParserTest < Test::Unit::TestCase
       parser = HttpParser.new
       req = {}
       sorta_safe = %(GET #{path} HTTP/1.1\r\n\r\n)
-      assert parser.execute(req, sorta_safe)
-      assert_nil req[:http_body]
+      assert_equal req, parser.headers(req, sorta_safe)
+      assert_equal path, req['REQUEST_URI']
+      assert_equal '', sorta_safe
     end
   end
   
@@ -120,30 +127,32 @@ class HttpParserTest < Test::Unit::TestCase
     req = {}
     bad_http = "GET / SsUTF/1.1"
 
-    assert_raises(HttpParserError) { parser.execute(req, bad_http) }
+    assert_raises(HttpParserError) { parser.headers(req, bad_http) }
+
+    # make sure we can recover
     parser.reset
-    assert(parser.execute({}, "GET / HTTP/1.0\r\n\r\n"))
-    assert_nil req[:http_body]
+    req.clear
+    assert_equal req, parser.headers(req, "GET / HTTP/1.0\r\n\r\n")
   end
 
   def test_piecemeal
     parser = HttpParser.new
     req = {}
     http = "GET"
-    assert ! parser.execute(req, http)
-    assert_raises(HttpParserError) { parser.execute(req, http) }
-    assert ! parser.execute(req, http << " / HTTP/1.0")
+    assert_nil parser.headers(req, http)
+    assert_nil parser.headers(req, http)
+    assert_nil parser.headers(req, http << " / HTTP/1.0")
     assert_equal '/', req['REQUEST_PATH']
     assert_equal '/', req['REQUEST_URI']
     assert_equal 'GET', req['REQUEST_METHOD']
-    assert ! parser.execute(req, http << "\r\n")
+    assert_nil parser.headers(req, http << "\r\n")
     assert_equal 'HTTP/1.0', req['HTTP_VERSION']
-    assert ! parser.execute(req, http << "\r")
-    assert parser.execute(req, http << "\n")
+    assert_nil parser.headers(req, http << "\r")
+    assert_equal req, parser.headers(req, http << "\n")
     assert_equal 'HTTP/1.1', req['SERVER_PROTOCOL']
     assert_nil req['FRAGMENT']
     assert_equal '', req['QUERY_STRING']
-    assert_nil req[:http_body]
+    assert_equal "", http
   end
 
   # not common, but underscores do appear in practice
@@ -151,7 +160,7 @@ class HttpParserTest < Test::Unit::TestCase
     parser = HttpParser.new
     req = {}
     http = "GET http://under_score.example.com/foo?q=bar HTTP/1.0\r\n\r\n"
-    assert parser.execute(req, http)
+    assert_equal req, parser.headers(req, http)
     assert_equal 'http', req['rack.url_scheme']
     assert_equal '/foo?q=bar', req['REQUEST_URI']
     assert_equal '/foo', req['REQUEST_PATH']
@@ -160,14 +169,14 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'under_score.example.com', req['HTTP_HOST']
     assert_equal 'under_score.example.com', req['SERVER_NAME']
     assert_equal '80', req['SERVER_PORT']
-    assert_nil req[:http_body]
+    assert_equal "", http
   end
 
   def test_absolute_uri
     parser = HttpParser.new
     req = {}
     http = "GET http://example.com/foo?q=bar HTTP/1.0\r\n\r\n"
-    assert parser.execute(req, http)
+    assert_equal req, parser.headers(req, http)
     assert_equal 'http', req['rack.url_scheme']
     assert_equal '/foo?q=bar', req['REQUEST_URI']
     assert_equal '/foo', req['REQUEST_PATH']
@@ -176,6 +185,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'example.com', req['HTTP_HOST']
     assert_equal 'example.com', req['SERVER_NAME']
     assert_equal '80', req['SERVER_PORT']
+    assert_equal "", http
   end
 
   # X-Forwarded-Proto is not in rfc2616, absolute URIs are, however...
@@ -184,7 +194,7 @@ class HttpParserTest < Test::Unit::TestCase
     req = {}
     http = "GET https://example.com/foo?q=bar HTTP/1.1\r\n" \
            "X-Forwarded-Proto: http\r\n\r\n"
-    assert parser.execute(req, http)
+    assert_equal req, parser.headers(req, http)
     assert_equal 'https', req['rack.url_scheme']
     assert_equal '/foo?q=bar', req['REQUEST_URI']
     assert_equal '/foo', req['REQUEST_PATH']
@@ -193,6 +203,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'example.com', req['HTTP_HOST']
     assert_equal 'example.com', req['SERVER_NAME']
     assert_equal '443', req['SERVER_PORT']
+    assert_equal "", http
   end
 
   # Host: header should be ignored for absolute URIs
@@ -201,7 +212,7 @@ class HttpParserTest < Test::Unit::TestCase
     req = {}
     http = "GET http://example.com:8080/foo?q=bar HTTP/1.2\r\n" \
            "Host: bad.example.com\r\n\r\n"
-    assert parser.execute(req, http)
+    assert_equal req, parser.headers(req, http)
     assert_equal 'http', req['rack.url_scheme']
     assert_equal '/foo?q=bar', req['REQUEST_URI']
     assert_equal '/foo', req['REQUEST_PATH']
@@ -210,6 +221,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'example.com:8080', req['HTTP_HOST']
     assert_equal 'example.com', req['SERVER_NAME']
     assert_equal '8080', req['SERVER_PORT']
+    assert_equal "", http
   end
 
   def test_absolute_uri_with_empty_port
@@ -217,7 +229,7 @@ class HttpParserTest < Test::Unit::TestCase
     req = {}
     http = "GET https://example.com:/foo?q=bar HTTP/1.1\r\n" \
            "Host: bad.example.com\r\n\r\n"
-    assert parser.execute(req, http)
+    assert_equal req, parser.headers(req, http)
     assert_equal 'https', req['rack.url_scheme']
     assert_equal '/foo?q=bar', req['REQUEST_URI']
     assert_equal '/foo', req['REQUEST_PATH']
@@ -226,32 +238,33 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'example.com:', req['HTTP_HOST']
     assert_equal 'example.com', req['SERVER_NAME']
     assert_equal '443', req['SERVER_PORT']
+    assert_equal "", http
   end
 
   def test_put_body_oneshot
     parser = HttpParser.new
     req = {}
     http = "PUT / HTTP/1.0\r\nContent-Length: 5\r\n\r\nabcde"
-    assert parser.execute(req, http)
+    assert_equal req, parser.headers(req, http)
     assert_equal '/', req['REQUEST_PATH']
     assert_equal '/', req['REQUEST_URI']
     assert_equal 'PUT', req['REQUEST_METHOD']
     assert_equal 'HTTP/1.0', req['HTTP_VERSION']
     assert_equal 'HTTP/1.1', req['SERVER_PROTOCOL']
-    assert_equal "abcde", req[:http_body]
+    assert_equal "abcde", http
   end
 
   def test_put_body_later
     parser = HttpParser.new
     req = {}
     http = "PUT /l HTTP/1.0\r\nContent-Length: 5\r\n\r\n"
-    assert parser.execute(req, http)
+    assert_equal req, parser.headers(req, http)
     assert_equal '/l', req['REQUEST_PATH']
     assert_equal '/l', req['REQUEST_URI']
     assert_equal 'PUT', req['REQUEST_METHOD']
     assert_equal 'HTTP/1.0', req['HTTP_VERSION']
     assert_equal 'HTTP/1.1', req['SERVER_PROTOCOL']
-    assert_equal "", req[:http_body]
+    assert_equal "", http
   end
 
   def test_unknown_methods
@@ -261,13 +274,13 @@ class HttpParserTest < Test::Unit::TestCase
       s = "#{m} /forums/1/topics/2375?page=1#posts-17408 HTTP/1.1\r\n\r\n"
       ok = false
       assert_nothing_raised do
-        ok = parser.execute(req, s)
+        ok = parser.headers(req, s)
       end
       assert ok
       assert_equal '/forums/1/topics/2375?page=1', req['REQUEST_URI']
       assert_equal 'posts-17408', req['FRAGMENT']
       assert_equal 'page=1', req['QUERY_STRING']
-      assert_equal "", req[:http_body]
+      assert_equal "", s
       assert_equal m, req['REQUEST_METHOD']
     }
   end
@@ -278,13 +291,13 @@ class HttpParserTest < Test::Unit::TestCase
     get = "GET /forums/1/topics/2375?page=1#posts-17408 HTTP/1.1\r\n\r\n"
     ok = false
     assert_nothing_raised do
-      ok = parser.execute(req, get)
+      ok = parser.headers(req, get)
     end
     assert ok
     assert_equal '/forums/1/topics/2375?page=1', req['REQUEST_URI']
     assert_equal 'posts-17408', req['FRAGMENT']
     assert_equal 'page=1', req['QUERY_STRING']
-    assert_nil req[:http_body]
+    assert_equal '', get
   end
 
   # lame random garbage maker
@@ -309,7 +322,7 @@ class HttpParserTest < Test::Unit::TestCase
     10.times do |c|
       get = "GET /#{rand_data(10,120)} HTTP/1.1\r\nX-#{rand_data(1024, 1024+(c*1024))}: Test\r\n\r\n"
       assert_raises Unicorn::HttpParserError do
-        parser.execute({}, get)
+        parser.headers({}, get)
         parser.reset
       end
     end
@@ -318,7 +331,7 @@ class HttpParserTest < Test::Unit::TestCase
     10.times do |c|
       get = "GET /#{rand_data(10,120)} HTTP/1.1\r\nX-Test: #{rand_data(1024, 1024+(c*1024), false)}\r\n\r\n"
       assert_raises Unicorn::HttpParserError do
-        parser.execute({}, get)
+        parser.headers({}, get)
         parser.reset
       end
     end
@@ -327,7 +340,7 @@ class HttpParserTest < Test::Unit::TestCase
     get = "GET /#{rand_data(10,120)} HTTP/1.1\r\n"
     get << "X-Test: test\r\n" * (80 * 1024)
     assert_raises Unicorn::HttpParserError do
-      parser.execute({}, get)
+      parser.headers({}, get)
       parser.reset
     end
 
@@ -335,7 +348,7 @@ class HttpParserTest < Test::Unit::TestCase
     10.times do |c|
       get = "GET #{rand_data(1024, 1024+(c*1024), false)} #{rand_data(1024, 1024+(c*1024), false)}\r\n\r\n"
       assert_raises Unicorn::HttpParserError do
-        parser.execute({}, get)
+        parser.headers({}, get)
         parser.reset
       end
     end
