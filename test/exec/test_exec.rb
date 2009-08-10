@@ -77,6 +77,7 @@ end
       File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
       pid = xfork { redirect_test_io { exec($unicorn_bin, "-l#@addr:#@port") } }
       wait_master_ready("test_stderr.#{pid}.log")
+      wait_workers_ready("test_stderr.#{pid}.log", 1)
       status = nil
       assert_nothing_raised do
         Process.kill(sig, pid)
@@ -626,6 +627,7 @@ end
     end
 
     wait_master_ready(log.path)
+    wait_workers_ready(log.path, 1)
     File.truncate(log.path, 0)
     wait_for_file(pid_file)
     orig_pid = pid = File.read(pid_file).to_i
@@ -641,6 +643,7 @@ end
     wait_for_death(pid)
 
     wait_master_ready(log.path)
+    wait_workers_ready(log.path, 1)
     File.truncate(log.path, 0)
     wait_for_file(pid_file)
     pid = File.read(pid_file).to_i
@@ -660,6 +663,7 @@ end
     wait_for_death(pid)
 
     wait_master_ready(log.path)
+    wait_workers_ready(log.path, 1)
     File.truncate(log.path, 0)
     wait_for_file(pid_file)
     pid = File.read(pid_file).to_i
