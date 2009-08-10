@@ -3,16 +3,14 @@
 == Features
 
 * Designed for Rack, Unix, fast clients, and ease-of-debugging.  We
-  cut out all things that are better-supported by nginx or Rack.
+  cut out everything that is better supported by the operating system,
+  nginx or Rack.
 
-* Mostly written in Ruby, only the HTTP parser (stolen and trimmed
-  down from Mongrel) is written in C.  Unicorn is compatible with
-  both Ruby 1.8 and 1.9.  A pure-Ruby (but still Unix-only) version
-  is planned.
+* Compatible with both Ruby 1.8 and 1.9, Rubinius support is planned.
 
 * Process management: Unicorn will reap and restart workers that
   die from broken apps.  There is no need to manage multiple processes
-  or ports yourself.  Unicorn can spawn and manage any fixed number of
+  or ports yourself.  Unicorn can spawn and manage any number of
   worker processes you choose to scale to your backend.
 
 * Load balancing is done entirely by the operating system kernel.
@@ -20,7 +18,7 @@
 
 * Does not care if your application is thread-safe or not, workers
   all run within their own isolated address space and only serve one
-  client at a time.
+  client at a time for maximum robustness.
 
 * Supports all Rack applications, along with pre-Rack versions of
   Ruby on Rails via a Rack wrapper.
@@ -31,10 +29,9 @@
   Unicorn also takes steps to ensure multi-line log entries from one
   request all stay within the same file.
 
-* nginx-style binary re-execution without losing connections.
+* nginx-style binary upgrades without losing connections.
   You can upgrade Unicorn, your entire application, libraries
-  and even your Ruby interpreter as long as Unicorn is
-  installed in the same path.
+  and even your Ruby interpreter without dropping clients.
 
 * before_fork and after_fork hooks in case your application
   has special needs when dealing with forked processes.  These
@@ -47,6 +44,10 @@
 * Able to listen on multiple interfaces including UNIX sockets,
   each worker process can also bind to a private port via the
   after_fork hook for easy debugging.
+
+* *Development branch* Decodes chunked transfers on-the-fly,
+  this allows upload progress notification to be implemented as well
+  as being able to tunnel arbitrary stream-based protocols over HTTP.
 
 == Versions
 
