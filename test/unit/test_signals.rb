@@ -53,8 +53,10 @@ class SignalsTest < Test::Unit::TestCase
       buf =~ /\bX-Pid: (\d+)\b/ or raise Exception
       child = $1.to_i
       wait_master_ready("test_stderr.#{pid}.log")
+      wait_workers_ready("test_stderr.#{pid}.log", 1)
       Process.kill(:KILL, pid)
       Process.waitpid(pid)
+      File.unlink("test_stderr.#{pid}.log", "test_stdout.#{pid}.log")
       t0 = Time.now
     end
     assert child
