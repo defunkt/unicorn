@@ -97,4 +97,7 @@ static off_t parse_length(const char *value, size_t length)
   return rv;
 }
 
+#define CONST_MEM_EQ(const_p, buf, len) \
+  ((sizeof(const_p) - 1) == len && !memcmp(const_p, buf, sizeof(const_p) - 1))
+
 #endif /* UH_util_h */
