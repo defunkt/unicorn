@@ -26,7 +26,7 @@ module Unicorn
       return(@input = nil) if 0 == @size
       @input = socket
       if RAW.size > 0
-        PARSER.read_body(DST, RAW) and finalize_input
+        PARSER.filter_body(DST, RAW) and finalize_input
         @tmp.write(DST)
         @tmp.seek(0)
       end
@@ -117,7 +117,7 @@ module Unicorn
     def tee(length, buf)
       unless PARSER.body_eof?
         begin
-          if PARSER.read_body(buf, @input.readpartial(length, RAW)).nil?
+          if PARSER.filter_body(buf, @input.readpartial(length, RAW)).nil?
             @tmp.write(buf)
             return buf
           end

@@ -409,7 +409,7 @@ static VALUE HttpParser_body_eof(VALUE self)
 
 /**
  * call-seq:
- *    parser.read_body(buf, data) -> nil/data
+ *    parser.filter_body(buf, data) -> nil/data
  *
  * Takes a String of +data+, will modify data if dechunking is done.
  * Returns +nil+ if there is more data left to process.  Returns
@@ -421,7 +421,7 @@ static VALUE HttpParser_body_eof(VALUE self)
  * Basically this is a glorified memcpy(3) that copies +data+
  * into +buf+ while filtering it through the dechunker.
  */
-static VALUE HttpParser_read_body(VALUE self, VALUE buf, VALUE data)
+static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
 {
   struct http_parser *hp = data_get(self);
   char *dptr = RSTRING_PTR(data);
@@ -481,7 +481,7 @@ void Init_unicorn_http(void)
   rb_define_method(cHttpParser, "initialize", HttpParser_init,0);
   rb_define_method(cHttpParser, "reset", HttpParser_reset,0);
   rb_define_method(cHttpParser, "headers", HttpParser_headers, 2);
-  rb_define_method(cHttpParser, "read_body", HttpParser_read_body, 2);
+  rb_define_method(cHttpParser, "filter_body", HttpParser_filter_body, 2);
   rb_define_method(cHttpParser, "trailers", HttpParser_headers, 2);
   rb_define_method(cHttpParser, "content_length", HttpParser_content_length, 0);
   rb_define_method(cHttpParser, "body_eof?", HttpParser_body_eof, 0);

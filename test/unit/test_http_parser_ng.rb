@@ -41,10 +41,10 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal 123, str.size
     assert_equal body, str
     tmp = ''
-    assert_nil @parser.read_body(tmp, str)
+    assert_nil @parser.filter_body(tmp, str)
     assert_equal 0, str.size
     assert_equal tmp, body
-    assert_equal "", @parser.read_body(tmp, str)
+    assert_equal "", @parser.filter_body(tmp, str)
   end
 
   def test_identity_oneshot_header_with_body_partial
@@ -53,15 +53,15 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal 1, str.size
     assert_equal 'a', str
     tmp = ''
-    assert_nil @parser.read_body(tmp, str)
+    assert_nil @parser.filter_body(tmp, str)
     assert_equal "", str
     assert_equal "a", tmp
     str << ' ' * 122
-    rv = @parser.read_body(tmp, str)
+    rv = @parser.filter_body(tmp, str)
     assert_equal 122, tmp.size
     assert_nil rv
     assert_equal "", str
-    assert_equal str.object_id, @parser.read_body(tmp, str).object_id
+    assert_equal str.object_id, @parser.filter_body(tmp, str).object_id
   end
 
   def test_identity_oneshot_header_with_body_slop
@@ -70,9 +70,9 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal 2, str.size
     assert_equal 'aG', str
     tmp = ''
-    assert_nil @parser.read_body(tmp, str)
+    assert_nil @parser.filter_body(tmp, str)
     assert_equal "G", str
-    assert_equal "G", @parser.read_body(tmp, str)
+    assert_equal "G", @parser.filter_body(tmp, str)
     assert_equal 1, tmp.size
     assert_equal "a", tmp
   end
@@ -83,18 +83,18 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal req, @parser.headers(req, str)
     assert_equal 0, str.size
     tmp = ""
-    assert_nil @parser.read_body(tmp, "6")
+    assert_nil @parser.filter_body(tmp, "6")
     assert_equal 0, tmp.size
-    assert_nil @parser.read_body(tmp, rv = "\r\n")
+    assert_nil @parser.filter_body(tmp, rv = "\r\n")
     assert_equal 0, rv.size
     assert_equal 0, tmp.size
     tmp = ""
-    assert_nil @parser.read_body(tmp, "..")
+    assert_nil @parser.filter_body(tmp, "..")
     assert_equal "..", tmp
-    assert_nil @parser.read_body(tmp, "abcd\r\n0\r\n")
+    assert_nil @parser.filter_body(tmp, "abcd\r\n0\r\n")
     assert_equal "abcd", tmp
     rv = "PUT"
-    assert_equal rv.object_id, @parser.read_body(tmp, rv).object_id
+    assert_equal rv.object_id, @parser.filter_body(tmp, rv).object_id
     assert_equal "PUT", rv
   end
 
@@ -104,27 +104,27 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal req, @parser.headers(req, str)
     assert_equal 0, str.size
     tmp = ""
-    assert_nil @parser.read_body(tmp, "6")
+    assert_nil @parser.filter_body(tmp, "6")
     assert_equal 0, tmp.size
-    assert_nil @parser.read_body(tmp, rv = "\r\n")
+    assert_nil @parser.filter_body(tmp, rv = "\r\n")
     assert_equal "", rv
     assert_equal 0, tmp.size
     tmp = ""
-    assert_nil @parser.read_body(tmp, "..")
+    assert_nil @parser.filter_body(tmp, "..")
     assert_equal 2, tmp.size
     assert_equal "..", tmp
-    assert_nil @parser.read_body(tmp, "abcd\r\n1")
+    assert_nil @parser.filter_body(tmp, "abcd\r\n1")
     assert_equal "abcd", tmp
-    assert_nil @parser.read_body(tmp, "\r")
+    assert_nil @parser.filter_body(tmp, "\r")
     assert_equal "", tmp
-    assert_nil @parser.read_body(tmp, "\n")
+    assert_nil @parser.filter_body(tmp, "\n")
     assert_equal "", tmp
-    assert_nil @parser.read_body(tmp, "z")
+    assert_nil @parser.filter_body(tmp, "z")
     assert_equal "z", tmp
-    assert_nil @parser.read_body(tmp, "\r\n")
-    assert_nil @parser.read_body(tmp, "0")
-    assert_nil @parser.read_body(tmp, "\r")
-    rv = @parser.read_body(tmp, buf = "\nGET")
+    assert_nil @parser.filter_body(tmp, "\r\n")
+    assert_nil @parser.filter_body(tmp, "0")
+    assert_nil @parser.filter_body(tmp, "\r")
+    rv = @parser.filter_body(tmp, buf = "\nGET")
     assert_equal "GET", rv
     assert_equal buf.object_id, rv.object_id
   end
@@ -135,16 +135,16 @@ class HttpParserNgTest < Test::Unit::TestCase
     req = {}
     assert_equal req, @parser.headers(req, str)
     tmp = ''
-    assert_nil @parser.read_body(tmp, str)
+    assert_nil @parser.filter_body(tmp, str)
     assert_equal '', str
     str = ' ' * 16300
-    assert_nil @parser.read_body(tmp, str)
+    assert_nil @parser.filter_body(tmp, str)
     assert_equal '', str
     str = ' ' * 80
-    assert_nil @parser.read_body(tmp, str)
+    assert_nil @parser.filter_body(tmp, str)
     assert_equal '', str
     assert ! @parser.body_eof?
-    assert_equal "", @parser.read_body(tmp, "\r\n0\r\n")
+    assert_equal "", @parser.filter_body(tmp, "\r\n0\r\n")
     assert @parser.body_eof?
   end
 
@@ -154,9 +154,9 @@ class HttpParserNgTest < Test::Unit::TestCase
     req = {}
     assert_equal req, @parser.headers(req, str)
     tmp = ''
-    assert_nil @parser.read_body(tmp, str)
+    assert_nil @parser.filter_body(tmp, str)
     assert_equal 'a..', tmp
-    rv = @parser.read_body(tmp, str)
+    rv = @parser.filter_body(tmp, str)
     assert_equal rv.object_id, str.object_id
   end
 
@@ -170,10 +170,10 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal 'Content-MD5', req['HTTP_TRAILER']
     assert_nil req['HTTP_CONTENT_MD5']
     tmp = ''
-    assert_nil @parser.read_body(tmp, str)
+    assert_nil @parser.filter_body(tmp, str)
     assert_equal 'a..', tmp
     md5_b64 = [ Digest::MD5.digest(tmp) ].pack('m').strip.freeze
-    rv = @parser.read_body(tmp, str)
+    rv = @parser.filter_body(tmp, str)
     assert_equal rv.object_id, str.object_id
     assert_equal '', str
     md5_hdr = "Content-MD5: #{md5_b64}\r\n".freeze
@@ -193,7 +193,7 @@ class HttpParserNgTest < Test::Unit::TestCase
     req = {}
     assert_equal req, @parser.headers(req, str)
     assert_nil @parser.content_length
-    assert_nothing_raised { @parser.read_body('', str) }
+    assert_nothing_raised { @parser.filter_body('', str) }
   end
 
   def test_max_body
@@ -212,7 +212,7 @@ class HttpParserNgTest < Test::Unit::TestCase
     req = {}
     assert_equal req, @parser.headers(req, str)
     assert_nil @parser.content_length
-    assert_raise(HttpParserError) { @parser.read_body('', str) }
+    assert_raise(HttpParserError) { @parser.filter_body('', str) }
   end
 
   def test_overflow_content_length
@@ -228,7 +228,7 @@ class HttpParserNgTest < Test::Unit::TestCase
     req = {}
     assert_equal req, @parser.headers(req, str)
     assert_nil @parser.content_length
-    assert_raise(HttpParserError) { @parser.read_body('', str) }
+    assert_raise(HttpParserError) { @parser.filter_body('', str) }
   end
 
   def test_bad_content_length
@@ -245,7 +245,7 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal req, @parser.headers(req, str)
     assert_equal 'Transfer-Encoding', req['HTTP_TRAILER']
     tmp = ''
-    assert_nil @parser.read_body(tmp, str)
+    assert_nil @parser.filter_body(tmp, str)
     assert_equal 'a..', tmp
     assert_equal '', str
     str << "Transfer-Encoding: identity\r\n\r\n"
