@@ -18,6 +18,10 @@
 #define UH_FL_HASTRAILER 0x8
 #define UH_FL_INTRAILER 0x10
 #define UH_FL_INCHUNK  0x20
+#define UH_FL_KAMETHOD 0x40
+#define UH_FL_KAVERSION 0x80
+
+#define UH_FL_KEEPALIVE (UH_FL_KAMETHOD | UH_FL_KAVERSION)
 
 struct http_parser {
   int cs; /* Ragel internal state */
@@ -46,6 +50,37 @@ static void finalize_header(VALUE req);
 #define PTR_TO(F) (buffer + hp->F)
 #define STR_NEW(M,FPC) rb_str_new(PTR_TO(M), LEN(M, FPC))
 
+static void
+request_method(struct http_parser *hp, VALUE req, const char *ptr, size_t len)
+{
+  VALUE v;
+
+  if (CONST_MEM_EQ("GET", ptr, len)) {
+    hp->flags |= UH_FL_KAMETHOD;
+    v = g_GET;
+  } else if (CONST_MEM_EQ("HEAD", ptr, len)) {
+    hp->flags |= UH_FL_KAMETHOD;
+    v = g_HEAD;
+  } else {
+    v = rb_str_new(ptr, len);
+  }
+  rb_hash_aset(req, g_request_method, v);
+}
+
+static void
+http_version(struct http_parser *hp, VALUE req, const char *ptr, size_t len)
+{
+  VALUE v;
+
+  if (CONST_MEM_EQ("HTTP/1.1", ptr, len)) {
+    hp->flags |= UH_FL_KAVERSION;
+    v = g_http_11;
+  } else {
+    v = rb_str_new(ptr, len);
+  }
+  rb_hash_aset(req, g_http_version, v);
+}
+
 static void invalid_if_trailer(int flags)
 {
   if (flags & UH_FL_INTRAILER)
@@ -64,6 +99,9 @@ static void write_value(VALUE req, struct http_parser *hp,
   if (f == Qnil) {
     VALIDATE_MAX_LENGTH(hp->s.field_len, FIELD_NAME);
     f = uncommon_field(PTR_TO(start.field), hp->s.field_len);
+  } else if (f == g_http_connection) {
+    if (STR_CSTR_CASE_EQ(v, "close"))
+      hp->flags &= ~UH_FL_KEEPALIVE;
   } else if (f == g_content_length) {
     hp->len.content = parse_length(RSTRING_PTR(v), RSTRING_LEN(v));
     if (hp->len.content < 0)
@@ -103,7 +141,7 @@ static void write_value(VALUE req, struct http_parser *hp,
   action start_value { MARK(mark, fpc); }
   action write_value { write_value(req, hp, buffer, fpc); }
   action request_method {
-    rb_hash_aset(req, g_request_method, STR_NEW(mark, fpc));
+    request_method(hp, req, PTR_TO(mark), LEN(mark, fpc));
   }
   action scheme {
     rb_hash_aset(req, g_rack_url_scheme, STR_NEW(mark, fpc));
@@ -136,9 +174,7 @@ static void write_value(VALUE req, struct http_parser *hp,
     VALIDATE_MAX_LENGTH(LEN(start.query, fpc), QUERY_STRING);
     rb_hash_aset(req, g_query_string, STR_NEW(start.query, fpc));
   }
-  action http_version {
-    rb_hash_aset(req, g_http_version, STR_NEW(mark, fpc));
-  }
+  action http_version { http_version(hp, req, PTR_TO(mark), LEN(mark, fpc)); }
   action request_path {
     VALUE val;
     size_t len = LEN(mark, fpc);
@@ -295,7 +331,7 @@ static void finalize_header(VALUE req)
   }
   rb_hash_aset(req, g_server_name, server_name);
   rb_hash_aset(req, g_server_port, server_port);
-  rb_hash_aset(req, g_server_protocol, g_server_protocol_value);
+  rb_hash_aset(req, g_server_protocol, g_http_11);
 
   /* rack requires QUERY_STRING */
   if (rb_hash_aref(req, g_query_string) == Qnil)
@@ -407,6 +443,13 @@ static VALUE HttpParser_body_eof(VALUE self)
   return hp->len.content == 0 ? Qtrue : Qfalse;
 }
 
+static VALUE HttpParser_keepalive(VALUE self)
+{
+  struct http_parser *hp = data_get(self);
+
+  return (hp->flags & UH_FL_KEEPALIVE) == UH_FL_KEEPALIVE ? Qtrue : Qfalse;
+}
+
 /**
  * call-seq:
  *    parser.filter_body(buf, data) -> nil/data
@@ -485,6 +528,7 @@ void Init_unicorn_http(void)
   rb_define_method(cHttpParser, "trailers", HttpParser_headers, 2);
   rb_define_method(cHttpParser, "content_length", HttpParser_content_length, 0);
   rb_define_method(cHttpParser, "body_eof?", HttpParser_body_eof, 0);
+  rb_define_method(cHttpParser, "keepalive?", HttpParser_keepalive, 0);
 
   /*
    * The maximum size a single chunk when using chunked transfer encoding.
@@ -506,5 +550,6 @@ void Init_unicorn_http(void)
   SET_GLOBAL(g_http_trailer, "TRAILER");
   SET_GLOBAL(g_http_transfer_encoding, "TRANSFER_ENCODING");
   SET_GLOBAL(g_content_length, "CONTENT_LENGTH");
+  SET_GLOBAL(g_http_connection, "CONNECTION");
 }
 #undef SET_GLOBAL

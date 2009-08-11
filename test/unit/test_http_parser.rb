@@ -9,7 +9,7 @@ require 'test/test_helper'
 include Unicorn
 
 class HttpParserTest < Test::Unit::TestCase
-    
+
   def test_parse_simple
     parser = HttpParser.new
     req = {}
@@ -25,6 +25,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_nil req['FRAGMENT']
     assert_equal '', req['QUERY_STRING']
 
+    assert parser.keepalive?
     parser.reset
     req.clear
 
@@ -45,6 +46,40 @@ class HttpParserTest < Test::Unit::TestCase
     assert_nil req['FRAGMENT']
     assert_equal '', req['QUERY_STRING']
     assert_equal '', http
+    assert parser.keepalive?
+  end
+
+  def test_connection_close_no_ka
+    parser = HttpParser.new
+    req = {}
+    tmp = "GET / HTTP/1.1\r\nConnection: close\r\n\r\n"
+    assert_equal req.object_id, parser.headers(req, tmp).object_id
+    assert_equal "GET", req['REQUEST_METHOD']
+    assert ! parser.keepalive?
+  end
+
+  def test_connection_keep_alive_ka
+    parser = HttpParser.new
+    req = {}
+    tmp = "HEAD / HTTP/1.1\r\nConnection: keep-alive\r\n\r\n"
+    assert_equal req.object_id, parser.headers(req, tmp).object_id
+    assert parser.keepalive?
+  end
+
+  def test_connection_keep_alive_ka_bad_method
+    parser = HttpParser.new
+    req = {}
+    tmp = "POST / HTTP/1.1\r\nConnection: keep-alive\r\n\r\n"
+    assert_equal req.object_id, parser.headers(req, tmp).object_id
+    assert ! parser.keepalive?
+  end
+
+  def test_connection_keep_alive_ka_bad_version
+    parser = HttpParser.new
+    req = {}
+    tmp = "GET / HTTP/1.0\r\nConnection: keep-alive\r\n\r\n"
+    assert_equal req.object_id, parser.headers(req, tmp).object_id
+    assert ! parser.keepalive?
   end
 
   def test_parse_server_host_default_port
@@ -55,6 +90,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'foo', req['SERVER_NAME']
     assert_equal '80', req['SERVER_PORT']
     assert_equal '', tmp
+    assert parser.keepalive?
   end
 
   def test_parse_server_host_alt_port
@@ -65,6 +101,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'foo', req['SERVER_NAME']
     assert_equal '999', req['SERVER_PORT']
     assert_equal '', tmp
+    assert parser.keepalive?
   end
 
   def test_parse_server_host_empty_port
@@ -75,6 +112,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'foo', req['SERVER_NAME']
     assert_equal '80', req['SERVER_PORT']
     assert_equal '', tmp
+    assert parser.keepalive?
   end
 
   def test_parse_server_host_xfp_https
@@ -86,6 +124,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'foo', req['SERVER_NAME']
     assert_equal '443', req['SERVER_PORT']
     assert_equal '', tmp
+    assert parser.keepalive?
   end
 
   def test_parse_strange_headers
@@ -94,6 +133,7 @@ class HttpParserTest < Test::Unit::TestCase
     should_be_good = "GET / HTTP/1.1\r\naaaaaaaaaaaaa:++++++++++\r\n\r\n"
     assert_equal req, parser.headers(req, should_be_good)
     assert_equal '', should_be_good
+    assert parser.keepalive?
 
     # ref: http://thread.gmane.org/gmane.comp.lang.ruby.mongrel.devel/37/focus=45
     # (note we got 'pen' mixed up with 'pound' in that thread,
@@ -119,6 +159,7 @@ class HttpParserTest < Test::Unit::TestCase
       assert_equal req, parser.headers(req, sorta_safe)
       assert_equal path, req['REQUEST_URI']
       assert_equal '', sorta_safe
+      assert parser.keepalive?
     end
   end
   
@@ -133,6 +174,7 @@ class HttpParserTest < Test::Unit::TestCase
     parser.reset
     req.clear
     assert_equal req, parser.headers(req, "GET / HTTP/1.0\r\n\r\n")
+    assert ! parser.keepalive?
   end
 
   def test_piecemeal
@@ -153,6 +195,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_nil req['FRAGMENT']
     assert_equal '', req['QUERY_STRING']
     assert_equal "", http
+    assert ! parser.keepalive?
   end
 
   # not common, but underscores do appear in practice
@@ -170,6 +213,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'under_score.example.com', req['SERVER_NAME']
     assert_equal '80', req['SERVER_PORT']
     assert_equal "", http
+    assert ! parser.keepalive?
   end
 
   def test_absolute_uri
@@ -186,6 +230,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'example.com', req['SERVER_NAME']
     assert_equal '80', req['SERVER_PORT']
     assert_equal "", http
+    assert ! parser.keepalive?
   end
 
   # X-Forwarded-Proto is not in rfc2616, absolute URIs are, however...
@@ -204,6 +249,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'example.com', req['SERVER_NAME']
     assert_equal '443', req['SERVER_PORT']
     assert_equal "", http
+    assert parser.keepalive?
   end
 
   # Host: header should be ignored for absolute URIs
@@ -222,6 +268,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'example.com', req['SERVER_NAME']
     assert_equal '8080', req['SERVER_PORT']
     assert_equal "", http
+    assert ! parser.keepalive? # TODO: read HTTP/1.2 when it's final
   end
 
   def test_absolute_uri_with_empty_port
@@ -239,6 +286,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'example.com', req['SERVER_NAME']
     assert_equal '443', req['SERVER_PORT']
     assert_equal "", http
+    assert parser.keepalive? # TODO: read HTTP/1.2 when it's final
   end
 
   def test_put_body_oneshot
@@ -252,6 +300,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'HTTP/1.0', req['HTTP_VERSION']
     assert_equal 'HTTP/1.1', req['SERVER_PROTOCOL']
     assert_equal "abcde", http
+    assert ! parser.keepalive? # TODO: read HTTP/1.2 when it's final
   end
 
   def test_put_body_later
@@ -265,6 +314,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'HTTP/1.0', req['HTTP_VERSION']
     assert_equal 'HTTP/1.1', req['SERVER_PROTOCOL']
     assert_equal "", http
+    assert ! parser.keepalive? # TODO: read HTTP/1.2 when it's final
   end
 
   def test_unknown_methods
@@ -282,6 +332,7 @@ class HttpParserTest < Test::Unit::TestCase
       assert_equal 'page=1', req['QUERY_STRING']
       assert_equal "", s
       assert_equal m, req['REQUEST_METHOD']
+      assert ! parser.keepalive? # TODO: read HTTP/1.2 when it's final
     }
   end
 
@@ -298,6 +349,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'posts-17408', req['FRAGMENT']
     assert_equal 'page=1', req['QUERY_STRING']
     assert_equal '', get
+    assert parser.keepalive?
   end
 
   # lame random garbage maker

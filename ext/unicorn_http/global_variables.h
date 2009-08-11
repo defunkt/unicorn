@@ -15,16 +15,19 @@ static VALUE g_path_info;
 static VALUE g_server_name;
 static VALUE g_server_port;
 static VALUE g_server_protocol;
-static VALUE g_server_protocol_value;
 static VALUE g_http_host;
 static VALUE g_http_x_forwarded_proto;
 static VALUE g_http_transfer_encoding;
 static VALUE g_content_length;
 static VALUE g_http_trailer;
+static VALUE g_http_connection;
 static VALUE g_port_80;
 static VALUE g_port_443;
 static VALUE g_localhost;
 static VALUE g_http;
+static VALUE g_http_11;
+static VALUE g_GET;
+static VALUE g_HEAD;
 
 /** Defines common length and error messages for input length validation. */
 #define DEF_MAX_LENGTH(N, length) \
@@ -71,12 +74,14 @@ void init_globals(void)
   DEF_GLOBAL(server_name, "SERVER_NAME");
   DEF_GLOBAL(server_port, "SERVER_PORT");
   DEF_GLOBAL(server_protocol, "SERVER_PROTOCOL");
-  DEF_GLOBAL(server_protocol_value, "HTTP/1.1");
   DEF_GLOBAL(http_x_forwarded_proto, "HTTP_X_FORWARDED_PROTO");
   DEF_GLOBAL(port_80, "80");
   DEF_GLOBAL(port_443, "443");
   DEF_GLOBAL(localhost, "localhost");
   DEF_GLOBAL(http, "http");
+  DEF_GLOBAL(http_11, "HTTP/1.1");
+  DEF_GLOBAL(GET, "GET");
+  DEF_GLOBAL(HEAD, "HEAD");
 
   eHttpParserError =
          rb_define_class_under(mUnicorn, "HttpParserError", rb_eIOError);
