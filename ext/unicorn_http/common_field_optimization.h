@@ -104,7 +104,7 @@ static VALUE uncommon_field(const char *field, size_t flen)
   memcpy(RSTRING_PTR(f), HTTP_PREFIX, HTTP_PREFIX_LEN);
   memcpy(RSTRING_PTR(f) + HTTP_PREFIX_LEN, field, flen);
   assert(*(RSTRING_PTR(f) + RSTRING_LEN(f)) == '\0'); /* paranoia */
-  return f;
+  return rb_obj_freeze(f);
 }
 
 #endif /* common_field_optimization_h */
