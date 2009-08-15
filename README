@@ -45,6 +45,8 @@
   each worker process can also bind to a private port via the
   after_fork hook for easy debugging.
 
+* Simple and easy Ruby DSL for configuration.
+
 * *Development branch* Decodes chunked transfers on-the-fly,
   this allows upload progress notification to be implemented as well
   as being able to tunnel arbitrary stream-based protocols over HTTP.
