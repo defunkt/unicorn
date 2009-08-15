@@ -1,15 +1,13 @@
 * security audit, fuzz testing
 
-* performance audit
-
-* keepalive (1 second max) + pipelining support (Ragel bits already done)
-
-* integration tests with nginx including bad client handling
-
 * manpages (why do so few Ruby executables come with proper manpages?)
 
 * code cleanups
 
-* launchers - add stop/start/kill commands?
+* launchers - add stop/start/kill/upgrade commands
+
+* Rainbows!
 
 * Rubinius support
+
+* keepalive (1 second max) + pipelining support (Ragel bits already done)
