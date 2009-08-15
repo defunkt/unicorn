@@ -140,7 +140,6 @@ app = lambda do ||
     end
 
     if old_rails
-      require 'rack'
       require 'unicorn/app/old_rails'
       Unicorn::App::OldRails.new
     else

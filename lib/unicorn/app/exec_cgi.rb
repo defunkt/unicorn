@@ -1,5 +1,4 @@
 require 'unicorn'
-require 'rack'
 
 module Unicorn::App
 

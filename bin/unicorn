@@ -120,7 +120,6 @@ require 'pp' if $DEBUG
 app = lambda do ||
   # require Rack as late as possible in case $LOAD_PATH is modified
   # in config.ru or command-line
-  require 'rack'
   inner_app = case config
   when /\.ru$/
     raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }

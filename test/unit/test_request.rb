@@ -2,13 +2,6 @@
 # You can redistribute it and/or modify it under the same terms as Ruby.
 
 require 'test/test_helper'
-begin
-  require 'rack'
-  require 'rack/lint'
-rescue LoadError
-  warn "Unable to load rack, skipping test"
-  exit 0
-end
 
 include Unicorn
 
