@@ -7,13 +7,13 @@ module Unicorn
 
       APPEND_FLAGS = File::WRONLY | File::APPEND
 
-      # this reopens logs that have been rotated (using logrotate(8) or
-      # similar).  It is recommended that you install
+      # This reopens ALL logfiles in the process that have been rotated
+      # using logrotate(8) (without copytruncate) or similar tools.
       # A +File+ object is considered for reopening if it is:
       #   1) opened with the O_APPEND and O_WRONLY flags
       #   2) opened with an absolute path (starts with "/")
       #   3) the current open file handle does not match its original open path
-      #   4) unbuffered (as far as userspace buffering goes)
+      #   4) unbuffered (as far as userspace buffering goes, not O_SYNC)
       # Returns the number of files reopened
       def reopen_logs
         nr = 0
