@@ -9,5 +9,3 @@
 * Rainbows!
 
 * Rubinius support
-
-* keepalive (1 second max) + pipelining support (Ragel bits already done)
