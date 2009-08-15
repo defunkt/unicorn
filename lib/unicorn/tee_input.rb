@@ -11,23 +11,16 @@
 # not support any deviations from it.
 
 module Unicorn
-  class TeeInput
+  class TeeInput < Struct.new(:socket, :req, :parser, :buf)
 
-    # it's so awesome to not have to care for thread safety...
-
-    RAW = HttpRequest::BUF # :nodoc:
-    DST = RAW.dup # :nodoc:
-    PARSER = HttpRequest::PARSER # :nodoc:
-    REQ = HttpRequest::REQ # :nodoc:
-
-    def initialize(socket)
-      @tmp = Util.tmpio
-      @size = PARSER.content_length
-      return(@input = nil) if 0 == @size
-      @input = socket
-      if RAW.size > 0
-        PARSER.filter_body(DST, RAW) and finalize_input
-        @tmp.write(DST)
+    def initialize(*args)
+      super(*args)
+      @size = parser.content_length
+      @tmp = @size && @size < Const::MAX_BODY ? StringIO.new(Z.dup) : Util.tmpio
+      @buf2 = buf.dup
+      if buf.size > 0
+        parser.filter_body(@buf2, buf) and finalize_input
+        @tmp.write(@buf2)
         @tmp.seek(0)
       end
     end
@@ -39,45 +32,45 @@ module Unicorn
     def size
       @size and return @size
 
-      if @input
-        pos = @tmp.tell
-        while tee(Const::CHUNK_SIZE, DST)
+      if socket
+        pos = @tmp.pos
+        while tee(Const::CHUNK_SIZE, @buf2)
         end
         @tmp.seek(pos)
       end
 
-      @size = @tmp.stat.size
+      @size = tmp_size
     end
 
     def read(*args)
-      @input or return @tmp.read(*args)
+      socket or return @tmp.read(*args)
 
       length = args.shift
       if nil == length
         rv = @tmp.read || Z.dup
-        while tee(Const::CHUNK_SIZE, DST)
-          rv << DST
+        while tee(Const::CHUNK_SIZE, @buf2)
+          rv << @buf2
         end
         rv
       else
-        buf = args.shift || DST.dup
-        diff = @tmp.stat.size - @tmp.pos
+        rv = args.shift || @buf2.dup
+        diff = tmp_size - @tmp.pos
         if 0 == diff
-          tee(length, buf)
+          tee(length, rv)
         else
-          @tmp.read(diff > length ? length : diff, buf)
+          @tmp.read(diff > length ? length : diff, rv)
         end
       end
     end
 
     # takes zero arguments for strict Rack::Lint compatibility, unlike IO#gets
     def gets
-      @input or return @tmp.gets
+      socket or return @tmp.gets
       nil == $/ and return read
 
-      orig_size = @tmp.stat.size
+      orig_size = tmp_size
       if @tmp.pos == orig_size
-        tee(Const::CHUNK_SIZE, DST) or return nil
+        tee(Const::CHUNK_SIZE, @buf2) or return nil
         @tmp.seek(orig_size)
       end
 
@@ -87,7 +80,7 @@ module Unicorn
       # unlikely, if we got here, then @tmp is at EOF
       begin
         orig_size = @tmp.pos
-        tee(Const::CHUNK_SIZE, DST) or break
+        tee(Const::CHUNK_SIZE, @buf2) or break
         @tmp.seek(orig_size)
         line << @tmp.gets
         $/ == line[-$/.size, $/.size] and return line
@@ -102,11 +95,11 @@ module Unicorn
         yield line
       end
 
-      self # Rack does not specify what the return value here
+      self # Rack does not specify what the return value is here
     end
 
     def rewind
-      @tmp.rewind # Rack does not specify what the return value here
+      @tmp.rewind # Rack does not specify what the return value is here
     end
 
   private
@@ -114,12 +107,12 @@ module Unicorn
     # tees off a +length+ chunk of data from the input into the IO
     # backing store as well as returning it.  +buf+ must be specified.
     # returns nil if reading from the input returns nil
-    def tee(length, buf)
-      unless PARSER.body_eof?
+    def tee(length, dst)
+      unless parser.body_eof?
         begin
-          if PARSER.filter_body(buf, @input.readpartial(length, RAW)).nil?
-            @tmp.write(buf)
-            return buf
+          if parser.filter_body(dst, socket.readpartial(length, buf)).nil?
+            @tmp.write(dst)
+            return dst
           end
         rescue EOFError
         end
@@ -128,10 +121,14 @@ module Unicorn
     end
 
     def finalize_input
-      while PARSER.trailers(REQ, RAW).nil?
-        RAW << @input.readpartial(Const::CHUNK_SIZE, DST)
+      while parser.trailers(req, buf).nil?
+        buf << socket.readpartial(Const::CHUNK_SIZE, @buf2)
       end
-      @input = nil
+      self.socket = nil
+    end
+
+    def tmp_size
+      StringIO === @tmp ? @tmp.size : @tmp.stat.size
     end
 
   end

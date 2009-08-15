@@ -74,7 +74,7 @@ module Unicorn
     # returns a # Rack environment if successful
     def handle_body(socket)
       REQ[Const::RACK_INPUT] = 0 == PARSER.content_length ?
-                               NULL_IO : Unicorn::TeeInput.new(socket)
+                   NULL_IO : Unicorn::TeeInput.new(socket, REQ, PARSER, BUF)
       REQ.update(DEFAULTS)
     end
 
