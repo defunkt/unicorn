@@ -20,7 +20,11 @@
 #if SIZEOF_OFF_T == 4
 #  define UH_OFF_T_MAX 0x7fffffff
 #elif SIZEOF_OFF_T == 8
-#  define UH_OFF_T_MAX 0x7fffffffffffffff
+#  if SIZEOF_LONG == 4
+#    define UH_OFF_T_MAX 0x7fffffffffffffffLL
+#  else
+#    define UH_OFF_T_MAX 0x7fffffffffffffff
+#  endif
 #else
 #  error off_t size unknown for this platform!
 #endif
