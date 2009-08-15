@@ -103,14 +103,14 @@ $(T): export RUBYLIB := $(test_prefix):$(test_prefix)/lib:$(RUBYLIB)
 $(T): $(test_prefix)/.stamp
 	$(run_test)
 
-install: $(bins)
+install: $(bins) $(ext)/unicorn_http.c
 	$(prep_setup_rb)
 	$(RM) -r .install-tmp
 	mkdir .install-tmp
-	cp -p $^ .install-tmp
+	cp -p bin/* .install-tmp
 	$(ruby) setup.rb all
 	$(RM) $^
-	mv $(addprefix .install-tmp/,$(^F)) bin/
+	mv .install-tmp/* bin/
 	$(RM) -r .install-tmp
 	$(prep_setup_rb)
 
