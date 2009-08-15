@@ -36,7 +36,7 @@ module Unicorn
     # writes the rack_response to socket as an HTTP response
     def self.write(socket, rack_response)
       status, headers, body = rack_response
-      status = CODES[status.to_i]
+      status = CODES[status.to_i] || status
       OUT.clear
 
       # Don't bother enforcing duplicate supression, it's a Hash most of

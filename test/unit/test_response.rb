@@ -94,4 +94,15 @@ class ResponseTest < Test::Unit::TestCase
     assert_match(expect_body, out.string.split(/\r\n/).last)
   end
 
+  def test_unknown_status_pass_through
+    out = StringIO.new
+    HttpResponse.write(out,["666 I AM THE BEAST", {}, [] ])
+    assert out.closed?
+    headers = out.string.split(/\r\n\r\n/).first.split(/\r\n/)
+    assert %r{\AHTTP/\d\.\d 666 I AM THE BEAST\z}.match(headers[0])
+    status = headers.grep(/\AStatus:/i).first
+    assert status
+    assert_equal "Status: 666 I AM THE BEAST", status
+  end
+
 end
