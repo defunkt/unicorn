@@ -44,10 +44,7 @@ local.mk.sample
 setup.rb
 test/aggregate.rb
 test/benchmark/README
-test/benchmark/big_request.rb
 test/benchmark/dd.ru
-test/benchmark/request.rb
-test/benchmark/response.rb
 test/exec/README
 test/exec/test_exec.rb
 test/rails/app-1.2.3/.gitignore

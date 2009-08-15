@@ -42,11 +42,6 @@ The benchmark client is usually httperf.
 Another gentle reminder: performance with slow networks/clients
 is NOT our problem.  That is the job of nginx (or similar).
 
-== request.rb, response.rb, big_request.rb
-
-These are micro-benchmarks designed to test internal components
-of Unicorn.  It assumes the internal Unicorn API is mostly stable.
-
 == Contributors
 
 This directory is maintained independently in the "benchmark" branch
