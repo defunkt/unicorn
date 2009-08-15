@@ -124,6 +124,7 @@ app = lambda do ||
   inner_app = case config
   when /\.ru$/
     raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }
+    raw.sub!(/^__END__\n.*/, '')
     eval("Rack::Builder.new {(#{raw}\n)}.to_app", nil, config)
   else
     require config
