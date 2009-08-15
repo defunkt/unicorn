@@ -100,8 +100,12 @@ static void write_value(VALUE req, struct http_parser *hp,
     VALIDATE_MAX_LENGTH(hp->s.field_len, FIELD_NAME);
     f = uncommon_field(PTR_TO(start.field), hp->s.field_len);
   } else if (f == g_http_connection) {
-    if (STR_CSTR_CASE_EQ(v, "close"))
-      hp->flags &= ~UH_FL_KEEPALIVE;
+    if (hp->flags & UH_FL_KAMETHOD) {
+      if (STR_CSTR_CASE_EQ(v, "keep-alive"))
+        hp->flags |= UH_FL_KAVERSION;
+      else if (STR_CSTR_CASE_EQ(v, "close"))
+        hp->flags &= ~UH_FL_KEEPALIVE;
+    }
   } else if (f == g_content_length) {
     hp->len.content = parse_length(RSTRING_PTR(v), RSTRING_LEN(v));
     if (hp->len.content < 0)

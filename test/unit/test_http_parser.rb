@@ -79,7 +79,7 @@ class HttpParserTest < Test::Unit::TestCase
     req = {}
     tmp = "GET / HTTP/1.0\r\nConnection: keep-alive\r\n\r\n"
     assert_equal req.object_id, parser.headers(req, tmp).object_id
-    assert ! parser.keepalive?
+    assert parser.keepalive?
   end
 
   def test_parse_server_host_default_port
