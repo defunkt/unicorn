@@ -120,6 +120,31 @@ class RequestTest < Test::Unit::TestCase
     assert_nothing_raised { res = @lint.call(env) }
   end
 
+  def test_no_content_stringio
+    client = MockRequest.new("GET / HTTP/1.1\r\nHost: foo\r\n\r\n")
+    res = env = nil
+    assert_nothing_raised { env = @request.read(client) }
+    assert_equal StringIO, env['rack.input'].class
+  end
+
+  def test_zero_content_stringio
+    client = MockRequest.new("PUT / HTTP/1.1\r\n" \
+                             "Content-Length: 0\r\n" \
+                             "Host: foo\r\n\r\n")
+    res = env = nil
+    assert_nothing_raised { env = @request.read(client) }
+    assert_equal StringIO, env['rack.input'].class
+  end
+
+  def test_real_content_not_stringio
+    client = MockRequest.new("PUT / HTTP/1.1\r\n" \
+                             "Content-Length: 1\r\n" \
+                             "Host: foo\r\n\r\n")
+    res = env = nil
+    assert_nothing_raised { env = @request.read(client) }
+    assert_equal Unicorn::TeeInput, env['rack.input'].class
+  end
+
   def test_rack_lint_put
     client = MockRequest.new(
       "PUT / HTTP/1.1\r\n" \

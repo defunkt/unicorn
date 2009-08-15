@@ -1,4 +1,5 @@
 # coding:binary
+require 'stringio'
 require 'unicorn_http'
 
 module Unicorn
@@ -17,6 +18,7 @@ module Unicorn
       "SERVER_SOFTWARE" => "Unicorn #{Const::UNICORN_VERSION}".freeze
     }
 
+    NULL_IO = StringIO.new(Z)
     LOCALHOST = '127.0.0.1'.freeze
 
     # Being explicitly single-threaded, we have certain advantages in
@@ -71,7 +73,8 @@ module Unicorn
     # Handles dealing with the rest of the request
     # returns a # Rack environment if successful
     def handle_body(socket)
-      REQ[Const::RACK_INPUT] = Unicorn::TeeInput.new(socket)
+      REQ[Const::RACK_INPUT] = 0 == PARSER.content_length ?
+                               NULL_IO : Unicorn::TeeInput.new(socket)
       REQ.update(DEFAULTS)
     end
 
