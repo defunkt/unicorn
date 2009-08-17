@@ -85,6 +85,8 @@ module Unicorn::App
             errors.write("Failed to reap #{str} (PID:#{pid})\n")
           end
         }
+        out_rd.close
+        err_rd.close
       end
 
     end
