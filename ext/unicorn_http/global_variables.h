@@ -61,8 +61,6 @@ DEF_MAX_LENGTH(HEADER, (1024 * (80 + 32)));
 
 void init_globals(void)
 {
-  mUnicorn = rb_define_module("Unicorn");
-
   DEF_GLOBAL(rack_url_scheme, "rack.url_scheme");
   DEF_GLOBAL(request_method, "REQUEST_METHOD");
   DEF_GLOBAL(request_uri, "REQUEST_URI");
@@ -82,10 +80,6 @@ void init_globals(void)
   DEF_GLOBAL(http_11, "HTTP/1.1");
   DEF_GLOBAL(GET, "GET");
   DEF_GLOBAL(HEAD, "HEAD");
-
-  eHttpParserError =
-         rb_define_class_under(mUnicorn, "HttpParserError", rb_eIOError);
-  cHttpParser = rb_define_class_under(mUnicorn, "HttpParser", rb_cObject);
 }
 
 #undef DEF_GLOBAL

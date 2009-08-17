@@ -1,10 +1,10 @@
-= Unicorn: Rack HTTP server for Unix, fast clients and nothing else
+= Unicorn: Rack HTTP server for Unix and fast clients
 
 == Features
 
 * Designed for Rack, Unix, fast clients, and ease-of-debugging.  We
   cut out everything that is better supported by the operating system,
-  nginx or Rack.
+  {nginx}[http://nginx.net/] or {Rack}[http://rack.rubyforge.org/].
 
 * Compatible with both Ruby 1.8 and 1.9, Rubinius support is planned.
 
@@ -60,7 +60,7 @@
 == License
 
 Unicorn is copyright 2009 Eric Wong and contributors.
-It is based on Mongrel and carries the same license:
+It is based on Mongrel and carries the same license.
 
 Mongrel is copyright 2007 Zed A. Shaw and contributors. It is licensed
 under the Ruby license and the GPL2. See the included LICENSE file for
@@ -162,7 +162,7 @@ requests) go to the mailing list/newsgroup.  Patches must be sent inline
 to post on the mailing list.  No top posting.  Address replies +To:+ (or
 +Cc:+) the original sender and +Cc:+ the mailing list.
 
-* email: mongrel-unicorn@rubyforge.org
+* email: mailto:mongrel-unicorn@rubyforge.org
 * nntp: nntp://news.gmane.org/gmane.comp.lang.ruby.unicorn.general
 * archives: http://rubyforge.org/pipermail/mongrel-unicorn/
 * subscribe: http://rubyforge.org/mailman/listinfo/mongrel-unicorn/

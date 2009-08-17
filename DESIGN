@@ -11,8 +11,8 @@
   only non-Ruby part and there are no plans to add any more
   non-Ruby components.
 
-* All HTTP protocol parsing and I/O is done just like Mongrel:
-    1. read/parse HTTP request in full
+* All HTTP protocol parsing and I/O is done much like Mongrel:
+    1. read/parse HTTP request headers in full
     2. call Rack application
     3. write HTTP response back to the client
 

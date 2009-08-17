@@ -3,13 +3,8 @@ TUNING
 PHILOSOPHY
 DESIGN
 CONTRIBUTORS
-COPYING
 LICENSE
 SIGNALS
 TODO
-bin/unicorn
-bin/unicorn_rails
 lib
-ext/**/*.c
-ext/**/*.rl
-ext/**/*.h
+ext/unicorn_http/unicorn_http.c

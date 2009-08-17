@@ -128,9 +128,11 @@ Manifest:
 	cmp $@+ $@ || mv $@+ $@
 	$(RM) -f $@+
 
-# using rdoc 2.4.1
-doc: .document
-	rdoc -Na -m README -t "$(shell sed -ne '1s/^= //p' README)"
+# using rdoc 2.4.1+
+doc: .document $(ext)/unicorn_http.c
+	rdoc -Na -t "$(shell sed -ne '1s/^= //p' README)"
+	install -m644 COPYING doc/COPYING
+	cd doc && ln README.html tmp.html && mv tmp.html index.html
 
 rails_git_url = git://github.com/rails/rails.git
 rails_git := vendor/rails.git

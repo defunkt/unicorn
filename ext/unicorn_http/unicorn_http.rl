@@ -351,7 +351,7 @@ static VALUE HttpParser_alloc(VALUE klass)
 
 /**
  * call-seq:
- *    parser.new -> parser
+ *    parser.new => parser
  *
  * Creates a new parser.
  */
@@ -362,10 +362,9 @@ static VALUE HttpParser_init(VALUE self)
   return self;
 }
 
-
 /**
  * call-seq:
- *    parser.reset -> nil
+ *    parser.reset => nil
  *
  * Resets the parser to it's initial state so that you can reuse it
  * rather than making new ones.
@@ -391,6 +390,18 @@ static void advance_str(VALUE str, off_t nr)
   rb_str_set_len(str, len);
 }
 
+/**
+ * call-seq:
+ *   parser.content_length => nil or Integer
+ *
+ * Returns the number of bytes left to run through HttpParser#filter_body.
+ * This will initially be the value of the "Content-Length" HTTP header
+ * after header parsing is complete and will decrease in value as
+ * HttpParser#filter_body is called for each chunk.  This should return
+ * zero for requests with no body.
+ *
+ * This will return nil on "Transfer-Encoding: chunked" requests.
+ */
 static VALUE HttpParser_content_length(VALUE self)
 {
   struct http_parser *hp = data_get(self);
@@ -399,16 +410,24 @@ static VALUE HttpParser_content_length(VALUE self)
 }
 
 /**
+ * Document-method: trailers
  * call-seq:
- *    parser.headers(req, data) -> req or nil
- *    parser.trailers(req, data) -> req or nil
+ *    parser.trailers(req, data) => req or nil
+ *
+ * This is an alias for HttpParser#headers
+ */
+
+/**
+ * Document-method: headers
+ * call-seq:
+ *    parser.headers(req, data) => req or nil
  *
  * Takes a Hash and a String of data, parses the String of data filling
  * in the Hash returning the Hash if parsing is finished, nil otherwise
  * When returning the req Hash, it may modify data to point to where
- * body processing should begin
+ * body processing should begin.
  *
- * Raises HttpParserError if there are parsing errors
+ * Raises HttpParserError if there are parsing errors.
  */
 static VALUE HttpParser_headers(VALUE self, VALUE req, VALUE data)
 {
@@ -437,6 +456,13 @@ static int chunked_eof(struct http_parser *hp)
           (hp->flags & UH_FL_INTRAILER));
 }
 
+/**
+ * call-seq:
+ *    parser.body_eof? => true or false
+ *
+ * Detects if we're done filtering the body or not.  This can be used
+ * to detect when to stop calling HttpParser#filter_body.
+ */
 static VALUE HttpParser_body_eof(VALUE self)
 {
   struct http_parser *hp = data_get(self);
@@ -447,6 +473,17 @@ static VALUE HttpParser_body_eof(VALUE self)
   return hp->len.content == 0 ? Qtrue : Qfalse;
 }
 
+/**
+ * call-seq:
+ *    parser.keepalive? => true or false
+ *
+ * This should be used to detect if a request can really handle
+ * keepalives and pipelining.  Currently, the rules are:
+ *
+ * 1. MUST be a GET or HEAD request
+ * 2. MUST be HTTP/1.1 +or+ HTTP/1.0 with "Connection: keep-alive"
+ * 3. MUST NOT have "Connection: close" set
+ */
 static VALUE HttpParser_keepalive(VALUE self)
 {
   struct http_parser *hp = data_get(self);
@@ -456,7 +493,7 @@ static VALUE HttpParser_keepalive(VALUE self)
 
 /**
  * call-seq:
- *    parser.filter_body(buf, data) -> nil/data
+ *    parser.filter_body(buf, data) => nil/data
  *
  * Takes a String of +data+, will modify data if dechunking is done.
  * Returns +nil+ if there is more data left to process.  Returns
@@ -464,7 +501,7 @@ static VALUE HttpParser_keepalive(VALUE self)
  * it may modify +data+ so the start of the string points to where
  * the body ended so that trailer processing can begin.
  *
- * Raises HttpParserError if there are dechunking errors
+ * Raises HttpParserError if there are dechunking errors.
  * Basically this is a glorified memcpy(3) that copies +data+
  * into +buf+ while filtering it through the dechunker.
  */
@@ -523,6 +560,10 @@ end_of_body:
 
 void Init_unicorn_http(void)
 {
+  mUnicorn = rb_define_module("Unicorn");
+  eHttpParserError =
+         rb_define_class_under(mUnicorn, "HttpParserError", rb_eIOError);
+  cHttpParser = rb_define_class_under(mUnicorn, "HttpParser", rb_cObject);
   init_globals();
   rb_define_alloc_func(cHttpParser, HttpParser_alloc);
   rb_define_method(cHttpParser, "initialize", HttpParser_init,0);
@@ -545,7 +586,7 @@ void Init_unicorn_http(void)
   /*
    * The maximum size of the body as specified by Content-Length.
    * This is only a theoretical maximum, the actual limit is subject
-   * to the limits of the file system used for +Dir::tmpdir+
+   * to the limits of the file system used for +Dir.tmpdir+.
    */
   rb_define_const(cHttpParser, "LENGTH_MAX", OFFT2NUM(UH_OFF_T_MAX));
 
