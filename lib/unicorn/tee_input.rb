@@ -23,6 +23,13 @@ module Unicorn
         @tmp.write(@buf2)
         @tmp.seek(0)
       end
+
+      # give our socket object a readpartial if it can't handle it
+      if socket && ! socket.respond_to?(:readpartial)
+        def socket.readpartial(nr, buf = Unicorn::Z.dup)
+          buf.replace(read)
+        end
+      end
     end
 
     # returns the size of the input.  This is what the Content-Length
