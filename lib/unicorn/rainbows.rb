@@ -116,11 +116,7 @@ end
 if $0 == __FILE__
   app = lambda { |env|
     if /\A100-continue\z/i =~ env['HTTP_EXPECT']
-      header = {
-        'Content-Type' => 'application/octet-stream',
-        'Content-Length' => '0'
-      }
-      return [ 100, header, [] ]
+      return [ 100, {}, [] ]
     end
     digest = Digest::SHA1.new
     input = env['rack.input']
@@ -128,7 +124,13 @@ if $0 == __FILE__
     while buf = input.read(16384, buf)
       digest.update(buf)
     end
-    [ 200, { 'X-SHA1' => digest.hexdigest }, [ env.inspect << "\n" ] ]
+    body = env.inspect << "\n"
+    header = {
+      'X-SHA1' => digest.hexdigest,
+      'Content-Length' => body.size.to_s,
+      'Content-Type' => 'text/plain',
+    }
+    [ 200, header, [ body ] ]
   }
   options = {
     :listeners => %w(0.0.0.0:8080),
