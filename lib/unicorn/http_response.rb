@@ -31,22 +31,21 @@ module Unicorn
     # Connection: and Date: headers no matter what (if anything) our
     # Rack application sent us.
     SKIP = { 'connection' => true, 'date' => true, 'status' => true }.freeze
-    OUT = [] # :nodoc
 
     # writes the rack_response to socket as an HTTP response
     def self.write(socket, rack_response)
       status, headers, body = rack_response
       status = CODES[status.to_i] || status
-      OUT.clear
+      tmp = []
 
       # Don't bother enforcing duplicate supression, it's a Hash most of
       # the time anyways so just hope our app knows what it's doing
       headers.each do |key, value|
         next if SKIP.include?(key.downcase)
         if value =~ /\n/
-          value.split(/\n/).each { |v| OUT << "#{key}: #{v}\r\n" }
+          value.split(/\n/).each { |v| tmp << "#{key}: #{v}\r\n" }
         else
-          OUT << "#{key}: #{value}\r\n"
+          tmp << "#{key}: #{value}\r\n"
         end
       end
 
@@ -58,7 +57,7 @@ module Unicorn
                    "Date: #{Time.now.httpdate}\r\n" \
                    "Status: #{status}\r\n" \
                    "Connection: close\r\n" \
-                   "#{OUT.join(Z)}\r\n")
+                   "#{tmp.join(Z)}\r\n")
       body.each { |chunk| socket.write(chunk) }
       socket.close # flushes and uncorks the socket immediately
       ensure
