@@ -1,3 +1,4 @@
+v0.10.2r - monkey-patch Rev for now (experimental)
 v0.10.1r - --rainbows/-R command-line option (experimental)
 v0.10.0r - Rainbows! (experimental, not going to Rubyforge)
 v0.90.0 - switch chunking+trailer handling to Ragel, v0.8.4 fixes
