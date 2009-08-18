@@ -12,6 +12,7 @@ module Unicorn
   autoload :Configurator, 'unicorn/configurator'
   autoload :TeeInput, 'unicorn/tee_input'
   autoload :Util, 'unicorn/util'
+  autoload :Rainbows, 'unicorn/rainbows'
 
   Z = '' # the stock empty string we use everywhere...
   Z.force_encoding(Encoding::BINARY) if Z.respond_to?(:force_encoding)
@@ -19,7 +20,8 @@ module Unicorn
 
   class << self
     def run(app, options = {})
-      HttpServer.new(app, options).start.join
+      klass = options.delete(:rainbows) ? Rainbows : HttpServer
+      klass.new(app, options).start.join
     end
   end
 

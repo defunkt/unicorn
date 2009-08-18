@@ -83,6 +83,8 @@ opts = OptionParser.new("", 24, '  ') do |opts|
     ENV['RAILS_RELATIVE_URL_ROOT'] = map_path = v
   end
 
+  opts.on("-R", "--rainbows") { options[:rainbows] = true }
+
   # I'm avoiding Unicorn-specific config options on the command-line.
   # IMNSHO, config options on the command-line are redundant given
   # config files and make things unnecessarily complicated with multiple

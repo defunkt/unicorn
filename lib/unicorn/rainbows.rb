@@ -62,7 +62,7 @@ module Unicorn
       trap(:USR1) { reopen_worker_logs(worker.nr) }
       trap(:QUIT) { alive = false; LISTENERS.each { |s| s.close rescue nil } }
       [:TERM, :INT].each { |sig| trap(sig) { exit!(0) } } # instant shutdown
-      logger.info "worker=#{worker.nr} ready"
+      logger.info "worker=#{worker.nr} ready with Rainbows"
 
       begin
         Actor.spawn(ready.accept) { |s| process_client(s) }
