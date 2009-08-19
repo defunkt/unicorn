@@ -383,6 +383,8 @@ static void advance_str(VALUE str, off_t nr)
   if (len == 0)
     return;
 
+  rb_str_modify(str);
+
   assert(nr <= len);
   len -= nr;
   if (len > 0) /* unlikely, len is usually 0 */
