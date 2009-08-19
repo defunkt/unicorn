@@ -36,6 +36,7 @@ struct http_parser {
     size_t field_len; /* only used during header processing */
     size_t dest_offset; /* only used during body processing */
   } s;
+  VALUE cont;
   union {
     off_t content;
     off_t chunk;
@@ -87,6 +88,31 @@ static void invalid_if_trailer(int flags)
     rb_raise(eHttpParserError, "invalid Trailer");
 }
 
+static void write_cont_value(struct http_parser *hp,
+                             const char *buffer, const char *p)
+{
+  char *vptr;
+
+  if (!hp->cont)
+    rb_raise(eHttpParserError, "invalid continuation line");
+
+  assert(hp->mark > 0);
+
+  if (LEN(mark, p) == 0)
+    return;
+
+  if (RSTRING_LEN(hp->cont) > 0)
+    --hp->mark;
+
+  vptr = PTR_TO(mark);
+
+  if (RSTRING_LEN(hp->cont) > 0) {
+    assert(' ' == *vptr || '\t' == *vptr);
+    *vptr = ' ';
+  }
+  rb_str_buf_cat(hp->cont, vptr, LEN(mark, p));
+}
+
 static void write_value(VALUE req, struct http_parser *hp,
                         const char *buffer, const char *p)
 {
@@ -123,11 +149,11 @@ static void write_value(VALUE req, struct http_parser *hp,
 
   e = rb_hash_aref(req, f);
   if (e == Qnil) {
-    rb_hash_aset(req, f, v);
+    hp->cont = rb_hash_aset(req, f, v);
   } else if (f != g_http_host) {
     /* full URLs in REQUEST_URI take precedence for the Host: header */
     rb_str_buf_cat(e, ",", 1);
-    rb_str_buf_append(e, v);
+    hp->cont = rb_str_buf_append(e, v);
   }
 }
 
@@ -144,6 +170,7 @@ static void write_value(VALUE req, struct http_parser *hp,
   action write_field { hp->s.field_len = LEN(start.field, fpc); }
   action start_value { MARK(mark, fpc); }
   action write_value { write_value(req, hp, buffer, fpc); }
+  action write_cont_value { write_cont_value(hp, buffer, fpc); }
   action request_method {
     request_method(hp, req, PTR_TO(mark), LEN(mark, fpc));
   }
@@ -342,10 +369,18 @@ static void finalize_header(VALUE req)
     rb_hash_aset(req, g_query_string, rb_str_new(NULL, 0));
 }
 
+static void hp_mark(void *ptr)
+{
+  struct http_parser *hp = ptr;
+
+  if (hp->cont)
+    rb_gc_mark(hp->cont);
+}
+
 static VALUE HttpParser_alloc(VALUE klass)
 {
   struct http_parser *hp;
-  return Data_Make_Struct(klass, struct http_parser, NULL, NULL, hp);
+  return Data_Make_Struct(klass, struct http_parser, hp_mark, NULL, hp);
 }
 
 
