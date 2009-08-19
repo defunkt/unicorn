@@ -56,25 +56,43 @@ module Unicorn
       ppid = master_pid
       init_worker_process(worker)
       alive = worker.tmp # tmp is our lifeline to the master process
-      ready = Revactor::TCP.listen(LISTENERS.first, nil)
-      Actor.current.trap_exit = true
 
       trap(:USR1) { reopen_worker_logs(worker.nr) }
       trap(:QUIT) { alive = false; LISTENERS.each { |s| s.close rescue nil } }
       [:TERM, :INT].each { |sig| trap(sig) { exit!(0) } } # instant shutdown
+
+      Actor.current.trap_exit = true
+
+      listeners = LISTENERS.map { |s|
+        TCPServer === s ? Revactor::TCP.listen(s, nil) : nil
+      }
+      listeners.compact!
+
       logger.info "worker=#{worker.nr} ready with Rainbows"
+      clients = []
+
+      listeners.map! do |s|
+        Actor.spawn(s) do |l|
+          begin
+            clients << Actor.spawn(l.accept) { |s| process_client(s) }
+          rescue Errno::EAGAIN, Errno::ECONNABORTED
+          rescue Object => e
+            if alive
+              logger.error "Unhandled listen loop exception #{e.inspect}."
+              logger.error e.backtrace.join("\n")
+            end
+          end while alive
+        end
+      end
 
       begin
-        Actor.spawn(ready.accept) { |s| process_client(s) }
-        ppid == Process.ppid or alive = false
-        alive.chmod(t = 0)
-      rescue Errno::EAGAIN, Errno::ECONNABORTED
-      rescue Object => e
+        Actor.sleep 1
+        clients.delete_if { |a| a.dead? }
         if alive
-          logger.error "Unhandled listen loop exception #{e.inspect}."
-          logger.error e.backtrace.join("\n")
+          alive.chmod(Time.now.to_i)
+          ppid == Process.ppid or alive = false
         end
-      end while alive
+      end while alive || ! clients.empty?
     end
 
     def murder_lazy_workers
