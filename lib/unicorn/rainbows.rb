@@ -85,11 +85,12 @@ module Unicorn
         end
       end
 
+      nr = 0
       begin
         Actor.sleep 1
         clients.delete_if { |a| a.dead? }
         if alive
-          alive.chmod(Time.now.to_i)
+          alive.chmod(nr = 0 == nr ? 1 : 0)
           ppid == Process.ppid or alive = false
         end
       end while alive || ! clients.empty?
