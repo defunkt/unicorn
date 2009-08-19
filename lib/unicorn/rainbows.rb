@@ -95,9 +95,6 @@ module Unicorn
       end while alive || ! clients.empty?
     end
 
-    def murder_lazy_workers
-    end
-
   private
 
     # write a response without caring if it went out or not
