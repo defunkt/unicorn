@@ -12,29 +12,33 @@ module Unicorn
       "rack.multithread" => true,
       "SERVER_SOFTWARE" => "Unicorn Rainbows! #{Const::UNICORN_VERSION}",
     })
-    SKIP = HttpResponse::SKIP
-    CODES = HttpResponse::CODES
 
     # once a client is accepted, it is processed in its entirety here
     # in 3 easy steps: read request, call app, write app response
     def process_client(client)
-      env = { Const::REMOTE_ADDR => client.remote_addr }
+      env = {}
+      remote_addr = client.remote_addr
       hp = HttpParser.new
       buf = client.read
-      while ! hp.headers(env, buf)
-        buf << client.read
-      end
 
-      env[Const::RACK_INPUT] = 0 == hp.content_length ?
-               HttpRequest::NULL_IO : TeeInput.new(client, env, hp, buf)
-      response = app.call(env.update(DEFAULTS))
+      begin
+        while ! hp.headers(env, buf)
+          buf << client.read
+        end
 
-      if 100 == response.first.to_i
-        client.write(Const::EXPECT_100_RESPONSE)
-        env.delete(Const::HTTP_EXPECT)
-        response = app.call(env)
-      end
-      HttpResponse.write(client, response)
+        env[Const::REMOTE_ADDR] = remote_addr
+        env[Const::RACK_INPUT] = 0 == hp.content_length ?
+                 HttpRequest::NULL_IO : TeeInput.new(client, env, hp, buf)
+        response = app.call(env.update(DEFAULTS))
+
+        if 100 == response.first.to_i
+          client.write(Const::EXPECT_100_RESPONSE)
+          env.delete(Const::HTTP_EXPECT)
+          response = app.call(env)
+        end
+        HttpResponse.write(client, response, hp.keepalive?)
+      end while hp.keepalive? and hp.reset.nil? and env.clear
+      client.close
     # if we get any error, try to write something back to the client
     # assuming we haven't closed the socket, but don't get hung up
     # if the socket is already closed or broken.  We'll always ensure
