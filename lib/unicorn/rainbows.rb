@@ -136,6 +136,7 @@ if $0 == __FILE__
     if /\A100-continue\z/i =~ env['HTTP_EXPECT']
       return [ 100, {}, [] ]
     end
+    env['REQUEST_URI'] =~ %r{^/sleep/(\d+(?:\.\d*)?)} and Actor.sleep($1.to_f)
     digest = Digest::SHA1.new
     input = env['rack.input']
     buf = Unicorn::Z.dup
@@ -151,7 +152,7 @@ if $0 == __FILE__
     [ 200, header, [ body ] ]
   }
   options = {
-    :listeners => %w(0.0.0.0:8080),
+    :listeners => %w(0.0.0.0:8080 0.0.0.0:8090),
   }
   Unicorn::Rainbows.new(app, options).start.join
 end
