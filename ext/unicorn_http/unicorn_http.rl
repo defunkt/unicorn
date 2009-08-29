@@ -104,7 +104,7 @@ static void write_cont_value(struct http_parser *hp,
   if (RSTRING_LEN(hp->cont) > 0)
     --hp->mark;
 
-  vptr = PTR_TO(mark);
+  vptr = (char *)PTR_TO(mark);
 
   if (RSTRING_LEN(hp->cont) > 0) {
     assert(' ' == *vptr || '\t' == *vptr);
