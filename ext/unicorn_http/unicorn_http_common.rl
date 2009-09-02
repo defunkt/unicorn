@@ -41,6 +41,7 @@
   Request_URI = ((absolute_path | "*") >mark %request_uri) | Absolute_URI;
   Fragment = ( uchar | reserved )* >mark %fragment;
   Method = (token){1,20} >mark %request_method;
+  GetOnly = "GET" >mark %request_method;
 
   http_number = ( digit+ "." digit+ ) ;
   HTTP_Version = ( "HTTP/" http_number ) >mark %http_version ;
@@ -65,8 +66,9 @@
   ChunkedBody := chunk* last_chunk @end_chunked_body;
   Trailers := (message_header)* CRLF @end_trailers;
 
-  Request = Request_Line (message_header)* CRLF @header_done;
+  FullRequest = Request_Line (message_header)* CRLF @header_done;
+  SimpleRequest = GetOnly " " Request_URI ("#"Fragment){0,1} CRLF @header_done;
 
-main := Request;
+main := FullRequest | SimpleRequest;
 
 }%%

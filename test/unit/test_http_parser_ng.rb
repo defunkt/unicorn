@@ -281,4 +281,23 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert ! @parser.keepalive?
   end
 
+  def test_parse_simple_request
+    parser = HttpParser.new
+    req = {}
+    http = "GET /read-rfc1945-if-you-dont-believe-me\r\n"
+    assert_equal req, parser.headers(req, http)
+    assert_equal '', http
+    expect = {
+      "SERVER_NAME"=>"localhost",
+      "rack.url_scheme"=>"http",
+      "REQUEST_PATH"=>"/read-rfc1945-if-you-dont-believe-me",
+      "PATH_INFO"=>"/read-rfc1945-if-you-dont-believe-me",
+      "REQUEST_URI"=>"/read-rfc1945-if-you-dont-believe-me",
+      "SERVER_PORT"=>"80",
+      "REQUEST_METHOD"=>"GET",
+      "QUERY_STRING"=>""
+    }
+    assert_equal expect, req
+  end
+
 end
