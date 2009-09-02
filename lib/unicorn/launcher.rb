@@ -24,8 +24,8 @@ class Unicorn::Launcher
       exit if fork
 
       # $stderr/$stderr can/will be redirected separately in the Unicorn config
-      $stdout.reopen("/dev/null", "a")
-      $stderr.reopen("/dev/null", "a")
+      Unicorn::Configurator::DEFAULTS[:stderr_path] = "/dev/null"
+      Unicorn::Configurator::DEFAULTS[:stdout_path] = "/dev/null"
     end
     $stdin.sync = $stdout.sync = $stderr.sync = true
   end
