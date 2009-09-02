@@ -40,7 +40,7 @@
 
   Request_URI = ((absolute_path | "*") >mark %request_uri) | Absolute_URI;
   Fragment = ( uchar | reserved )* >mark %fragment;
-  Method = ( upper | digit | safe ){1,20} >mark %request_method;
+  Method = (token){1,20} >mark %request_method;
 
   http_number = ( digit+ "." digit+ ) ;
   HTTP_Version = ( "HTTP/" http_number ) >mark %http_version ;
