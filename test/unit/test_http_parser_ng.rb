@@ -21,6 +21,7 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal '123', req['CONTENT_LENGTH']
     assert_equal 0, str.size
     assert ! @parser.keepalive?
+    assert @parser.headers?
   end
 
   def test_identity_oneshot_header
@@ -299,6 +300,7 @@ class HttpParserNgTest < Test::Unit::TestCase
       "QUERY_STRING"=>""
     }
     assert_equal expect, req
+    assert ! parser.headers?
   end
 
 end

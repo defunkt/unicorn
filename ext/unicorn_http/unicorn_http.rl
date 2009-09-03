@@ -537,6 +537,21 @@ static VALUE HttpParser_keepalive(VALUE self)
 
 /**
  * call-seq:
+ *    parser.headers? => true or false
+ *
+ * This should be used to detect if a request has headers (and if
+ * the response will have headers as well).  HTTP/0.9 requests
+ * should return false, all subsequent HTTP versions will return true
+ */
+static VALUE HttpParser_has_headers(VALUE self)
+{
+  struct http_parser *hp = data_get(self);
+
+  return (hp->flags & UH_FL_HASHEADER) ? Qtrue : Qfalse;
+}
+
+/**
+ * call-seq:
  *    parser.filter_body(buf, data) => nil/data
  *
  * Takes a String of +data+, will modify data if dechunking is done.
@@ -618,6 +633,7 @@ void Init_unicorn_http(void)
   rb_define_method(cHttpParser, "content_length", HttpParser_content_length, 0);
   rb_define_method(cHttpParser, "body_eof?", HttpParser_body_eof, 0);
   rb_define_method(cHttpParser, "keepalive?", HttpParser_keepalive, 0);
+  rb_define_method(cHttpParser, "headers?", HttpParser_has_headers, 0);
 
   /*
    * The maximum size a single chunk when using chunked transfer encoding.
