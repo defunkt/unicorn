@@ -604,6 +604,26 @@ end
     reexec_usr2_quit_test(new_pid, pid_file)
   end
 
+  def test_daemonize_redirect_fail
+    pid_file = "#{@tmpdir}/test.pid"
+    log = Tempfile.new('unicorn_test_log')
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite("pid #{pid_file}\"\n")
+    err = Tempfile.new('stderr')
+    out = Tempfile.new('stdout ')
+
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
+    pid = xfork do
+      $stderr.reopen(err.path, "a")
+      $stdout.reopen(out.path, "a")
+      exec($unicorn_bin, "-D", "-l#{@addr}:#{@port}", "-c#{ucfg.path}")
+    end
+    pid, status = Process.waitpid2(pid)
+    assert status.success?, "original process exited successfully"
+    sleep 1 # can't waitpid on a daemonized process :<
+    assert err.stat.size > 0
+  end
+
   def test_reexec_fd_leak
     unless RUBY_PLATFORM =~ /linux/ # Solaris may work, too, but I forget...
       warn "FD leak test only works on Linux at the moment"
