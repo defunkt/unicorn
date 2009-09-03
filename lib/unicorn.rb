@@ -447,8 +447,7 @@ module Unicorn
         env.delete(Const::HTTP_EXPECT)
         response = app.call(env)
       end
-
-      HttpResponse.write(client, response)
+      HttpResponse.write(client, response, HttpRequest::PARSER.headers?)
     # if we get any error, try to write something back to the client
     # assuming we haven't closed the socket, but don't get hung up
     # if the socket is already closed or broken.  We'll always ensure

@@ -148,6 +148,16 @@ class WebServerTest < Test::Unit::TestCase
     assert_nothing_raised { sock.close }
   end
 
+  def test_http_0_9
+    sock = nil
+    assert_nothing_raised do
+      sock = TCPSocket.new('127.0.0.1', @port)
+      sock.syswrite("GET /hello\r\n")
+    end
+    assert_match 'hello!\n', sock.sysread(4096)
+    assert_nothing_raised { sock.close }
+  end
+
   def test_header_is_too_long
     redirect_test_io do
       long = "GET /test HTTP/1.1\r\n" + ("X-Big: stuff\r\n" * 15000) + "\r\n"
