@@ -260,7 +260,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'HTTP/1.0', req['HTTP_VERSION']
     assert_nil parser.headers(req, http << "\r")
     assert_equal req, parser.headers(req, http << "\n")
-    assert_equal 'HTTP/1.1', req['SERVER_PROTOCOL']
+    assert_equal 'HTTP/1.0', req['SERVER_PROTOCOL']
     assert_nil req['FRAGMENT']
     assert_equal '', req['QUERY_STRING']
     assert_equal "", http
@@ -367,7 +367,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal '/', req['REQUEST_URI']
     assert_equal 'PUT', req['REQUEST_METHOD']
     assert_equal 'HTTP/1.0', req['HTTP_VERSION']
-    assert_equal 'HTTP/1.1', req['SERVER_PROTOCOL']
+    assert_equal 'HTTP/1.0', req['SERVER_PROTOCOL']
     assert_equal "abcde", http
     assert ! parser.keepalive? # TODO: read HTTP/1.2 when it's final
   end
@@ -381,7 +381,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal '/l', req['REQUEST_URI']
     assert_equal 'PUT', req['REQUEST_METHOD']
     assert_equal 'HTTP/1.0', req['HTTP_VERSION']
-    assert_equal 'HTTP/1.1', req['SERVER_PROTOCOL']
+    assert_equal 'HTTP/1.0', req['SERVER_PROTOCOL']
     assert_equal "", http
     assert ! parser.keepalive? # TODO: read HTTP/1.2 when it's final
   end

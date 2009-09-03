@@ -294,7 +294,7 @@ class HttpParserNgTest < Test::Unit::TestCase
       "PATH_INFO"=>"/read-rfc1945-if-you-dont-believe-me",
       "REQUEST_URI"=>"/read-rfc1945-if-you-dont-believe-me",
       "SERVER_PORT"=>"80",
-      "SERVER_PROTOCOL"=>"HTTP/1.1", # FIXME
+      "SERVER_PROTOCOL"=>"HTTP/0.9",
       "REQUEST_METHOD"=>"GET",
       "QUERY_STRING"=>""
     }

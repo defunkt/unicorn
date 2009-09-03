@@ -20,6 +20,7 @@
 #define UH_FL_INCHUNK  0x20
 #define UH_FL_KAMETHOD 0x40
 #define UH_FL_KAVERSION 0x80
+#define UH_FL_HASHEADER 0x100
 
 #define UH_FL_KEEPALIVE (UH_FL_KAMETHOD | UH_FL_KAVERSION)
 
@@ -43,7 +44,7 @@ struct http_parser {
   } len;
 };
 
-static void finalize_header(VALUE req);
+static void finalize_header(struct http_parser *hp, VALUE req);
 
 #define REMAINING (unsigned long)(pe - p)
 #define LEN(AT, FPC) (FPC - buffer - hp->AT)
@@ -73,12 +74,17 @@ http_version(struct http_parser *hp, VALUE req, const char *ptr, size_t len)
 {
   VALUE v;
 
+  hp->flags |= UH_FL_HASHEADER;
+
   if (CONST_MEM_EQ("HTTP/1.1", ptr, len)) {
     hp->flags |= UH_FL_KAVERSION;
     v = g_http_11;
+  } else if (CONST_MEM_EQ("HTTP/1.0", ptr, len)) {
+    v = g_http_10;
   } else {
     v = rb_str_new(ptr, len);
   }
+  rb_hash_aset(req, g_server_protocol, v);
   rb_hash_aset(req, g_http_version, v);
 }
 
@@ -223,7 +229,7 @@ static void write_value(VALUE req, struct http_parser *hp,
       rb_raise(eHttpParserError, "invalid chunk size");
   }
   action header_done {
-    finalize_header(req);
+    finalize_header(hp, req);
 
     cs = http_parser_first_final;
     if (hp->flags & UH_FL_HASBODY) {
@@ -328,7 +334,7 @@ static struct http_parser *data_get(VALUE self)
   return hp;
 }
 
-static void finalize_header(VALUE req)
+static void finalize_header(struct http_parser *hp, VALUE req)
 {
   VALUE temp = rb_hash_aref(req, g_rack_url_scheme);
   VALUE server_name = g_localhost;
@@ -362,7 +368,8 @@ static void finalize_header(VALUE req)
   }
   rb_hash_aset(req, g_server_name, server_name);
   rb_hash_aset(req, g_server_port, server_port);
-  rb_hash_aset(req, g_server_protocol, g_http_11);
+  if (!(hp->flags & UH_FL_HASHEADER))
+    rb_hash_aset(req, g_server_protocol, g_http_09);
 
   /* rack requires QUERY_STRING */
   if (rb_hash_aref(req, g_query_string) == Qnil)
