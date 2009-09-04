@@ -630,7 +630,7 @@ module Unicorn
     end
 
     def redirect_io(io, path)
-      File.open(path, 'a') { |fp| io.reopen(fp) } if path
+      File.open(path, 'ab') { |fp| io.reopen(fp) } if path
       io.sync = true
     end
 
