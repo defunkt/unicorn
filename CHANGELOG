@@ -1,3 +1,4 @@
+v0.91.0 - HTTP/0.9 support, multiline header support, small fixes
 v0.90.0 - switch chunking+trailer handling to Ragel, v0.8.4 fixes
 v0.9.2 - Ruby 1.9.2 preview1 compatibility
 v0.9.1 - FD_CLOEXEC portability fix (v0.8.2 port)
