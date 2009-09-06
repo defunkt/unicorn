@@ -22,6 +22,7 @@
 #define UH_FL_KAVERSION 0x80
 #define UH_FL_HASHEADER 0x100
 
+/* both of these flags need to be set for keepalive to be supported */
 #define UH_FL_KEEPALIVE (UH_FL_KAMETHOD | UH_FL_KAVERSION)
 
 struct http_parser {
@@ -57,11 +58,44 @@ static void finalize_header(struct http_parser *hp, VALUE req);
 #define HP_FL_UNSET(hp,fl) ((hp)->flags &= ~(UH_FL_##fl))
 #define HP_FL_ALL(hp,fl) (HP_FL_TEST(hp, fl) == (UH_FL_##fl))
 
+/*
+ * handles values of the "Connection:" header, keepalive is implied
+ * for HTTP/1.1 but needs to be explicitly enabled with HTTP/1.0
+ * Additionally, we require GET/HEAD requests to support keepalive.
+ */
+static void hp_keepalive_connection(struct http_parser *hp, VALUE val)
+{
+  /* REQUEST_METHOD is always set before any headers */
+  if (HP_FL_TEST(hp, KAMETHOD)) {
+    if (STR_CSTR_CASE_EQ(val, "keep-alive")) {
+      /* basically have HTTP/1.0 masquerade as HTTP/1.1+ */
+      HP_FL_SET(hp, KAVERSION);
+    } else if (STR_CSTR_CASE_EQ(val, "close")) {
+      /*
+       * it doesn't matter what HTTP version or request method we have,
+       * if a client says "Connection: close", we disable keepalive
+       */
+      HP_FL_UNSET(hp, KEEPALIVE);
+    } else {
+      /*
+       * client could've sent anything, ignore it for now.  Maybe
+       * "HP_FL_UNSET(hp, KEEPALIVE);" just in case?
+       * Raising an exception might be too mean...
+       */
+    }
+  }
+}
+
 static void
 request_method(struct http_parser *hp, VALUE req, const char *ptr, size_t len)
 {
   VALUE v;
 
+  /*
+   * we only support keepalive for GET and HEAD requests for now other
+   * methods are too rarely seen to be worth optimizing.  POST is unsafe
+   * since some clients send extra bytes after POST bodies.
+   */
   if (CONST_MEM_EQ("GET", ptr, len)) {
     HP_FL_SET(hp, KAMETHOD);
     v = g_GET;
@@ -82,6 +116,7 @@ http_version(struct http_parser *hp, VALUE req, const char *ptr, size_t len)
   HP_FL_SET(hp, HASHEADER);
 
   if (CONST_MEM_EQ("HTTP/1.1", ptr, len)) {
+    /* HTTP/1.1 implies keepalive unless "Connection: close" is set */
     HP_FL_SET(hp, KAVERSION);
     v = g_http_11;
   } else if (CONST_MEM_EQ("HTTP/1.0", ptr, len)) {
@@ -137,12 +172,7 @@ static void write_value(VALUE req, struct http_parser *hp,
     VALIDATE_MAX_LENGTH(hp->s.field_len, FIELD_NAME);
     f = uncommon_field(PTR_TO(start.field), hp->s.field_len);
   } else if (f == g_http_connection) {
-    if (HP_FL_TEST(hp, KAMETHOD)) {
-      if (STR_CSTR_CASE_EQ(v, "keep-alive"))
-        HP_FL_SET(hp, KAVERSION);
-      else if (STR_CSTR_CASE_EQ(v, "close"))
-        HP_FL_UNSET(hp, KEEPALIVE);
-    }
+    hp_keepalive_connection(hp, v);
   } else if (f == g_content_length) {
     hp->len.content = parse_length(RSTRING_PTR(v), RSTRING_LEN(v));
     if (hp->len.content < 0)
