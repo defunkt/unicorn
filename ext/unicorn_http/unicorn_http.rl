@@ -302,6 +302,7 @@ static void write_value(VALUE req, struct http_parser *hp,
       cs = http_parser_first_final;
     }
     ++p;
+    assert(p <= pe && "buffer overflow after chunked body");
     goto post_exec;
   }
 
