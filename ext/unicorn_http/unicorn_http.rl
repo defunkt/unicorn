@@ -38,7 +38,7 @@ struct http_parser {
     size_t field_len; /* only used during header processing */
     size_t dest_offset; /* only used during body processing */
   } s;
-  VALUE cont;
+  VALUE cont; /* Qfalse: unset, Qnil: ignored header, T_STRING: append */
   union {
     off_t content;
     off_t chunk;
@@ -139,9 +139,12 @@ static void write_cont_value(struct http_parser *hp,
 {
   char *vptr;
 
-  if (!hp->cont)
-    rb_raise(eHttpParserError, "invalid continuation line");
+  if (hp->cont == Qfalse)
+     rb_raise(eHttpParserError, "invalid continuation line");
+  if (NIL_P(hp->cont))
+     return; /* we're ignoring this header (probably Host:) */
 
+  assert(TYPE(hp->cont) == T_STRING && "continuation line is not a string");
   assert(hp->mark > 0 && "impossible continuation line offset");
 
   if (LEN(mark, p) == 0)
@@ -200,6 +203,7 @@ static void write_value(VALUE req, struct http_parser *hp,
      * ignored, absolute URLs in REQUEST_URI take precedence over
      * the Host: header (ref: rfc 2616, section 5.2.1)
      */
+     hp->cont = Qnil;
   } else {
     rb_str_buf_cat(e, ",", 1);
     hp->cont = rb_str_buf_append(e, v);
@@ -333,6 +337,7 @@ static void http_parser_init(struct http_parser *hp)
 {
   int cs = 0;
   memset(hp, 0, sizeof(struct http_parser));
+  hp->cont = Qfalse; /* zero on MRI, should be optimized away by above */
   %% write init;
   hp->cs = cs;
 }

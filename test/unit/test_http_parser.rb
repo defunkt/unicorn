@@ -180,6 +180,17 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'hi y x ASDF', req['HTTP_X_ASDF']
   end
 
+  def test_continuation_with_absolute_uri_and_ignored_host_header
+    parser = HttpParser.new
+    header = "GET http://example.com/ HTTP/1.1\r\n" \
+             "Host: \r\n" \
+             "    YHBT.net\r\n" \
+             "\r\n"
+    req = {}
+    assert_equal req, parser.headers(req, header)
+    assert_equal 'example.com', req['HTTP_HOST']
+  end
+
   # this may seem to be testing more of an implementation detail, but
   # it also helps ensure we're safe in the presence of multiple parsers
   # in case we ever go multithreaded/evented...
