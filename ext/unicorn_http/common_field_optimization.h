@@ -103,7 +103,8 @@ static VALUE uncommon_field(const char *field, size_t flen)
   VALUE f = rb_str_new(NULL, HTTP_PREFIX_LEN + flen);
   memcpy(RSTRING_PTR(f), HTTP_PREFIX, HTTP_PREFIX_LEN);
   memcpy(RSTRING_PTR(f) + HTTP_PREFIX_LEN, field, flen);
-  assert(*(RSTRING_PTR(f) + RSTRING_LEN(f)) == '\0'); /* paranoia */
+  assert(*(RSTRING_PTR(f) + RSTRING_LEN(f)) == '\0' &&
+         "string didn't end with \\0"); /* paranoia */
   return rb_obj_freeze(f);
 }
 

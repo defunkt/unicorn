@@ -142,7 +142,7 @@ static void write_cont_value(struct http_parser *hp,
   if (!hp->cont)
     rb_raise(eHttpParserError, "invalid continuation line");
 
-  assert(hp->mark > 0);
+  assert(hp->mark > 0 && "impossible continuation line offset");
 
   if (LEN(mark, p) == 0)
     return;
@@ -153,7 +153,7 @@ static void write_cont_value(struct http_parser *hp,
   vptr = (char *)PTR_TO(mark);
 
   if (RSTRING_LEN(hp->cont) > 0) {
-    assert(' ' == *vptr || '\t' == *vptr);
+    assert((' ' == *vptr || '\t' == *vptr) && "invalid leading white space");
     *vptr = ' ';
   }
   rb_str_buf_cat(hp->cont, vptr, LEN(mark, p));
@@ -280,7 +280,7 @@ static void write_value(VALUE req, struct http_parser *hp,
       if (HP_FL_TEST(hp, CHUNKED))
         cs = http_parser_en_ChunkedBody;
     } else {
-      assert(!HP_FL_TEST(hp, CHUNKED));
+      assert(!HP_FL_TEST(hp, CHUNKED) && "chunked encoding without body!");
     }
     /*
      * go back to Ruby so we can call the Rack application, we'll reenter
@@ -313,7 +313,7 @@ static void write_value(VALUE req, struct http_parser *hp,
     hp->s.dest_offset += nr;
     hp->len.chunk -= nr;
     p += nr;
-    assert(hp->len.chunk >= 0);
+    assert(hp->len.chunk >= 0 && "negative chunk length");
     if (hp->len.chunk > REMAINING) {
       HP_FL_SET(hp, INCHUNK);
       goto post_exec;
@@ -374,7 +374,7 @@ static struct http_parser *data_get(VALUE self)
   struct http_parser *hp;
 
   Data_Get_Struct(self, struct http_parser, hp);
-  assert(hp);
+  assert(hp && "failed to extract http_parser struct");
   return hp;
 }
 
@@ -473,7 +473,7 @@ static void advance_str(VALUE str, off_t nr)
 
   rb_str_modify(str);
 
-  assert(nr <= len);
+  assert(nr <= len && "trying to advance past end of buffer");
   len -= nr;
   if (len > 0) /* unlikely, len is usually 0 */
     memmove(RSTRING_PTR(str), RSTRING_PTR(str) + nr, len);
@@ -626,19 +626,20 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
       if (hp->cs == http_parser_error)
         rb_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
 
-      assert(hp->s.dest_offset <= hp->start.offset);
+      assert(hp->s.dest_offset <= hp->start.offset &&
+             "destination buffer overflow");
       advance_str(data, hp->start.offset);
       rb_str_set_len(buf, hp->s.dest_offset);
 
       if (RSTRING_LEN(buf) == 0 && chunked_eof(hp)) {
-        assert(hp->len.chunk == 0);
+        assert(hp->len.chunk == 0 && "chunk at EOF but more to parse");
       } else {
         data = Qnil;
       }
     }
   } else {
     /* no need to enter the Ragel machine for unchunked transfers */
-    assert(hp->len.content >= 0);
+    assert(hp->len.content >= 0 && "negative Content-Length");
     if (hp->len.content > 0) {
       long nr = MIN(dlen, hp->len.content);
 
@@ -657,7 +658,7 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
 
 #define SET_GLOBAL(var,str) do { \
   var = find_common_field(str, sizeof(str) - 1); \
-  assert(var != Qnil); \
+  assert(var != Qnil && "missed global field"); \
 } while (0)
 
 void Init_unicorn_http(void)

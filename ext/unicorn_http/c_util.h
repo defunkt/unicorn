@@ -56,7 +56,7 @@ static int hexchar2int(int xdigit)
     return xdigit - 'a' + 10;
 
   /* Ragel already does runtime range checking for us in Unicorn: */
-  assert(xdigit >= '0' && xdigit <= '9');
+  assert(xdigit >= '0' && xdigit <= '9' && "invalid digit character");
 
   return xdigit - '0';
 }
