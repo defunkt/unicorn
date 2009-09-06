@@ -88,9 +88,9 @@ http_version(struct http_parser *hp, VALUE req, const char *ptr, size_t len)
   rb_hash_aset(req, g_http_version, v);
 }
 
-static void invalid_if_trailer(int flags)
+static inline void hp_invalid_if_trailer(struct http_parser *hp)
 {
-  if (flags & UH_FL_INTRAILER)
+  if (hp->flags & UH_FL_INTRAILER)
     rb_raise(eHttpParserError, "invalid Trailer");
 }
 
@@ -143,14 +143,14 @@ static void write_value(VALUE req, struct http_parser *hp,
     if (hp->len.content < 0)
       rb_raise(eHttpParserError, "invalid Content-Length");
     hp->flags |= UH_FL_HASBODY;
-    invalid_if_trailer(hp->flags);
+    hp_invalid_if_trailer(hp);
   } else if (f == g_http_transfer_encoding) {
     if (STR_CSTR_CASE_EQ(v, "chunked"))
       hp->flags |= UH_FL_CHUNKED | UH_FL_HASBODY;
-    invalid_if_trailer(hp->flags);
+    hp_invalid_if_trailer(hp);
   } else if (f == g_http_trailer) {
     hp->flags |= UH_FL_HASTRAILER;
-    invalid_if_trailer(hp->flags);
+    hp_invalid_if_trailer(hp);
   }
 
   e = rb_hash_aref(req, f);
