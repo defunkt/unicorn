@@ -188,6 +188,8 @@ static void write_value(VALUE req, struct http_parser *hp,
   } else if (f == g_http_trailer) {
     HP_FL_SET(hp, HASTRAILER);
     hp_invalid_if_trailer(hp);
+  } else {
+    assert(OBJ_FROZEN(f) && "unfrozen object returned");
   }
 
   e = rb_hash_aref(req, f);
@@ -391,6 +393,8 @@ static void finalize_header(struct http_parser *hp, VALUE req)
     rb_hash_aset(req, g_rack_url_scheme, temp);
   } else if (STR_CSTR_EQ(temp, "https")) {
     server_port = g_port_443;
+  } else {
+    assert(server_port == g_port_80 && "server_port not set");
   }
 
   /* parse and set the SERVER_NAME and SERVER_PORT variables */
