@@ -619,22 +619,21 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
   OBJ_TAINT(buf); /* keep weirdo $SAFE users happy */
 
   if (HP_FL_TEST(hp, CHUNKED)) {
-    if (chunked_eof(hp))
-      goto end_of_body;
+    if (!chunked_eof(hp)) {
+      hp->s.dest_offset = 0;
+      http_parser_execute(hp, buf, dptr, dlen);
+      if (hp->cs == http_parser_error)
+        rb_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
 
-    hp->s.dest_offset = 0;
-    http_parser_execute(hp, buf, dptr, dlen);
-    if (hp->cs == http_parser_error)
-      rb_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
+      assert(hp->s.dest_offset <= hp->start.offset);
+      advance_str(data, hp->start.offset);
+      rb_str_set_len(buf, hp->s.dest_offset);
 
-    assert(hp->s.dest_offset <= hp->start.offset);
-    advance_str(data, hp->start.offset);
-    rb_str_set_len(buf, hp->s.dest_offset);
-
-    if (RSTRING_LEN(buf) == 0 && chunked_eof(hp)) {
-      assert(hp->len.chunk == 0);
-    } else {
-      data = Qnil;
+      if (RSTRING_LEN(buf) == 0 && chunked_eof(hp)) {
+        assert(hp->len.chunk == 0);
+      } else {
+        data = Qnil;
+      }
     }
   } else {
     /* no need to enter the Ragel machine for unchunked transfers */
@@ -651,7 +650,6 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
       data = Qnil;
     }
   }
-end_of_body:
   hp->start.offset = 0; /* for trailer parsing */
   return data;
 }
