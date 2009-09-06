@@ -426,8 +426,7 @@ static void hp_mark(void *ptr)
 {
   struct http_parser *hp = ptr;
 
-  if (hp->cont)
-    rb_gc_mark(hp->cont);
+  rb_gc_mark(hp->cont);
 }
 
 static VALUE HttpParser_alloc(VALUE klass)
