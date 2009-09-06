@@ -52,16 +52,21 @@ static void finalize_header(struct http_parser *hp, VALUE req);
 #define PTR_TO(F) (buffer + hp->F)
 #define STR_NEW(M,FPC) rb_str_new(PTR_TO(M), LEN(M, FPC))
 
+#define HP_FL_TEST(hp,fl) ((hp)->flags & (UH_FL_##fl))
+#define HP_FL_SET(hp,fl) ((hp)->flags |= (UH_FL_##fl))
+#define HP_FL_UNSET(hp,fl) ((hp)->flags &= ~(UH_FL_##fl))
+#define HP_FL_ALL(hp,fl) (HP_FL_TEST(hp, fl) == (UH_FL_##fl))
+
 static void
 request_method(struct http_parser *hp, VALUE req, const char *ptr, size_t len)
 {
   VALUE v;
 
   if (CONST_MEM_EQ("GET", ptr, len)) {
-    hp->flags |= UH_FL_KAMETHOD;
+    HP_FL_SET(hp, KAMETHOD);
     v = g_GET;
   } else if (CONST_MEM_EQ("HEAD", ptr, len)) {
-    hp->flags |= UH_FL_KAMETHOD;
+    HP_FL_SET(hp, KAMETHOD);
     v = g_HEAD;
   } else {
     v = rb_str_new(ptr, len);
@@ -74,10 +79,10 @@ http_version(struct http_parser *hp, VALUE req, const char *ptr, size_t len)
 {
   VALUE v;
 
-  hp->flags |= UH_FL_HASHEADER;
+  HP_FL_SET(hp, HASHEADER);
 
   if (CONST_MEM_EQ("HTTP/1.1", ptr, len)) {
-    hp->flags |= UH_FL_KAVERSION;
+    HP_FL_SET(hp, KAVERSION);
     v = g_http_11;
   } else if (CONST_MEM_EQ("HTTP/1.0", ptr, len)) {
     v = g_http_10;
@@ -90,7 +95,7 @@ http_version(struct http_parser *hp, VALUE req, const char *ptr, size_t len)
 
 static inline void hp_invalid_if_trailer(struct http_parser *hp)
 {
-  if (hp->flags & UH_FL_INTRAILER)
+  if (HP_FL_TEST(hp, INTRAILER))
     rb_raise(eHttpParserError, "invalid Trailer");
 }
 
@@ -132,24 +137,26 @@ static void write_value(VALUE req, struct http_parser *hp,
     VALIDATE_MAX_LENGTH(hp->s.field_len, FIELD_NAME);
     f = uncommon_field(PTR_TO(start.field), hp->s.field_len);
   } else if (f == g_http_connection) {
-    if (hp->flags & UH_FL_KAMETHOD) {
+    if (HP_FL_TEST(hp, KAMETHOD)) {
       if (STR_CSTR_CASE_EQ(v, "keep-alive"))
-        hp->flags |= UH_FL_KAVERSION;
+        HP_FL_SET(hp, KAVERSION);
       else if (STR_CSTR_CASE_EQ(v, "close"))
-        hp->flags &= ~UH_FL_KEEPALIVE;
+        HP_FL_UNSET(hp, KEEPALIVE);
     }
   } else if (f == g_content_length) {
     hp->len.content = parse_length(RSTRING_PTR(v), RSTRING_LEN(v));
     if (hp->len.content < 0)
       rb_raise(eHttpParserError, "invalid Content-Length");
-    hp->flags |= UH_FL_HASBODY;
+    HP_FL_SET(hp, HASBODY);
     hp_invalid_if_trailer(hp);
   } else if (f == g_http_transfer_encoding) {
-    if (STR_CSTR_CASE_EQ(v, "chunked"))
-      hp->flags |= UH_FL_CHUNKED | UH_FL_HASBODY;
+    if (STR_CSTR_CASE_EQ(v, "chunked")) {
+      HP_FL_SET(hp, CHUNKED);
+      HP_FL_SET(hp, HASBODY);
+    }
     hp_invalid_if_trailer(hp);
   } else if (f == g_http_trailer) {
-    hp->flags |= UH_FL_HASTRAILER;
+    HP_FL_SET(hp, HASTRAILER);
     hp_invalid_if_trailer(hp);
   }
 
@@ -236,12 +243,12 @@ static void write_value(VALUE req, struct http_parser *hp,
     finalize_header(hp, req);
 
     cs = http_parser_first_final;
-    if (hp->flags & UH_FL_HASBODY) {
-      hp->flags |= UH_FL_INBODY;
-      if (hp->flags & UH_FL_CHUNKED)
+    if (HP_FL_TEST(hp, HASBODY)) {
+      HP_FL_SET(hp, INBODY);
+      if (HP_FL_TEST(hp, CHUNKED))
         cs = http_parser_en_ChunkedBody;
     } else {
-      assert(!(hp->flags & UH_FL_CHUNKED));
+      assert(!HP_FL_TEST(hp, CHUNKED));
     }
     /*
      * go back to Ruby so we can call the Rack application, we'll reenter
@@ -256,8 +263,8 @@ static void write_value(VALUE req, struct http_parser *hp,
   }
 
   action end_chunked_body {
-    if (hp->flags & UH_FL_HASTRAILER) {
-      hp->flags |= UH_FL_INTRAILER;
+    if (HP_FL_TEST(hp, HASTRAILER)) {
+      HP_FL_SET(hp, INTRAILER);
       cs = http_parser_en_Trailers;
     } else {
       cs = http_parser_first_final;
@@ -275,7 +282,7 @@ static void write_value(VALUE req, struct http_parser *hp,
     p += nr;
     assert(hp->len.chunk >= 0);
     if (hp->len.chunk > REMAINING) {
-      hp->flags |= UH_FL_INCHUNK;
+      HP_FL_SET(hp, INCHUNK);
       goto post_exec;
     } else {
       fhold;
@@ -315,8 +322,8 @@ static void http_parser_execute(struct http_parser *hp,
 
   assert(pe - p == len - off && "pointers aren't same distance");
 
-  if (hp->flags & UH_FL_INCHUNK) {
-    hp->flags &= ~(UH_FL_INCHUNK);
+  if (HP_FL_TEST(hp, INCHUNK)) {
+    HP_FL_UNSET(hp, INCHUNK);
     goto skip_chunk_data_hack;
   }
   %% write exec;
@@ -372,7 +379,7 @@ static void finalize_header(struct http_parser *hp, VALUE req)
   }
   rb_hash_aset(req, g_server_name, server_name);
   rb_hash_aset(req, g_server_port, server_port);
-  if (!(hp->flags & UH_FL_HASHEADER))
+  if (!HP_FL_TEST(hp, HASHEADER))
     rb_hash_aset(req, g_server_protocol, g_http_09);
 
   /* rack requires QUERY_STRING */
@@ -454,7 +461,7 @@ static VALUE HttpParser_content_length(VALUE self)
 {
   struct http_parser *hp = data_get(self);
 
-  return (hp->flags & UH_FL_CHUNKED) ? Qnil : OFFT2NUM(hp->len.content);
+  return HP_FL_TEST(hp, CHUNKED) ? Qnil : OFFT2NUM(hp->len.content);
 }
 
 /**
@@ -500,8 +507,7 @@ static VALUE HttpParser_headers(VALUE self, VALUE req, VALUE data)
 
 static int chunked_eof(struct http_parser *hp)
 {
-  return ((hp->cs == http_parser_first_final) ||
-          (hp->flags & UH_FL_INTRAILER));
+  return ((hp->cs == http_parser_first_final) || HP_FL_TEST(hp, INTRAILER));
 }
 
 /**
@@ -515,7 +521,7 @@ static VALUE HttpParser_body_eof(VALUE self)
 {
   struct http_parser *hp = data_get(self);
 
-  if (hp->flags & UH_FL_CHUNKED)
+  if (HP_FL_TEST(hp, CHUNKED))
     return chunked_eof(hp) ? Qtrue : Qfalse;
 
   return hp->len.content == 0 ? Qtrue : Qfalse;
@@ -536,7 +542,7 @@ static VALUE HttpParser_keepalive(VALUE self)
 {
   struct http_parser *hp = data_get(self);
 
-  return (hp->flags & UH_FL_KEEPALIVE) == UH_FL_KEEPALIVE ? Qtrue : Qfalse;
+  return HP_FL_ALL(hp, KEEPALIVE) ? Qtrue : Qfalse;
 }
 
 /**
@@ -551,7 +557,7 @@ static VALUE HttpParser_has_headers(VALUE self)
 {
   struct http_parser *hp = data_get(self);
 
-  return (hp->flags & UH_FL_HASHEADER) ? Qtrue : Qfalse;
+  return HP_FL_TEST(hp, HASHEADER) ? Qtrue : Qfalse;
 }
 
 /**
@@ -578,7 +584,7 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
   rb_str_resize(buf, dlen); /* we can never copy more than dlen bytes */
   OBJ_TAINT(buf); /* keep weirdo $SAFE users happy */
 
-  if (hp->flags & UH_FL_CHUNKED) {
+  if (HP_FL_TEST(hp, CHUNKED)) {
     if (chunked_eof(hp))
       goto end_of_body;
 
