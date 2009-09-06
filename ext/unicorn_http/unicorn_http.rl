@@ -156,8 +156,12 @@ static void write_value(VALUE req, struct http_parser *hp,
   e = rb_hash_aref(req, f);
   if (e == Qnil) {
     hp->cont = rb_hash_aset(req, f, v);
-  } else if (f != g_http_host) {
-    /* full URLs in REQUEST_URI take precedence for the Host: header */
+  } else if (f == g_http_host) {
+    /*
+     * ignored, absolute URLs in REQUEST_URI take precedence over
+     * the Host: header (ref: rfc 2616, section 5.2.1)
+     */
+  } else {
     rb_str_buf_cat(e, ",", 1);
     hp->cont = rb_str_buf_append(e, v);
   }
