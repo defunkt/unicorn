@@ -168,7 +168,7 @@ static void write_value(VALUE req, struct http_parser *hp,
 
   VALIDATE_MAX_LENGTH(LEN(mark, p), FIELD_VALUE);
   v = STR_NEW(mark, p);
-  if (f == Qnil) {
+  if (NIL_P(f)) {
     VALIDATE_MAX_LENGTH(hp->s.field_len, FIELD_NAME);
     f = uncommon_field(PTR_TO(start.field), hp->s.field_len);
   } else if (f == g_http_connection) {
@@ -193,7 +193,7 @@ static void write_value(VALUE req, struct http_parser *hp,
   }
 
   e = rb_hash_aref(req, f);
-  if (e == Qnil) {
+  if (NIL_P(e)) {
     hp->cont = rb_hash_aset(req, f, v);
   } else if (f == g_http_host) {
     /*
@@ -385,9 +385,9 @@ static void finalize_header(struct http_parser *hp, VALUE req)
   VALUE server_port = g_port_80;
 
   /* set rack.url_scheme to "https" or "http", no others are allowed by Rack */
-  if (temp == Qnil) {
+  if (NIL_P(temp)) {
     temp = rb_hash_aref(req, g_http_x_forwarded_proto);
-    if (temp != Qnil && STR_CSTR_EQ(temp, "https"))
+    if (!NIL_P(temp) && STR_CSTR_EQ(temp, "https"))
       server_port = g_port_443;
     else
       temp = g_http;
@@ -400,7 +400,7 @@ static void finalize_header(struct http_parser *hp, VALUE req)
 
   /* parse and set the SERVER_NAME and SERVER_PORT variables */
   temp = rb_hash_aref(req, g_http_host);
-  if (temp != Qnil) {
+  if (!NIL_P(temp)) {
     char *colon = memchr(RSTRING_PTR(temp), ':', RSTRING_LEN(temp));
     if (colon) {
       long port_start = colon - RSTRING_PTR(temp) + 1;
@@ -418,7 +418,7 @@ static void finalize_header(struct http_parser *hp, VALUE req)
     rb_hash_aset(req, g_server_protocol, g_http_09);
 
   /* rack requires QUERY_STRING */
-  if (rb_hash_aref(req, g_query_string) == Qnil)
+  if (NIL_P(rb_hash_aref(req, g_query_string)))
     rb_hash_aset(req, g_query_string, rb_str_new(NULL, 0));
 }
 
@@ -658,7 +658,7 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
 
 #define SET_GLOBAL(var,str) do { \
   var = find_common_field(str, sizeof(str) - 1); \
-  assert(var != Qnil && "missed global field"); \
+  assert(!NIL_P(var) && "missed global field"); \
 } while (0)
 
 void Init_unicorn_http(void)
