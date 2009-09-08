@@ -1,3 +1,4 @@
+# -*- encoding: binary -*-
 
 require 'rubygems'
 require 'echoe'

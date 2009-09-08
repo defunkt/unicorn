@@ -1,4 +1,6 @@
 #!/usr/bin/ruby -n
+# -*- encoding: binary -*-
+
 BEGIN { $tests = $assertions = $failures = $errors = 0 }
 
 $_ =~ /(\d+) tests, (\d+) assertions, (\d+) failures, (\d+) errors/ or next

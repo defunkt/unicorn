@@ -1,3 +1,5 @@
+# -*- encoding: binary -*-
+
 require 'test/test_helper'
 require 'tempfile'
 

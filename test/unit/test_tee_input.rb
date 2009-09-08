@@ -1,4 +1,5 @@
-# encoding: binary
+# -*- encoding: binary -*-
+
 require 'test/unit'
 require 'digest/sha1'
 require 'unicorn'

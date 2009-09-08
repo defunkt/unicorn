@@ -1,3 +1,5 @@
+# -*- encoding: binary -*-
+
 require 'fcntl'
 require 'tmpdir'
 

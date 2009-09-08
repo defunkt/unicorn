@@ -1,3 +1,5 @@
+# -*- encoding: binary -*-
+
 module Unicorn
 
   # Frequently used constants when constructing requests or responses.  Many times

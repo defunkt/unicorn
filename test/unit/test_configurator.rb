@@ -1,3 +1,5 @@
+# -*- encoding: binary -*-
+
 require 'test/unit'
 require 'tempfile'
 require 'unicorn'

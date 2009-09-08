@@ -1,3 +1,5 @@
+# -*- encoding: binary -*-
+
 require 'digest/sha1'
 class FooController < ApplicationController
   def index

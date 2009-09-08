@@ -1,4 +1,5 @@
 #!/home/ew/bin/ruby
+# -*- encoding: binary -*-
 require 'unicorn/launcher'
 require 'optparse'
 

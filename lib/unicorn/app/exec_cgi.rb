@@ -1,3 +1,5 @@
+# -*- encoding: binary -*-
+
 require 'unicorn'
 
 module Unicorn::App

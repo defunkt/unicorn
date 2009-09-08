@@ -1,4 +1,10 @@
+# -*- encoding: binary -*-
+
 $stdin.sync = $stdout.sync = $stderr.sync = true
+$stdin.binmode
+$stdout.binmode
+$stderr.binmode
+
 require 'unicorn'
 
 class Unicorn::Launcher

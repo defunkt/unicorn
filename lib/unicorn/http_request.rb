@@ -1,4 +1,5 @@
-# coding:binary
+# -*- encoding: binary -*-
+
 require 'stringio'
 require 'unicorn_http'
 

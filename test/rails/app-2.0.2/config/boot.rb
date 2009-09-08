@@ -1,3 +1,5 @@
+# -*- encoding: binary -*-
+
 unless defined?(RAILS_ROOT)
   root_path = File.join(File.dirname(__FILE__), '..')
   RAILS_ROOT = root_path

@@ -1,3 +1,4 @@
+# -*- encoding: binary -*-
 require 'mkmf'
 
 dir_config("unicorn_http")

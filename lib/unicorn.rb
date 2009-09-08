@@ -1,3 +1,5 @@
+# -*- encoding: binary -*-
+
 require 'fcntl'
 require 'unicorn/socket_helper'
 autoload :Rack, 'rack'

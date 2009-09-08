@@ -1,3 +1,5 @@
+# -*- encoding: binary -*-
+
 unless defined? RAILS_GEM_VERSION
   RAILS_GEM_VERSION = ENV['UNICORN_RAILS_VERSION'] # || '1.2.3'
 end
