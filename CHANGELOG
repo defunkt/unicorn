@@ -1,3 +1,4 @@
+v0.10.3r - small fixes, depend on rev 0.3.0+
 v0.10.2r - monkey-patch Rev for now (experimental)
 v0.10.1r - --rainbows/-R command-line option (experimental)
 v0.10.0r - Rainbows! (experimental, not going to Rubyforge)
