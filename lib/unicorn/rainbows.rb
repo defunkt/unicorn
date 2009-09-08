@@ -112,27 +112,6 @@ module Unicorn
   end
 end
 
-# Allow Rev::TCPListener to use an existing TCPServer
-# patch already submitted:
-#   http://rubyforge.org/pipermail/rev-talk/2009-August/000097.html
-class Rev::TCPListener
-  alias_method :orig_initialize, :initialize
-
-  def initialize(addr, port = nil, options = {})
-    BasicSocket.do_not_reverse_lookup = true unless options[:reverse_lookup]
-    options[:backlog] ||= DEFAULT_BACKLOG
-
-    listen_socket = if ::TCPServer === addr
-      addr
-    else
-      raise ArgumentError, "port must be an integer" if nil == port
-      ::TCPServer.new(addr, port)
-    end
-    listen_socket.instance_eval { listen(options[:backlog]) }
-    super(listen_socket)
-  end
-end
-
 if $0 == __FILE__
   app = lambda { |env|
     if /\A100-continue\z/i =~ env['HTTP_EXPECT']
