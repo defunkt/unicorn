@@ -54,9 +54,7 @@ losing any incoming connections.  Doing so will reload all of your
 application code, Unicorn config, Ruby executable, and all libraries.
 The only things that will not change (due to OS limitations) are:
 
-1. The listener backlog size of already-bound sockets
-
-2. The path to the unicorn executable script.  If you want to change to
+1. The path to the unicorn executable script.  If you want to change to
    a different installation of Ruby, you can modify the shebang
    line to point to your alternative interpreter.
 
