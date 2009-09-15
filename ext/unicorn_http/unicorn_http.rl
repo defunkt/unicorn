@@ -192,6 +192,7 @@ static void write_value(VALUE req, struct http_parser *hp,
     HP_FL_SET(hp, HASTRAILER);
     hp_invalid_if_trailer(hp);
   } else {
+    assert(TYPE(f) == T_STRING && "memoized object is not a string");
     assert_frozen(f);
   }
 

@@ -28,7 +28,7 @@ static void rb_18_str_set_len(VALUE str, long len)
 #if defined(OBJ_FROZEN)
 #  define assert_frozen(f) assert(OBJ_FROZEN(f) && "unfrozen object")
 #else
-#  define assert_frozen(f) assert(!NIL_P(f))
+#  define assert_frozen(f) do {} while (0)
 #endif
 
 #if !defined(OFFT2NUM)
