@@ -25,6 +25,14 @@ static void rb_18_str_set_len(VALUE str, long len)
 #  define assert_frozen(f) assert(!NIL_P(f))
 #endif
 
+#if !defined(OFFT2NUM)
+#  if SIZEOF_OFF_T == SIZEOF_LONG
+#    define OFFT2NUM(n) LONG2NUM(n)
+#  else
+#    define OFFT2NUM(n) LL2NUM(n)
+#  endif
+#endif /* ! defined(OFFT2NUM) */
+
 static inline int str_cstr_eq(VALUE val, const char *ptr, size_t len)
 {
   return (RSTRING_LEN(val) == len && !memcmp(ptr, RSTRING_PTR(val), len));
