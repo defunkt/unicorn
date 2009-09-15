@@ -6,7 +6,7 @@
   cut out everything that is better supported by the operating system,
   {nginx}[http://nginx.net/] or {Rack}[http://rack.rubyforge.org/].
 
-* Compatible with both Ruby 1.8 and 1.9, Rubinius support is planned.
+* Compatible with both Ruby 1.8 and 1.9.  Rubinius support is in-progress.
 
 * Process management: Unicorn will reap and restart workers that
   die from broken apps.  There is no need to manage multiple processes

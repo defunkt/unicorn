@@ -6,6 +6,7 @@
 
 * launchers - add stop/start/kill/upgrade commands
 
+* Rubinius support (partially done, waiting on Rubinius to stabilize)
+
 * Rainbows!
 
-* Rubinius support
