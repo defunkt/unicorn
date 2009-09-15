@@ -192,7 +192,7 @@ static void write_value(VALUE req, struct http_parser *hp,
     HP_FL_SET(hp, HASTRAILER);
     hp_invalid_if_trailer(hp);
   } else {
-    assert(OBJ_FROZEN(f) && "unfrozen object returned");
+    assert_frozen(f);
   }
 
   e = rb_hash_aref(req, f);

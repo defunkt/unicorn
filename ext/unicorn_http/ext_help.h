@@ -18,6 +18,13 @@ static void rb_18_str_set_len(VALUE str, long len)
 #  define rb_str_set_len(str,len) rb_18_str_set_len(str,len)
 #endif
 
+/* not all Ruby implementations support frozen objects (Rubinius does not) */
+#if defined(OBJ_FROZEN)
+#  define assert_frozen(f) assert(OBJ_FROZEN(f) && "unfrozen object")
+#else
+#  define assert_frozen(f) assert(!NIL_P(f))
+#endif
+
 static inline int str_cstr_eq(VALUE val, const char *ptr, size_t len)
 {
   return (RSTRING_LEN(val) == len && !memcmp(ptr, RSTRING_PTR(val), len));
