@@ -170,7 +170,7 @@ static void write_value(VALUE req, struct http_parser *hp,
   VALUE e;
 
   VALIDATE_MAX_LENGTH(LEN(mark, p), FIELD_VALUE);
-  v = STR_NEW(mark, p);
+  v = LEN(mark, p) == 0 ? rb_str_buf_new(128) : STR_NEW(mark, p);
   if (NIL_P(f)) {
     VALIDATE_MAX_LENGTH(hp->s.field_len, FIELD_NAME);
     f = uncommon_field(PTR_TO(start.field), hp->s.field_len);
