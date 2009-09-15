@@ -1,6 +1,8 @@
 # -*- encoding: binary -*-
 require 'mkmf'
 
+$CFLAGS += " -fPIC " # needed for Rubinius, MRI already uses it regardless
+
 dir_config("unicorn_http")
 
 have_macro("SIZEOF_OFF_T", "ruby.h") or check_sizeof("off_t", "sys/types.h")
