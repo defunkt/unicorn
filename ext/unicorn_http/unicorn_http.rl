@@ -527,6 +527,8 @@ static VALUE HttpParser_headers(VALUE self, VALUE req, VALUE data)
 {
   struct http_parser *hp = data_get(self);
 
+  rb_str_update(data);
+
   http_parser_execute(hp, req, RSTRING_PTR(data), RSTRING_LEN(data));
   VALIDATE_MAX_LENGTH(hp->start.offset, HEADER);
 
@@ -616,8 +618,12 @@ static VALUE HttpParser_has_headers(VALUE self)
 static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
 {
   struct http_parser *hp = data_get(self);
-  char *dptr = RSTRING_PTR(data);
-  long dlen = RSTRING_LEN(data);
+  char *dptr;
+  long dlen;
+
+  rb_str_update(data);
+  dptr = RSTRING_PTR(data);
+  dlen = RSTRING_LEN(data);
 
   StringValue(buf);
   rb_str_resize(buf, dlen); /* we can never copy more than dlen bytes */
