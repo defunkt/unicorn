@@ -3,10 +3,10 @@
 
 #ifndef RSTRING_PTR
 #define RSTRING_PTR(s) (RSTRING(s)->ptr)
-#endif
+#endif /* !defined(RSTRING_PTR) */
 #ifndef RSTRING_LEN
 #define RSTRING_LEN(s) (RSTRING(s)->len)
-#endif
+#endif /* !defined(RSTRING_LEN) */
 
 #ifndef RUBINIUS
 #  define rb_str_update(x) do {} while (0)
@@ -22,14 +22,14 @@ static void rb_18_str_set_len(VALUE str, long len)
   rb_str_flush(str);
 }
 #  define rb_str_set_len(str,len) rb_18_str_set_len(str,len)
-#endif
+#endif /* !defined(HAVE_RB_STR_SET_LEN) */
 
 /* not all Ruby implementations support frozen objects (Rubinius does not) */
 #if defined(OBJ_FROZEN)
 #  define assert_frozen(f) assert(OBJ_FROZEN(f) && "unfrozen object")
 #else
 #  define assert_frozen(f) do {} while (0)
-#endif
+#endif /* !defined(OBJ_FROZEN) */
 
 #if !defined(OFFT2NUM)
 #  if SIZEOF_OFF_T == SIZEOF_LONG
@@ -41,7 +41,7 @@ static void rb_18_str_set_len(VALUE str, long len)
 
 #ifndef HAVE_RB_STR_MODIFY
 #  define rb_str_modify(x) do {} while (0)
-#endif
+#endif /* ! defined(HAVE_RB_STR_MODIFY) */
 
 static inline int str_cstr_eq(VALUE val, const char *ptr, size_t len)
 {
@@ -70,4 +70,4 @@ static int str_cstr_case_eq(VALUE val, const char *ptr, size_t len)
 #define STR_CSTR_CASE_EQ(val, const_str) \
   str_cstr_case_eq(val, const_str, sizeof(const_str) - 1)
 
-#endif
+#endif /* ext_help_h */

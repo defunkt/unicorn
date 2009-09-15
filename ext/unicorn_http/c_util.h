@@ -27,7 +27,7 @@
 #  endif
 #else
 #  error off_t size unknown for this platform!
-#endif
+#endif /* SIZEOF_OFF_T check */
 
 /*
  * capitalizes all lower-case ASCII characters and converts dashes
