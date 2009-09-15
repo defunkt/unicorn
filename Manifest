@@ -1,5 +1,6 @@
 .document
 .gitignore
+.mailmap
 CHANGELOG
 CONTRIBUTORS
 COPYING
