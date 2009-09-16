@@ -7,11 +7,11 @@ module Unicorn
   # gave about a 3% to 10% performance improvement over using the strings directly.
   # Symbols did not really improve things much compared to constants.
   module Const
-    UNICORN_VERSION="0.91.0".freeze
+    UNICORN_VERSION="0.91.0"
 
-    DEFAULT_HOST = "0.0.0.0".freeze # default TCP listen host address
-    DEFAULT_PORT = "8080".freeze    # default TCP listen port
-    DEFAULT_LISTEN = "#{DEFAULT_HOST}:#{DEFAULT_PORT}".freeze
+    DEFAULT_HOST = "0.0.0.0" # default TCP listen host address
+    DEFAULT_PORT = "8080"    # default TCP listen port
+    DEFAULT_LISTEN = "#{DEFAULT_HOST}:#{DEFAULT_PORT}"
 
     # The basic max request size we'll try to read.
     CHUNK_SIZE=(16 * 1024)
@@ -24,8 +24,8 @@ module Unicorn
     MAX_BODY=MAX_HEADER
 
     # common errors we'll send back
-    ERROR_400_RESPONSE = "HTTP/1.1 400 Bad Request\r\n\r\n".freeze
-    ERROR_500_RESPONSE = "HTTP/1.1 500 Internal Server Error\r\n\r\n".freeze
+    ERROR_400_RESPONSE = "HTTP/1.1 400 Bad Request\r\n\r\n"
+    ERROR_500_RESPONSE = "HTTP/1.1 500 Internal Server Error\r\n\r\n"
     EXPECT_100_RESPONSE = "HTTP/1.1 100 Continue\r\n\r\n"
 
     # A frozen format for this is about 15% faster

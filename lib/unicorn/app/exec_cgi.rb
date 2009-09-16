@@ -26,7 +26,7 @@ module Unicorn::App
       SERVER_PORT
       SERVER_PROTOCOL
       SERVER_SOFTWARE
-    ).map { |x| x.freeze }.freeze # frozen strings are faster for Hash lookups
+    ).map { |x| x.freeze } # frozen strings are faster for Hash assignments
 
     # Intializes the app, example of usage in a config.ru
     #   map "/cgit" do

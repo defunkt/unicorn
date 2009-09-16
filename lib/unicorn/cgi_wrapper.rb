@@ -46,7 +46,7 @@ class Unicorn::CGIWrapper < ::CGI
     'language' => 'Content-Language'.freeze,
     'expires' => 'Expires'.freeze,
     'length' => CONTENT_LENGTH,
-  }.freeze
+  }
 
   # Takes an a Rackable environment, plus any additional CGI.new
   # arguments These are used internally to create a wrapper around the

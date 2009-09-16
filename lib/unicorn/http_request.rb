@@ -12,15 +12,15 @@ module Unicorn
       "rack.multiprocess" => true,
       "rack.multithread" => false,
       "rack.run_once" => false,
-      "rack.version" => [1, 0].freeze,
-      "SCRIPT_NAME" => "".freeze,
+      "rack.version" => [1, 0],
+      "SCRIPT_NAME" => "",
 
       # this is not in the Rack spec, but some apps may rely on it
-      "SERVER_SOFTWARE" => "Unicorn #{Const::UNICORN_VERSION}".freeze
+      "SERVER_SOFTWARE" => "Unicorn #{Const::UNICORN_VERSION}"
     }
 
     NULL_IO = StringIO.new(Z)
-    LOCALHOST = '127.0.0.1'.freeze
+    LOCALHOST = '127.0.0.1'
 
     # Being explicitly single-threaded, we have certain advantages in
     # not having to worry about variables being clobbered :)

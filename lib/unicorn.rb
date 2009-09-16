@@ -285,7 +285,7 @@ module Unicorn
 
     # list of signals we care about and trap in master.
     QUEUE_SIGS = [ :WINCH, :QUIT, :INT, :TERM, :USR1, :USR2, :HUP,
-                   :TTIN, :TTOU ].freeze
+                   :TTIN, :TTOU ]
 
     # defer a signal for later processing in #join (master process)
     def trap_deferred(signal)

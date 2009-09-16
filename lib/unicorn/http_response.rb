@@ -32,7 +32,7 @@ module Unicorn
     # Rack does not set/require a Date: header.  We always override the
     # Connection: and Date: headers no matter what (if anything) our
     # Rack application sent us.
-    SKIP = { 'connection' => true, 'date' => true, 'status' => true }.freeze
+    SKIP = { 'connection' => true, 'date' => true, 'status' => true }
     OUT = [] # :nodoc
 
     def self.write_header(socket, status, headers)

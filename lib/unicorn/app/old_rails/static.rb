@@ -20,7 +20,7 @@
 # with Unicorn and you should see a decent speed boost (but not as
 # fast as if you use a static server like nginx).
 class Unicorn::App::OldRails::Static < Struct.new(:app, :root, :file_server)
-  FILE_METHODS = { 'GET' => true, 'HEAD' => true }.freeze
+  FILE_METHODS = { 'GET' => true, 'HEAD' => true }
   REQUEST_METHOD = 'REQUEST_METHOD'.freeze
   REQUEST_URI = 'REQUEST_URI'.freeze
   PATH_INFO = 'PATH_INFO'.freeze
