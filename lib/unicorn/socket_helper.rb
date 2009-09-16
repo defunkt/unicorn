@@ -20,10 +20,8 @@ module Unicorn
       # Use the HTTP accept filter if available.
       # The struct made by pack() is defined in /usr/include/sys/socket.h
       # as accept_filter_arg
-      # We won't be seupportin the "dataready" filter unlike nginx
-      # since we only support HTTP and no other protocols
       unless `/sbin/sysctl -nq net.inet.accf.http`.empty?
-        HTTPREADY = ['httpready', nil].pack('a16a240').freeze
+        FILTER_ARG = ['httpready', nil].pack('a16a240')
       end
     end
 
@@ -46,8 +44,8 @@ module Unicorn
       # No good reason to ever have deferred accepts off
       if defined?(TCP_DEFER_ACCEPT)
         sock.setsockopt(SOL_TCP, TCP_DEFER_ACCEPT, 1) rescue nil
-      elsif defined?(SO_ACCEPTFILTER) && defined?(HTTPREADY)
-        sock.setsockopt(SOL_SOCKET, SO_ACCEPTFILTER, HTTPREADY) rescue nil
+      elsif defined?(SO_ACCEPTFILTER) && defined?(FILTER_ARG)
+        sock.setsockopt(SOL_SOCKET, SO_ACCEPTFILTER, FILTER_ARG) rescue nil
       end
     end
 
