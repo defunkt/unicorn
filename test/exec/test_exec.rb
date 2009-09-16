@@ -697,4 +697,62 @@ end
     wait_for_death(pid)
   end
 
+  def hup_test_common(preload)
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI.gsub("HI", '#$$')) }
+    pid_file = Tempfile.new('pid')
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite("listen '#@addr:#@port'\n")
+    ucfg.syswrite("pid '#{pid_file.path}'\n")
+    ucfg.syswrite("preload_app true\n") if preload
+    ucfg.syswrite("stderr_path 'test_stderr.#$$.log'\n")
+    ucfg.syswrite("stdout_path 'test_stdout.#$$.log'\n")
+    pid = xfork {
+      redirect_test_io { exec($unicorn_bin, "-D", "-c", ucfg.path) }
+    }
+    _, status = Process.waitpid2(pid)
+    assert status.success?
+    wait_master_ready("test_stderr.#$$.log")
+    wait_workers_ready("test_stderr.#$$.log", 1)
+    uri = URI.parse("http://#@addr:#@port/")
+    pids = Tempfile.new('worker_pids')
+    hitter = fork {
+      bodies = Hash.new(0)
+      at_exit { pids.syswrite(bodies.inspect) }
+      trap(:TERM) { exit(0) }
+      loop {
+        rv = Net::HTTP.get(uri)
+        pid = rv.to_i
+        exit!(1) if pid <= 0
+        bodies[pid] += 1
+      }
+    }
+    sleep 1 # racy
+    daemon_pid = pid_file.read.to_i
+    assert daemon_pid > 0
+    Process.kill(:HUP, daemon_pid)
+    sleep 1 # racy
+    assert_nothing_raised { Process.kill(:TERM, hitter) }
+    _, hitter_status = Process.waitpid2(hitter)
+    assert hitter_status.success?
+    pids.sysseek(0)
+    pids = eval(pids.read)
+    assert_kind_of(Hash, pids)
+    assert_equal 2, pids.size
+    pids.keys.each { |x|
+      assert_kind_of(Integer, x)
+      assert x > 0
+      assert pids[x] > 0
+    }
+    assert_nothing_raised { Process.kill(:QUIT, daemon_pid) }
+    wait_for_death(daemon_pid)
+  end
+
+  def test_preload_app_hup
+    hup_test_common(true)
+  end
+
+  def test_hup
+    hup_test_common(false)
+  end
+
 end if do_test
