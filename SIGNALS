@@ -1,7 +1,7 @@
 == Signal handling
 
 In general, signals need only be sent to the master process.  However,
-the signals unicorn uses internally to communicate with the worker
+the signals Unicorn uses internally to communicate with the worker
 processes are documented here as well.
 
 === Master Process
