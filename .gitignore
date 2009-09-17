@@ -14,3 +14,5 @@ pkg/
 /vendor
 /NEWS
 /ChangeLog
+/.manifest
+/GIT-VERSION-FILE

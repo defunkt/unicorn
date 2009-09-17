@@ -1,54 +1,61 @@
 # -*- encoding: binary -*-
 
-require 'rubygems'
-require 'echoe'
-
-Echoe.new("unicorn") do |p|
-  p.summary = "Rack HTTP server for Unix, fast clients and nothing else"
-  p.author = "Eric Wong"
-  p.email = "normalperson@yhbt.net"
-  p.clean_pattern = ['ext/unicorn_http/*.{bundle,so,o,obj,pdb,lib,def,exp}',
-                     'lib/*.{bundle,so,o,obj,pdb,lib,def,exp}',
-                     'ext/unicorn_http/Makefile',
-                     'pkg', 'lib/*.bundle', '*.gem',
-                     'site/output', '.config', 'coverage',
-                     'test_*.log', 'log', 'doc']
-  p.url = "http://unicorn.bogomips.org/"
-  p.ignore_pattern = /^(pkg|site|projects|doc|log)|CVS|\.log/
-  p.need_tar_gz = false
-  p.need_tgz = true
-  p.dependencies = [ 'rack' ]
-
-  p.extension_pattern = ["ext/**/extconf.rb"]
-
-  # Eric hasn't bothered to figure out running exec tests properly
-  # from Rake, but Eric prefers GNU make to Rake for tests anyways...
-  p.test_pattern = [ 'test/unit/test*.rb' ]
-end
-
-#### Ragel builder
-
-desc "Rebuild the Ragel sources"
-task :ragel do
-  Dir.chdir "ext/unicorn_http" do
-    target = "unicorn_http.c"
-    File.unlink target if File.exist? target
-    sh "ragel unicorn_http.rl -C -G2 -o #{target}"
-    raise "Failed to build C source" unless File.exist? target
-  end
-end
+# most tasks are in the GNUmakefile which offers better parallelism
 
 desc 'prints RDoc-formatted history'
 task :history do
   tags = `git tag -l`.split(/\n/).grep(/^v[\d\.]+$/).reverse
   timefmt = '%Y-%m-%d %H:%M UTC'
+
+  old_summaries = File.readlines(".CHANGELOG.old").inject({}) do |hash, line|
+    version, summary = line.split(/ - /, 2)
+    hash[version] = summary
+    hash
+  end
+
   tags.each do |tag|
     header, subject, body = `git cat-file tag #{tag}`.split(/\n\n/, 3)
     tagger = header.split(/\n/).grep(/^tagger /).first.split(/\s/)
     time = Time.at(tagger[-2].to_i).utc
     puts "=== #{tag.sub(/^v/, '')} / #{time.strftime(timefmt)}"
     puts ""
-    puts body ? body.gsub(/^/sm, "  ") : "  initial"
+
+    if old_summary = old_summaries[tag]
+      print "  #{old_summary}\n"
+    end
+
+    puts body ? body.gsub(/^/sm, "  ").gsub(/[ \t]+$/sm, "") : "  initial"
     puts ""
   end
+end
+
+desc "print release changelog for Rubyforge"
+task :release_changes do
+  version = ENV['VERSION'] or abort "VERSION= needed"
+  version = "v#{version}"
+  tags = `git tag -l`.split(/\n/)
+  prev = tags[tags.index(version) - 1]
+  system('git', 'diff', '--stat', prev, version) or abort $?
+  puts ""
+  system('git', 'log', "#{prev}..#{version}") or abort $?
+end
+
+desc "print release notes for Rubyforge"
+task :release_notes do
+  require 'rubygems'
+
+  git_url = ENV['GIT_URL'] ||
+            `git config --get remote.origin.url 2>/dev/null`.chomp! ||
+            'git://git.bogomips.org/unicorn.git'
+
+  spec = Gem::Specification.load('unicorn.gemspec')
+  puts spec.description.strip
+  puts ""
+  puts "* #{spec.homepage}"
+  puts "* #{spec.email}"
+  puts "* #{git_url}"
+
+  _, _, body = `git cat-file tag v#{spec.version}`.split(/\n\n/, 3)
+  print "\nChanges:\n\n"
+  puts body
 end

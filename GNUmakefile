@@ -3,7 +3,13 @@ all:: test
 ruby = ruby
 rake = rake
 ragel = ragel
+GIT_URL = $(shell git config --get remote.origin.url 2>/dev/null || \
+           echo git://git.bogomips.org/unicorn.git)
 RLFLAGS = -G2
+
+GIT-VERSION-FILE: .FORCE-GIT-VERSION-FILE
+	@./GIT-VERSION-GEN
+-include GIT-VERSION-FILE
 -include local.mk
 ruby_bin := $(shell which $(ruby))
 ifeq ($(DLEXT),) # "so" for Linux
@@ -30,8 +36,9 @@ test_prefix = $(CURDIR)/test/install-$(RUBY_VERSION)
 
 ext := ext/unicorn_http
 c_files := $(ext)/unicorn_http.c $(wildcard $(ext)/*.h)
-rl_files := $(addprefix $(ext)/,unicorn_http.rl unicorn_http_common.rl)
-rb_files := $(shell grep '^\(bin\|lib\)' Manifest)
+rl_files := $(wildcard $(ext)/*.rl)
+bins := $(wildcard bin/*)
+rb_files := $(bins) $(shell find lib -type f -name '*.rb')
 inst_deps := $(c_files) $(rb_files)
 
 ragel: $(ext)/unicorn_http.c
@@ -49,12 +56,10 @@ http: lib/unicorn_http.$(DLEXT)
 
 $(test_prefix)/.stamp: $(inst_deps)
 	mkdir -p $(test_prefix)/.ccache
-	tar c `cat Manifest` | (cd $(test_prefix) && tar x)
+	tar c `cat .manifest` | (cd $(test_prefix) && tar x)
 	$(MAKE) -C $(test_prefix) clean
 	$(MAKE) -C $(test_prefix) http shebang
 	> $@
-
-bins := $(wildcard bin/*)
 
 # this is only intended to be run within $(test_prefix)
 shebang: $(bins)
@@ -124,17 +129,18 @@ clean:
 	$(RM) $(setup_rb_files) $(t_log)
 	$(RM) -r $(test_prefix)
 
-Manifest:
-	(git ls-files && echo $(ext)/unicorn_http.c) | LC_ALL=C sort > $@+
+.manifest: GIT-VERSION-FILE NEWS ChangeLog $(ext)/unicorn_http.c
+	(git ls-files && \
+         for i in $@ $^; do echo $$i; done) | LC_ALL=C sort > $@+
 	cmp $@+ $@ || mv $@+ $@
-	$(RM) -f $@+
+	$(RM) $@+
 
-NEWS:
+NEWS: GIT-VERSION-FILE
 	$(rake) -s history > $@+
 	mv $@+ $@
 
-ChangeLog:
-	@echo ChangeLog from git://git.bogomips.org/unicorn.git > $@+
+ChangeLog: GIT-VERSION-FILE
+	@echo "ChangeLog from $(GIT_URL) ($(GIT_VERSION))" > $@+
 	@echo >> $@+
 	git log | sed -e 's/^/    /' >> $@+
 	mv $@+ $@
@@ -164,4 +170,50 @@ $(T_r).%.r: export RAILS_GIT_REPO = $(CURDIR)/$(rails_git)
 $(T_r).%.r: $(test_prefix)/.stamp $(rails_git)/info/cloned-stamp
 	$(run_test)
 
-.PHONY: doc $(T) $(slow_tests) Manifest ChangeLog
+ifneq ($(VERSION),)
+rfproject := mongrel
+rfpackage := unicorn
+pkggem := pkg/$(rfpackage)-$(VERSION).gem
+pkgtgz := pkg/$(rfpackage)-$(VERSION).tgz
+release_notes := release_notes-$(VERSION)
+release_changes := release_changes-$(VERSION)
+
+release-notes: $(release_notes)
+release-changes: $(release_changes)
+$(release_changes):
+	$(rake) -s release_changes > $@+
+	$(VISUAL) $@+ && test -s $@+ && mv $@+ $@
+$(release_notes):
+	GIT_URL=$(GIT_URL) $(rake) -s release_notes > $@+
+	$(VISUAL) $@+ && test -s $@+ && mv $@+ $@
+verify:
+	git rev-parse --verify refs/tags/v$(VERSION)^{}
+	git diff-index --quiet HEAD^0
+	test `git rev-parse --verify HEAD^0` = \
+	     `git rev-parse --verify refs/tags/v$(VERSION)^{}`
+
+$(pkggem): .manifest
+	gem build $(rfpackage).gemspec
+	mkdir -p pkg
+	mv $(@F) $@
+
+$(pkgtgz): distdir = $(basename $@)
+$(pkgtgz): HEAD = v$(VERSION)
+$(pkgtgz): .manifest
+	@test -n "$(distdir)"
+	$(RM) -r $(distdir)
+	git archive --format=tar --prefix=$(distdir)/ $(HEAD) | tar xv
+	install -m644 $^ $(distdir)/
+	cd pkg && tar c $(basename $(@F)) | gzip -9 > $(@F)+
+	mv $@+ $@
+
+package: $(pkgtgz) $(pkggem)
+
+release: package $(release_notes) $(release_changes)
+	rubyforge add_release -f -n $(release_notes) -a $(release_changes) \
+	  $(rfproject) $(rfpackage) $(VERSION) $(pkggem)
+	rubyforge add_file \
+	  $(rfproject) $(rfpackage) $(VERSION) $(pkgtgz)
+endif
+
+.PHONY: .FORCE-GIT-VERSION-FILE doc $(T) $(slow_tests) .manifest
