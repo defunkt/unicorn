@@ -1,6 +1,7 @@
 # -*- encoding: binary -*-
 
 # Copyright (c) 2009 Eric Wong
+FLOCK_PATH = File.expand_path(__FILE__)
 require 'test/test_helper'
 
 do_test = true
@@ -753,6 +754,102 @@ end
 
   def test_hup
     hup_test_common(false)
+  end
+
+  def test_default_listen_hup_holds_listener
+    default_listen_lock do
+      res, pid_path = default_listen_setup
+      daemon_pid = File.read(pid_path).to_i
+      assert_nothing_raised { Process.kill(:HUP, daemon_pid) }
+      wait_workers_ready("test_stderr.#$$.log", 1)
+      res2 = hit(["http://#{Unicorn::Const::DEFAULT_LISTEN}/"])
+      assert_match %r{\d+}, res2.first
+      assert res2.first != res.first
+      assert_nothing_raised { Process.kill(:QUIT, daemon_pid) }
+      wait_for_death(daemon_pid)
+    end
+  end
+
+  def test_default_listen_upgrade_holds_listener
+    default_listen_lock do
+      res, pid_path = default_listen_setup
+      daemon_pid = File.read(pid_path).to_i
+      assert_nothing_raised {
+        Process.kill(:USR2, daemon_pid)
+        wait_for_file("#{pid_path}.oldbin")
+        wait_for_file(pid_path)
+        Process.kill(:QUIT, daemon_pid)
+        wait_for_death(daemon_pid)
+      }
+      daemon_pid = File.read(pid_path).to_i
+      wait_workers_ready("test_stderr.#$$.log", 1)
+      File.truncate("test_stderr.#$$.log", 0)
+
+      res2 = hit(["http://#{Unicorn::Const::DEFAULT_LISTEN}/"])
+      assert_match %r{\d+}, res2.first
+      assert res2.first != res.first
+
+      assert_nothing_raised { Process.kill(:HUP, daemon_pid) }
+      wait_workers_ready("test_stderr.#$$.log", 1)
+      File.truncate("test_stderr.#$$.log", 0)
+      res3 = hit(["http://#{Unicorn::Const::DEFAULT_LISTEN}/"])
+      assert res2.first != res3.first
+
+      assert_nothing_raised { Process.kill(:QUIT, daemon_pid) }
+      wait_for_death(daemon_pid)
+    end
+  end
+
+  def default_listen_setup
+    File.open("config.ru", "wb") { |fp| fp.syswrite(HI.gsub("HI", '#$$')) }
+    pid_path = (tmp = Tempfile.new('pid')).path
+    tmp.close!
+    ucfg = Tempfile.new('unicorn_test_config')
+    ucfg.syswrite("pid '#{pid_path}'\n")
+    ucfg.syswrite("stderr_path 'test_stderr.#$$.log'\n")
+    ucfg.syswrite("stdout_path 'test_stdout.#$$.log'\n")
+    pid = xfork {
+      redirect_test_io { exec($unicorn_bin, "-D", "-c", ucfg.path) }
+    }
+    _, status = Process.waitpid2(pid)
+    assert status.success?
+    wait_master_ready("test_stderr.#$$.log")
+    wait_workers_ready("test_stderr.#$$.log", 1)
+    File.truncate("test_stderr.#$$.log", 0)
+    res = hit(["http://#{Unicorn::Const::DEFAULT_LISTEN}/"])
+    assert_match %r{\d+}, res.first
+    [ res, pid_path ]
+  end
+
+  # we need to flock() something to prevent these tests from running
+  def default_listen_lock(&block)
+    fp = File.open(FLOCK_PATH, "rb")
+    begin
+      fp.flock(File::LOCK_EX)
+      begin
+        TCPServer.new(Unicorn::Const::DEFAULT_HOST,
+                      Unicorn::Const::DEFAULT_PORT).close
+      rescue Errno::EADDRINUSE, Errno::EACCES
+        warn "can't bind to #{Unicorn::Const::DEFAULT_LISTEN}"
+        return false
+      end
+
+      # unused_port should never take this, but we may run an environment
+      # where tests are being run against older unicorns...
+      lock_path = "#{Dir::tmpdir}/unicorn_test." \
+                  "#{Unicorn::Const::DEFAULT_LISTEN}.lock"
+      begin
+        lock = File.open(lock_path, File::WRONLY|File::CREAT|File::EXCL, 0600)
+        yield
+      rescue Errno::EEXIST
+        lock_path = nil
+        return false
+      ensure
+        File.unlink(lock_path) if lock_path
+      end
+    ensure
+      fp.flock(File::LOCK_UN)
+    end
   end
 
 end if do_test

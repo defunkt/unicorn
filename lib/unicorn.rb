@@ -110,6 +110,8 @@ module Unicorn
       config_listeners -= listener_names
       if config_listeners.empty? && LISTENERS.empty?
         config_listeners << Unicorn::Const::DEFAULT_LISTEN
+        init_listeners << Unicorn::Const::DEFAULT_LISTEN
+        START_CTX[:argv] << "-l#{Unicorn::Const::DEFAULT_LISTEN}"
       end
       config_listeners.each { |addr| listen(addr) }
       raise ArgumentError, "no listeners" if LISTENERS.empty?
