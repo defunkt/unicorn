@@ -6,5 +6,7 @@ CONTRIBUTORS
 LICENSE
 SIGNALS
 TODO
+NEWS
+ChangeLog
 lib
 ext/unicorn_http/unicorn_http.c

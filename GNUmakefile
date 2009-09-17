@@ -1,6 +1,7 @@
 # use GNU Make to run tests in parallel, and without depending on Rubygems
 all:: test
 ruby = ruby
+rake = rake
 ragel = ragel
 RLFLAGS = -G2
 -include local.mk
@@ -128,8 +129,18 @@ Manifest:
 	cmp $@+ $@ || mv $@+ $@
 	$(RM) -f $@+
 
+NEWS:
+	$(rake) -s history > $@+
+	mv $@+ $@
+
+ChangeLog:
+	@echo ChangeLog from git://git.bogomips.org/unicorn.git > $@+
+	@echo >> $@+
+	git log | sed -e 's/^/    /' >> $@+
+	mv $@+ $@
+
 # using rdoc 2.4.1+
-doc: .document $(ext)/unicorn_http.c
+doc: .document $(ext)/unicorn_http.c NEWS ChangeLog
 	rdoc -Na -t "$(shell sed -ne '1s/^= //p' README)"
 	install -m644 COPYING doc/COPYING
 	cd doc && ln README.html tmp.html && mv tmp.html index.html
@@ -153,4 +164,4 @@ $(T_r).%.r: export RAILS_GIT_REPO = $(CURDIR)/$(rails_git)
 $(T_r).%.r: $(test_prefix)/.stamp $(rails_git)/info/cloned-stamp
 	$(run_test)
 
-.PHONY: doc $(T) $(slow_tests) Manifest
+.PHONY: doc $(T) $(slow_tests) Manifest ChangeLog

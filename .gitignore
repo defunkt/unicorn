@@ -12,3 +12,5 @@ ext/unicorn_http/unicorn_http.c
 log/
 pkg/
 /vendor
+/NEWS
+/ChangeLog
