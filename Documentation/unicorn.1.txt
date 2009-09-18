@@ -8,7 +8,7 @@ unicorn - a rackup-like command to launch the Unicorn HTTP server
 
 # SYNOPSIS
 
-unicorn [-c CONFIG_FILE] [-E ENVIRONMENT] [-D] [RACKUP_FILE]
+unicorn [-c CONFIG_FILE] [-E RACK_ENV] [-D] [RACKUP_FILE]
 
 # DESCRIPTION
 
@@ -47,26 +47,9 @@ with rackup(1) but strongly discouraged.
     Unless specified in the CONFIG_FILE, stderr and stdout will
     also be redirected to "/dev/null".
 
--E, \--env ENVIRONMENT
-:   Run under the given ENVIRONMENT.  Accepted values and the
-    middleware they automatically load (outside of RACKUP_FILE)
-    are exactly as those in rackup(1) and detailed below:
-
-      * development - loads Rack::CommonLogger,
-                      Rack::ShowExceptions, and
-                      Rack::Lint middleware
-      * deployment  - loads Rack::CommonLogger middleware
-      * none        - loads no middleware at all, relying
-                      entirely on RACKUP_FILE
-
-     All unrecognized values for ENVIRONMENT are assumed to be
-     "none".  Production deployments are strongly encouraged to use
-     "deployment" or "none" for maximum performance.
-
-     Note that the Rack::ContentLength and Rack::Chunked middlewares
-     are never loaded by default.  If needed, they should be
-     individually specified in the RACKUP_FILE, some frameworks do
-     not require them.
+-E, \--env RACK_ENV
+:   Run under the given RACK_ENV.  See the RACK ENVIRONMENT section
+    for more details.
 
 -l, \--listen ADDRESS
 :   Listens on a given ADDRESS.  ADDRESS may be in the form of
@@ -139,6 +122,26 @@ The following UNIX signals may be sent to the master process:
 
 See the [SIGNALS][4] document for full description of all signals
 used by Unicorn.
+
+#  RACK ENVIRONMENT
+
+Accepted values of RACK_ENV and the middleware they automatically load
+(outside of RACKUP_FILE) are exactly as those in rackup(1):
+
+* development - loads Rack::CommonLogger, Rack::ShowExceptions, and
+                Rack::Lint middleware
+* deployment  - loads Rack::CommonLogger middleware
+* none        - loads no middleware at all, relying
+                entirely on RACKUP_FILE
+
+All unrecognized values for RACK_ENV are assumed to be
+"none".  Production deployments are strongly encouraged to use
+"deployment" or "none" for maximum performance.
+
+Note that the Rack::ContentLength and Rack::Chunked middlewares
+are never loaded by default.  If needed, they should be
+individually specified in the RACKUP_FILE, some frameworks do
+not require them.
 
 # SEE ALSO
 
