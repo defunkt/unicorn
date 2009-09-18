@@ -8,18 +8,18 @@ unicorn - a rackup-like command to launch the Unicorn HTTP server
 
 # SYNOPSIS
 
-unicorn [*-c CONFIG_FILE*] [*-E* *ENVIRONMENT*] [*-D*] [*RACKUP_FILE*]
+unicorn [-c CONFIG_FILE] [-E ENVIRONMENT] [-D] [RACKUP_FILE]
 
 # DESCRIPTION
 
 A rackup(1)-like command to launch Rack applications using Unicorn.
 It is expected to be started in your application root (APP_ROOT), but
-"Dir.chdir" may also be executed in the *CONFIG_FILE* or *RACKUP_FILE*.
+"Dir.chdir" may also be executed in the CONFIG_FILE or RACKUP_FILE.
 
 While Unicorn takes a myriad of command-line options for
 compatibility with ruby(1) and rackup(1), it is recommended to stick
 to the few command-line options specified in the SYNOPSIS and use
-the *CONFIG_FILE* as much as possible.
+the CONFIG_FILE as much as possible.
 
 # RACKUP FILE
 
@@ -31,7 +31,7 @@ Embedded command-line options are mostly parsed for compatibility
 with rackup(1) but strongly discouraged.
 
 # UNICORN OPTIONS
--c, \--config-file *CONFIG_FILE*
+-c, \--config-file CONFIG_FILE
 :   Path to the Unicorn-specific config file.  The config file is
     implemented as a Ruby DSL, so Ruby code may executed (e.g.
     "Dir.chdir", "Process::UID.change_privilege").  See the RDoc/ri
@@ -44,12 +44,12 @@ with rackup(1) but strongly discouraged.
     Unlike many common UNIX daemons, we do not chdir to \"/\"
     upon daemonization to allow more control over the startup/upgrade
     process.
-    Unless specified in the *CONFIG_FILE*, stderr and stdout will
+    Unless specified in the CONFIG_FILE, stderr and stdout will
     also be redirected to "/dev/null".
 
--E, \--env *ENVIRONMENT*
-:   Run under the given *ENVIRONMENT*.  Accepted values and the
-    middleware they automatically load (outside of *RACKUP_FILE*)
+-E, \--env ENVIRONMENT
+:   Run under the given ENVIRONMENT.  Accepted values and the
+    middleware they automatically load (outside of RACKUP_FILE)
     are exactly as those in rackup(1) and detailed below:
 
       * development - loads Rack::CommonLogger,
@@ -68,37 +68,37 @@ with rackup(1) but strongly discouraged.
      individually specified in the RACKUP_FILE, some frameworks do
      not require them.
 
--l, \--listen *ADDRESS*
-:   Listens on a given *ADDRESS*.  *ADDRESS* may be in the form of
-    *HOST:PORT* or *PATH*, *HOST:PORT* is taken to mean a TCP socket
-    and *PATH* is meant to be a path to a UNIX domain socket.
+-l, \--listen ADDRESS
+:   Listens on a given ADDRESS.  ADDRESS may be in the form of
+    HOST:PORT or PATH, HOST:PORT is taken to mean a TCP socket
+    and PATH is meant to be a path to a UNIX domain socket.
     Defaults to "0.0.0.0:8080" (all addresses on TCP port 8080)
     For production deployments, specifying the "listen" directive in
-    *CONFIG_FILE* is recommended as it allows fine-tuning of socket
+    CONFIG_FILE is recommended as it allows fine-tuning of socket
     options.
 
 # RACKUP COMPATIBILITY OPTIONS
 -o, \--host HOST
-:   Listen on a TCP socket belonging to *HOST*, default is
+:   Listen on a TCP socket belonging to HOST, default is
     "0.0.0.0" (all addresses).
     If specified multiple times on the command-line, only the
     last-specified value takes effect.
     This option only exists for compatibility with the rackup(1) command,
     use of "-l"/"\--listen" switch is recommended instead.
 
--p, \--port *PORT*
-:   Listen on the specified TCP *PORT*, default is 8080.
+-p, \--port PORT
+:   Listen on the specified TCP PORT, default is 8080.
     If specified multiple times on the command-line, only the last-specified
     value takes effect.
     This option only exists for compatibility with the rackup(1) command,
     use of "-l"/"\--listen" switch is recommended instead.
 
--s, \--server *SERVER*
+-s, \--server SERVER
 :   No-op, this exists only for compatibility with rackup(1).
 
 # RUBY OPTIONS
--e, \--eval *LINE*
-:   Evaluate a *LINE* of Ruby code.  This evaluation happens
+-e, \--eval LINE
+:   Evaluate a LINE of Ruby code.  This evaluation happens
     immediately as the command-line is being parsed.
 
 -d, \--debug
@@ -107,15 +107,15 @@ with rackup(1) but strongly discouraged.
 -w, \--warn
 :   Turn on verbose warnings, the $VERBOSE variable is set to true.
 
--I, \--include *PATH*
-:   specify $LOAD_PATH.  *PATH* will be prepended to $LOAD_PATH.
+-I, \--include PATH
+:   specify $LOAD_PATH.  PATH will be prepended to $LOAD_PATH.
     The \':\' character may be used to delimit multiple directories.
     This directive may be used more than once.  Modifications to
     $LOAD_PATH take place immediately and in the order they were
     specified on the command-line.
 
--r, \--require *LIBRARY*
-:   require a specified *LIBRARY* before executing the application.  The
+-r, \--require LIBRARY
+:   require a specified LIBRARY before executing the application.  The
     \"require\" statement will be executed immediately and in the order
     they were specified on the command-line.
 
@@ -142,6 +142,7 @@ used by Unicorn.
 
 # SEE ALSO
 
+* unicorn_rails(1)
 * *Rack::Builder* ri/RDoc
 * *Unicorn::Configurator* ri/RDoc
 * [Unicorn RDoc][1]
