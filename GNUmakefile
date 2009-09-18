@@ -191,6 +191,8 @@ $(release_changes):
 $(release_notes):
 	GIT_URL=$(GIT_URL) $(rake) -s release_notes > $@+
 	$(VISUAL) $@+ && test -s $@+ && mv $@+ $@
+
+# ensures we're actually on the tagged $(VERSION), only used for release
 verify:
 	git rev-parse --verify refs/tags/v$(VERSION)^{}
 	git diff-index --quiet HEAD^0
@@ -207,14 +209,14 @@ $(pkgtgz): HEAD = v$(VERSION)
 $(pkgtgz): .manifest
 	@test -n "$(distdir)"
 	$(RM) -r $(distdir)
-	git archive --format=tar --prefix=$(distdir)/ $(HEAD) | tar xv
-	install -m644 $^ $(distdir)/
+	mkdir -p $(distdir)
+	tar c `cat .manifest` | (cd $(distdir) && tar x)
 	cd pkg && tar c $(basename $(@F)) | gzip -9 > $(@F)+
 	mv $@+ $@
 
 package: $(pkgtgz) $(pkggem)
 
-release: package $(release_notes) $(release_changes)
+release: verify package $(release_notes) $(release_changes)
 	rubyforge add_release -f -n $(release_notes) -a $(release_changes) \
 	  $(rfproject) $(rfpackage) $(VERSION) $(pkggem)
 	rubyforge add_file \
