@@ -1,7 +1,7 @@
 all::
 
 PANDOC = pandoc
-PANDOC_OPTS = -s -f markdown --email-obfuscation=none --sanitize-html
+PANDOC_OPTS = -f markdown --email-obfuscation=none --sanitize-html
 pandoc = $(PANDOC) $(PANDOC_OPTS)
 pandoc_html = $(pandoc) --toc -t html --no-wrap
 
@@ -24,7 +24,7 @@ install-man: man
 %.1: %.1.txt
 	$(pandoc) -t man < $< > $@+ && mv $@+ $@
 %.1.html: %.1.txt
-	$(pandoc_html) -T $(basename $@) < $< > $@+ && mv $@+ $@
+	$(pandoc_html) < $< > $@+ && mv $@+ $@
 
 clean::
 	$(RM) $(man1) $(html1)
