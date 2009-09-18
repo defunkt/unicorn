@@ -5,7 +5,7 @@ PANDOC_OPTS = -s -f markdown --email-obfuscation=none --sanitize-html
 pandoc = $(PANDOC) $(PANDOC_OPTS)
 pandoc_html = $(pandoc) --toc -t html --no-wrap
 
-man1 := unicorn
+man1 := unicorn unicorn_rails
 
 all:: html man
 doc-gz: man-gz html-gz
