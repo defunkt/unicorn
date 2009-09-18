@@ -37,6 +37,7 @@ cgit_url = "http://git.bogomips.org/cgit/unicorn.git"
 desc 'prints news as an Atom feed'
 task :news_atom do
   require 'nokogiri'
+  new_tags = tags[0,10]
   puts(Nokogiri::XML::Builder.new do
     feed :xmlns => "http://www.w3.org/2005/Atom" do
       id! "http://unicorn.bogomips.org/NEWS.atom.xml"
@@ -44,8 +45,8 @@ task :news_atom do
       subtitle "Rack HTTP server for Unix and fast clients"
       link! :rel => 'alternate', :type => 'text/html',
             :href => 'http://unicorn.bogomips.org/NEWS.html'
-      updated tags.first[:time]
-      tags.each do |tag|
+      updated new_tags.first[:time]
+      new_tags.each do |tag|
         entry do
           title tag[:subject]
           updated tag[:time]
