@@ -144,10 +144,11 @@ NEWS: GIT-VERSION-FILE
 	$(rake) -s news_rdoc > $@+
 	mv $@+ $@
 
+SINCE = 0.91.0
 ChangeLog: GIT-VERSION-FILE
-	@echo "ChangeLog from $(GIT_URL) ($(GIT_VERSION))" > $@+
+	@echo "ChangeLog from $(GIT_URL) ($(SINCE)..$(GIT_VERSION))" > $@+
 	@echo >> $@+
-	git log | sed -e 's/^/    /' >> $@+
+	git log v$(SINCE).. | sed -e 's/^/    /' >> $@+
 	mv $@+ $@
 
 news_atom := http://unicorn.bogomips.org/NEWS.atom.xml
