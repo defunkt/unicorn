@@ -27,11 +27,14 @@ test-18:
 test-19:
 	$(MAKE) test test-rails r19=1 2>&1 | sed -u -e 's!^!1.9 !'
 
+latest: NEWS
+	@awk 'BEGIN{RS="=== ";ORS=""}NR==2{sub(/\n$$/,"");print RS""$$0 }' < $<
+
 # publishes docs to http://unicorn.bogomips.org
 publish_doc:
 	-git set-file-times
 	$(MAKE) doc
-	awk 'BEGIN{RS="=== ";ORS=""}NR==2{ print RS""$$0 }' NEWS > doc/LATEST
+	$(MAKE) -s latest > doc/LATEST
 	$(MAKE) doc_gz
 	rsync -av --delete doc/ dcvr:/srv/unicorn/
 	git ls-files | xargs touch
