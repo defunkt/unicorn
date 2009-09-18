@@ -80,7 +80,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   end
 
   opts.on("-P", "--path PATH", "Runs Rails app mounted at a specific path.",
-          "(default: /") do |v|
+          "(default: /)") do |v|
     ENV['RAILS_RELATIVE_URL_ROOT'] = map_path = v
   end
 
