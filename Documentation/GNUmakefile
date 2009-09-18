@@ -22,7 +22,7 @@ install-man: man
 	install -m 644 $(man1) ../man/man1
 
 %.1: %.1.txt
-	$(pandoc) -t man < $< > $@+ && mv $@+ $@
+	$(pandoc) -s -t man < $< > $@+ && mv $@+ $@
 %.1.html: %.1.txt
 	$(pandoc_html) < $< > $@+ && mv $@+ $@
 
