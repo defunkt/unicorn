@@ -4,6 +4,7 @@ PANDOC = pandoc
 PANDOC_OPTS = -s -f markdown --email-obfuscation=none --sanitize-html
 pandoc = $(PANDOC) $(PANDOC_OPTS)
 pandoc_html = $(pandoc) --toc -t html --no-wrap
+gzip = gzip
 
 man1 := unicorn unicorn_rails
 
@@ -21,10 +22,10 @@ man-gz: $(addsuffix .1.gz,$(man1))
 	$(pandoc_html) -T $(basename $@) < $< > $@+ && mv $@+ $@
 
 %.1.gz: %.1
-	gzip --rsyncable < $< > $@+ && mv $@+ $@
+	$(gzip) < $< > $@+ && mv $@+ $@
 
 %.1.html.gz: %.1.html
-	gzip --rsyncable < $< > $@+ && mv $@+ $@
+	$(gzip) < $< > $@+ && mv $@+ $@
 
 clean::
 	$(RM) $(addsuffix .1.html,$(man1))
