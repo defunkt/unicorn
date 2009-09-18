@@ -125,13 +125,18 @@ prep_setup_rb := @-$(RM) $(setup_rb_files);$(MAKE) -C $(ext) clean
 
 clean:
 	-$(MAKE) -C $(ext) clean
+	-$(MAKE) -C Documentation clean
 	$(RM) $(ext)/Makefile lib/unicorn_http.$(DLEXT)
 	$(RM) $(setup_rb_files) $(t_log)
-	$(RM) -r $(test_prefix)
+	$(RM) -r $(test_prefix) man
 
+man:
+	$(MAKE) -C Documentation install-man
 .manifest: GIT-VERSION-FILE NEWS ChangeLog $(ext)/unicorn_http.c
+	$(MAKE) man
 	(git ls-files && \
-         for i in $@ $^; do echo $$i; done) | LC_ALL=C sort > $@+
+         for i in $@ $^ $(wildcard man/*/*.1); \
+	 do echo $$i; done) | LC_ALL=C sort > $@+
 	cmp $@+ $@ || mv $@+ $@
 	$(RM) $@+
 
@@ -216,4 +221,4 @@ release: package $(release_notes) $(release_changes)
 	  $(rfproject) $(rfpackage) $(VERSION) $(pkgtgz)
 endif
 
-.PHONY: .FORCE-GIT-VERSION-FILE doc $(T) $(slow_tests) .manifest
+.PHONY: .FORCE-GIT-VERSION-FILE doc $(T) $(slow_tests) .manifest man

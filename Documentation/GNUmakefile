@@ -4,31 +4,27 @@ PANDOC = pandoc
 PANDOC_OPTS = -s -f markdown --email-obfuscation=none --sanitize-html
 pandoc = $(PANDOC) $(PANDOC_OPTS)
 pandoc_html = $(pandoc) --toc -t html --no-wrap
-gzip = gzip
 
-man1 := unicorn unicorn_rails
+man1 := $(addsuffix .1,unicorn unicorn_rails)
+html1 := $(addsuffix .html,$(man1))
 
 all:: html man
-doc-gz: man-gz html-gz
 
-html: $(addsuffix .1.html,$(man1))
-man: $(addsuffix .1,$(man1))
-html-gz: $(addsuffix .1.html.gz,$(man1))
-man-gz: $(addsuffix .1.gz,$(man1))
+html: $(html1)
+man: $(man1)
+
+install-html: html
+	mkdir -p ../doc/man1
+	install -m 644 $(html1) ../doc/man1
+
+install-man: man
+	mkdir -p ../man/man1
+	install -m 644 $(man1) ../man/man1
 
 %.1: %.1.txt
 	$(pandoc) -t man < $< > $@+ && mv $@+ $@
 %.1.html: %.1.txt
 	$(pandoc_html) -T $(basename $@) < $< > $@+ && mv $@+ $@
 
-%.1.gz: %.1
-	$(gzip) < $< > $@+ && mv $@+ $@
-
-%.1.html.gz: %.1.html
-	$(gzip) < $< > $@+ && mv $@+ $@
-
 clean::
-	$(RM) $(addsuffix .1.html,$(man1))
-	$(RM) $(addsuffix .1,$(man1))
-	$(RM) $(addsuffix .1.html.gz,$(man1))
-	$(RM) $(addsuffix .1.gz,$(man1))
+	$(RM) $(man1) $(html1)
