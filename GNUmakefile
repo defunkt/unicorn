@@ -132,9 +132,10 @@ clean:
 man:
 	$(MAKE) -C Documentation install-man
 .manifest: GIT-VERSION-FILE NEWS ChangeLog $(ext)/unicorn_http.c
+	$(RM) -r man
 	$(MAKE) man
 	(git ls-files && \
-         for i in $@ $^ $(wildcard man/*/*.1); \
+         for i in $@ $^ man/man1/*.1; \
 	 do echo $$i; done) | LC_ALL=C sort > $@+
 	cmp $@+ $@ || mv $@+ $@
 	$(RM) $@+
@@ -159,7 +160,8 @@ doc: .document $(ext)/unicorn_http.c NEWS ChangeLog
 	> unicorn.1 && > unicorn_rails.1
 	rdoc -Na -t "$(shell sed -ne '1s/^= //p' README)"
 	install -m644 $(shell grep '^[A-Z]' .document)  doc/
-	$(MAKE) -C Documentation install-html
+	$(MAKE) -C Documentation install-html install-man
+	install -m644 man/man1/*.1 doc/
 	cd doc && for i in unicorn unicorn_rails; do \
 	  sed -e '/"documentation">/r man1/'$$i'.1.html' \
 		< $${i}_1.html > tmp && mv tmp $${i}_1.html; done
