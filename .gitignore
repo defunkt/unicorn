@@ -1,6 +1,7 @@
 *.bundle
 *.log
 *.so
+*.rbc
 .DS_Store
 /.config
 /InstalledFiles
