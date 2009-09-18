@@ -159,7 +159,7 @@ atom = <link rel="alternate" title="Atom feed" href="$(1)" \
 doc: .document $(ext)/unicorn_http.c NEWS ChangeLog
 	> unicorn.1 && > unicorn_rails.1
 	rdoc -Na -t "$(shell sed -ne '1s/^= //p' README)"
-	install -m644 COPYING doc/COPYING
+	install -m644 $(shell grep '^[A-Z]' .document)  doc/
 	$(MAKE) -C Documentation install-html
 	cd doc && for i in unicorn unicorn_rails; do \
 	  sed -e '/"documentation">/r man1/'$$i'.1.html' \

@@ -31,6 +31,7 @@ test-19:
 publish_doc:
 	-git set-file-times
 	$(MAKE) doc
+	awk 'BEGIN{RS="=== ";ORS=""}NR==2{ print RS""$$0 }' NEWS > doc/LATEST
 	$(MAKE) doc_gz
 	rsync -av --delete doc/ dcvr:/srv/unicorn/
 	git ls-files | xargs touch
@@ -38,7 +39,7 @@ publish_doc:
 # Create gzip variants of the same timestamp as the original so nginx
 # "gzip_static on" can serve the gzipped versions directly.
 doc_gz: suf := html js css
-doc_gz: docs = $(shell find doc/ -regex '^.*\.\(html\|js\|css\)$$') doc/COPYING
+doc_gz: docs = $(shell find doc -type f ! -regex '^.*\.\(gif\|jpg\|png\|gz\)$$')
 doc_gz:
 	for i in $(docs); do \
-	  gzip --rsyncable < $$i > $$i.gz; touch -r $$i $$i.gz; done
+	  gzip --rsyncable -9 < $$i > $$i.gz; touch -r $$i $$i.gz; done
