@@ -3,8 +3,7 @@ all:: test
 ruby = ruby
 rake = rake
 ragel = ragel
-GIT_URL = $(shell git config --get remote.origin.url 2>/dev/null || \
-           echo git://git.bogomips.org/unicorn.git)
+GIT_URL = git://git.bogomips.org/unicorn.git
 RLFLAGS = -G2
 
 GIT-VERSION-FILE: .FORCE-GIT-VERSION-FILE

@@ -93,9 +93,7 @@ desc "print release notes for Rubyforge"
 task :release_notes do
   require 'rubygems'
 
-  git_url = ENV['GIT_URL'] ||
-            `git config --get remote.origin.url 2>/dev/null`.chomp! ||
-            'git://git.bogomips.org/unicorn.git'
+  git_url = ENV['GIT_URL'] || 'git://git.bogomips.org/unicorn.git'
 
   spec = Gem::Specification.load('unicorn.gemspec')
   puts spec.description.strip
