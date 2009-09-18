@@ -2,29 +2,77 @@
 
 # most tasks are in the GNUmakefile which offers better parallelism
 
-desc 'prints RDoc-formatted history'
-task :history do
-  tags = `git tag -l`.split(/\n/).grep(/^v[\d\.]+$/).reverse
-  timefmt = '%Y-%m-%d %H:%M UTC'
-
-  old_summaries = File.readlines(".CHANGELOG.old").inject({}) do |hash, line|
+def old_summaries
+  @old_summaries ||= File.readlines(".CHANGELOG.old").inject({}) do |hash, line|
     version, summary = line.split(/ - /, 2)
     hash[version] = summary
     hash
   end
+end
 
+def tags
+  timefmt = '%Y-%m-%dT%H:%M:%SZ'
+  @tags ||= `git tag -l`.split(/\n/).map do |tag|
+    next if tag == "v0.0.0"
+    if %r{\Av[\d\.]+\z} =~ tag
+      header, subject, body = `git cat-file tag #{tag}`.split(/\n\n/, 3)
+      header = header.split(/\n/)
+      tagger = header.grep(/\Atagger /).first
+      body ||= "initial"
+      {
+        :time => Time.at(tagger.split(/ /)[-2].to_i).utc.strftime(timefmt),
+        :tagger_name => %r{^tagger ([^<]+)}.match(tagger)[1],
+        :tagger_email => %r{<([^>]+)>}.match(tagger)[1],
+        :id => `git rev-parse refs/tags/#{tag}`.chomp!,
+        :tag => tag,
+        :subject => subject,
+        :body => (old = old_summaries[tag]) ? "#{old}\n#{body}" : body,
+      }
+    end
+  end.compact.sort { |a,b| b[:time] <=> a[:time] }
+end
+
+cgit_url = "http://git.bogomips.org/cgit/unicorn.git"
+
+desc 'prints news as an Atom feed'
+task :news_atom do
+  require 'nokogiri'
+  puts(Nokogiri::XML::Builder.new do
+    feed :xmlns => "http://www.w3.org/2005/Atom" do
+      id! "http://unicorn.bogomips.org/NEWS.atom.xml"
+      title "Unicorn news"
+      subtitle "Rack HTTP server for Unix and fast clients"
+      link! :rel => 'alternate', :type => 'text/html',
+            :href => 'http://unicorn.bogomips.org/NEWS.html'
+      updated tags.first[:time]
+      tags.each do |tag|
+        entry do
+          title tag[:subject]
+          updated tag[:time]
+          published tag[:time]
+          author {
+            name tag[:tagger_name]
+            email tag[:tagger_email]
+          }
+          url = "#{cgit_url}/tag/?id=#{tag[:tag]}"
+          link! :rel => "alternate", :type => "text/html", :href =>url
+          id! url
+          content(:type => 'text') { tag[:body] }
+        end
+      end
+    end
+  end.to_xml)
+end
+
+desc 'prints RDoc-formatted news'
+task :news_rdoc do
   tags.each do |tag|
-    header, subject, body = `git cat-file tag #{tag}`.split(/\n\n/, 3)
-    tagger = header.split(/\n/).grep(/^tagger /).first.split(/\s/)
-    time = Time.at(tagger[-2].to_i).utc
-    puts "=== #{tag.sub(/^v/, '')} / #{time.strftime(timefmt)}"
+    time = tag[:time].tr!('T', ' ').gsub!(/:\d\dZ/, ' UTC')
+    puts "=== #{tag[:tag].sub(/^v/, '')} / #{time}"
     puts ""
 
-    if old_summary = old_summaries[tag]
-      print "  #{old_summary}\n"
-    end
-
-    puts body ? body.gsub(/^/sm, "  ").gsub(/[ \t]+$/sm, "") : "  initial"
+    body = tag[:body]
+    puts tag[:body].gsub(/^/sm, "  ").gsub!(/[ \t]+$/sm, "")
     puts ""
   end
 end
@@ -33,8 +81,8 @@ desc "print release changelog for Rubyforge"
 task :release_changes do
   version = ENV['VERSION'] or abort "VERSION= needed"
   version = "v#{version}"
-  tags = `git tag -l`.split(/\n/)
-  prev = tags[tags.index(version) - 1]
+  vtags = tags.map { |tag| tag[:tag] =~ /\Av/ and tag[:tag] }.sort
+  prev = vtags[vtags.index(version) - 1]
   system('git', 'diff', '--stat', prev, version) or abort $?
   puts ""
   system('git', 'log', "#{prev}..#{version}") or abort $?

@@ -141,7 +141,7 @@ man:
 	$(RM) $@+
 
 NEWS: GIT-VERSION-FILE
-	$(rake) -s history > $@+
+	$(rake) -s news_rdoc > $@+
 	mv $@+ $@
 
 ChangeLog: GIT-VERSION-FILE
@@ -149,6 +149,11 @@ ChangeLog: GIT-VERSION-FILE
 	@echo >> $@+
 	git log | sed -e 's/^/    /' >> $@+
 	mv $@+ $@
+
+news_atom := http://unicorn.bogomips.org/NEWS.atom.xml
+cgit_atom := http://git.bogomips.org/cgit/unicorn.git/atom/?h=master
+atom = <link rel="alternate" title="Atom feed" href="$(1)" \
+             type="application/atom+xml"/>
 
 # using rdoc 2.4.1+
 doc: .document $(ext)/unicorn_http.c NEWS ChangeLog
@@ -159,6 +164,13 @@ doc: .document $(ext)/unicorn_http.c NEWS ChangeLog
 	cd doc && for i in unicorn unicorn_rails; do \
 	  sed -e '/"documentation">/r man1/'$$i'.1.html' \
 		< $${i}_1.html > tmp && mv tmp $${i}_1.html; done
+	$(ruby) -i -p -e \
+	  '$$_.gsub!("</title>",%q{\&$(call atom,$(cgit_atom))})' \
+	  doc/ChangeLog.html
+	$(ruby) -i -p -e \
+	  '$$_.gsub!("</title>",%q{\&$(call atom,$(news_atom))})' \
+	  doc/NEWS.html doc/README.html
+	$(rake) -s news_atom > doc/NEWS.atom.xml
 	cd doc && ln README.html tmp && mv tmp index.html
 	$(RM) unicorn.1 unicorn_rails.1
 
