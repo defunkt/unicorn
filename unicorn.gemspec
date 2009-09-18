@@ -9,13 +9,7 @@ Gem::Specification.new do |s|
 
   s.authors = ["Eric Wong"]
   s.date = Time.now.utc.strftime('%Y-%m-%d')
-
-  s.description = %q{
-HTTP server for Rack applications designed to take advantage of features
-in Unix/Unix-like operating systems and serve low-latency, high-bandwidth
-clients (such as a buffering reverse proxy server).
-}.strip
-
+  s.description = File.read("README").split(/\n\n/)[1]
   s.email = %q{mongrel-unicorn@rubyforge.org}
   s.executables = %w(unicorn unicorn_rails)
   s.extensions = %w(ext/unicorn_http/extconf.rb)
