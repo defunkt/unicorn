@@ -79,8 +79,9 @@ opts = OptionParser.new("", 24, '  ') do |opts|
     options[:config_file] = File.expand_path(f)
   end
 
-  opts.on("-P", "--path PATH", "Runs Rails app mounted at a specific path.",
-          "(default: /)") do |v|
+  opts.on("-P", "--path PATH", "DEPRECATED") do |v|
+    warn %q{Use of --path/-P is strongly discouraged}
+    warn %q{Use the 'map' directive in the rackup config instead}
     ENV['RAILS_RELATIVE_URL_ROOT'] = map_path = v
   end
 
@@ -92,7 +93,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   opts.separator "Common options:"
 
   opts.on_tail("-h", "--help", "Show this message") do
-    puts opts
+    puts opts.to_s.gsub(/^.*DEPRECATED.*$/s, '')
     exit
   end
 

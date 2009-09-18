@@ -65,7 +65,9 @@ opts = OptionParser.new("", 24, '  ') do |opts|
     daemonize = d ? true : false
   end
 
-  opts.on("-P", "--pid FILE", "file to store PID (default: none)") do |f|
+  opts.on("-P", "--pid FILE", "DEPRECATED") do |f|
+    warn %q{Use of --pid/-P is strongly discouraged}
+    warn %q{Use the 'pid' directive in the Unicorn config file instead}
     options[:pid] = File.expand_path(f)
   end
 
@@ -94,7 +96,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   opts.separator "Common options:"
 
   opts.on_tail("-h", "--help", "Show this message") do
-    puts opts
+    puts opts.to_s.gsub(/^.*DEPRECATED.*$/s, '')
     exit
   end
 

@@ -93,11 +93,6 @@ with rackup(1) but strongly discouraged.
     This option only exists for compatibility with the rackup(1) command,
     use of "-l"/"\--listen" switch is recommended instead.
 
--P, \--pid FILE
-:   Store the Process ID of the Unicorn master process.
-    This option only exists for compatibility with the rackup(1) command,
-    use of the "pid" directive in *CONFIG_FILE* is recommended.
-
 -s, \--server *SERVER*
 :   No-op, this exists only for compatibility with rackup(1).
 
