@@ -1,12 +1,5 @@
-* security audit, fuzz testing
+* Documentation improvements
 
-* manpages (why do so few Ruby executables come with proper manpages?)
+* launchers - add --kill switch to allow DRY pid file path definition
 
-* code cleanups
-
-* launchers - add stop/start/kill/upgrade commands
-
-* Rubinius support (partially done, waiting on Rubinius to stabilize)
-
-* Rainbows!
-
+* Rainbows! (http://article.gmane.org/gmane.comp.lang.ruby.unicorn.general/22)
