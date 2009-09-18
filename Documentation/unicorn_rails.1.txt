@@ -45,7 +45,7 @@ as much as possible.
     Daemonization will _skip_ loading of the *Rails::Rack::LogTailer*
     middleware under Rails \>\= 2.3.x.
     By default, unicorn\_rails(1) will create a PID file in
-    _\"RAILS_ROOT/tmp/pids/unicorn.pid\"_.  You may override this
+    _\"RAILS\_ROOT/tmp/pids/unicorn.pid\"_.  You may override this
     by specifying the "pid" directive to override this Unicorn config file.
 
 -E, \--env RAILS_ENV
