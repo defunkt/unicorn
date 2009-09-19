@@ -53,7 +53,7 @@ lib/unicorn_http.$(DLEXT): $(ext)/unicorn_http.$(DLEXT)
 	install -m644 $< $@
 http: lib/unicorn_http.$(DLEXT)
 
-$(test_prefix)/.stamp: $(inst_deps)
+$(test_prefix)/.stamp: $(inst_deps) .manifest
 	mkdir -p $(test_prefix)/.ccache
 	tar c `cat .manifest` | (cd $(test_prefix) && tar x)
 	$(MAKE) -C $(test_prefix) clean
