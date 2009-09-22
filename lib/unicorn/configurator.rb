@@ -102,7 +102,7 @@ module Unicorn
     #    user, group = 'www-data', 'www-data'
     #    target_uid = Etc.getpwnam(user).uid
     #    target_gid = Etc.getgrnam(group).gid
-    #    worker.tempfile.chown(target_uid, target_gid)
+    #    worker.tmp.chown(target_uid, target_gid)
     #    if uid != target_uid || gid != target_gid
     #      Process.initgroups(user, target_gid)
     #      Process::GID.change_privilege(target_gid)
