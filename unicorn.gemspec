@@ -36,5 +36,6 @@ Gem::Specification.new do |s|
   s.test_files = manifest.grep(%r{\Atest/unit/test_*\.rb\z})
 
   s.add_dependency(%q<rack>)
-  s.licenses = %w(GPLv2 Ruby)
+
+  # s.licenses = %w(GPLv2 Ruby) # not compatible with older Rubygems
 end
