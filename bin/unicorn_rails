@@ -58,8 +58,8 @@ opts = OptionParser.new("", 24, '  ') do |opts|
     set_listener = true
   end
 
-  opts.on("-E", "--env ENVIRONMENT",
-          "use ENVIRONMENT for defaults (default: development)") do |e|
+  opts.on("-E", "--env RAILS_ENV",
+          "use RAILS_ENV for defaults (default: development)") do |e|
     ENV['RAILS_ENV'] = e
   end
 
