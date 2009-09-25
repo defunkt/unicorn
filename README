@@ -144,22 +144,6 @@ Unicorn is designed to only serve fast clients either on the local host
 or a fast LAN.  See the PHILOSOPHY and DESIGN documents for more details
 regarding this.
 
-== Known Issues
-
-* WONTFIX: code reloading and restarts with Sinatra 0.3.x (and likely older
-  versions) apps is broken.  The workaround is to force production
-  mode to disable code reloading as well as disabling "run" in your
-  Sinatra application:
-    set :env, :production
-    set :run, false
-  Since this is no longer an issue with Sinatra 0.9.x apps, this will not be
-  fixed on our end.  Since Unicorn is itself the application launcher, the
-  at_exit handler used in old Sinatra always caused Mongrel to be launched
-  whenever a Unicorn worker was about to exit.
-
-  Also remember we're capable of replacing the running binary without dropping
-  any connections regardless of framework :)
-
 == Contact
 
 All feedback (bug reports, user/development dicussion, patches, pull
