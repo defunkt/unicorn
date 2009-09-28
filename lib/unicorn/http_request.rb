@@ -56,24 +56,15 @@ module Unicorn
                     TCPSocket === socket ? socket.peeraddr.last : LOCALHOST
 
       # short circuit the common case with small GET requests first
-      PARSER.headers(REQ, socket.readpartial(Const::CHUNK_SIZE, BUF)) and
-          return handle_body(socket)
+      if PARSER.headers(REQ, socket.readpartial(Const::CHUNK_SIZE, BUF)).nil?
+        data = BUF.dup # socket.readpartial will clobber data
 
-      data = BUF.dup # socket.readpartial will clobber data
-
-      # Parser is not done, queue up more data to read and continue parsing
-      # an Exception thrown from the PARSER will throw us out of the loop
-      begin
-        BUF << socket.readpartial(Const::CHUNK_SIZE, data)
-        PARSER.headers(REQ, BUF) and return handle_body(socket)
-      end while true
-    end
-
-    private
-
-    # Handles dealing with the rest of the request
-    # returns a # Rack environment if successful
-    def handle_body(socket)
+        # Parser is not done, queue up more data to read and continue parsing
+        # an Exception thrown from the PARSER will throw us out of the loop
+        begin
+          BUF << socket.readpartial(Const::CHUNK_SIZE, data)
+        end while PARSER.headers(REQ, BUF).nil?
+      end
       REQ[Const::RACK_INPUT] = 0 == PARSER.content_length ?
                    NULL_IO : Unicorn::TeeInput.new(socket, REQ, PARSER, BUF)
       REQ.update(DEFAULTS)
