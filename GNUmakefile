@@ -36,7 +36,10 @@ test_prefix = $(CURDIR)/test/install-$(RUBY_VERSION)
 ext := ext/unicorn_http
 c_files := $(ext)/unicorn_http.c $(wildcard $(ext)/*.h)
 rl_files := $(wildcard $(ext)/*.rl)
-bins := $(wildcard bin/*)
+base_bins := unicorn unicorn_rails
+bins := $(addprefix bin/, $(base_bins))
+man1_bins := $(addsuffix .1, $(base_bins))
+man1_paths := $(addprefix man/man1/, $(man1_bins))
 rb_files := $(bins) $(shell find lib -type f -name '*.rb')
 inst_deps := $(c_files) $(rb_files)
 
@@ -131,11 +134,15 @@ clean:
 
 man:
 	$(MAKE) -C Documentation install-man
-.manifest: GIT-VERSION-FILE NEWS ChangeLog $(ext)/unicorn_http.c
-	$(RM) -r man
-	$(MAKE) man
+
+pkg_extra := GIT-VERSION-FILE NEWS ChangeLog $(ext)/unicorn_http.c
+manifest: $(pkg_extra) man
+	$(RM) .manifest
+	$(MAKE) .manifest
+
+.manifest:
 	(git ls-files && \
-         for i in $@ $^ man/man1/*.1; \
+         for i in $@ $(pkg_extra) $(man1_paths); \
 	 do echo $$i; done) | LC_ALL=C sort > $@+
 	cmp $@+ $@ || mv $@+ $@
 	$(RM) $@+
@@ -158,12 +165,12 @@ atom = <link rel="alternate" title="Atom feed" href="$(1)" \
 
 # using rdoc 2.4.1+
 doc: .document $(ext)/unicorn_http.c NEWS ChangeLog
-	> unicorn.1 && > unicorn_rails.1
+	for i in $(man1_bins); do > $$i; done
 	rdoc -Na -t "$(shell sed -ne '1s/^= //p' README)"
 	install -m644 $(shell grep '^[A-Z]' .document)  doc/
 	$(MAKE) -C Documentation install-html install-man
-	install -m644 man/man1/*.1 doc/
-	cd doc && for i in unicorn unicorn_rails; do \
+	install -m644 $(man1_paths) doc/
+	cd doc && for i in $(base_bins); do \
 	  sed -e '/"documentation">/r man1/'$$i'.1.html' \
 		< $${i}_1.html > tmp && mv tmp $${i}_1.html; done
 	$(ruby) -i -p -e \
@@ -174,7 +181,7 @@ doc: .document $(ext)/unicorn_http.c NEWS ChangeLog
 	  doc/NEWS.html doc/README.html
 	$(rake) -s news_atom > doc/NEWS.atom.xml
 	cd doc && ln README.html tmp && mv tmp index.html
-	$(RM) unicorn.1 unicorn_rails.1
+	$(RM) $(man1_bins)
 
 rails_git_url = git://github.com/rails/rails.git
 rails_git := vendor/rails.git
@@ -219,14 +226,14 @@ verify:
 	test `git rev-parse --verify HEAD^0` = \
 	     `git rev-parse --verify refs/tags/v$(VERSION)^{}`
 
-$(pkggem): .manifest
+$(pkggem): manifest
 	gem build $(rfpackage).gemspec
 	mkdir -p pkg
 	mv $(@F) $@
 
 $(pkgtgz): distdir = $(basename $@)
 $(pkgtgz): HEAD = v$(VERSION)
-$(pkgtgz): .manifest
+$(pkgtgz): manifest
 	@test -n "$(distdir)"
 	$(RM) -r $(distdir)
 	mkdir -p $(distdir)
@@ -243,4 +250,4 @@ release: verify package $(release_notes) $(release_changes)
 	  $(rfproject) $(rfpackage) $(VERSION) $(pkgtgz)
 endif
 
-.PHONY: .FORCE-GIT-VERSION-FILE doc $(T) $(slow_tests) .manifest man
+.PHONY: .FORCE-GIT-VERSION-FILE doc $(T) $(slow_tests) manifest man
