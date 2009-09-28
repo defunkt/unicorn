@@ -33,7 +33,7 @@ Gem::Specification.new do |s|
   s.require_paths = %w(lib ext)
   s.rubyforge_project = %q{mongrel}
   s.summary = %q{Rack HTTP server for Unix and fast clients}
-  s.test_files = manifest.grep(%r{\Atest/unit/test_*\.rb\z})
+  s.test_files = manifest.grep(%r{\Atest/unit/test_.*\.rb\z})
 
   s.add_dependency(%q<rack>)
 
