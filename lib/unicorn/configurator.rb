@@ -42,13 +42,11 @@ module Unicorn
   #     # correctly implements pread()/pwrite() system calls)
   #   end
   class Configurator < Struct.new(:set, :config_file)
-    # The default logger writes its output to $stderr
-    DEFAULT_LOGGER = Logger.new($stderr)
 
     # Default settings for Unicorn
     DEFAULTS = {
       :timeout => 60,
-      :logger => DEFAULT_LOGGER,
+      :logger => Logger.new($stderr),
       :worker_processes => 1,
       :after_fork => lambda { |server, worker|
           server.logger.info("worker=#{worker.nr} spawned pid=#{$$}")
