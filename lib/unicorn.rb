@@ -355,7 +355,7 @@ module Unicorn
           logger.error "reexec-ed child already running PID:#{reexec_pid}"
           return
         rescue Errno::ESRCH
-          reexec_pid = 0
+          self.reexec_pid = 0
         end
       end
 
