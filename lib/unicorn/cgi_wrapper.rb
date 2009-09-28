@@ -138,13 +138,8 @@ class Unicorn::CGIWrapper < ::CGI
     @env_table[RACK_INPUT]
   end
 
-  # The stdoutput should be completely bypassed but we'll drop a
-  # warning just in case
+  # return a pointer to the StringIO body since it's STDOUT-like
   def stdoutput
-    err = @env_table[RACK_ERRORS]
-    err.puts "WARNING: Your program is doing something not expected."
-    err.puts "Please tell Eric that stdoutput was used and what software " \
-             "you are running.  Thanks."
     @body
   end
 
