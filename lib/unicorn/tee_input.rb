@@ -15,7 +15,7 @@ module Unicorn
     def initialize(*args)
       super(*args)
       @size = parser.content_length
-      @tmp = @size && @size < Const::MAX_BODY ? StringIO.new(Z.dup) : Util.tmpio
+      @tmp = @size && @size < Const::MAX_BODY ? StringIO.new("") : Util.tmpio
       @buf2 = buf.dup
       if buf.size > 0
         parser.filter_body(@buf2, buf) and finalize_input
@@ -46,7 +46,7 @@ module Unicorn
 
       length = args.shift
       if nil == length
-        rv = @tmp.read || Z.dup
+        rv = @tmp.read || ""
         while tee(Const::CHUNK_SIZE, @buf2)
           rv << @buf2
         end

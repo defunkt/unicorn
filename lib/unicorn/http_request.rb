@@ -19,7 +19,7 @@ module Unicorn
       "SERVER_SOFTWARE" => "Unicorn #{Const::UNICORN_VERSION}"
     }
 
-    NULL_IO = StringIO.new(Z)
+    NULL_IO = StringIO.new("")
     LOCALHOST = '127.0.0.1'
 
     # Being explicitly single-threaded, we have certain advantages in

@@ -59,7 +59,7 @@ class Unicorn::CGIWrapper < ::CGI
     @status = nil
     @head = {}
     @headv = Hash.new { |hash,key| hash[key] = [] }
-    @body = StringIO.new
+    @body = StringIO.new("")
     super(*args)
   end
 

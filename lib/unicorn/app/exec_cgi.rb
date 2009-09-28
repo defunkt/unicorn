@@ -125,10 +125,10 @@ module Unicorn::App
       else
         tmp = Unicorn::Util.tmpio
 
-        buf = Unicorn::Z.dup
-        while inp.read(CHUNK_SIZE, buf)
+        buf = inp.read(CHUNK_SIZE)
+        begin
           tmp.syswrite(buf)
-        end
+        end while inp.read(CHUNK_SIZE, buf)
         tmp.sysseek(0)
         tmp
       end

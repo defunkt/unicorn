@@ -33,13 +33,12 @@ module Unicorn::App
         inp_pid = fork {
           input = env['rack.input']
           [ err_rd, out_rd ].each { |io| io.close }
-          buf = Unicorn::Z.dup
 
           # this is dependent on input.read having readpartial semantics:
-          while input.read(16384, buf)
+          buf = input.read(16384)
+          begin
             in_wr.write(buf)
-          end
-          in_wr.close
+          end while input.read(16384, buf)
         }
         in_wr.close
         self.pid_map = {
