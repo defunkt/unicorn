@@ -197,7 +197,7 @@ module Unicorn
     #
     # The following options may be specified (but are generally not needed):
     #
-    # +backlog+: this is the backlog of the listen() syscall.
+    # +:backlog+: this is the backlog of the listen() syscall.
     #
     # Some operating systems allow negative values here to specify the
     # maximum allowable value.  In most cases, this number is only
@@ -212,7 +212,7 @@ module Unicorn
     #
     # Default: 1024
     #
-    # +rcvbuf+, +sndbuf+: maximum send and receive buffer sizes of sockets
+    # +:rcvbuf+, +:sndbuf+: maximum receive and send buffer sizes of sockets
     #
     # These correspond to the SO_RCVBUF and SO_SNDBUF settings which
     # can be set via the setsockopt(2) syscall.  Some kernels
@@ -226,13 +226,13 @@ module Unicorn
     #
     # Defaults: operating system defaults
     #
-    # +tcp_nodelay+: disables Nagle's algorithm on TCP sockets
+    # +:tcp_nodelay+: disables Nagle's algorithm on TCP sockets
     #
     # This has no effect on UNIX sockets.
     #
     # Default: operating system defaults (usually Nagle's algorithm enabled)
     #
-    # +tcp_nopush+: enables TCP_CORK in Linux or TCP_NOPUSH in FreeBSD
+    # +:tcp_nopush+: enables TCP_CORK in Linux or TCP_NOPUSH in FreeBSD
     #
     # This will prevent partial TCP frames from being sent out.
     # Enabling +tcp_nopush+ is generally not needed or recommended as
@@ -242,7 +242,7 @@ module Unicorn
     #
     # This has no effect on UNIX sockets.
     #
-    # +tries+: times to retry binding a socket if it is already in use
+    # +:tries+: times to retry binding a socket if it is already in use
     #
     # A negative number indicates we will retry indefinitely, this is
     # useful for migrations and upgrades when individual workers
@@ -250,7 +250,7 @@ module Unicorn
     #
     # Default: 5
     #
-    # +delay+: seconds to wait between successive +tries+
+    # +:delay+: seconds to wait between successive +tries+
     #
     # Default: 0.5 seconds
     def listen(address, opt = {})
