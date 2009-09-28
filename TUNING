@@ -12,6 +12,12 @@ See Unicorn::Configurator for details on the config file format.
   directives can allow failover to happen more quickly if your
   cluster is configured for it.
 
+* If you're doing extremely simple benchmarks and getting connection
+  errors under high request rates, increasing your :backlog parameter
+  above the already-generous default of 1024 can help avoid connection
+  errors.  Keep in mind this is not recommended for real traffic if
+  you have another machine to failover to (see above).
+
 * :rcvbuf and :sndbuf parameters generally do not need to be set for TCP
   listeners under Linux 2.6 because auto-tuning is enabled.  UNIX domain
   sockets do not have auto-tuning buffer sizes; so increasing those will
@@ -45,7 +51,8 @@ WARNING: Do not change system parameters unless you know what you're doing!
 
 * For load testing/benchmarking with UNIX domain sockets, you should
   consider increasing net.core.somaxconn or else nginx will start
-  failing to connect under heavy load.
+  failing to connect under heavy load.  You may also consider setting
+  a higher :backlog to listen on as noted earlier.
 
 * If you're running out of local ports, consider lowering
   net.ipv4.tcp_fin_timeout to 20-30 (default: 60 seconds).  Also
