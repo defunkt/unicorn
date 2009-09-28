@@ -66,7 +66,7 @@ class Unicorn::CGIWrapper < ::CGI
   # finalizes the response in a way Rack applications would expect
   def rack_response
     # @head[CONTENT_LENGTH] ||= @body.size
-    @headv[SET_COOKIE] += @output_cookies if @output_cookies
+    @headv[SET_COOKIE].concat(@output_cookies) if @output_cookies
     @headv.each_pair do |key,value|
       @head[key] ||= value.join("\n") unless value.empty?
     end
