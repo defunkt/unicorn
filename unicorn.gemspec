@@ -45,5 +45,5 @@ Gem::Specification.new do |s|
 
   s.add_dependency(%q<rack>)
 
-  # s.licenses = %w(GPLv2 Ruby) # not compatible with older Rubygems
+  # s.licenses = %w(GPLv2 Ruby) # licenses= method is not in older Rubygems
 end
