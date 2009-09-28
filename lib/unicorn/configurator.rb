@@ -5,16 +5,41 @@ require 'logger'
 
 module Unicorn
 
-  # Implements a simple DSL for configuring a unicorn server.
+  # Implements a simple DSL for configuring a Unicorn server.
   #
   # Example (when used with the unicorn config file):
   #   worker_processes 4
   #   listen '/tmp/my_app.sock', :backlog => 1
-  #   listen '0.0.0.0:9292'
+  #   listen 9292, :tcp_nopush => true
   #   timeout 10
   #   pid "/tmp/my_app.pid"
-  #   after_fork do |server,worker|
-  #     server.listen("127.0.0.1:#{9293 + worker.nr}") rescue nil
+  #
+  #   # combine REE with "preload_app true" for memory savings
+  #   # http://rubyenterpriseedition.com/faq.html#adapt_apps_for_cow
+  #   preload_app true
+  #   GC.respond_to?(:copy_on_write_friendly=) and
+  #     GC.copy_on_write_friendly = true
+  #
+  #   before_fork do |server, worker|
+  #     # the following is recomended for Rails + "preload_app true"
+  #     # as there's no need for the master process to hold a connection
+  #     defined?(ActiveRecord::Base) and
+  #       ActiveRecord::Base.connection.disconnect!
+  #   end
+  #
+  #   after_fork do |server, worker|
+  #     addr = "127.0.0.1:#{9293 + worker.nr}"
+  #     server.listen(addr, :tries => -1, :delay => 5, :tcp_nopush => true)
+  #
+  #     # the following is required for Rails + "preload_app true",
+  #     defined?(ActiveRecord::Base) and
+  #       ActiveRecord::Base.establish_connection
+  #
+  #     # if preload_app is true, then you may also want to check and
+  #     # restart any other shared sockets/descriptors such as Memcached,
+  #     # and Redis.  TokyoCabinet file handles are safe to reuse
+  #     # between any number of forked children (assuming your kernel
+  #     # correctly implements pread()/pwrite() system calls)
   #   end
   class Configurator < Struct.new(:set, :config_file)
     # The default logger writes its output to $stderr
@@ -29,11 +54,8 @@ module Unicorn
           server.logger.info("worker=#{worker.nr} spawned pid=#{$$}")
 
           # per-process listener ports for debugging/admin:
-          # "rescue nil" statement is needed because USR2 will
-          # cause the master process to reexecute itself and the
-          # per-worker ports can be taken, necessitating another
-          # HUP after QUIT-ing the original master:
-          # server.listen("127.0.0.1:#{8081 + worker.nr}") rescue nil
+          # addr = "127.0.0.1:#{8081 + worker.nr}"
+          # server.listen(addr, :tries => -1, :delay => 5)
         },
       :before_fork => lambda { |server, worker|
           server.logger.info("worker=#{worker.nr} spawning...")
