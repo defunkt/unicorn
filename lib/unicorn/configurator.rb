@@ -51,6 +51,9 @@ module Unicorn
       self.config_file = defaults.delete(:config_file)
       set.merge!(DEFAULTS) if use_defaults
       defaults.each { |key, value| self.send(key, value) }
+      Hash === set[:listener_opts] or
+          set[:listener_opts] = Hash.new { |hash,key| hash[key] = {} }
+      Array === set[:listeners] or set[:listeners] = []
       reload
     end
 
@@ -231,8 +234,6 @@ module Unicorn
     def listen(address, opt = {})
       address = expand_addr(address)
       if String === address
-        Hash === set[:listener_opts] or
-          set[:listener_opts] = Hash.new { |hash,key| hash[key] = {} }
         [ :backlog, :sndbuf, :rcvbuf, :tries ].each do |key|
           value = opt[key] or next
           Integer === value or
@@ -250,7 +251,6 @@ module Unicorn
         set[:listener_opts][address].merge!(opt)
       end
 
-      set[:listeners] = [] unless Array === set[:listeners]
       set[:listeners] << address
     end
 
