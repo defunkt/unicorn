@@ -72,8 +72,7 @@ class Unicorn::CGIWrapper < ::CGI
     end
 
     # Capitalized "Status:", with human-readable status code (e.g. "200 OK")
-    parseable_status = @head.delete(Status)
-    @status ||= parseable_status.split(/ /)[0].to_i rescue 500
+    @status ||= @head.delete(Status)
 
     [ @status || 500, @head, [ @body.string ] ]
   end
