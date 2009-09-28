@@ -7,8 +7,6 @@ module Unicorn
   class Util
     class << self
 
-      APPEND_FLAGS = File::WRONLY | File::APPEND
-
       # This reopens ALL logfiles in the process that have been rotated
       # using logrotate(8) (without copytruncate) or similar tools.
       # A +File+ object is considered for reopening if it is:
@@ -19,10 +17,12 @@ module Unicorn
       # Returns the number of files reopened
       def reopen_logs
         nr = 0
+        append_flags = File::WRONLY | File::APPEND
+
         ObjectSpace.each_object(File) do |fp|
           next if fp.closed?
           next unless (fp.sync && fp.path[0..0] == "/")
-          next unless (fp.fcntl(Fcntl::F_GETFL) & APPEND_FLAGS) == APPEND_FLAGS
+          next unless (fp.fcntl(Fcntl::F_GETFL) & append_flags) == append_flags
 
           begin
             a, b = fp.stat, File.stat(fp.path)
