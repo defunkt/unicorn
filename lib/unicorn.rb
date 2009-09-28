@@ -175,10 +175,17 @@ module Unicorn
     # add a given address to the +listeners+ set, idempotently
     # Allows workers to add a private, per-process listener via the
     # after_fork hook.  Very useful for debugging and testing.
+    # +:tries+ may be specified as an option for the number of times
+    # to retry, and +:delay+ may be specified as the time in seconds
+    # to delay between retries.
+    # A negative value for +:tries+ indicates the listen will be
+    # retried indefinitely, this is useful when workers belonging to
+    # different masters are spawned during a transparent upgrade.
     def listen(address, opt = {}.merge(listener_opts[address] || {}))
       return if String === address && listener_names.include?(address)
 
-      delay, tries = 0.5, 5
+      delay = opt[:delay] || 0.5
+      tries = opt[:tries] || 5
       begin
         io = bind_listen(address, opt)
         unless TCPServer === io || UNIXServer === io
@@ -192,7 +199,8 @@ module Unicorn
         logger.error "adding listener failed addr=#{address} (in use)"
         raise err if tries == 0
         tries -= 1
-        logger.error "retrying in #{delay} seconds (#{tries} tries left)"
+        logger.error "retrying in #{delay} seconds " \
+                     "(#{tries < 0 ? 'infinite' : tries} tries left)"
         sleep(delay)
         retry
       end

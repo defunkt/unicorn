@@ -89,11 +89,13 @@ module Unicorn
     #
     #  after_fork do |server,worker|
     #    # per-process listener ports for debugging/admin:
-    #    # "rescue nil" statement is needed because USR2 will
-    #    # cause the master process to reexecute itself and the
-    #    # per-worker ports can be taken, necessitating another
-    #    # HUP after QUIT-ing the original master:
-    #    server.listen("127.0.0.1:#{9293 + worker.nr}") rescue nil
+    #    addr = "127.0.0.1:#{9293 + worker.nr}"
+    #
+    #    # the negative :tries parameter indicates we will retry forever
+    #    # waiting on the existing process to exit with a 5 second :delay
+    #    # Existing options for Unicorn::Configurator#listen such as
+    #    # :backlog, :rcvbuf, :sndbuf are available here as well.
+    #    server.listen(addr, :tries => -1, :delay => 5, :backlog => 128)
     #
     #    # drop permissions to "www-data" in the worker
     #    # generally there's no reason to start Unicorn as a priviledged user
@@ -215,12 +217,23 @@ module Unicorn
     #
     # This has no effect on UNIX sockets.
     #
+    # +tries+: times to retry binding a socket if it is already in use
+    #
+    # A negative number indicates we will retry indefinitely, this is
+    # useful for migrations and upgrades when individual workers
+    # are binding to different ports.
+    #
+    # Default: 5
+    #
+    # +delay+: seconds to wait between successive +tries+
+    #
+    # Default: 0.5 seconds
     def listen(address, opt = {})
       address = expand_addr(address)
       if String === address
         Hash === set[:listener_opts] or
           set[:listener_opts] = Hash.new { |hash,key| hash[key] = {} }
-        [ :backlog, :sndbuf, :rcvbuf ].each do |key|
+        [ :backlog, :sndbuf, :rcvbuf, :tries ].each do |key|
           value = opt[key] or next
           Integer === value or
             raise ArgumentError, "not an integer: #{key}=#{value.inspect}"
@@ -229,6 +242,10 @@ module Unicorn
           (value = opt[key]).nil? and next
           TrueClass === value || FalseClass === value or
             raise ArgumentError, "not boolean: #{key}=#{value.inspect}"
+        end
+        unless (value = opt[:tries]).nil?
+          Numeric === value or
+            raise ArgumentError, "not numeric: #{key}=#{value.inspect}"
         end
         set[:listener_opts][address].merge!(opt)
       end
