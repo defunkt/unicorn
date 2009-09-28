@@ -3,6 +3,13 @@
 ENV["VERSION"] or abort "VERSION= must be specified"
 manifest = File.readlines('.manifest').map! { |x| x.chomp! }
 
+# don't bother with tests that fork, not worth our time to get working
+# with `gem check -t` ... (of course we care for them when testing with
+# GNU make when they can run in parallel)
+test_files = manifest.grep(%r{\Atest/unit/test_.*\.rb\z}).map do |f|
+  File.readlines(f).grep(/\bfork\b/).empty? ? f : nil
+end.compact
+
 Gem::Specification.new do |s|
   s.name = %q{unicorn}
   s.version = ENV["VERSION"]
@@ -33,7 +40,8 @@ Gem::Specification.new do |s|
   s.require_paths = %w(lib ext)
   s.rubyforge_project = %q{mongrel}
   s.summary = %q{Rack HTTP server for Unix and fast clients}
-  s.test_files = manifest.grep(%r{\Atest/unit/test_.*\.rb\z})
+
+  s.test_files = test_files
 
   s.add_dependency(%q<rack>)
 
