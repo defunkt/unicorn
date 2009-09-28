@@ -113,6 +113,7 @@ $(T): $(test_prefix)/.stamp
 
 install: $(bins) $(ext)/unicorn_http.c
 	$(prep_setup_rb)
+	$(RM) lib/unicorn_http.$(DLEXT)
 	$(RM) -r .install-tmp
 	mkdir .install-tmp
 	cp -p bin/* .install-tmp
