@@ -141,6 +141,7 @@ class SignalsTest < Test::Unit::TestCase
       pid = buf[/\r\nX-Pid: (\d+)\r\n/, 1].to_i
       header_len = buf[/\A(.+?\r\n\r\n)/m, 1].size
     end
+    assert pid > 0, "pid not positive: #{pid.inspect}"
     read = buf.size
     mode_before = @tmp.stat.mode
     assert_raises(EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,
@@ -177,6 +178,7 @@ class SignalsTest < Test::Unit::TestCase
       sock.close
     end
 
+    assert pid > 0, "pid not positive: #{pid.inspect}"
     sock = TCPSocket.new('127.0.0.1', @port)
     sock.syswrite("PUT / HTTP/1.0\r\n")
     sock.syswrite("Content-Length: #{@bs * @count}\r\n\r\n")
