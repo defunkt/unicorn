@@ -33,39 +33,37 @@ module Unicorn
     # Connection: and Date: headers no matter what (if anything) our
     # Rack application sent us.
     SKIP = { 'connection' => true, 'date' => true, 'status' => true }
-    OUT = [] # :nodoc
-
-    def self.write_header(socket, status, headers)
-      status = CODES[status.to_i] || status
-      OUT.clear
-
-      # Don't bother enforcing duplicate supression, it's a Hash most of
-      # the time anyways so just hope our app knows what it's doing
-      headers.each do |key, value|
-        next if SKIP.include?(key.downcase)
-        if value =~ /\n/
-          value.split(/\n/).each { |v| OUT << "#{key}: #{v}\r\n" }
-        else
-          OUT << "#{key}: #{value}\r\n"
-        end
-      end
-
-      # Rack should enforce Content-Length or chunked transfer encoding,
-      # so don't worry or care about them.
-      # Date is required by HTTP/1.1 as long as our clock can be trusted.
-      # Some broken clients require a "Status" header so we accomodate them
-      socket.write("HTTP/1.1 #{status}\r\n" \
-                   "Date: #{Time.now.httpdate}\r\n" \
-                   "Status: #{status}\r\n" \
-                   "Connection: close\r\n" \
-                   "#{OUT.join(Z)}\r\n")
-
-    end
 
     # writes the rack_response to socket as an HTTP response
     def self.write(socket, rack_response, have_header = true)
       status, headers, body = rack_response
-      write_header(socket, status, headers) if have_header
+
+      if have_header
+        status = CODES[status.to_i] || status
+        out = []
+
+        # Don't bother enforcing duplicate supression, it's a Hash most of
+        # the time anyways so just hope our app knows what it's doing
+        headers.each do |key, value|
+          next if SKIP.include?(key.downcase)
+          if value =~ /\n/
+            out.concat(value.split(/\n/).map! { |v| "#{key}: #{v}\r\n" })
+          else
+            out << "#{key}: #{value}\r\n"
+          end
+        end
+
+        # Rack should enforce Content-Length or chunked transfer encoding,
+        # so don't worry or care about them.
+        # Date is required by HTTP/1.1 as long as our clock can be trusted.
+        # Some broken clients require a "Status" header so we accomodate them
+        socket.write("HTTP/1.1 #{status}\r\n" \
+                     "Date: #{Time.now.httpdate}\r\n" \
+                     "Status: #{status}\r\n" \
+                     "Connection: close\r\n" \
+                     "#{out.join('')}\r\n")
+      end
+
       body.each { |chunk| socket.write(chunk) }
       socket.close # flushes and uncorks the socket immediately
       ensure
