@@ -182,6 +182,7 @@ module Unicorn
     # retried indefinitely, this is useful when workers belonging to
     # different masters are spawned during a transparent upgrade.
     def listen(address, opt = {}.merge(listener_opts[address] || {}))
+      address = config.expand_addr(address)
       return if String === address && listener_names.include?(address)
 
       delay = opt[:delay] || 0.5

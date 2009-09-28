@@ -294,7 +294,30 @@ module Unicorn
       set_path(:stdout_path, path)
     end
 
-    private
+    # expands "unix:path/to/foo" to a socket relative to the current path
+    # expands pathnames of sockets if relative to "~" or "~username"
+    # expands "*:port and ":port" to "0.0.0.0:port"
+    def expand_addr(address) #:nodoc
+      return "0.0.0.0:#{address}" if Integer === address
+      return address unless String === address
+
+      case address
+      when %r{\Aunix:(.*)\z}
+        File.expand_path($1)
+      when %r{\A~}
+        File.expand_path(address)
+      when %r{\A(?:\*:)?(\d+)\z}
+        "0.0.0.0:#$1"
+      when %r{\A(.*):(\d+)\z}
+        # canonicalize the name
+        packed = Socket.pack_sockaddr_in($2.to_i, $1)
+        Socket.unpack_sockaddr_in(packed).reverse!.join(':')
+      else
+        address
+      end
+    end
+
+  private
 
     def set_path(var, path) #:nodoc:
       case path
@@ -323,29 +346,6 @@ module Unicorn
         raise ArgumentError, "invalid type: #{var}=#{my_proc.inspect}"
       end
       set[var] = my_proc
-    end
-
-    # expands "unix:path/to/foo" to a socket relative to the current path
-    # expands pathnames of sockets if relative to "~" or "~username"
-    # expands "*:port and ":port" to "0.0.0.0:port"
-    def expand_addr(address) #:nodoc
-      return "0.0.0.0:#{address}" if Integer === address
-      return address unless String === address
-
-      case address
-      when %r{\Aunix:(.*)\z}
-        File.expand_path($1)
-      when %r{\A~}
-        File.expand_path(address)
-      when %r{\A(?:\*:)?(\d+)\z}
-        "0.0.0.0:#$1"
-      when %r{\A(.*):(\d+)\z}
-        # canonicalize the name
-        packed = Socket.pack_sockaddr_in($2.to_i, $1)
-        Socket.unpack_sockaddr_in(packed).reverse!.join(':')
-      else
-        address
-      end
     end
 
   end
