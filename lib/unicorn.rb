@@ -61,7 +61,13 @@ module Unicorn
       0 => $0.dup,
     }
 
+    # This class and its members can be considered a stable interface
+    # and will not change in a backwards-incompatible fashion between
+    # releases of Unicorn.  You may need to access it in the
+    # before_fork/after_fork hooks.  See the Unicorn::Configurator RDoc
+    # for examples.
     class Worker < Struct.new(:nr, :tmp)
+
       # worker objects may be compared to just plain numbers
       def ==(other_nr)
         self.nr == other_nr
