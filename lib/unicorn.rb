@@ -84,6 +84,17 @@ module Unicorn
       self.init_listeners = options[:listeners] ? options[:listeners].dup : []
       self.config = Configurator.new(options.merge(:use_defaults => true))
       self.listener_opts = {}
+
+      # we try inheriting listeners first, so we bind them later.
+      # we don't write the pid file until we've bound listeners in case
+      # unicorn was started twice by mistake.  Even though our #pid= method
+      # checks for stale/existing pid files, race conditions are still
+      # possible (and difficult/non-portable to avoid) and can be likely
+      # to clobber the pid if the second start was in quick succession
+      # after the first, so we rely on the listener binding to fail in
+      # that case.  Some tests (in and outside of this source tree) and
+      # monitoring tools may also rely on pid files existing before we
+      # attempt to connect to the listener(s)
       config.commit!(self, :skip => [:listeners, :pid])
       self.orig_app = app
     end
@@ -170,6 +181,11 @@ module Unicorn
         end
       end
       unlink_pid_safe(pid) if pid
+
+      # not using O_EXCL here since we may be (intentionally) clobbering an
+      # existing file.  Avoiding /all/ possible race conditions with the pid
+      # file is hard so we don't unlink it before writing nor do we rename()
+      # since that's clobbering, too...
       File.open(path, 'wb') { |fp| fp.syswrite("#$$\n") } if path
       self.set_pid(path)
     end
@@ -589,7 +605,9 @@ module Unicorn
     end
 
     # unlinks a PID file at given +path+ if it contains the current PID
-    # useful as an at_exit handler.
+    # still potentially racy without locking the directory (which is
+    # non-portable and may interact badly with other programs), but the
+    # window for hitting the race condition is small
     def unlink_pid_safe(path)
       (File.read(path).to_i == $$ and File.unlink(path)) rescue nil
     end
@@ -597,14 +615,15 @@ module Unicorn
     # returns a PID if a given path contains a non-stale PID file,
     # nil otherwise.
     def valid_pid?(path)
-      if File.exist?(path) && (wpid = File.read(path).to_i) > 1
-        begin
-          Process.kill(0, wpid)
-          return wpid
-        rescue Errno::ESRCH
-        end
+      wpid = File.read(path).to_i
+      wpid <= 0 and return nil
+      begin
+        Process.kill(0, wpid)
+        return wpid
+      rescue Errno::ESRCH
+        # don't unlink stale pid files, racy without non-portable locking...
       end
-      nil
+      rescue Errno::ENOENT
     end
 
     def load_config!
