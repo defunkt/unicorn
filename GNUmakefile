@@ -227,6 +227,11 @@ verify:
 	test `git rev-parse --verify HEAD^0` = \
 	     `git rev-parse --verify refs/tags/v$(VERSION)^{}`
 
+gem: $(pkggem)
+
+install-gem: $(pkggem)
+	gem install $(CURDIR)/$<
+
 $(pkggem): manifest
 	gem build $(rfpackage).gemspec
 	mkdir -p pkg
@@ -249,6 +254,9 @@ release: verify package $(release_notes) $(release_changes)
 	  $(rfproject) $(rfpackage) $(VERSION) $(pkggem)
 	rubyforge add_file \
 	  $(rfproject) $(rfpackage) $(VERSION) $(pkgtgz)
+else
+gem install-gem: GIT-VERSION-FILE
+	$(MAKE) $@ VERSION=$(GIT_VERSION)
 endif
 
 .PHONY: .FORCE-GIT-VERSION-FILE doc $(T) $(slow_tests) manifest man

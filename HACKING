@@ -96,3 +96,18 @@ We will adhere to mostly the same conventions for patch submissions as
 git itself.  See the Documentation/SubmittingPatches document
 distributed with git on on patch submission guidelines to follow.  Just
 don't email the git mailing list or maintainer with Unicorn patches :)
+
+== Running Development Versions
+
+It is easy to install the contents of your git working directory:
+
+Via RubyGems (RubyGems 1.3.5+ recommended for prerelease versions):
+
+  make install-gem
+
+Without RubyGems (via setup.rb):
+
+  make install
+
+It is not at all recommended to mix a RubyGems installation with an
+installation done without RubyGems, however.
