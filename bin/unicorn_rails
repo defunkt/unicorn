@@ -12,7 +12,6 @@ options = { :listeners => listeners }
 host, port = Unicorn::Const::DEFAULT_HOST, Unicorn::Const::DEFAULT_PORT
 set_listener = false
 ENV['RAILS_ENV'] ||= "development"
-map_path = ENV['RAILS_RELATIVE_URL_ROOT']
 
 opts = OptionParser.new("", 24, '  ') do |opts|
   opts.banner = "Usage: #{cmd} " \
@@ -81,8 +80,9 @@ opts = OptionParser.new("", 24, '  ') do |opts|
 
   opts.on("-P", "--path PATH", "DEPRECATED") do |v|
     warn %q{Use of --path/-P is strongly discouraged}
-    warn %q{Use the 'map' directive in the rackup config instead}
-    ENV['RAILS_RELATIVE_URL_ROOT'] = map_path = v
+    warn %q{Use the RAILS_RELATIVE_URL_ROOT environment variable}
+    warn %q{  or the 'map' directive in the rackup config instead}
+    ENV['RAILS_RELATIVE_URL_ROOT'] = v
   end
 
   # I'm avoiding Unicorn-specific config options on the command-line.
@@ -156,8 +156,8 @@ app = lambda do ||
     Object.const_get(File.basename(config, '.rb').capitalize)
   end
 
-  map_path ||= '/'
   Rack::Builder.new do
+    map_path = ENV['RAILS_RELATIVE_URL_ROOT'] || '/'
     if inner_app.class.to_s == "Unicorn::App::OldRails"
       if map_path != '/'
         # patches + tests welcome, but I really cbf to deal with this

@@ -231,6 +231,31 @@ logger Logger.new('#{COMMON_TMP.path}')
     assert_equal '404 Not Found', res['Status']
   end
 
+  def test_alt_url_root_config_env
+    # cbf to actually work on this since I never use this feature (ewong)
+    return unless ROR_V[0] >= 2 && ROR_V[1] >= 3
+    tmp = Tempfile.new(nil)
+    tmp.syswrite("ENV['RAILS_RELATIVE_URL_ROOT'] = '/poo'\n")
+    redirect_test_io do
+      @pid = fork { exec 'unicorn_rails', "-l#@addr:#@port", "-c", tmp.path }
+    end
+    wait_master_ready("test_stderr.#$$.log")
+    res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/poo/foo"))
+    assert_equal "200", res.code
+    assert_equal '200 OK', res['Status']
+    assert_equal "FOO\n", res.body
+    assert_match %r{^text/html\b}, res['Content-Type']
+    assert_equal "4", res['Content-Length']
+
+    res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/foo"))
+    assert_equal "404", res.code
+    assert_equal '404 Not Found', res['Status']
+
+    res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/poo/x.txt"))
+    assert_equal "200", res.code
+    assert_equal "HELLO\n", res.body
+  end
+
   def teardown
     return if @start_pid != $$
 
