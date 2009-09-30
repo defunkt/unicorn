@@ -123,7 +123,7 @@ module Unicorn
     def listeners=(listeners)
       cur_names, dead_names = [], []
       listener_names.each do |name|
-        if "/" == name[0..0]
+        if ?/ == name[0]
           # mark unlinked sockets as dead so we can rebind them
           (File.socket?(name) ? cur_names : dead_names) << name
         else

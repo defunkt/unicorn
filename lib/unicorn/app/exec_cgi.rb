@@ -36,7 +36,7 @@ module Unicorn::App
       self.args = args
       first = args[0] or
         raise ArgumentError, "need path to executable"
-      first[0..0] == "/" or args[0] = ::File.expand_path(first)
+      first[0] == ?/ or args[0] = ::File.expand_path(first)
       File.executable?(args[0]) or
         raise ArgumentError, "#{args[0]} is not executable"
     end

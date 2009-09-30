@@ -76,7 +76,7 @@ module Unicorn
     def bind_listen(address = '0.0.0.0:8080', opt = {})
       return address unless String === address
 
-      sock = if address[0..0] == "/"
+      sock = if address[0] == ?/
         if File.exist?(address)
           if File.socket?(address)
             if self.respond_to?(:logger)
