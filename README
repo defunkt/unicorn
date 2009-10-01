@@ -57,12 +57,6 @@ both the the request and response in between Unicorn and slow clients.
   notification to be implemented as well as being able to tunnel
   arbitrary stream-based protocols over HTTP.
 
-== Versions
-
-{Current v0.92.0}[http://git.bogomips.org/cgit/unicorn.git/tag/?id=v0.92.0]
-
-{Old Stable v0.8.4}[http://git.bogomips.org/cgit/unicorn.git/tag/?id=v0.8.4]
-
 == License
 
 Unicorn is copyright 2009 Eric Wong and contributors.
