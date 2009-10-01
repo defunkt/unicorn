@@ -78,6 +78,12 @@ as much as possible.
     This option only exists for compatibility with the rackup(1) command,
     use of "-l"/"\--listen" switch is recommended instead.
 
+\--path PATH
+:   Mounts the Rails application at the given PATH (instead of "/").
+    This is equivalent to setting the RAILS_RELATIVE_URL_ROOT
+    environment variable.  This is only supported under Rails 2.3
+    or later at the moment.
+
 # RUBY OPTIONS
 -e, \--eval LINE
 :   Evaluate a LINE of Ruby code.  This evaluation happens
