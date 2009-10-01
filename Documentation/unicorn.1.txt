@@ -143,6 +143,15 @@ are never loaded by default.  If needed, they should be
 individually specified in the RACKUP_FILE, some frameworks do
 not require them.
 
+# ENVIRONMENT VARIABLES
+
+All application or library-specific environment variables (e.g. TMPDIR)
+may always be set in the Unicorn CONFIG_FILE in addition to the spawning
+shell.  When transparently upgrading Unicorn, all environment variables
+set in the old master process are inherited by the new master process.
+Unicorn only uses (and will overwrite) the UNICORN_FD environment
+variable internally when doing transparent upgrades.
+
 # SEE ALSO
 
 * unicorn_rails(1)

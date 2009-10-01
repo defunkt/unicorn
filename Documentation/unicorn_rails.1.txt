@@ -120,6 +120,19 @@ of the default middleware for performance.
 Embedded command-line options are mostly parsed for compatibility
 with rackup(1) but strongly discouraged.
 
+# ENVIRONMENT VARIABLES
+
+The RAILS_ENV variable is set by the aforementioned \-E switch.  The
+RAILS_RELATIVE_URL_ROOT is set by the aforementioned \--path switch.
+Either of these variables may also be set in the shell or the Unicorn
+CONFIG_FILE.  All application or library-specific environment variables
+(e.g. TMPDIR, RAILS_ASSET_ID) may always be set in the Unicorn
+CONFIG_FILE in addition to the spawning shell.  When transparently
+upgrading Unicorn, all environment variables set in the old master
+process are inherited by the new master process.  Unicorn only uses (and
+will overwrite) the UNICORN_FD environment variable internally when
+doing transparent upgrades.
+
 # SIGNALS
 
 The following UNIX signals may be sent to the master process:
