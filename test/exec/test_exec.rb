@@ -728,7 +728,7 @@ end
       }
     }
     sleep 1 # racy
-    daemon_pid = pid_file.read.to_i
+    daemon_pid = File.read(pid_file.path).to_i
     assert daemon_pid > 0
     Process.kill(:HUP, daemon_pid)
     sleep 1 # racy

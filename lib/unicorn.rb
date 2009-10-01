@@ -182,11 +182,17 @@ module Unicorn
       end
       unlink_pid_safe(pid) if pid
 
-      # not using O_EXCL here since we may be (intentionally) clobbering an
-      # existing file.  Avoiding /all/ possible race conditions with the pid
-      # file is hard so we don't unlink it before writing nor do we rename()
-      # since that's clobbering, too...
-      File.open(path, 'wb') { |fp| fp.syswrite("#$$\n") } if path
+      if path
+        fp = begin
+          tmp = "#{File.dirname(path)}/#{rand}.#$$"
+          File.open(tmp, File::RDWR|File::CREAT|File::EXCL, 0644)
+        rescue Errno::EEXIST
+          retry
+        end
+        fp.syswrite("#$$\n")
+        File.rename(fp.path, path)
+        fp.close
+      end
       self.set_pid(path)
     end
 
