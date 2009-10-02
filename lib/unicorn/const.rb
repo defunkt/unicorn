@@ -10,7 +10,7 @@ module Unicorn
     UNICORN_VERSION="0.92.0"
 
     DEFAULT_HOST = "0.0.0.0" # default TCP listen host address
-    DEFAULT_PORT = "8080"    # default TCP listen port
+    DEFAULT_PORT = 8080      # default TCP listen port
     DEFAULT_LISTEN = "#{DEFAULT_HOST}:#{DEFAULT_PORT}"
 
     # The basic max request size we'll try to read.
