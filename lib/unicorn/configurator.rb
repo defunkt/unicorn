@@ -277,9 +277,9 @@ module Unicorn
           TrueClass === value || FalseClass === value or
             raise ArgumentError, "not boolean: #{key}=#{value.inspect}"
         end
-        unless (value = opt[:tries]).nil?
+        unless (value = opt[:delay]).nil?
           Numeric === value or
-            raise ArgumentError, "not numeric: #{key}=#{value.inspect}"
+            raise ArgumentError, "not numeric: delay=#{value.inspect}"
         end
         set[:listener_opts][address].merge!(opt)
       end

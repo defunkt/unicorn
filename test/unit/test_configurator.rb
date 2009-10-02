@@ -99,6 +99,36 @@ class TestConfigurator < Test::Unit::TestCase
     end
   end
 
+  def test_listen_option_bad_delay
+    tmp = Tempfile.new('unicorn_config')
+    expect = { :delay => "five" }
+    listener = "127.0.0.1:12345"
+    tmp.syswrite("listen '#{listener}', #{expect.inspect}\n")
+    assert_raises(ArgumentError) do
+      Unicorn::Configurator.new(:config_file => tmp.path)
+    end
+  end
+
+  def test_listen_option_float_delay
+    tmp = Tempfile.new('unicorn_config')
+    expect = { :delay => 0.5 }
+    listener = "127.0.0.1:12345"
+    tmp.syswrite("listen '#{listener}', #{expect.inspect}\n")
+    assert_nothing_raised do
+      Unicorn::Configurator.new(:config_file => tmp.path)
+    end
+  end
+
+  def test_listen_option_int_delay
+    tmp = Tempfile.new('unicorn_config')
+    expect = { :delay => 5 }
+    listener = "127.0.0.1:12345"
+    tmp.syswrite("listen '#{listener}', #{expect.inspect}\n")
+    assert_nothing_raised do
+      Unicorn::Configurator.new(:config_file => tmp.path)
+    end
+  end
+
   def test_after_fork_proc
     test_struct = TestStruct.new
     [ proc { |a,b| }, Proc.new { |a,b| }, lambda { |a,b| } ].each do |my_proc|
