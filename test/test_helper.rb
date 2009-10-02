@@ -104,10 +104,8 @@ def unused_port(addr = '127.0.0.1')
   begin
     begin
       port = base + rand(32768 - base)
-      if addr == Unicorn::Const::DEFAULT_HOST
-        while port == Unicorn::Const::DEFAULT_PORT
-          port = base + rand(32768 - base)
-        end
+      while port == Unicorn::Const::DEFAULT_PORT
+        port = base + rand(32768 - base)
       end
 
       sock = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM, 0)
