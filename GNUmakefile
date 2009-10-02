@@ -153,10 +153,11 @@ NEWS: GIT-VERSION-FILE
 	mv $@+ $@
 
 SINCE = 0.91.0
+ChangeLog: log_range = $(shell test -n "$(SINCE)" && echo v$(SINCE)..)
 ChangeLog: GIT-VERSION-FILE
 	@echo "ChangeLog from $(GIT_URL) ($(SINCE)..$(GIT_VERSION))" > $@+
 	@echo >> $@+
-	git log v$(SINCE).. | sed -e 's/^/    /' >> $@+
+	git log $(log_range) | sed -e 's/^/    /' >> $@+
 	mv $@+ $@
 
 news_atom := http://unicorn.bogomips.org/NEWS.atom.xml
