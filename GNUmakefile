@@ -40,8 +40,8 @@ base_bins := unicorn unicorn_rails
 bins := $(addprefix bin/, $(base_bins))
 man1_bins := $(addsuffix .1, $(base_bins))
 man1_paths := $(addprefix man/man1/, $(man1_bins))
-rb_files := $(bins) $(shell find lib -type f -name '*.rb')
-inst_deps := $(c_files) $(rb_files)
+rb_files := $(bins) $(shell find lib ext -type f -name '*.rb')
+inst_deps := $(c_files) $(rb_files) GNUmakefile test/test_helper.rb
 
 ragel: $(ext)/unicorn_http.c
 $(ext)/unicorn_http.c: $(rl_files)
@@ -56,9 +56,9 @@ lib/unicorn_http.$(DLEXT): $(ext)/unicorn_http.$(DLEXT)
 	install -m644 $< $@
 http: lib/unicorn_http.$(DLEXT)
 
-$(test_prefix)/.stamp: $(inst_deps) .manifest
+$(test_prefix)/.stamp: $(inst_deps)
 	mkdir -p $(test_prefix)/.ccache
-	tar c `cat .manifest` | (cd $(test_prefix) && tar x)
+	tar c $(inst_deps) | (cd $(test_prefix) && tar x)
 	$(MAKE) -C $(test_prefix) clean
 	$(MAKE) -C $(test_prefix) http shebang
 	> $@
