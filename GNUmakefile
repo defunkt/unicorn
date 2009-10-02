@@ -58,7 +58,7 @@ http: lib/unicorn_http.$(DLEXT)
 
 $(test_prefix)/.stamp: $(inst_deps)
 	mkdir -p $(test_prefix)/.ccache
-	tar c $(inst_deps) | (cd $(test_prefix) && tar x)
+	tar c $(inst_deps) GIT-VERSION-GEN | (cd $(test_prefix) && tar x)
 	$(MAKE) -C $(test_prefix) clean
 	$(MAKE) -C $(test_prefix) http shebang
 	> $@
