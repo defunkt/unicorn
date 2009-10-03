@@ -223,24 +223,29 @@ $(release_notes):
 
 # ensures we're actually on the tagged $(VERSION), only used for release
 verify:
+	test x"$(shell umask)" = x0022
 	git rev-parse --verify refs/tags/v$(VERSION)^{}
 	git diff-index --quiet HEAD^0
 	test `git rev-parse --verify HEAD^0` = \
 	     `git rev-parse --verify refs/tags/v$(VERSION)^{}`
+
+fix-perms:
+	git ls-tree -r HEAD | awk '/^100644 / {print $$NF}' | xargs chmod 644
+	git ls-tree -r HEAD | awk '/^100755 / {print $$NF}' | xargs chmod 755
 
 gem: $(pkggem)
 
 install-gem: $(pkggem)
 	gem install $(CURDIR)/$<
 
-$(pkggem): manifest
+$(pkggem): manifest fix-perms
 	gem build $(rfpackage).gemspec
 	mkdir -p pkg
 	mv $(@F) $@
 
 $(pkgtgz): distdir = $(basename $@)
 $(pkgtgz): HEAD = v$(VERSION)
-$(pkgtgz): manifest
+$(pkgtgz): manifest fix-perms
 	@test -n "$(distdir)"
 	$(RM) -r $(distdir)
 	mkdir -p $(distdir)
