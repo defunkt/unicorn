@@ -73,7 +73,7 @@ task :news_rdoc do
     puts ""
 
     body = tag[:body]
-    puts tag[:body].gsub(/^/sm, "  ").gsub!(/[ \t]+$/sm, "")
+    puts tag[:body].gsub(/^/sm, "  ").gsub(/[ \t]+$/sm, "")
     puts ""
   end
 end
