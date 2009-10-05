@@ -14,7 +14,7 @@ Gem::Specification.new do |s|
   s.name = %q{unicorn}
   s.version = ENV["VERSION"]
 
-  s.authors = ["Eric Wong"]
+  s.authors = ["Unicorn developers"]
   s.date = Time.now.utc.strftime('%Y-%m-%d')
   s.description = File.read("README").split(/\n\n/)[1]
   s.email = %q{mongrel-unicorn@rubyforge.org}
