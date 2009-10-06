@@ -1,5 +1,3 @@
 * Documentation improvements
 
 * launchers - add --kill switch to allow DRY pid file path definition
-
-* Rainbows! (http://article.gmane.org/gmane.comp.lang.ruby.unicorn.general/22)
