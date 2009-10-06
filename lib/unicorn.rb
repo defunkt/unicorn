@@ -53,6 +53,27 @@ module Unicorn
 
     # We populate this at startup so we can figure out how to reexecute
     # and upgrade the currently running instance of Unicorn
+    # This Hash is considered a stable interface and changing its contents
+    # will allow you to switch between different installations of Unicorn
+    # or even different installations of the same applications without
+    # downtime.  Keys of this constant Hash are described as follows:
+    #
+    # * 0 - the path to the unicorn/unicorn_rails executable
+    # * :argv - a deep copy of the ARGV array the executable originally saw
+    # * :cwd - the working directory of the application, this is where
+    # you originally started Unicorn.
+    #
+    # The following example may be used in your Unicorn config file to
+    # change your working directory during a config reload (HUP) without
+    # upgrading or restarting:
+    #
+    #   Dir.chdir(Unicorn::HttpServer::START_CTX[:cwd] = path)
+    #
+    # To change your unicorn executable to a different path without downtime,
+    # you can set the following in your Unicorn config file, HUP and then
+    # continue with the traditional USR2 + QUIT upgrade steps:
+    #
+    #   Unicorn::HttpServer::START_CTX[0] = "/home/bofh/1.9.2/bin/unicorn"
     START_CTX = {
       :argv => ARGV.map { |arg| arg.dup },
       # don't rely on Dir.pwd here since it's not symlink-aware, and
