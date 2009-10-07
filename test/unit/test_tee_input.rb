@@ -104,6 +104,22 @@ class TestTeeInput < Test::Unit::TestCase
     assert_equal Unicorn::Const::MAX_BODY + 1, ti.size
   end
 
+  def test_read_in_full_if_content_length
+    a, b = 300, 3
+    init_parser('.' * b, 300)
+    assert_equal 300, @parser.content_length
+    ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
+    pid = fork {
+      @wr.write('.' * 197)
+      sleep 1 # still a *potential* race here that would make the test moot...
+      @wr.write('.' * 100)
+    }
+    assert_equal a, ti.read(a).size
+    _, status = Process.waitpid2(pid)
+    assert status.success?
+    @wr.close
+  end
+
   def test_big_body_multi
     init_parser('.', Unicorn::Const::MAX_BODY + 1)
     ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
@@ -164,6 +180,36 @@ class TestTeeInput < Test::Unit::TestCase
     assert_kind_of File, ti.instance_eval { @tmp }
     status = nil
     assert_nothing_raised { pid, status = Process.waitpid2(pid) }
+    assert status.success?
+  end
+
+  def test_chunked_ping_pong
+    @parser = Unicorn::HttpParser.new
+    @buf = "POST / HTTP/1.1\r\n" \
+           "Host: localhost\r\n" \
+           "Transfer-Encoding: chunked\r\n" \
+           "\r\n"
+    assert_equal @env, @parser.headers(@env, @buf)
+    assert_equal "", @buf
+    chunks = %w(aa bbb cccc dddd eeee)
+    rd, wr = IO.pipe
+
+    pid = fork {
+      chunks.each do |chunk|
+        rd.read(1) == "." and
+          @wr.write("#{'%x' % [ chunk.size]}\r\n#{chunk}\r\n")
+      end
+      @wr.write("0\r\n")
+    }
+    ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
+    assert_nil @parser.content_length
+    assert_nil ti.instance_eval { @size }
+    assert ! @parser.body_eof?
+    chunks.each do |chunk|
+      wr.write('.')
+      assert_equal chunk, ti.read(16384)
+    end
+    _, status = Process.waitpid2(pid)
     assert status.success?
   end
 
