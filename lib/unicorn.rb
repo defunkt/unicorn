@@ -42,7 +42,23 @@ module Unicorn
     # This hash maps PIDs to Workers
     WORKERS = {}
 
-    # See: http://cr.yp.to/docs/selfpipe.html
+    # We use SELF_PIPE differently in the master and worker processes:
+    #
+    # * The master process never closes or reinitializes this once
+    # initialized.  Signal handlers in the master process will write to
+    # it to wake up the master from IO.select in exactly the same manner
+    # djb describes in http://cr.yp.to/docs/selfpipe.html
+    #
+    # * The workers immediately close the pipe they inherit from the
+    # master and replace it with a new pipe after forking.  This new
+    # pipe is also used to wakeup from IO.select from inside (worker)
+    # signal handlers.  However, workers *close* the pipe descriptors in
+    # the signal handlers to raise EBADF in IO.select instead of writing
+    # like we do in the master.  We cannot easily use the reader set for
+    # IO.select because LISTENERS is already that set, and it's extra
+    # work (and cycles) to distinguish the pipe FD from the reader set
+    # once IO.select returns.  So we're lazy and just close the pipe when
+    # a (rare) signal arrives in the worker and reinitialize the pipe later.
     SELF_PIPE = []
 
     # signal queue used for self-piping
