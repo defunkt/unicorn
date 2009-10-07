@@ -41,6 +41,26 @@ module Unicorn
       @size = tmp_size
     end
 
+    # call-seq:
+    #   ios = env['rack.input']
+    #   ios.read([length [, buffer ]]) => string, buffer, or nil
+    #
+    # Reads at most length bytes from the I/O stream, or to the end of
+    # file if length is omitted or is nil. length must be a non-negative
+    # integer or nil. If the optional buffer argument is present, it
+    # must reference a String, which will receive the data.
+    #
+    # At end of file, it returns nil or "" depend on length.
+    # ios.read() and ios.read(nil) returns "".
+    # ios.read(length [, buffer]) returns nil.
+    #
+    # If the Content-Length of the HTTP request is known (as is the common
+    # case for POST requests), then ios.read(length [, buffer]) will block
+    # until the specified length is read (or it is the last chunk).
+    # Otherwise, for uncommon "Transfer-Encoding: chunked" requests,
+    # ios.read(length [, buffer]) will return immediately if there is
+    # any data and only block when nothing is available (providing
+    # IO#readpartial semantics).
     def read(*args)
       socket or return @tmp.read(*args)
 
@@ -55,9 +75,9 @@ module Unicorn
         rv = args.shift || @buf2.dup
         diff = tmp_size - @tmp.pos
         if 0 == diff
-          tee(length, rv)
+          ensure_length(tee(length, rv), length)
         else
-          @tmp.read(diff > length ? length : diff, rv)
+          ensure_length(@tmp.read(diff > length ? length : diff, rv), length)
         end
       end
     end
@@ -128,6 +148,25 @@ module Unicorn
 
     def tmp_size
       StringIO === @tmp ? @tmp.size : @tmp.stat.size
+    end
+
+    # tee()s into +buf+ until it is of +length+ bytes (or until
+    # we've reached the Content-Length of the request body).
+    # Returns +buf+ (the exact object, not a duplicate)
+    # To continue supporting applications that need near-real-time
+    # streaming input bodies, this is a no-op for
+    # "Transfer-Encoding: chunked" requests.
+    def ensure_length(buf, length)
+      # @size is nil for chunked bodies, so we can't ensure length for those
+      # since they could be streaming bidirectionally and we don't want to
+      # block the caller in that case.
+      return buf if buf.nil? || @size.nil?
+
+      while buf.size < length && @size != @tmp.pos
+        buf << tee(length - buf.size, @buf2)
+      end
+
+      buf
     end
 
   end
