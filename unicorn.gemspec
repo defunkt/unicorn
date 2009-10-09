@@ -35,11 +35,11 @@ Gem::Specification.new do |s|
   s.files = manifest
   s.homepage = %q{http://unicorn.bogomips.org/}
 
-  s.rdoc_options = [ "-Na", "-t",
-                     "Unicorn: Rack HTTP server for Unix and fast clients" ]
+  summary = %q{Rack HTTP server for fast clients and Unix}
+  s.rdoc_options = [ "-Na", "-t", "Unicorn: #{summary}" ]
   s.require_paths = %w(lib ext)
   s.rubyforge_project = %q{mongrel}
-  s.summary = %q{Rack HTTP server for Unix and fast clients}
+  s.summary = summary
 
   s.test_files = test_files
 
