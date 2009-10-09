@@ -46,7 +46,6 @@ inst_deps := $(c_files) $(rb_files) GNUmakefile test/test_helper.rb
 ragel: $(ext)/unicorn_http.c
 $(ext)/unicorn_http.c: $(rl_files)
 	cd $(@D) && $(ragel) unicorn_http.rl -C $(RLFLAGS) -o $(@F)
-	$(ruby) -i -p -e '$$_.gsub!(%r{[ \t]*$$},"")' $@
 $(ext)/Makefile: $(ext)/extconf.rb $(c_files)
 	cd $(@D) && $(ruby) extconf.rb
 $(ext)/unicorn_http.$(DLEXT): $(ext)/Makefile
