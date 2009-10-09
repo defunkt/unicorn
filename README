@@ -3,7 +3,7 @@
 Unicorn is a HTTP server for Rack applications designed to take
 advantage of features in Unix/Unix-like kernels and only serve fast
 clients on low-latency, high-bandwidth connections.  Slow clients should
-only be served by placing a reverse proxy capable of fully-buffering
+only be served by placing a reverse proxy capable of fully buffering
 both the the request and response in between Unicorn and slow clients.
 
 == Features
