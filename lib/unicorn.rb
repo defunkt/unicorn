@@ -575,13 +575,13 @@ module Unicorn
       nr = 0 # this becomes negative if we need to reopen logs
       alive = worker.tmp # tmp is our lifeline to the master process
       ready = LISTENERS
-      t = ti = 0
 
       # closing anything we IO.select on will raise EBADF
       trap(:USR1) { nr = -65536; SELF_PIPE.first.close rescue nil }
       trap(:QUIT) { alive = nil; LISTENERS.each { |s| s.close rescue nil } }
       [:TERM, :INT].each { |sig| trap(sig) { exit!(0) } } # instant shutdown
       logger.info "worker=#{worker.nr} ready"
+      m = 0
 
       begin
         nr < 0 and reopen_worker_logs(worker.nr)
@@ -595,13 +595,13 @@ module Unicorn
         # changes with chmod doesn't update ctime on all filesystems; so
         # we change our counter each and every time (after process_client
         # and before IO.select).
-        t == (ti = Time.now.to_i) or alive.chmod(t = ti)
+        alive.chmod(m = 0 == m ? 1 : 0)
 
         ready.each do |sock|
           begin
             process_client(sock.accept_nonblock)
             nr += 1
-            t == (ti = Time.now.to_i) or alive.chmod(t = ti)
+            alive.chmod(m = 0 == m ? 1 : 0)
           rescue Errno::EAGAIN, Errno::ECONNABORTED
           end
           break if nr < 0
@@ -614,7 +614,7 @@ module Unicorn
         redo unless nr == 0 # (nr < 0) => reopen logs
 
         ppid == Process.ppid or return
-        alive.chmod(t = 0)
+        alive.chmod(m = 0 == m ? 1 : 0)
         begin
           # timeout used so we can detect parent death:
           ret = IO.select(LISTENERS, nil, SELF_PIPE, timeout) or redo
