@@ -101,7 +101,7 @@ A reverse proxy for Unicorn should meet the following requirements:
 nginx is the only (Free) solution we know of that meets the above
 requirements.
 
-Indeed, the author of Unicorn has deployed nginx as a reverse-proxy not
+Indeed, the folks behind Unicorn have deployed nginx as a reverse-proxy not
 only for Ruby applications, but also for production applications running
 Apache/mod_perl, Apache/mod_php and Apache Tomcat.  In every single
 case, performance improved because application servers were able to use
