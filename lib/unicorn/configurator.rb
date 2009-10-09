@@ -175,6 +175,23 @@ module Unicorn
     # to the scheduling limitations by the worker process.  Due the
     # low-complexity, low-overhead implementation, timeouts of less
     # than 3.0 seconds can be considered inaccurate and unsafe.
+    #
+    # For running Unicorn behind nginx, it is recommended to set
+    # "fail_timeout=0" for in your nginx configuration like this
+    # to have nginx always retry backends that may have had workers
+    # SIGKILL-ed due to timeouts.
+    #
+    #    # See http://wiki.nginx.org/NginxHttpUpstreamModule for more details
+    #    # on nginx upstream configuration:
+    #    upstream unicorn_backend {
+    #      # for UNIX domain socket setups:
+    #      server unix:/path/to/unicorn.sock fail_timeout=0;
+    #
+    #      # for TCP setups
+    #      server 192.168.0.7:8080 fail_timeout=0;
+    #      server 192.168.0.8:8080 fail_timeout=0;
+    #      server 192.168.0.9:8080 fail_timeout=0;
+    #    }
     def timeout(seconds)
       Numeric === seconds or raise ArgumentError,
                                   "not numeric: timeout=#{seconds.inspect}"
