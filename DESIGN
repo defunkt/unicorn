@@ -7,7 +7,7 @@
   all clients down, just one.  Only UNIX-like systems supporting
   fork() and file descriptor inheritance are supported.
 
-* The Ragel->C HTTP parser is taken from Mongrel.  This is the
+* The Ragel+C HTTP parser is taken from Mongrel.  This is the
   only non-Ruby part and there are no plans to add any more
   non-Ruby components.
 
