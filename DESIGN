@@ -55,6 +55,22 @@
   applications that are running all the time since worker processes
   will only select()/accept() outside of the application dispatch.
 
+* Additionally, thundering herds are much smaller than with
+  configurations using existing prefork servers.  Process counts should
+  only be scaled to backend resources, _never_ to the number of expected
+  clients like is typical with blocking prefork servers.  So while we've
+  seen instances of popular prefork servers configured to run many
+  hundreds of worker processes, Unicorn deployments are typically only
+  2-4 processes per-core.
+
+* On-demand scaling of worker processes never happens automatically.
+  Again, Unicorn is concerned about scaling to backend limits and should
+  never configured in a fashion where it could be waiting on slow
+  clients.  For extremely rare circumstances, we provide TTIN and TTOU
+  signal handlers to increment/decrement your process counts without
+  reloading.  Think of it as driving a car with manual transmission:
+  you have a lot more control if you know what you're doing.
+
 * Blocking I/O is used for clients.  This allows a simpler code path
   to be followed within the Ruby interpreter and fewer syscalls.
   Applications that use threads continue to work if Unicorn
