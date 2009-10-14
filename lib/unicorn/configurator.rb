@@ -91,7 +91,7 @@ module Unicorn
     end
 
     def reload #:nodoc:
-      instance_eval(File.read(config_file)) if config_file
+      instance_eval(File.read(config_file), config_file) if config_file
     end
 
     def commit!(server, options = {}) #:nodoc:
