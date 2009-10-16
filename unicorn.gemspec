@@ -43,6 +43,10 @@ Gem::Specification.new do |s|
 
   s.test_files = test_files
 
+  # for people that are absolutely stuck on Rails 2.3.2 and can't
+  # up/downgrade to any other version, the Rack dependency may be
+  # commented out.  Nevertheless, upgrading to Rails 2.3.4 or later is
+  # *strongly* recommended for security reasons.
   s.add_dependency(%q<rack>)
 
   # s.licenses = %w(GPLv2 Ruby) # licenses= method is not in older Rubygems

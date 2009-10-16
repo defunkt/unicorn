@@ -1,5 +1,18 @@
 = Known Issues
 
+* Rails 2.3.2 bundles its own version of Rack.  This may cause subtle
+  bugs when simultaneously loaded with the system-wide Rack Rubygem
+  which Unicorn depends on.  Upgrading to Rails 2.3.4 (or later) is
+  strongly recommended for all Rails 2.3.x users for this (and security
+  reasons).  Rails 2.2.x series (or before) did not bundle Rack and are
+  should be unnaffected.  If there is any reason which forces your
+  application to use Rails 2.3.2 and you have no other choice, then
+  you may edit your Unicorn gemspec and remove the Rack dependency.
+
+  ref: http://mid.gmane.org/20091014221552.GA30624@dcvr.yhbt.net
+  Note: the workaround described in the article above only made
+  the issue more subtle and we didn't notice them immediately.
+
 * Installing "unicorn" as a system-wide Rubygem and using the
   {isolate}[http://github.com/jbarnette/isolate] gem may cause issues if
   you're using any of the bundled application-level libraries in
