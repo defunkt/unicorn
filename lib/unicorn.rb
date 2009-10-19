@@ -341,16 +341,13 @@ module Unicorn
     # Terminates all workers, but does not exit master process
     def stop(graceful = true)
       self.listeners = []
-      kill_each_worker(graceful ? :QUIT : :TERM)
-      timeleft = timeout
-      step = 0.2
-      reap_all_workers
-      until WORKERS.empty?
-        sleep(step)
+      limit = Time.now + timeout
+      until WORKERS.empty? || Time.now > limit
+        kill_each_worker(graceful ? :QUIT : :TERM)
+        sleep(0.1)
         reap_all_workers
-        (timeleft -= step) > 0 and next
-        kill_each_worker(:KILL)
       end
+      kill_each_worker(:KILL)
     end
 
     private
