@@ -21,8 +21,8 @@ def tags
       body ||= "initial"
       {
         :time => Time.at(tagger.split(/ /)[-2].to_i).utc.strftime(timefmt),
-        :tagger_name => %r{^tagger ([^<]+)}.match(tagger)[1],
-        :tagger_email => %r{<([^>]+)>}.match(tagger)[1],
+        :tagger_name => %r{^tagger ([^<]+)}.match(tagger)[1].strip,
+        :tagger_email => %r{<([^>]+)>}.match(tagger)[1].strip,
         :id => `git rev-parse refs/tags/#{tag}`.chomp!,
         :tag => tag,
         :subject => subject,
@@ -58,7 +58,7 @@ task :news_atom do
           url = "#{cgit_url}/tag/?id=#{tag[:tag]}"
           link! :rel => "alternate", :type => "text/html", :href =>url
           id! url
-          content(:type => 'text') { tag[:body] }
+          content({:type => 'text'}, tag[:body])
         end
       end
     end
