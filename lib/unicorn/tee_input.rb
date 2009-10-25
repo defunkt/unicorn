@@ -131,6 +131,7 @@ module Unicorn
         begin
           if parser.filter_body(dst, socket.readpartial(length, buf)).nil?
             @tmp.write(dst)
+            @tmp.seek(0, IO::SEEK_END) # workaround FreeBSD/OSX + MRI 1.8.x bug
             return dst
           end
         rescue EOFError
