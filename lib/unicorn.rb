@@ -277,6 +277,7 @@ module Unicorn
       # are trapped.  See trap_deferred
       init_self_pipe!
       respawn = true
+      last_check = Time.now
 
       QUEUE_SIGS.each { |sig| trap_deferred(sig) }
       trap(:CHLD) { |sig_nr| awaken_master }
@@ -287,7 +288,11 @@ module Unicorn
           reap_all_workers
           case SIG_QUEUE.shift
           when nil
-            murder_lazy_workers
+            # avoid murdering workers after our master process (or the
+            # machine) comes out of suspend/hibernation
+            if (last_check + timeout) >= (last_check = Time.now)
+              murder_lazy_workers
+            end
             maintain_worker_count if respawn
             master_sleep
           when :QUIT # graceful shutdown
@@ -475,7 +480,6 @@ module Unicorn
           kill_worker(:QUIT, wpid)
           next
         end
-        stat.mode == 0100000 and next
         (diff = (Time.now - stat.ctime)) <= timeout and next
         logger.error "worker=#{worker.nr} PID:#{wpid} timeout " \
                      "(#{diff}s > #{timeout}s), killing"
