@@ -1,1 +1,16 @@
 * Documentation improvements
+
+* ensure test suite passes on non-GNU/Linux systems
+  (likely that it already does)
+
+* consider adding "working_directory" directive to Configurator
+  since START_CTX is ugly...
+
+* consider adding user switching support (ugh...)
+  This makes more sense for Rainbows!, but some folks use it already...
+
+* fix const-correctness in HTTP parser
+
+* performance validation (esp. TeeInput)
+
+* improve test suite (steal from Rainbows!, probably...)
