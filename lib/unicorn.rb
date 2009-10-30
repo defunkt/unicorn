@@ -471,16 +471,8 @@ module Unicorn
     # is stale for >timeout seconds, then we'll kill the corresponding
     # worker.
     def murder_lazy_workers
-      diff = stat = nil
       WORKERS.dup.each_pair do |wpid, worker|
-        stat = begin
-          worker.tmp.stat
-        rescue => e
-          logger.warn "worker=#{worker.nr} PID:#{wpid} stat error: #{e.inspect}"
-          kill_worker(:QUIT, wpid)
-          next
-        end
-        (diff = (Time.now - stat.ctime)) <= timeout and next
+        (diff = (Time.now - worker.tmp.stat.ctime)) <= timeout and next
         logger.error "worker=#{worker.nr} PID:#{wpid} timeout " \
                      "(#{diff}s > #{timeout}s), killing"
         kill_worker(:KILL, wpid) # take no prisoners for timeout violations
