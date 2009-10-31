@@ -92,9 +92,17 @@ module Unicorn
     #   Unicorn::HttpServer::START_CTX[0] = "/home/bofh/1.9.2/bin/unicorn"
     START_CTX = {
       :argv => ARGV.map { |arg| arg.dup },
-      # don't rely on Dir.pwd here since it's not symlink-aware, and
-      # symlink dirs are the default with Capistrano...
-      :cwd => `/bin/sh -c pwd`.chomp("\n"),
+      :cwd => lambda {
+          # favor ENV['PWD'] since it is (usually) symlink aware for
+          # Capistrano and like systems
+          begin
+            a = File.stat(pwd = ENV['PWD'])
+            b = File.stat(Dir.pwd)
+            a.ino == b.ino && a.dev == b.dev ? pwd : Dir.pwd
+          rescue
+            Dir.pwd
+          end
+        }.call,
       0 => $0.dup,
     }
 
