@@ -26,14 +26,15 @@ class SignalsTest < Test::Unit::TestCase
     @bs = 1 * 1024 * 1024
     @count = 100
     @port = unused_port
-    tmp = @tmp = Tempfile.new('unicorn.sock')
+    @sock = Tempfile.new('unicorn.sock')
+    @tmp = Tempfile.new('unicorn.write')
+    @tmp.sync = true
+    File.unlink(@sock.path)
     File.unlink(@tmp.path)
-    n = 0
-    tmp.chmod(0)
     @server_opts = {
-      :listeners => [ "127.0.0.1:#@port", @tmp.path ],
+      :listeners => [ "127.0.0.1:#@port", @sock.path ],
       :after_fork => lambda { |server,worker|
-        trap(:HUP) { tmp.chmod(n += 1) }
+        trap(:HUP) { @tmp.syswrite('.') }
       },
     }
     @server = nil
@@ -143,7 +144,7 @@ class SignalsTest < Test::Unit::TestCase
     end
     assert pid > 0, "pid not positive: #{pid.inspect}"
     read = buf.size
-    mode_before = @tmp.stat.mode
+    size_before = @tmp.stat.size
     assert_raises(EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,
                   Errno::EBADF) do
       loop do
@@ -156,8 +157,10 @@ class SignalsTest < Test::Unit::TestCase
 
     redirect_test_io { @server.stop(true) }
     # can't check for == since pending signals get merged
-    assert mode_before < @tmp.stat.mode
-    assert_equal(read - header_len, @bs * @count)
+    assert size_before < @tmp.stat.size
+    got = read - header_len
+    expect = @bs * @count
+    assert_equal(expect, got, "expect=#{expect} got=#{got}")
     assert_nothing_raised { sock.close }
   end
 
@@ -183,7 +186,7 @@ class SignalsTest < Test::Unit::TestCase
     sock.syswrite("PUT / HTTP/1.0\r\n")
     sock.syswrite("Content-Length: #{@bs * @count}\r\n\r\n")
     1000.times { Process.kill(:HUP, pid) }
-    mode_before = @tmp.stat.mode
+    size_before = @tmp.stat.size
     killer = fork { loop { Process.kill(:HUP, pid); sleep(0.0001) } }
     buf = ' ' * @bs
     @count.times { sock.syswrite(buf) }
@@ -191,7 +194,7 @@ class SignalsTest < Test::Unit::TestCase
     Process.waitpid2(killer)
     redirect_test_io { @server.stop(true) }
     # can't check for == since pending signals get merged
-    assert mode_before < @tmp.stat.mode
+    assert size_before < @tmp.stat.size
     assert_equal pid, sock.sysread(4096)[/\r\nX-Pid: (\d+)\r\n/, 1].to_i
     sock.close
   end
