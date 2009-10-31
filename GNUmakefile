@@ -57,7 +57,8 @@ http: lib/unicorn_http.$(DLEXT)
 
 $(test_prefix)/.stamp: $(inst_deps)
 	mkdir -p $(test_prefix)/.ccache
-	tar c $(inst_deps) GIT-VERSION-GEN | (cd $(test_prefix) && tar x)
+	tar cf - $(inst_deps) GIT-VERSION-GEN | \
+	  (cd $(test_prefix) && tar xf -)
 	$(MAKE) -C $(test_prefix) clean
 	$(MAKE) -C $(test_prefix) http shebang
 	> $@
@@ -249,8 +250,8 @@ $(pkgtgz): manifest fix-perms
 	@test -n "$(distdir)"
 	$(RM) -r $(distdir)
 	mkdir -p $(distdir)
-	tar c `cat .manifest` | (cd $(distdir) && tar x)
-	cd pkg && tar c $(basename $(@F)) | gzip -9 > $(@F)+
+	tar cf - `cat .manifest` | (cd $(distdir) && tar xf -)
+	cd pkg && tar cf - $(basename $(@F)) | gzip -9 > $(@F)+
 	mv $@+ $@
 
 package: $(pkgtgz) $(pkggem)
