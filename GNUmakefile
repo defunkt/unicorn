@@ -92,9 +92,13 @@ else
          rm $(stamp) 2>/dev/null && $(check_test)
 endif
 
+# not all systems have setsid(8), we need it because we spam signals
+# stupidly in some tests...
+rb_setsid := $(ruby) -e 'Process.setsid' -e 'exec *ARGV'
+
 # TRACER='strace -f -o $(t).strace -s 100000'
 run_test = $(quiet_pre) \
-  setsid $(TRACER) $(ruby) -w $(arg) $(TEST_OPTS) $(quiet_post) || \
+  $(rb_setsid) $(TRACER) $(ruby) -w $(arg) $(TEST_OPTS) $(quiet_post) || \
   (sed "s,^,$(extra): ," >&2 < $(t); exit 1)
 
 %.n: arg = $(subst .n,,$(subst --, -n ,$@))
