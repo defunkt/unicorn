@@ -145,7 +145,7 @@ def retry_hit(uris = [])
   tries = DEFAULT_TRIES
   begin
     hit(uris)
-  rescue Errno::ECONNREFUSED => err
+  rescue Errno::EINVAL, Errno::ECONNREFUSED => err
     if (tries -= 1) > 0
       sleep DEFAULT_RES
       retry
