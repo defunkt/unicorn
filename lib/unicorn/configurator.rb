@@ -9,6 +9,7 @@ module Unicorn
   #
   # Example (when used with the unicorn config file):
   #   worker_processes 4
+  #   working_directory "/path/to/deploy/app/current"
   #   listen '/tmp/my_app.sock', :backlog => 1
   #   listen 9292, :tcp_nopush => true
   #   timeout 10
@@ -343,6 +344,16 @@ module Unicorn
     # Same as stderr_path, except for $stdout
     def stdout_path(path)
       set_path(:stdout_path, path)
+    end
+
+    # sets the working directory for Unicorn.  This ensures USR2 will
+    # start a new instance of Unicorn in this directory.  This may be
+    # a symlink.  You should specify this directive near the top or
+    # your config file before any relative paths for other config
+    # directives (or avoid relative paths entirely).
+    def working_directory(path)
+      # just let chdir raise errors
+      Dir.chdir(HttpServer::START_CTX[:cwd] = path)
     end
 
     # expands "unix:path/to/foo" to a socket relative to the current path
