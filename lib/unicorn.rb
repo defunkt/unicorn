@@ -490,13 +490,6 @@ module Unicorn
     def spawn_missing_workers
       (0...worker_processes).each do |worker_nr|
         WORKERS.values.include?(worker_nr) and next
-        begin
-          Dir.chdir(START_CTX[:cwd])
-        rescue Errno::ENOENT => err
-          logger.fatal "#{err.inspect} (#{START_CTX[:cwd]})"
-          SIG_QUEUE << :QUIT # forcibly emulate SIGQUIT
-          return
-        end
         worker = Worker.new(worker_nr, Unicorn::Util.tmpio)
         before_fork.call(self, worker)
         WORKERS[fork { worker_loop(worker) }] = worker
