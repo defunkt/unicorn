@@ -511,6 +511,27 @@ module Unicorn
       }
     end
 
+    # if we get any error, try to write something back to the client
+    # assuming we haven't closed the socket, but don't get hung up
+    # if the socket is already closed or broken.  We'll always ensure
+    # the socket is closed at the end of this function
+    def handle_error(client, e)
+      msg = case e
+      when EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF
+        Const::ERROR_500_RESPONSE
+      when HttpParserError # try to tell the client they're bad
+        Const::ERROR_400_RESPONSE
+      else
+        logger.error "Read error: #{e.inspect}"
+        logger.error e.backtrace.join("\n")
+        Const::ERROR_500_RESPONSE
+      end
+      client.write_nonblock(msg)
+      client.close
+      rescue
+        nil
+    end
+
     # once a client is accepted, it is processed in its entirety here
     # in 3 easy steps: read request, call app, write app response
     def process_client(client)
@@ -523,21 +544,8 @@ module Unicorn
         response = app.call(env)
       end
       HttpResponse.write(client, response, HttpRequest::PARSER.headers?)
-    # if we get any error, try to write something back to the client
-    # assuming we haven't closed the socket, but don't get hung up
-    # if the socket is already closed or broken.  We'll always ensure
-    # the socket is closed at the end of this function
-    rescue EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF
-      client.write_nonblock(Const::ERROR_500_RESPONSE) rescue nil
-      client.close rescue nil
-    rescue HttpParserError # try to tell the client they're bad
-      client.write_nonblock(Const::ERROR_400_RESPONSE) rescue nil
-      client.close rescue nil
-    rescue Object => e
-      client.write_nonblock(Const::ERROR_500_RESPONSE) rescue nil
-      client.close rescue nil
-      logger.error "Read error: #{e.inspect}"
-      logger.error e.backtrace.join("\n")
+    rescue => e
+      handle_error(client, e)
     end
 
     # gets rid of stuff the worker has no business keeping track of
