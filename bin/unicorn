@@ -3,7 +3,7 @@
 require 'unicorn/launcher'
 require 'optparse'
 
-env = "development"
+ENV["RACK_ENV"] ||= "development"
 daemonize = false
 listeners = []
 options = { :listeners => listeners }
@@ -58,7 +58,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
 
   opts.on("-E", "--env ENVIRONMENT",
           "use ENVIRONMENT for defaults (default: development)") do |e|
-    env = e
+    ENV["RACK_ENV"] = e
   end
 
   opts.on("-D", "--daemonize", "run daemonized in the background") do |d|
@@ -118,8 +118,6 @@ if config =~ /\.ru$/
   end
 end
 
-ENV['RACK_ENV'] = env
-
 require 'pp' if $DEBUG
 
 app = lambda do ||
@@ -135,7 +133,7 @@ app = lambda do ||
     Object.const_get(File.basename(config, '.rb').capitalize)
   end
   pp({ :inner_app => inner_app }) if $DEBUG
-  case env
+  case ENV["RACK_ENV"]
   when "development"
     Rack::Builder.new do
       use Rack::CommonLogger, $stderr
