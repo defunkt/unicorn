@@ -94,6 +94,15 @@ module Unicorn
 
     def reload #:nodoc:
       instance_eval(File.read(config_file), config_file) if config_file
+
+      # working_directory binds immediately (easier error checking that way),
+      # now ensure any paths we changed are correctly set.
+      [ :pid, :stderr_path, :stdout_path ].each do |var|
+        String === (path = set[var]) or next
+        path = File.expand_path(path)
+        test(?w, path) || test(?w, File.dirname(path)) or \
+              raise ArgumentError, "directory for #{var}=#{path} not writable"
+      end
     end
 
     def commit!(server, options = {}) #:nodoc:
@@ -385,15 +394,11 @@ module Unicorn
 
     def set_path(var, path) #:nodoc:
       case path
-      when NilClass
-      when String
-        path = File.expand_path(path)
-        File.writable?(File.dirname(path)) or \
-               raise ArgumentError, "directory for #{var}=#{path} not writable"
+      when NilClass, String
+        set[var] = path
       else
         raise ArgumentError
       end
-      set[var] = path
     end
 
     def set_hook(var, my_proc, req_arity = 2) #:nodoc:

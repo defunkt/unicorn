@@ -114,6 +114,51 @@ EOF
       FileUtils.rmtree(other.path)
   end
 
+  def test_working_directory_controls_relative_paths
+    other = Tempfile.new('unicorn.wd')
+    File.unlink(other.path)
+    Dir.mkdir(other.path)
+    File.open("config.ru", "wb") do |fp|
+      fp.syswrite <<EOF
+use Rack::ContentLength
+run proc { |env| [ 200, { 'Content-Type' => 'text/plain' }, [ Dir.pwd ] ] }
+EOF
+    end
+    FileUtils.cp("config.ru", other.path + "/config.ru")
+    system('mkfifo', "#{other.path}/fifo")
+    tmp = Tempfile.new('unicorn.config')
+    tmp.syswrite <<EOF
+pid "pid_file_here"
+stderr_path "stderr_log_here"
+stdout_path "stdout_log_here"
+working_directory '#{other.path}'
+listen '#@addr:#@port'
+after_fork do |server, worker|
+  File.open("fifo", "wb").close
+end
+EOF
+    pid = xfork { redirect_test_io { exec($unicorn_bin, "-c#{tmp.path}") } }
+    File.open("#{other.path}/fifo", "rb").close
+
+    assert ! File.exist?("stderr_log_here")
+    assert ! File.exist?("stdout_log_here")
+    assert ! File.exist?("pid_file_here")
+
+    assert ! File.exist?("#@tmpdir/stderr_log_here")
+    assert ! File.exist?("#@tmpdir/stdout_log_here")
+    assert ! File.exist?("#@tmpdir/pid_file_here")
+
+    assert File.exist?("#{other.path}/pid_file_here")
+    assert_equal "#{pid}\n", File.read("#{other.path}/pid_file_here")
+    assert File.exist?("#{other.path}/stderr_log_here")
+    assert File.exist?("#{other.path}/stdout_log_here")
+
+    Process.kill(:QUIT, pid)
+    ensure
+      FileUtils.rmtree(other.path)
+  end
+
+
   def test_exit_signals
     %w(INT TERM QUIT).each do |sig|
       File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
