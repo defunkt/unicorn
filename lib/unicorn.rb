@@ -3,7 +3,6 @@
 require 'fcntl'
 require 'unicorn/socket_helper'
 autoload :Rack, 'rack'
-autoload :Etc, 'etc'
 
 # Unicorn module containing all of the classes (include C extensions) for running
 # a Unicorn web server.  It contains a minimalist HTTP server with just enough
@@ -113,6 +112,8 @@ module Unicorn
     # before_fork/after_fork hooks.  See the Unicorn::Configurator RDoc
     # for examples.
     class Worker < Struct.new(:nr, :tmp)
+
+      autoload :Etc, 'etc'
 
       # worker objects may be compared to just plain numbers
       def ==(other_nr)
