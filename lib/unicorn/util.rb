@@ -21,7 +21,7 @@ module Unicorn
 
         ObjectSpace.each_object(File) do |fp|
           next if fp.closed?
-          next unless (fp.sync && fp.path[0..0] == "/")
+          next unless (fp.sync && fp.path[0] == ?/)
           next unless (fp.fcntl(Fcntl::F_GETFL) & append_flags) == append_flags
 
           begin
