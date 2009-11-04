@@ -357,9 +357,7 @@ module Unicorn
 
     # sets the working directory for Unicorn.  This ensures USR2 will
     # start a new instance of Unicorn in this directory.  This may be
-    # a symlink.  You should specify this directive near the top or
-    # your config file before any relative paths for other config
-    # directives (or avoid relative paths entirely).
+    # a symlink.
     def working_directory(path)
       # just let chdir raise errors
       path = File.expand_path(path)
