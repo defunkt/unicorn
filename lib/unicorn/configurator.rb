@@ -354,7 +354,8 @@ module Unicorn
     def working_directory(path)
       # just let chdir raise errors
       path = File.expand_path(path)
-      Dir.chdir(HttpServer::START_CTX[:cwd] = path)
+      Dir.chdir(path)
+      HttpServer::START_CTX[:cwd] = ENV["PWD"] = path
     end
 
     # expands "unix:path/to/foo" to a socket relative to the current path
