@@ -118,6 +118,8 @@ if config =~ /\.ru$/
   end
 end
 
+ENV['RACK_ENV'] = env
+
 require 'pp' if $DEBUG
 
 app = lambda do ||
