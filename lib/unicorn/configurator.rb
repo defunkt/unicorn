@@ -147,16 +147,7 @@ module Unicorn
     #    # drop permissions to "www-data" in the worker
     #    # generally there's no reason to start Unicorn as a priviledged user
     #    # as it is not recommended to expose Unicorn to public clients.
-    #    uid, gid = Process.euid, Process.egid
-    #    user, group = 'www-data', 'www-data'
-    #    target_uid = Etc.getpwnam(user).uid
-    #    target_gid = Etc.getgrnam(group).gid
-    #    worker.tmp.chown(target_uid, target_gid)
-    #    if uid != target_uid || gid != target_gid
-    #      Process.initgroups(user, target_gid)
-    #      Process::GID.change_privilege(target_gid)
-    #      Process::UID.change_privilege(target_uid)
-    #    end
+    #    worker.user('www-data', 'www-data') if Process.euid == 0
     #  end
     def after_fork(*args, &block)
       set_hook(:after_fork, block_given? ? block : args[0])
