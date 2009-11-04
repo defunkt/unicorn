@@ -353,6 +353,7 @@ module Unicorn
     # directives (or avoid relative paths entirely).
     def working_directory(path)
       # just let chdir raise errors
+      path = File.expand_path(path)
       Dir.chdir(HttpServer::START_CTX[:cwd] = path)
     end
 
