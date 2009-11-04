@@ -28,6 +28,13 @@ use Rack::ContentLength
 run proc { |env| [ 200, { 'Content-Type' => 'text/plain' }, [ "HI\\n" ] ] }
   EOS
 
+  SHOW_RACK_ENV = <<-EOS
+use Rack::ContentLength
+run proc { |env|
+  [ 200, { 'Content-Type' => 'text/plain' }, [ ENV['RACK_ENV'] ] ]
+}
+  EOS
+
   HELLO = <<-EOS
 class Hello
   def call(env)
@@ -183,6 +190,46 @@ EOF
     end
     results = retry_hit(["http://#{@addr}:#{@port}/"])
     assert_equal String, results[0].class
+    assert_shutdown(pid)
+  end
+
+  def test_rack_env_unset
+    File.open("config.ru", "wb") { |fp| fp.syswrite(SHOW_RACK_ENV) }
+    pid = fork { redirect_test_io { exec($unicorn_bin, "-l#@addr:#@port") } }
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_equal "development", results.first
+    assert_shutdown(pid)
+  end
+
+  def test_rack_env_cli_set
+    File.open("config.ru", "wb") { |fp| fp.syswrite(SHOW_RACK_ENV) }
+    pid = fork {
+      redirect_test_io { exec($unicorn_bin, "-l#@addr:#@port", "-Easdf") }
+    }
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_equal "asdf", results.first
+    assert_shutdown(pid)
+  end
+
+  def test_rack_env_ENV_set
+    File.open("config.ru", "wb") { |fp| fp.syswrite(SHOW_RACK_ENV) }
+    pid = fork {
+      ENV["RACK_ENV"] = "foobar"
+      redirect_test_io { exec($unicorn_bin, "-l#@addr:#@port") }
+    }
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_equal "foobar", results.first
+    assert_shutdown(pid)
+  end
+
+  def test_rack_env_cli_override_ENV
+    File.open("config.ru", "wb") { |fp| fp.syswrite(SHOW_RACK_ENV) }
+    pid = fork {
+      ENV["RACK_ENV"] = "foobar"
+      redirect_test_io { exec($unicorn_bin, "-l#@addr:#@port", "-Easdf") }
+    }
+    results = retry_hit(["http://#{@addr}:#{@port}/"])
+    assert_equal "asdf", results.first
     assert_shutdown(pid)
   end
 
