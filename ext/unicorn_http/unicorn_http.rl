@@ -25,14 +25,15 @@
 /* both of these flags need to be set for keepalive to be supported */
 #define UH_FL_KEEPALIVE (UH_FL_KAMETHOD | UH_FL_KAVERSION)
 
+/* keep this small for Rainbows! since every client has one */
 struct http_parser {
   int cs; /* Ragel internal state */
   unsigned int flags;
   size_t mark;
-  union { /* these 3 fields don't nest */
+  size_t offset;
+  union { /* these 2 fields don't nest */
     size_t field;
     size_t query;
-    size_t offset;
   } start;
   union {
     size_t field_len; /* only used during header processing */
@@ -349,7 +350,7 @@ static void http_parser_execute(struct http_parser *hp,
 {
   const char *p, *pe;
   int cs = hp->cs;
-  size_t off = hp->start.offset;
+  size_t off = hp->offset;
 
   if (cs == http_parser_first_final)
     return;
@@ -369,10 +370,10 @@ static void http_parser_execute(struct http_parser *hp,
 post_exec: /* "_out:" also goes here */
   if (hp->cs != http_parser_error)
     hp->cs = cs;
-  hp->start.offset = p - buffer;
+  hp->offset = p - buffer;
 
   assert(p <= pe && "buffer overflow after parsing execute");
-  assert(hp->start.offset <= len && "start.offset longer than length");
+  assert(hp->offset <= len && "offset longer than length");
 }
 
 static struct http_parser *data_get(VALUE self)
@@ -531,12 +532,12 @@ static VALUE HttpParser_headers(VALUE self, VALUE req, VALUE data)
   rb_str_update(data);
 
   http_parser_execute(hp, req, RSTRING_PTR(data), RSTRING_LEN(data));
-  VALIDATE_MAX_LENGTH(hp->start.offset, HEADER);
+  VALIDATE_MAX_LENGTH(hp->offset, HEADER);
 
   if (hp->cs == http_parser_first_final ||
       hp->cs == http_parser_en_ChunkedBody) {
-    advance_str(data, hp->start.offset + 1);
-    hp->start.offset = 0;
+    advance_str(data, hp->offset + 1);
+    hp->offset = 0;
 
     return req;
   }
@@ -637,9 +638,9 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
       if (hp->cs == http_parser_error)
         rb_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
 
-      assert(hp->s.dest_offset <= hp->start.offset &&
+      assert(hp->s.dest_offset <= hp->offset &&
              "destination buffer overflow");
-      advance_str(data, hp->start.offset);
+      advance_str(data, hp->offset);
       rb_str_set_len(buf, hp->s.dest_offset);
 
       if (RSTRING_LEN(buf) == 0 && chunked_eof(hp)) {
@@ -663,7 +664,7 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
       data = Qnil;
     }
   }
-  hp->start.offset = 0; /* for trailer parsing */
+  hp->offset = 0; /* for trailer parsing */
   return data;
 }
 

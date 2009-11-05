@@ -12,6 +12,24 @@ class HttpParserNgTest < Test::Unit::TestCase
     @parser = HttpParser.new
   end
 
+  def test_identity_byte_headers
+    req = {}
+    str = "PUT / HTTP/1.1\r\n"
+    str << "Content-Length: 123\r\n"
+    str << "\r"
+    hdr = ""
+    str.each_byte { |byte|
+      assert_nil @parser.headers(req, hdr << byte.chr)
+    }
+    hdr << "\n"
+    assert_equal req.object_id, @parser.headers(req, hdr).object_id
+    assert_equal '123', req['CONTENT_LENGTH']
+    assert_equal 0, hdr.size
+    assert ! @parser.keepalive?
+    assert @parser.headers?
+    assert 123, @parser.content_length
+  end
+
   def test_identity_step_headers
     req = {}
     str = "PUT / HTTP/1.1\r\n"
@@ -197,6 +215,34 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal req, @parser.trailers(req, str << "\nGET / ")
     assert_equal "GET / ", str
     assert ! @parser.keepalive?
+  end
+
+  def test_trailers_slowly
+    str = "PUT / HTTP/1.1\r\n" \
+          "Trailer: Content-MD5\r\n" \
+          "transfer-Encoding: chunked\r\n\r\n" \
+          "1\r\na\r\n2\r\n..\r\n0\r\n"
+    req = {}
+    assert_equal req, @parser.headers(req, str)
+    assert_equal 'Content-MD5', req['HTTP_TRAILER']
+    assert_nil req['HTTP_CONTENT_MD5']
+    tmp = ''
+    assert_nil @parser.filter_body(tmp, str)
+    assert_equal 'a..', tmp
+    md5_b64 = [ Digest::MD5.digest(tmp) ].pack('m').strip.freeze
+    rv = @parser.filter_body(tmp, str)
+    assert_equal rv.object_id, str.object_id
+    assert_equal '', str
+    assert_nil @parser.trailers(req, str)
+    md5_hdr = "Content-MD5: #{md5_b64}\r\n".freeze
+    md5_hdr.each_byte { |byte|
+      str << byte.chr
+      assert_nil @parser.trailers(req, str)
+    }
+    assert_equal md5_b64, req['HTTP_CONTENT_MD5']
+    assert_equal "CONTENT_MD5: #{md5_b64}\r\n", str
+    assert_nil @parser.trailers(req, str << "\r")
+    assert_equal req, @parser.trailers(req, str << "\n")
   end
 
   def test_max_chunk
