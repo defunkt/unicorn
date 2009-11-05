@@ -142,7 +142,7 @@ module Unicorn
 
     def finalize_input
       while parser.trailers(req, buf).nil?
-        buf << socket.readpartial(Const::CHUNK_SIZE, @buf2)
+        buf << socket.readpartial(Const::CHUNK_SIZE)
       end
       self.socket = nil
     end
