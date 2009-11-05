@@ -4,6 +4,16 @@ require 'fcntl'
 require 'tmpdir'
 
 module Unicorn
+
+  class TmpIO < ::File
+
+    # for easier env["rack.input"] compatibility
+    def size
+      # flush if sync
+      stat.size
+    end
+  end
+
   class Util
     class << self
 
@@ -47,8 +57,8 @@ module Unicorn
       # buffering is disabled
       def tmpio
         fp = begin
-          File.open("#{Dir::tmpdir}/#{rand}",
-                    File::RDWR|File::CREAT|File::EXCL, 0600)
+          TmpIO.open("#{Dir::tmpdir}/#{rand}",
+                     File::RDWR|File::CREAT|File::EXCL, 0600)
         rescue Errno::EEXIST
           retry
         end

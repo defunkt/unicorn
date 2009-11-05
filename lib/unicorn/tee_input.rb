@@ -38,7 +38,7 @@ module Unicorn
         @tmp.seek(pos)
       end
 
-      @size = tmp_size
+      @size = @tmp.size
     end
 
     # call-seq:
@@ -73,7 +73,7 @@ module Unicorn
         rv
       else
         rv = args.shift || @buf2.dup
-        diff = tmp_size - @tmp.pos
+        diff = @tmp.size - @tmp.pos
         if 0 == diff
           ensure_length(tee(length, rv), length)
         else
@@ -87,7 +87,7 @@ module Unicorn
       socket or return @tmp.gets
       nil == $/ and return read
 
-      orig_size = tmp_size
+      orig_size = @tmp.size
       if @tmp.pos == orig_size
         tee(Const::CHUNK_SIZE, @buf2) or return nil
         @tmp.seek(orig_size)
@@ -145,10 +145,6 @@ module Unicorn
         buf << socket.readpartial(Const::CHUNK_SIZE)
       end
       self.socket = nil
-    end
-
-    def tmp_size
-      StringIO === @tmp ? @tmp.size : @tmp.stat.size
     end
 
     # tee()s into +buf+ until it is of +length+ bytes (or until

@@ -127,7 +127,7 @@ class TestTeeInput < Test::Unit::TestCase
     assert ! @parser.body_eof?
     assert_kind_of File, ti.instance_eval { @tmp }
     assert_equal 0, ti.instance_eval { @tmp.pos }
-    assert_equal 1, ti.instance_eval { tmp_size }
+    assert_equal 1, ti.instance_eval { @tmp.size }
     assert_equal Unicorn::Const::MAX_BODY + 1, ti.size
     nr = Unicorn::Const::MAX_BODY / 4
     pid = fork {
