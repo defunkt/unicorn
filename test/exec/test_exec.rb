@@ -159,6 +159,7 @@ EOF
     assert_equal "#{pid}\n", File.read("#{other.path}/pid_file_here")
     assert File.exist?("#{other.path}/stderr_log_here")
     assert File.exist?("#{other.path}/stdout_log_here")
+    wait_master_ready("#{other.path}/stderr_log_here")
 
     Process.kill(:QUIT, pid)
     ensure
