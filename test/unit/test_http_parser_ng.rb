@@ -190,6 +190,26 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert ! @parser.keepalive?
   end
 
+  def test_chunks_bytewise
+    chunked = "10\r\nabcdefghijklmnop\r\n11\r\n0123456789abcdefg\r\n0\r\n"
+    str = "PUT / HTTP/1.1\r\ntransfer-Encoding: chunked\r\n\r\n#{chunked}"
+    req = {}
+    assert_equal req, @parser.headers(req, str)
+    assert_equal chunked, str
+    tmp = ''
+    buf = ''
+    body = ''
+    str = str[0..-2]
+    str.each_byte { |byte|
+      assert_nil @parser.filter_body(tmp, buf << byte.chr)
+      body << tmp
+    }
+    assert_equal 'abcdefghijklmnop0123456789abcdefg', body
+    rv = @parser.filter_body(tmp, buf << "\n")
+    assert_equal rv.object_id, buf.object_id
+    assert ! @parser.keepalive?
+  end
+
   def test_trailers
     str = "PUT / HTTP/1.1\r\n" \
           "Trailer: Content-MD5\r\n" \
