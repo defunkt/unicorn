@@ -138,6 +138,10 @@ All unrecognized values for RACK_ENV are assumed to be
 "none".  Production deployments are strongly encouraged to use
 "deployment" or "none" for maximum performance.
 
+As of Unicorn 0.94.0, RACK_ENV is exported as a process-wide environment
+variable as well.  While not current a part of the Rack specification as
+of Rack 1.0.1, this has become a de facto standard in the Rack world.
+
 Note that the Rack::ContentLength and Rack::Chunked middlewares
 are never loaded by default.  If needed, they should be
 individually specified in the RACKUP_FILE, some frameworks do
@@ -145,6 +149,7 @@ not require them.
 
 # ENVIRONMENT VARIABLES
 
+The RACK_ENV variable is set by the aforementioned \-E switch.
 All application or library-specific environment variables (e.g. TMPDIR)
 may always be set in the Unicorn CONFIG_FILE in addition to the spawning
 shell.  When transparently upgrading Unicorn, all environment variables
