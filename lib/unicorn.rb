@@ -507,7 +507,10 @@ module Unicorn
     # worker.
     def murder_lazy_workers
       WORKERS.dup.each_pair do |wpid, worker|
-        (diff = (Time.now - worker.tmp.stat.ctime)) <= timeout and next
+        stat = worker.tmp.stat
+        # skip workers that disable fchmod or have never fchmod-ed
+        stat.mode == 0100600 and next
+        (diff = (Time.now - stat.ctime)) <= timeout and next
         logger.error "worker=#{worker.nr} PID:#{wpid} timeout " \
                      "(#{diff}s > #{timeout}s), killing"
         kill_worker(:KILL, wpid) # take no prisoners for timeout violations
