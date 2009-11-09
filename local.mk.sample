@@ -5,27 +5,36 @@
 # This is depends on a bunch of GNU-isms from bash, sed, touch.
 
 DLEXT := so
-rack_ver := 1.0.0
+gems := rack-1.0.1
 
 # Avoid loading rubygems to speed up tests because gmake is
 # fork+exec heavy with Ruby.
+prefix = $(HOME)
 ifeq ($(r19),)
-  ruby := $(HOME)/bin/ruby
-  RUBYLIB := $(HOME)/lib/ruby/gems/1.8/gems/rack-$(rack_ver)/lib
+  ruby := $(prefix)/bin/ruby
+  gem_paths := $(addprefix $(prefix)/lib/ruby/gems/1.8/gems/,$(gems))
 else
-  export PATH := $(HOME)/ruby-1.9/bin:$(PATH)
-  ruby := $(HOME)/ruby-1.9/bin/ruby --disable-gems
-  RUBYLIB := $(HOME)/ruby-1.9/lib/ruby/gems/1.9.1/gems/rack-$(rack_ver)/lib
+  prefix := $(prefix)/ruby-1.9
+  export PATH := $(prefix)/bin:$(PATH)
+  ruby := $(prefix)/bin/ruby --disable-gems
+  gem_paths := $(addprefix $(prefix)/lib/ruby/gems/1.9.1/gems/,$(gems))
 endif
 
-# pipefail is THE reason to use bash (v3+)
-SHELL := /bin/bash -e -o pipefail
+ifdef gem_paths
+  sp :=
+  sp +=
+  export RUBYLIB := $(subst $(sp),:,$(addsuffix /lib,$(gem_paths)))
+endif
+
+# pipefail is THE reason to use bash (v3+) or never revisions of ksh93
+# SHELL := /bin/bash -e -o pipefail
+SHELL := /bin/ksh93 -e -o pipefail
 
 full-test: test-18 test-19
 test-18:
-	$(MAKE) test test-rails 2>&1 | sed -u -e 's!^!1.8 !'
+	$(MAKE) test test-rails 2>&1 | sed -e 's!^!1.8 !'
 test-19:
-	$(MAKE) test test-rails r19=1 2>&1 | sed -u -e 's!^!1.9 !'
+	$(MAKE) test test-rails r19=1 2>&1 | sed -e 's!^!1.9 !'
 
 latest: NEWS
 	@awk 'BEGIN{RS="=== ";ORS=""}NR==2{sub(/\n$$/,"");print RS""$$0 }' < $<
