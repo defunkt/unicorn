@@ -725,6 +725,10 @@ module Unicorn
 
     def build_app!
       if app.respond_to?(:arity) && app.arity == 0
+        # exploit COW in case of preload_app.  Also avoids race
+        # conditions in Rainbows! since load/require are not thread-safe
+        Unicorn.constants.each { |x| Unicorn.const_get(x) }
+
         if defined?(Gem) && Gem.respond_to?(:refresh)
           logger.info "Refreshing Gem list"
           Gem.refresh
