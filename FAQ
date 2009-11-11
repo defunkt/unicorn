@@ -1,0 +1,39 @@
+= Frequently Asked Questions about Unicorn
+
+=== Why are my redirects going to "http" URLs when my site uses https?
+
+If your site is entirely behind https, then Rack applications that use
+"rack.url_scheme" can set the following in the Unicorn config file:
+
+  HttpRequest::DEFAULTS["rack.url_scheme"] = "https"
+
+Otherwise, you can configure your proxy (nginx) to send the
+"X-Forwarded-Proto: https" header only for parts of the site that use
+https.  For nginx, you can do it with the following line in appropriate
+"location" blocks of your nginx config file:
+
+  proxy_set_header X-Forwarded-Proto https;
+
+=== Why are log messages from Unicorn are unformatted when using Rails?
+
+Current versions of Rails unfortunately overrides the default Logger
+formatter.
+
+You can undo this behavior with the default logger in your Unicorn
+config file:
+
+  Configurator::DEFAULTS[:logger].formatter = Logger::Formatter.new
+
+Of course you can specify an entirely different logger as well
+with the "logger" directive described by Configurator.
+
+=== Why am I getting "connection refused"/502 errors under high load?
+
+Short answer: your application cannot keep up.
+
+You can increase the size of the :backlog parameter if your kernel
+supports a larger listen() queue, but keep in mind having a large listen
+queue makes failover to a different machine more difficult.
+
+See the TUNING and Configurator documents for more information on
+:backlog-related topics.
