@@ -25,7 +25,7 @@ config file:
   Configurator::DEFAULTS[:logger].formatter = Logger::Formatter.new
 
 Of course you can specify an entirely different logger as well
-with the "logger" directive described by Configurator.
+with the "logger" directive described by Unicorn::Configurator.
 
 === Why am I getting "connection refused"/502 errors under high load?
 
@@ -35,5 +35,5 @@ You can increase the size of the :backlog parameter if your kernel
 supports a larger listen() queue, but keep in mind having a large listen
 queue makes failover to a different machine more difficult.
 
-See the TUNING and Configurator documents for more information on
-:backlog-related topics.
+See the TUNING and Unicorn::Configurator documents for more information
+on :backlog-related topics.
