@@ -124,7 +124,7 @@ module Unicorn
   private
 
     # tees off a +length+ chunk of data from the input into the IO
-    # backing store as well as returning it.  +buf+ must be specified.
+    # backing store as well as returning it.  +dst+ must be specified.
     # returns nil if reading from the input returns nil
     def tee(length, dst)
       unless parser.body_eof?
