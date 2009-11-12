@@ -128,13 +128,10 @@ module Unicorn
     # returns nil if reading from the input returns nil
     def tee(length, dst)
       unless parser.body_eof?
-        begin
-          if parser.filter_body(dst, socket.readpartial(length, buf)).nil?
-            @tmp.write(dst)
-            @tmp.seek(0, IO::SEEK_END) # workaround FreeBSD/OSX + MRI 1.8.x bug
-            return dst
-          end
-        rescue EOFError
+        if parser.filter_body(dst, socket.readpartial(length, buf)).nil?
+          @tmp.write(dst)
+          @tmp.seek(0, IO::SEEK_END) # workaround FreeBSD/OSX + MRI 1.8.x bug
+          return dst
         end
       end
       finalize_input
@@ -159,8 +156,8 @@ module Unicorn
       # block the caller in that case.
       return buf if buf.nil? || @size.nil?
 
-      while buf.size < length && @size != @tmp.pos
-        buf << tee(length - buf.size, @buf2)
+      while buf.size < length && tee(length - buf.size, @buf2)
+        buf << @buf2
       end
 
       buf
