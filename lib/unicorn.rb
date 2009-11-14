@@ -142,6 +142,7 @@ module Unicorn
         # capabilities.  Let the caller handle any and all errors.
         uid = Etc.getpwnam(user).uid
         gid = Etc.getgrnam(group).gid if group
+        Unicorn::Util.chown_logs(uid, gid)
         tmp.chown(uid, gid)
         if gid && Process.egid != gid
           Process.initgroups(user, gid)

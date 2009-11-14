@@ -50,6 +50,13 @@ automatically respawned.
   the current request, so multiple log lines for one request
   (as done by Rails) will not be split across multiple logs.
 
+  It is NOT recommended to send the USR1 signal directly to workers via
+  "killall -USR1 unicorn" if you are using user/group-switching support
+  in your workers.  You will encounter incorrect file permissions and
+  workers will need to be respawned.  Sending USR1 to the master process
+  first will ensure logs have the correct permissions before the master
+  forwards the USR1 signal to workers.
+
 === Procedure to replace a running unicorn executable
 
 You may replace a running instance of unicorn with a new one without

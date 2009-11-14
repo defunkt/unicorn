@@ -17,6 +17,22 @@ module Unicorn
   class Util
     class << self
 
+      def is_log?(fp)
+        append_flags = File::WRONLY | File::APPEND
+
+        ! fp.closed? &&
+          fp.sync &&
+          fp.path[0] == ?/ &&
+          (fp.fcntl(Fcntl::F_GETFL) & append_flags) == append_flags
+      end
+
+      def chown_logs(uid, gid)
+        ObjectSpace.each_object(File) do |fp|
+          is_log?(fp) or next
+          fp.chown(uid, gid)
+        end
+      end
+
       # This reopens ALL logfiles in the process that have been rotated
       # using logrotate(8) (without copytruncate) or similar tools.
       # A +File+ object is considered for reopening if it is:
@@ -27,16 +43,13 @@ module Unicorn
       # Returns the number of files reopened
       def reopen_logs
         nr = 0
-        append_flags = File::WRONLY | File::APPEND
 
         ObjectSpace.each_object(File) do |fp|
-          next if fp.closed?
-          next unless (fp.sync && fp.path[0] == ?/)
-          next unless (fp.fcntl(Fcntl::F_GETFL) & append_flags) == append_flags
-
+          is_log?(fp) or next
+          orig_st = fp.stat
           begin
-            a, b = fp.stat, File.stat(fp.path)
-            next if a.ino == b.ino && a.dev == b.dev
+            b = File.stat(fp.path)
+            next if orig_st.ino == b.ino && orig_st.dev == b.dev
           rescue Errno::ENOENT
           end
 
@@ -47,6 +60,10 @@ module Unicorn
           end
           fp.reopen(fp.path, open_arg)
           fp.sync = true
+          new_st = fp.stat
+          if orig_st.uid != new_st.uid || orig_st.gid != new_st.gid
+            fp.chown(orig_st.uid, orig_st.gid)
+          end
           nr += 1
         end # each_object
         nr
