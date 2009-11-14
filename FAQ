@@ -7,6 +7,12 @@ If your site is entirely behind https, then Rack applications that use
 
   HttpRequest::DEFAULTS["rack.url_scheme"] = "https"
 
+For frameworks that do not use "rack.url_scheme", you can also
+try setting one or both of the following:
+
+  HttpRequest::DEFAULTS["HTTPS"] = "on"
+  HttpRequest::DEFAULTS["HTTP_X_FORWARDED_PROTO"] = "https"
+
 Otherwise, you can configure your proxy (nginx) to send the
 "X-Forwarded-Proto: https" header only for parts of the site that use
 https.  For nginx, you can do it with the following line in appropriate
