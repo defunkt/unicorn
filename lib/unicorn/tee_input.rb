@@ -135,10 +135,21 @@ module Unicorn
         end
       end
       finalize_input
+      rescue EOFError
+        # in case client only did a premature shutdown(SHUT_WR)
+        # we do support clients that shutdown(SHUT_WR) after the
+        # _entire_ request has been sent, and those will not have
+        # raised EOFError on us.
+        socket.close if socket
+        raise ClientShutdown, "bytes_read=#{@tmp.size}", []
     end
 
     def finalize_input
       while parser.trailers(req, buf).nil?
+        # Don't worry about throw-ing :http_499 here on EOFError, tee()
+        # will catch EOFError when app is processing it, otherwise in
+        # initialize we never get any chance to enter the app so the
+        # EOFError will just get trapped by Unicorn and not the Rack app
         buf << socket.readpartial(Const::CHUNK_SIZE)
       end
       self.socket = nil

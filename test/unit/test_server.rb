@@ -12,11 +12,12 @@ include Unicorn
 
 class TestHandler 
 
-  def call(env) 
-  #   response.socket.write("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nhello!\n")
+  def call(env)
     while env['rack.input'].read(4096)
     end
     [200, { 'Content-Type' => 'text/plain' }, ['hello!\n']]
+    rescue Unicorn::ClientShutdown => e
+      $stderr.syswrite("#{e.class}: #{e.message} #{e.backtrace.empty?}\n")
    end
 end
 
@@ -103,6 +104,62 @@ class WebServerTest < Test::Unit::TestCase
     assert_equal 'hello!\n', results[0], "Handler didn't really run"
   end
 
+  def test_client_shutdown_writes
+    sock = nil
+    buf = nil
+    bs = 15609315 * rand
+    assert_nothing_raised do
+      sock = TCPSocket.new('127.0.0.1', @port)
+      sock.syswrite("PUT /hello HTTP/1.1\r\n")
+      sock.syswrite("Host: example.com\r\n")
+      sock.syswrite("Transfer-Encoding: chunked\r\n")
+      sock.syswrite("Trailer: X-Foo\r\n")
+      sock.syswrite("\r\n")
+      sock.syswrite("%x\r\n" % [ bs ])
+      sock.syswrite("F" * bs)
+      sock.syswrite("\r\n0\r\nX-")
+      "Foo: bar\r\n\r\n".each_byte do |x|
+        sock.syswrite x.chr
+        sleep 0.05
+      end
+      # we wrote the entire request before shutting down, server should
+      # continue to process our request and never hit EOFError on our sock
+      sock.shutdown(Socket::SHUT_WR)
+      buf = sock.read
+    end
+    assert_equal 'hello!\n', buf.split(/\r\n\r\n/).last
+    lines = File.readlines("test_stderr.#$$.log")
+    assert lines.grep(/^Unicorn::ClientShutdown: /).empty?
+    assert_nothing_raised { sock.close }
+  end
+
+  def test_client_shutdown_write_truncates
+    sock = nil
+    buf = nil
+    bs = 15609315 * rand
+    assert_nothing_raised do
+      sock = TCPSocket.new('127.0.0.1', @port)
+      sock.syswrite("PUT /hello HTTP/1.1\r\n")
+      sock.syswrite("Host: example.com\r\n")
+      sock.syswrite("Transfer-Encoding: chunked\r\n")
+      sock.syswrite("Trailer: X-Foo\r\n")
+      sock.syswrite("\r\n")
+      sock.syswrite("%x\r\n" % [ bs ])
+      sock.syswrite("F" * (bs / 2.0))
+
+      # shutdown prematurely, this will force the server to abort
+      # processing on us even during app dispatch
+      sock.shutdown(Socket::SHUT_WR)
+      IO.select([sock], nil, nil, 60) or raise "Timed out"
+      buf = sock.read
+    end
+    assert_equal "", buf
+    lines = File.readlines("test_stderr.#$$.log")
+    lines = lines.grep(/^Unicorn::ClientShutdown: bytes_read=\d+/)
+    assert_equal 1, lines.size
+    assert_match %r{\AUnicorn::ClientShutdown: bytes_read=\d+ true$}, lines[0]
+    assert_nothing_raised { sock.close }
+  end
 
   def do_test(string, chunk, close_after=nil, shutdown_delay=0)
     # Do not use instance variables here, because it needs to be thread safe

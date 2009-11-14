@@ -8,6 +8,12 @@ autoload :Rack, 'rack'
 # a Unicorn web server.  It contains a minimalist HTTP server with just enough
 # functionality to service web application requests fast as possible.
 module Unicorn
+
+  # raise this inside TeeInput when a client disconnects inside the
+  # application dispatch
+  class ClientShutdown < EOFError
+  end
+
   autoload :Const, 'unicorn/const'
   autoload :HttpRequest, 'unicorn/http_request'
   autoload :HttpResponse, 'unicorn/http_response'
