@@ -7,7 +7,7 @@ module Unicorn
 
   # Implements a simple DSL for configuring a Unicorn server.
   #
-  # Example (when used with the unicorn config file):
+  # Example (when used with the Unicorn config file):
   #   worker_processes 4
   #   working_directory "/path/to/deploy/app/current"
   #   listen '/tmp/my_app.sock', :backlog => 1
@@ -22,12 +22,16 @@ module Unicorn
   #     GC.copy_on_write_friendly = true
   #
   #   before_fork do |server, worker|
-  #     # the following is recomended for Rails + "preload_app true"
+  #     # the following is highly recomended for Rails + "preload_app true"
   #     # as there's no need for the master process to hold a connection
   #     defined?(ActiveRecord::Base) and
   #       ActiveRecord::Base.connection.disconnect!
   #
-  #     # the following allows a new master process to incrementally
+  #     # The following is only recommended for memory/DB-constrained
+  #     # installations.  It is not needed if your system can house
+  #     # twice as many worker_processes as you have configured.
+  #
+  #     # This allows a new master process to incrementally
   #     # phase out the old master process with SIGTTOU to avoid a
   #     # thundering herd (especially in the "preload_app false" case)
   #     # when doing a transparent upgrade.  The last worker spawned
@@ -41,7 +45,7 @@ module Unicorn
   #       end
   #     end
   #
-  #     # optionally throttle the master from forking too quickly by sleeping
+  #     # *optionally* throttle the master from forking too quickly by sleeping
   #     sleep 1
   #   end
   #
@@ -50,7 +54,7 @@ module Unicorn
   #     addr = "127.0.0.1:#{9293 + worker.nr}"
   #     server.listen(addr, :tries => -1, :delay => 5, :tcp_nopush => true)
   #
-  #     # the following is required for Rails + "preload_app true",
+  #     # the following is *required* for Rails + "preload_app true",
   #     defined?(ActiveRecord::Base) and
   #       ActiveRecord::Base.establish_connection
   #
@@ -203,7 +207,11 @@ module Unicorn
     end
 
     # sets the current number of worker_processes to +nr+.  Each worker
-    # process will serve exactly one client at a time.
+    # process will serve exactly one client at a time.  You can
+    # increment or decrement this value at runtime by sending SIGTTIN
+    # or SIGTTOU respectively to the master process without reloading
+    # the rest of your Unicorn configuration.  See the SIGNALS document
+    # for more information.
     def worker_processes(nr)
       Integer === nr or raise ArgumentError,
                              "not an integer: worker_processes=#{nr.inspect}"
