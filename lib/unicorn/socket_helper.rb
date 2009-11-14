@@ -88,7 +88,7 @@ module Unicorn
                   "socket=#{address} specified but it is not a socket!"
           end
         end
-        old_umask = File.umask(0)
+        old_umask = File.umask(opt[:umask] || 0)
         begin
           UNIXServer.new(address)
         ensure

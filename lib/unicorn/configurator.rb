@@ -291,10 +291,22 @@ module Unicorn
     # +:delay+: seconds to wait between successive +tries+
     #
     # Default: 0.5 seconds
+    #
+    # +:umask+: sets the file mode creation mask for UNIX sockets
+    #
+    # Typically UNIX domain sockets are created with more liberal
+    # file permissions than the rest of the application.  By default,
+    # we create UNIX domain sockets to be readable and writable by
+    # all local users to give them the same accessibility as
+    # locally-bound TCP listeners.
+    #
+    # This has no effect on TCP listeners.
+    #
+    # Default: 0 (world read/writable)
     def listen(address, opt = {})
       address = expand_addr(address)
       if String === address
-        [ :backlog, :sndbuf, :rcvbuf, :tries ].each do |key|
+        [ :umask, :backlog, :sndbuf, :rcvbuf, :tries ].each do |key|
           value = opt[key] or next
           Integer === value or
             raise ArgumentError, "not an integer: #{key}=#{value.inspect}"

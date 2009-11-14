@@ -63,6 +63,20 @@ class TestSocketHelper < Test::Unit::TestCase
       File.umask(old_umask)
   end
 
+  def test_bind_listen_unix_umask
+    old_umask = File.umask(0777)
+    tmp = Tempfile.new 'unix.sock'
+    @unix_listener_path = tmp.path
+    File.unlink(@unix_listener_path)
+    @unix_listener = bind_listen(@unix_listener_path, :umask => 077)
+    assert UNIXServer === @unix_listener
+    assert_equal @unix_listener_path, sock_name(@unix_listener)
+    assert_equal 0140700, File.stat(@unix_listener_path).mode
+    assert_equal 0777, File.umask
+    ensure
+      File.umask(old_umask)
+  end
+
   def test_bind_listen_unix_idempotent
     test_bind_listen_unix
     a = bind_listen(@unix_listener)
