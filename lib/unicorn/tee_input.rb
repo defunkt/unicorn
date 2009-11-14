@@ -146,7 +146,7 @@ module Unicorn
 
     def finalize_input
       while parser.trailers(req, buf).nil?
-        # Don't worry about throw-ing :http_499 here on EOFError, tee()
+        # Don't worry about raising ClientShutdown here on EOFError, tee()
         # will catch EOFError when app is processing it, otherwise in
         # initialize we never get any chance to enter the app so the
         # EOFError will just get trapped by Unicorn and not the Rack app
