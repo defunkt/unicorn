@@ -144,23 +144,23 @@ module Unicorn
       self.socket = nil
     end
 
-    # tee()s into +buf+ until it is of +length+ bytes (or until
+    # tee()s into +dst+ until it is of +length+ bytes (or until
     # we've reached the Content-Length of the request body).
-    # Returns +buf+ (the exact object, not a duplicate)
+    # Returns +dst+ (the exact object, not a duplicate)
     # To continue supporting applications that need near-real-time
     # streaming input bodies, this is a no-op for
     # "Transfer-Encoding: chunked" requests.
-    def ensure_length(buf, length)
+    def ensure_length(dst, length)
       # @size is nil for chunked bodies, so we can't ensure length for those
       # since they could be streaming bidirectionally and we don't want to
       # block the caller in that case.
-      return buf if buf.nil? || @size.nil?
+      return dst if dst.nil? || @size.nil?
 
-      while buf.size < length && tee(length - buf.size, @buf2)
-        buf << @buf2
+      while dst.size < length && tee(length - dst.size, @buf2)
+        dst << @buf2
       end
 
-      buf
+      dst
     end
 
   end
