@@ -9,8 +9,10 @@ autoload :Rack, 'rack'
 # functionality to service web application requests fast as possible.
 module Unicorn
 
-  # raise this inside TeeInput when a client disconnects inside the
-  # application dispatch
+  # raised inside TeeInput when a client closes the socket inside the
+  # application dispatch.  This is always raised with an empty backtrace
+  # since there is nothing in the application stack that is responsible
+  # for client shutdowns/disconnects.
   class ClientShutdown < EOFError
   end
 
