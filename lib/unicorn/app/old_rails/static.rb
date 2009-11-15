@@ -21,9 +21,11 @@
 # fast as if you use a static server like nginx).
 class Unicorn::App::OldRails::Static < Struct.new(:app, :root, :file_server)
   FILE_METHODS = { 'GET' => true, 'HEAD' => true }
-  REQUEST_METHOD = 'REQUEST_METHOD'.freeze
-  REQUEST_URI = 'REQUEST_URI'.freeze
-  PATH_INFO = 'PATH_INFO'.freeze
+
+  # avoid allocating new strings for hash lookups
+  REQUEST_METHOD = 'REQUEST_METHOD'
+  REQUEST_URI = 'REQUEST_URI'
+  PATH_INFO = 'PATH_INFO'
 
   def initialize(app)
     self.app = app
