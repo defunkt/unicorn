@@ -375,7 +375,7 @@ module Unicorn
         end
       rescue Errno::EINTR
         retry
-      rescue Object => e
+      rescue => e
         logger.error "Unhandled master loop exception #{e.inspect}."
         logger.error e.backtrace.join("\n")
         retry
@@ -477,7 +477,7 @@ module Unicorn
           logger.error "old PID:#{valid_pid?(old_pid)} running with " \
                        "existing pid=#{old_pid}, refusing rexec"
           return
-        rescue Object => e
+        rescue => e
           logger.error "error writing pid=#{old_pid} #{e.class} #{e.message}"
           return
         end
@@ -663,7 +663,7 @@ module Unicorn
         rescue Errno::EBADF
           nr < 0 or return
         end
-      rescue Object => e
+      rescue => e
         if alive
           logger.error "Unhandled listen loop exception #{e.inspect}."
           logger.error e.backtrace.join("\n")
@@ -719,7 +719,7 @@ module Unicorn
         self.app = orig_app
         build_app! if preload_app
         logger.info "done reloading config_file=#{config.config_file}"
-      rescue Object => e
+      rescue => e
         logger.error "error reloading config_file=#{config.config_file}: " \
                      "#{e.class} #{e.message}"
       end

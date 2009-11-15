@@ -21,7 +21,7 @@ class Unicorn::App::OldRails
       Dispatcher.dispatch(cgi,
           ActionController::CgiRequest::DEFAULT_SESSION_OPTIONS,
           cgi.body)
-    rescue Object => e
+    rescue => e
       err = env['rack.errors']
       err.write("#{e} #{e.message}\n")
       e.backtrace.each { |line| err.write("#{line}\n") }
