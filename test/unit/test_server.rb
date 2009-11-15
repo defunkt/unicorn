@@ -16,8 +16,9 @@ class TestHandler
     while env['rack.input'].read(4096)
     end
     [200, { 'Content-Type' => 'text/plain' }, ['hello!\n']]
-    rescue Unicorn::ClientShutdown => e
+    rescue Unicorn::ClientShutdown, Unicorn::HttpParserError => e
       $stderr.syswrite("#{e.class}: #{e.message} #{e.backtrace.empty?}\n")
+      raise e
    end
 end
 
@@ -163,6 +164,32 @@ class WebServerTest < Test::Unit::TestCase
     assert_equal 1, lines.size
     assert_match %r{\AUnicorn::ClientShutdown: bytes_read=\d+ true$}, lines[0]
     assert_nothing_raised { sock.close }
+  end
+
+  def test_client_malformed_body
+    sock = nil
+    buf = nil
+    bs = 15653984
+    assert_nothing_raised do
+      sock = TCPSocket.new('127.0.0.1', @port)
+      sock.syswrite("PUT /hello HTTP/1.1\r\n")
+      sock.syswrite("Host: example.com\r\n")
+      sock.syswrite("Transfer-Encoding: chunked\r\n")
+      sock.syswrite("Trailer: X-Foo\r\n")
+      sock.syswrite("\r\n")
+      sock.syswrite("%x\r\n" % [ bs ])
+      sock.syswrite("F" * bs)
+    end
+    begin
+      File.open("/dev/urandom", "rb") { |fp| sock.syswrite(fp.sysread(16384)) }
+    rescue
+    end
+    assert_nothing_raised { sock.close }
+    next_client = Net::HTTP.get(URI.parse("http://127.0.0.1:#@port/"))
+    assert_equal 'hello!\n', next_client
+    lines = File.readlines("test_stderr.#$$.log")
+    lines = lines.grep(/^Unicorn::HttpParserError: .* true$/)
+    assert_equal 1, lines.size
   end
 
   def do_test(string, chunk, close_after=nil, shutdown_delay=0)

@@ -123,6 +123,21 @@ module Unicorn
 
   private
 
+    def client_error(e)
+      case e
+      when EOFError
+        # in case client only did a premature shutdown(SHUT_WR)
+        # we do support clients that shutdown(SHUT_WR) after the
+        # _entire_ request has been sent, and those will not have
+        # raised EOFError on us.
+        socket.close if socket
+        raise ClientShutdown, "bytes_read=#{@tmp.size}", []
+      when HttpParserError
+        e.set_backtrace([])
+        raise e
+      end
+    end
+
     # tees off a +length+ chunk of data from the input into the IO
     # backing store as well as returning it.  +dst+ must be specified.
     # returns nil if reading from the input returns nil
@@ -135,13 +150,8 @@ module Unicorn
         end
       end
       finalize_input
-      rescue EOFError
-        # in case client only did a premature shutdown(SHUT_WR)
-        # we do support clients that shutdown(SHUT_WR) after the
-        # _entire_ request has been sent, and those will not have
-        # raised EOFError on us.
-        socket.close if socket
-        raise ClientShutdown, "bytes_read=#{@tmp.size}", []
+      rescue => e
+        client_error(e)
     end
 
     def finalize_input
