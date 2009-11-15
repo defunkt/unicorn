@@ -11,16 +11,23 @@ module Unicorn
     when /linux/
       # from /usr/include/linux/tcp.h
       TCP_DEFER_ACCEPT = 9 unless defined?(TCP_DEFER_ACCEPT)
+
+      # do not send out partial frames (Linux)
       TCP_CORK = 3 unless defined?(TCP_CORK)
     when /freebsd(([1-4]\..{1,2})|5\.[0-4])/
       # Do nothing for httpready, just closing a bug when freebsd <= 5.4
-      TCP_NOPUSH = 4 unless defined?(TCP_NOPUSH)
+      TCP_NOPUSH = 4 unless defined?(TCP_NOPUSH) # :nodoc:
     when /freebsd/
+      # do not send out partial frames (FreeBSD)
       TCP_NOPUSH = 4 unless defined?(TCP_NOPUSH)
+
       # Use the HTTP accept filter if available.
       # The struct made by pack() is defined in /usr/include/sys/socket.h
       # as accept_filter_arg
       unless `/sbin/sysctl -nq net.inet.accf.http`.empty?
+        # set set the "httpready" accept filter in FreeBSD if available
+        # if other protocols are to be supported, this may be
+        # String#replace-d with "dataready" arguments instead
         FILTER_ARG = ['httpready', nil].pack('a16a240')
       end
     end
