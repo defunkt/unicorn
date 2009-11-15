@@ -171,7 +171,6 @@ app = lambda do ||
       $stderr.puts "LogTailer not available for Rails < 2.3" unless daemonize
       $stderr.puts "Debugger not available" if $DEBUG
       map(map_path) do
-        require 'unicorn/app/old_rails/static'
         use Unicorn::App::OldRails::Static
         run inner_app
       end

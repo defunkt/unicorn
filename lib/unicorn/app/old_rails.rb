@@ -13,6 +13,8 @@ module Unicorn; module App; end; end
 # Implements a handler that can run Rails.
 class Unicorn::App::OldRails
 
+  autoload :Static, "unicorn/app/old_rails/static"
+
   def call(env)
     cgi = Unicorn::CGIWrapper.new(env)
     begin
