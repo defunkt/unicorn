@@ -128,6 +128,8 @@ class WebServerTest < Test::Unit::TestCase
       buf = sock.read
     end
     assert_equal 'hello!\n', buf.split(/\r\n\r\n/).last
+    next_client = Net::HTTP.get(URI.parse("http://127.0.0.1:#@port/"))
+    assert_equal 'hello!\n', next_client
     lines = File.readlines("test_stderr.#$$.log")
     assert lines.grep(/^Unicorn::ClientShutdown: /).empty?
     assert_nothing_raised { sock.close }
@@ -154,6 +156,8 @@ class WebServerTest < Test::Unit::TestCase
       buf = sock.read
     end
     assert_equal "", buf
+    next_client = Net::HTTP.get(URI.parse("http://127.0.0.1:#@port/"))
+    assert_equal 'hello!\n', next_client
     lines = File.readlines("test_stderr.#$$.log")
     lines = lines.grep(/^Unicorn::ClientShutdown: bytes_read=\d+/)
     assert_equal 1, lines.size
