@@ -134,8 +134,8 @@ module Unicorn
         raise ClientShutdown, "bytes_read=#{@tmp.size}", []
       when HttpParserError
         e.set_backtrace([])
-        raise e
       end
+      raise e
     end
 
     # tees off a +length+ chunk of data from the input into the IO
