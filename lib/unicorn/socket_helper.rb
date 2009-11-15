@@ -29,23 +29,23 @@ module Unicorn
 
       # highly portable, but off by default because we don't do keepalive
       if defined?(TCP_NODELAY) && ! (val = opt[:tcp_nodelay]).nil?
-        sock.setsockopt(IPPROTO_TCP, TCP_NODELAY, val ? 1 : 0) rescue nil
+        sock.setsockopt(IPPROTO_TCP, TCP_NODELAY, val ? 1 : 0)
       end
 
       unless (val = opt[:tcp_nopush]).nil?
         val = val ? 1 : 0
         if defined?(TCP_CORK) # Linux
-          sock.setsockopt(IPPROTO_TCP, TCP_CORK, val) rescue nil
+          sock.setsockopt(IPPROTO_TCP, TCP_CORK, val)
         elsif defined?(TCP_NOPUSH) # TCP_NOPUSH is untested (FreeBSD)
-          sock.setsockopt(IPPROTO_TCP, TCP_NOPUSH, val) rescue nil
+          sock.setsockopt(IPPROTO_TCP, TCP_NOPUSH, val)
         end
       end
 
       # No good reason to ever have deferred accepts off
       if defined?(TCP_DEFER_ACCEPT)
-        sock.setsockopt(SOL_TCP, TCP_DEFER_ACCEPT, 1) rescue nil
+        sock.setsockopt(SOL_TCP, TCP_DEFER_ACCEPT, 1)
       elsif defined?(SO_ACCEPTFILTER) && defined?(FILTER_ARG)
-        sock.setsockopt(SOL_SOCKET, SO_ACCEPTFILTER, FILTER_ARG) rescue nil
+        sock.setsockopt(SOL_SOCKET, SO_ACCEPTFILTER, FILTER_ARG)
       end
     end
 
@@ -61,6 +61,11 @@ module Unicorn
         log_buffer_sizes(sock, " after: ")
       end
       sock.listen(opt[:backlog] || 1024)
+      rescue => e
+        if respond_to?(:logger)
+          logger.error "error setting socket options: #{e.inspect}"
+          logger.error e.backtrace.join("\n")
+        end
     end
 
     def log_buffer_sizes(sock, pfx = '')
