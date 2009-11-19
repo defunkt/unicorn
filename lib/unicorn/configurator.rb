@@ -372,6 +372,13 @@ module Unicorn
     def working_directory(path)
       # just let chdir raise errors
       path = File.expand_path(path)
+      if config_file &&
+         config_file[0] != ?/ &&
+         ! test(?r, "#{path}/#{config_file}")
+        raise ArgumentError,
+              "config_file=#{config_file} would not be accessible in" \
+              " working_directory=#{path}"
+      end
       Dir.chdir(path)
       HttpServer::START_CTX[:cwd] = ENV["PWD"] = path
     end

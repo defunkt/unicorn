@@ -82,6 +82,57 @@ end
     end
   end
 
+  def test_working_directory_rel_path_config_file
+    other = Tempfile.new('unicorn.wd')
+    File.unlink(other.path)
+    Dir.mkdir(other.path)
+    File.open("config.ru", "wb") do |fp|
+      fp.syswrite <<EOF
+use Rack::ContentLength
+run proc { |env| [ 200, { 'Content-Type' => 'text/plain' }, [ Dir.pwd ] ] }
+EOF
+    end
+    FileUtils.cp("config.ru", other.path + "/config.ru")
+    Dir.chdir(@tmpdir)
+
+    tmp = File.open('unicorn.config', 'wb')
+    tmp.syswrite <<EOF
+working_directory '#@tmpdir'
+listen '#@addr:#@port'
+EOF
+    pid = xfork { redirect_test_io { exec($unicorn_bin, "-c#{tmp.path}") } }
+    wait_workers_ready("test_stderr.#{pid}.log", 1)
+    results = hit(["http://#@addr:#@port/"])
+    assert_equal @tmpdir, results.first
+    File.truncate("test_stderr.#{pid}.log", 0)
+
+    tmp.sysseek(0)
+    tmp.truncate(0)
+    tmp.syswrite <<EOF
+working_directory '#{other.path}'
+listen '#@addr:#@port'
+EOF
+
+    Process.kill(:HUP, pid)
+    lines = []
+    re = /config_file=(.+) would not be accessible in working_directory=(.+)/
+    until lines.grep(re)
+      sleep 0.1
+      lines = File.readlines("test_stderr.#{pid}.log")
+    end
+
+    File.truncate("test_stderr.#{pid}.log", 0)
+    FileUtils.cp('unicorn.config', other.path + "/unicorn.config")
+    Process.kill(:HUP, pid)
+    wait_workers_ready("test_stderr.#{pid}.log", 1)
+    results = hit(["http://#@addr:#@port/"])
+    assert_equal other.path, results.first
+
+    Process.kill(:QUIT, pid)
+    ensure
+      FileUtils.rmtree(other.path)
+  end
+
   def test_working_directory
     other = Tempfile.new('unicorn.wd')
     File.unlink(other.path)

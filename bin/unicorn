@@ -68,7 +68,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   opts.on("-P", "--pid FILE", "DEPRECATED") do |f|
     warn %q{Use of --pid/-P is strongly discouraged}
     warn %q{Use the 'pid' directive in the Unicorn config file instead}
-    options[:pid] = File.expand_path(f)
+    options[:pid] = f
   end
 
   opts.on("-s", "--server SERVER",
@@ -85,7 +85,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   end
 
   opts.on("-c", "--config-file FILE", "Unicorn-specific config file") do |f|
-    options[:config_file] = File.expand_path(f)
+    options[:config_file] = f
   end
 
   # I'm avoiding Unicorn-specific config options on the command-line.

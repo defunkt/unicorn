@@ -75,7 +75,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   end
 
   opts.on("-c", "--config-file FILE", "Unicorn-specific config file") do |f|
-    options[:config_file] = File.expand_path(f)
+    options[:config_file] = f
   end
 
   opts.on("-P PATH", "DEPRECATED") do |v|
