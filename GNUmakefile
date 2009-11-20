@@ -262,9 +262,8 @@ package: $(pkgtgz) $(pkggem)
 
 release: verify package $(release_notes) $(release_changes)
 	rubyforge add_release -f -n $(release_notes) -a $(release_changes) \
-	  $(rfproject) $(rfpackage) $(VERSION) $(pkggem)
-	rubyforge add_file \
 	  $(rfproject) $(rfpackage) $(VERSION) $(pkgtgz)
+	@echo do something with gemcutter for: $(pkggem)
 else
 gem install-gem: GIT-VERSION-FILE
 	$(MAKE) $@ VERSION=$(GIT_VERSION)
