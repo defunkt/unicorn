@@ -910,11 +910,11 @@ EOF
         bodies[pid] += 1
       }
     }
-    sleep 1 # racy
+    sleep 5 # racy
     daemon_pid = File.read(pid_file.path).to_i
     assert daemon_pid > 0
     Process.kill(:HUP, daemon_pid)
-    sleep 1 # racy
+    sleep 5 # racy
     assert_nothing_raised { Process.kill(:TERM, hitter) }
     _, hitter_status = Process.waitpid2(hitter)
     assert hitter_status.success?
