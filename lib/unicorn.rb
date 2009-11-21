@@ -300,7 +300,7 @@ module Unicorn
         end
         logger.info "listening on addr=#{sock_name(io)} fd=#{io.fileno}"
         LISTENERS << io
-        return io
+        io
       rescue Errno::EADDRINUSE => err
         logger.error "adding listener failed addr=#{address} (in use)"
         raise err if tries == 0
@@ -703,7 +703,7 @@ module Unicorn
       wpid <= 0 and return nil
       begin
         Process.kill(0, wpid)
-        return wpid
+        wpid
       rescue Errno::ESRCH
         # don't unlink stale pid files, racy without non-portable locking...
       end
