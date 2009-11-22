@@ -1,6 +1,6 @@
 = Unicorn: Rack HTTP server for fast clients and Unix
 
-Unicorn is a HTTP server for Rack applications designed to only serve
+Unicorn is an HTTP server for Rack applications designed to only serve
 fast clients on low-latency, high-bandwidth connections and take
 advantage of features in Unix/Unix-like kernels.  Slow clients should
 only be served by placing a reverse proxy capable of fully buffering
