@@ -1,4 +1,4 @@
-# use GNU Make to run tests in parallel, and without depending on Rubygems
+# use GNU Make to run tests in parallel, and without depending on RubyGems
 all:: test
 ruby = ruby
 rake = rake

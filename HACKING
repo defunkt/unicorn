@@ -14,14 +14,14 @@ done.
 
 Tests are good, but slow tests make development slow, so we make tests
 faster (in parallel) with GNU make (instead of Rake) and avoiding
-Rubygems.
+RubyGems.
 
 Users of GNU-based systems (such as GNU/Linux) usually have GNU make installed
 as "make" instead of "gmake".
 
 Since we don't load RubyGems by default, loading Rack properly requires
 setting up RUBYLIB to point to where Rack is located.  Not loading
-Rubygems drastically lowers the time to run the full test suite.  You
+RubyGems drastically lowers the time to run the full test suite.  You
 may setup a "local.mk" file in the top-level working directory to setup
 your RUBYLIB and any other environment variables.  A "local.mk.sample"
 file is provided for reference.
