@@ -86,9 +86,7 @@ You can get the latest source via git from the following locations
 (these versions may not be stable):
 
   git://git.bogomips.org/unicorn.git
-  http://git.bogomips.org/unicorn.git
   git://repo.or.cz/unicorn.git (mirror)
-  http://repo.or.cz/r/unicorn.git (mirror)
 
 You may browse the code from the web and download the latest snapshot
 tarballs here:
