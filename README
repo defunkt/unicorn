@@ -94,6 +94,9 @@ tarballs here:
 * http://git.bogomips.org/cgit/unicorn.git (cgit)
 * http://repo.or.cz/w/unicorn.git (gitweb)
 
+See the HACKING guide on how to contribute and build prerelease gems
+from git.
+
 == Usage
 
 === non-Rails Rack applications
