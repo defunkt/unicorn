@@ -78,7 +78,7 @@ and run setup.rb after unpacking it:
 
 http://rubyforge.org/frs/?group_id=1306
 
-You may also install it via Rubygems on Rubyforge:
+You may also install it via Rubygems on Gemcutter:
 
   gem install unicorn
 
