@@ -131,9 +131,8 @@ options.
 
 == Disclaimer
 
-Like the creatures themselves, production deployments of Unicorn are
-rare.  There is NO WARRANTY whatsoever if anything goes wrong, but let
-us know and we'll try our best to fix it.
+There is NO WARRANTY whatsoever if anything goes wrong, but let us know
+and we'll try our best to fix it.
 
 Unicorn is designed to only serve fast clients either on the local host
 or a fast LAN.  See the PHILOSOPHY and DESIGN documents for more details
