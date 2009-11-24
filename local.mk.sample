@@ -42,19 +42,19 @@ latest: NEWS
 # publishes docs to http://unicorn.bogomips.org
 publish_doc:
 	-git set-file-times
-	$(RM) -r doc
-	$(MAKE) doc
+	$(RM) -r doc ChangeLog NEWS
+	$(MAKE) doc LOG_VERSION=$(shell git tag -l | tail -1)
 	$(MAKE) -s latest > doc/LATEST
 	find doc/images doc/js -type f | \
 		TZ=UTC xargs touch -d '1970-01-01 00:00:00' doc/rdoc.css
 	$(MAKE) doc_gz
+	tar cf - $$(git ls-files examples/) | (cd doc && tar xf -)
 	chmod 644 $$(find doc -type f)
-	rsync -av --delete doc/ dcvr:/srv/unicorn/
+	rsync -av doc/ dcvr:/srv/unicorn/
 	git ls-files | xargs touch
 
 # Create gzip variants of the same timestamp as the original so nginx
 # "gzip_static on" can serve the gzipped versions directly.
-doc_gz: suf := html js css
 doc_gz: docs = $(shell find doc -type f ! -regex '^.*\.\(gif\|jpg\|png\|gz\)$$')
 doc_gz:
 	touch doc/NEWS.atom.xml -d "$$(awk 'NR==1{print $$4,$$5,$$6}' NEWS)"
