@@ -143,3 +143,20 @@ task :raa_update do
   p res
   puts res.body
 end
+
+# optional rake-compiler support in case somebody needs to cross compile
+begin
+  require 'rubygems'
+  spec = Gem::Specification.load('unicorn.gemspec')
+  require 'rake/extensiontask'
+  unless test ?r, "ext/unicorn_http/unicorn_http.c"
+    abort "run 'gmake ragel' or 'make ragel' to generate the Ragel source"
+  end
+  mk = "ext/unicorn_http/Makefile"
+  if test ?r, mk
+    abort "run 'gmake -C ext/unicorn_http clean' and " \
+          "remove #{mk} before using rake-compiler"
+  end
+  Rake::ExtensionTask.new('unicorn_http', spec)
+rescue LoadError
+end
