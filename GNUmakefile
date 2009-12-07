@@ -157,7 +157,9 @@ NEWS: GIT-VERSION-FILE
 	mv $@+ $@
 
 SINCE = 0.94.0
-ChangeLog: LOG_VERSION = $(GIT_VERSION)
+ChangeLog: LOG_VERSION = \
+  $(shell git rev-parse -q "$(GIT_VERSION)" >/dev/null 2>&1 && \
+          echo $(GIT_VERSION) || git describe)
 ChangeLog: log_range = v$(SINCE)..$(LOG_VERSION)
 ChangeLog: GIT-VERSION-FILE
 	@echo "ChangeLog from $(GIT_URL) ($(log_range))" > $@+
