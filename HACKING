@@ -91,7 +91,7 @@ user and developer feedback and bug reports.
 Follow conventions already established in the code and do not exceed 80
 characters per line.
 
-Inline patches (from "git format-patch") to the mailing list are
+Inline patches (from "git format-patch -M") to the mailing list are
 preferred because they allow code review and comments in the reply to
 the patch.
 
