@@ -371,4 +371,50 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert ! parser.headers?
   end
 
+  def test_path_info_semicolon
+    qs = "QUERY_STRING"
+    pi = "PATH_INFO"
+    req = {}
+    str = "GET %s HTTP/1.1\r\nHost: example.com\r\n\r\n"
+    {
+      "/1;a=b?c=d&e=f" => { qs => "c=d&e=f", pi => "/1;a=b" },
+      "/1?c=d&e=f" => { qs => "c=d&e=f", pi => "/1" },
+      "/1;a=b" => { qs => "", pi => "/1;a=b" },
+      "/1;a=b?" => { qs => "", pi => "/1;a=b" },
+      "/1?a=b;c=d&e=f" => { qs => "a=b;c=d&e=f", pi => "/1" },
+      "*" => { qs => "", pi => "" },
+    }.each do |uri,expect|
+      assert_equal req, @parser.headers(req.clear, str % [ uri ])
+      @parser.reset
+      assert_equal uri, req["REQUEST_URI"], "REQUEST_URI mismatch"
+      assert_equal expect[qs], req[qs], "#{qs} mismatch"
+      assert_equal expect[pi], req[pi], "#{pi} mismatch"
+      next if uri == "*"
+      uri = URI.parse("http://example.com#{uri}")
+      assert_equal uri.query.to_s, req[qs], "#{qs} mismatch URI.parse disagrees"
+      assert_equal uri.path, req[pi], "#{pi} mismatch URI.parse disagrees"
+    end
+  end
+
+  def test_path_info_semicolon_absolute
+    qs = "QUERY_STRING"
+    pi = "PATH_INFO"
+    req = {}
+    str = "GET http://example.com%s HTTP/1.1\r\nHost: www.example.com\r\n\r\n"
+    {
+      "/1;a=b?c=d&e=f" => { qs => "c=d&e=f", pi => "/1;a=b" },
+      "/1?c=d&e=f" => { qs => "c=d&e=f", pi => "/1" },
+      "/1;a=b" => { qs => "", pi => "/1;a=b" },
+      "/1;a=b?" => { qs => "", pi => "/1;a=b" },
+      "/1?a=b;c=d&e=f" => { qs => "a=b;c=d&e=f", pi => "/1" },
+    }.each do |uri,expect|
+      assert_equal req, @parser.headers(req.clear, str % [ uri ])
+      @parser.reset
+      assert_equal uri, req["REQUEST_URI"], "REQUEST_URI mismatch"
+      assert_equal "example.com", req["HTTP_HOST"], "Host: mismatch"
+      assert_equal expect[qs], req[qs], "#{qs} mismatch"
+      assert_equal expect[pi], req[pi], "#{pi} mismatch"
+    end
+  end
+
 end

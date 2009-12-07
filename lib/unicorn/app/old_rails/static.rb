@@ -46,11 +46,7 @@ class Unicorn::App::OldRails::Static < Struct.new(:app, :root, :file_server)
     end
 
     # then try the cached version:
-
-    # grab the semi-colon REST operator used by old versions of Rails
-    # this is the reason we didn't just copy the new Rails::Rack::Static
-    env[REQUEST_URI] =~ /^#{Regexp.escape(path_info)}(;[^\?]+)/
-    path_info << "#$1#{ActionController::Base.page_cache_extension}"
+    path_info << ActionController::Base.page_cache_extension
 
     if File.file?("#{root}/#{::Rack::Utils.unescape(path_info)}")
       env[PATH_INFO] = path_info
