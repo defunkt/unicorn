@@ -59,7 +59,9 @@ task :news_atom do
           url = "#{cgit_url}/tag/?id=#{tag[:tag]}"
           link! :rel => "alternate", :type => "text/html", :href =>url
           id! url
-          content({:type => 'text'}, tag[:body])
+          message_only = tag[:body].split(/\n.+\(\d+\):\n {6}/s).first.strip
+          content({:type =>:text}, message_only)
+          content(:type =>:xhtml) { pre tag[:body] }
         end
       end
     end
