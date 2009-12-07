@@ -131,8 +131,8 @@ options.
 
 == Disclaimer
 
-There is NO WARRANTY whatsoever if anything goes wrong, but let us know
-and we'll try our best to fix it.
+There is NO WARRANTY whatsoever if anything goes wrong, but
+{let us know}[link:ISSUES.html] and we'll try our best to fix it.
 
 Unicorn is designed to only serve fast clients either on the local host
 or a fast LAN.  See the PHILOSOPHY and DESIGN documents for more details
@@ -141,13 +141,9 @@ regarding this.
 == Contact
 
 All feedback (bug reports, user/development dicussion, patches, pull
-requests) go to the mailing list/newsgroup.  Patches must be sent inline
-(git format-patch -M + git send-email).  No subscription is necessary
-to post on the mailing list.  No top posting.  Address replies +To:+
-the mailing list.
+requests) go to the mailing list/newsgroup.  See the ISSUES document for
+information on the {mailing list}[mailto:mongrel-unicorn@rubyforge.org].
 
-* email: mailto:mongrel-unicorn@rubyforge.org
-* nntp: nntp://news.gmane.org/gmane.comp.lang.ruby.unicorn.general
-* archives: http://rubyforge.org/pipermail/mongrel-unicorn/
-* subscribe: http://rubyforge.org/mailman/listinfo/mongrel-unicorn/
-* finger: unicorn@bogomips.org
+For the latest on Unicorn releases, you may also finger us at
+unicorn@bogomips.org or check our NEWS page (and subscribe to our Atom
+feed).

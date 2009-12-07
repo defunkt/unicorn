@@ -1,5 +1,8 @@
 = Known Issues
 
+Occasionally odd {issues}[link:ISSUES.html] arise without a transparent or
+acceptable solution.  Those issues are documented here.
+
 * Rails 2.3.2 bundles its own version of Rack.  This may cause subtle
   bugs when simultaneously loaded with the system-wide Rack Rubygem
   which Unicorn depends on.  Upgrading to Rails 2.3.4 (or later) is
