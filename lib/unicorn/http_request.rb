@@ -57,12 +57,10 @@ module Unicorn
 
       # short circuit the common case with small GET requests first
       if PARSER.headers(REQ, socket.readpartial(Const::CHUNK_SIZE, BUF)).nil?
-        data = BUF.dup # socket.readpartial will clobber data
-
         # Parser is not done, queue up more data to read and continue parsing
         # an Exception thrown from the PARSER will throw us out of the loop
         begin
-          BUF << socket.readpartial(Const::CHUNK_SIZE, data)
+          BUF << socket.readpartial(Const::CHUNK_SIZE)
         end while PARSER.headers(REQ, BUF).nil?
       end
       REQ[Const::RACK_INPUT] = 0 == PARSER.content_length ?
