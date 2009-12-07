@@ -146,6 +146,35 @@ task :raa_update do
   puts res.body
 end
 
+desc "post to FM"
+task :fm_update do
+  require 'tempfile'
+  require 'net/http'
+  require 'net/netrc'
+  require 'json'
+  version = ENV['VERSION'] or abort "VERSION= needed"
+  uri = URI.parse('http://freshmeat.net/projects/unicorn/releases.json')
+  rc = Net::Netrc.locate('unicorn-fm') or abort "~/.netrc not found"
+  api_token = rc.password
+  changelog = tags.find { |t| t[:tag] == "v#{version}" }[:body]
+  tmp = Tempfile.new('fm-changelog')
+  tmp.syswrite(changelog)
+  system(ENV["VISUAL"], tmp.path) or abort "#{ENV["VISUAL"]} failed: #$?"
+  changelog = File.read(tmp.path).strip
+
+  req = {
+    "auth_code" => api_token,
+    "release" => {
+      "tag_list" => "Stable",
+      "version" => version,
+      "changelog" => changelog,
+    },
+  }.to_json
+  Net::HTTP.start(uri.host, uri.port) do |http|
+    p http.post(uri.path, req, {'Content-Type'=>'application/json'})
+  end
+end
+
 # optional rake-compiler support in case somebody needs to cross compile
 begin
   require 'rubygems'
