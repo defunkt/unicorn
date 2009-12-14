@@ -228,6 +228,16 @@ class WebServerTest < Test::Unit::TestCase
     end
   end
 
+  def test_logger_set
+    assert_equal @server.logger, Unicorn::HttpRequest::DEFAULTS["rack.logger"]
+  end
+
+  def test_logger_changed
+    tmp = Logger.new($stdout)
+    @server.logger = tmp
+    assert_equal tmp, Unicorn::HttpRequest::DEFAULTS["rack.logger"]
+  end
+
   def test_bad_client_400
     sock = nil
     assert_nothing_raised do
