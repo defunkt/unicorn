@@ -249,9 +249,6 @@ module Unicorn
     def stdout_path=(path); redirect_io($stdout, path); end
     def stderr_path=(path); redirect_io($stderr, path); end
 
-    alias_method :set_pid, :pid=
-    undef_method :pid=
-
     # sets the path for the PID file of the master process
     def pid=(path)
       if path
@@ -274,7 +271,7 @@ module Unicorn
         File.rename(fp.path, path)
         fp.close
       end
-      self.set_pid(path)
+      super(path)
     end
 
     # add a given address to the +listeners+ set, idempotently
