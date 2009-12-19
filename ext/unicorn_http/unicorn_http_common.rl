@@ -28,6 +28,7 @@
   scheme = ( "http"i ("s"i)? ) $downcase_char >mark %scheme;
   hostname = (alnum | "-" | "." | "_")+;
   host_with_port = (hostname (":" digit*)?) >mark %host;
+  userinfo = ((unreserved | escape | ";" | ":" | "&" | "=" | "+")+ "@")*;
 
   path = ( pchar+ ( "/" pchar* )* ) ;
   query = ( uchar | reserved )* %query_string ;
@@ -36,7 +37,7 @@
   rel_path = (path? (";" params)? %request_path) ("?" %start_query query)?;
   absolute_path = ( "/"+ rel_path );
   path_uri = absolute_path > mark %request_uri;
-  Absolute_URI = (scheme "://" host_with_port path_uri);
+  Absolute_URI = (scheme "://" userinfo host_with_port path_uri);
 
   Request_URI = ((absolute_path | "*") >mark %request_uri) | Absolute_URI;
   Fragment = ( uchar | reserved )* >mark %fragment;

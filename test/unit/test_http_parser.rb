@@ -298,6 +298,45 @@ class HttpParserTest < Test::Unit::TestCase
     assert ! parser.keepalive?
   end
 
+  # some dumb clients add users because they're stupid
+  def test_absolute_uri_w_user
+    parser = HttpParser.new
+    req = {}
+    http = "GET http://user%20space@example.com/foo?q=bar HTTP/1.0\r\n\r\n"
+    assert_equal req, parser.headers(req, http)
+    assert_equal 'http', req['rack.url_scheme']
+    assert_equal '/foo?q=bar', req['REQUEST_URI']
+    assert_equal '/foo', req['REQUEST_PATH']
+    assert_equal 'q=bar', req['QUERY_STRING']
+
+    assert_equal 'example.com', req['HTTP_HOST']
+    assert_equal 'example.com', req['SERVER_NAME']
+    assert_equal '80', req['SERVER_PORT']
+    assert_equal "", http
+    assert ! parser.keepalive?
+  end
+
+  # since Mongrel supported anything URI.parse supported, we're stuck
+  # supporting everything URI.parse supports
+  def test_absolute_uri_uri_parse
+    "#{URI::REGEXP::PATTERN::UNRESERVED};:&=+$,".split(//).each do |char|
+      parser = HttpParser.new
+      req = {}
+      http = "GET http://#{char}@example.com/ HTTP/1.0\r\n\r\n"
+      assert_equal req, parser.headers(req, http)
+      assert_equal 'http', req['rack.url_scheme']
+      assert_equal '/', req['REQUEST_URI']
+      assert_equal '/', req['REQUEST_PATH']
+      assert_equal '', req['QUERY_STRING']
+
+      assert_equal 'example.com', req['HTTP_HOST']
+      assert_equal 'example.com', req['SERVER_NAME']
+      assert_equal '80', req['SERVER_PORT']
+      assert_equal "", http
+      assert ! parser.keepalive?
+    end
+  end
+
   def test_absolute_uri
     parser = HttpParser.new
     req = {}
