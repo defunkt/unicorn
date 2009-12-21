@@ -175,6 +175,7 @@ atom = <link rel="alternate" title="Atom feed" href="$(1)" \
 # using rdoc 2.4.1+
 doc: .document $(ext)/unicorn_http.c NEWS ChangeLog
 	for i in $(man1_bins); do > $$i; done
+	find bin lib -type f -name '*.rbc' -exec rm -f '{}' ';'
 	rdoc -Na -t "$(shell sed -ne '1s/^= //p' README)"
 	install -m644 COPYING doc/COPYING
 	install -m644 $(shell grep '^[A-Z]' .document)  doc/
