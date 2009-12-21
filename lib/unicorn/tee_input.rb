@@ -3,15 +3,20 @@
 module Unicorn
 
   # acts like tee(1) on an input input to provide a input-like stream
-  # while providing rewindable semantics through a File/StringIO
-  # backing store.  On the first pass, the input is only read on demand
-  # so your Rack application can use input notification (upload progress
-  # and like).  This should fully conform to the Rack::InputWrapper
+  # while providing rewindable semantics through a File/StringIO backing
+  # store.  On the first pass, the input is only read on demand so your
+  # Rack application can use input notification (upload progress and
+  # like).  This should fully conform to the Rack::Lint::InputWrapper
   # specification on the public API.  This class is intended to be a
-  # strict interpretation of Rack::InputWrapper functionality and will
-  # not support any deviations from it.
+  # strict interpretation of Rack::Lint::InputWrapper functionality and
+  # will not support any deviations from it.
+  #
+  # When processing uploads, Unicorn exposes a TeeInput object under
+  # "rack.input" of the Rack environment.
   class TeeInput < Struct.new(:socket, :req, :parser, :buf)
 
+    # Initializes a new TeeInput object.  You normally do not have to call
+    # this unless you are writing an HTTP server.
     def initialize(*args)
       super(*args)
       @size = parser.content_length
@@ -24,10 +29,16 @@ module Unicorn
       end
     end
 
-    # returns the size of the input.  This is what the Content-Length
-    # header value should be, and how large our input is expected to be.
-    # For TE:chunked, this requires consuming all of the input stream
-    # before returning since there's no other way
+    # :call-seq:
+    #   ios.size  => Integer
+    #
+    # Returns the size of the input.  For requests with a Content-Length
+    # header value, this will not read data off the socket and just return
+    # the value of the Content-Length header as an Integer.
+    #
+    # For Transfer-Encoding:chunked requests, this requires consuming
+    # all of the input stream before returning since there's no other
+    # way to determine the size of the request body beforehand.
     def size
       @size and return @size
 
@@ -41,8 +52,7 @@ module Unicorn
       @size = @tmp.size
     end
 
-    # call-seq:
-    #   ios = env['rack.input']
+    # :call-seq:
     #   ios.read([length [, buffer ]]) => string, buffer, or nil
     #
     # Reads at most length bytes from the I/O stream, or to the end of
@@ -82,7 +92,15 @@ module Unicorn
       end
     end
 
-    # takes zero arguments for strict Rack::Lint compatibility, unlike IO#gets
+    # :call-seq:
+    #   ios.gets   => string or nil
+    #
+    # Reads the next ``line'' from the I/O stream; lines are separated
+    # by the global record separator ($/, typically "\n"). A global
+    # record separator of nil reads the entire unread contents of ios.
+    # Returns nil if called at the end of file.
+    # This takes zero arguments for strict Rack::Lint compatibility,
+    # unlike IO#gets.
     def gets
       socket or return @tmp.gets
       nil == $/ and return read
@@ -109,6 +127,11 @@ module Unicorn
       line
     end
 
+    # :call-seq:
+    #   ios.each { |line| block }  => ios
+    #
+    # Executes the block for every ``line'' in *ios*, where lines are
+    # separated by the global record separator ($/, typically "\n").
     def each(&block)
       while line = gets
         yield line
@@ -117,6 +140,12 @@ module Unicorn
       self # Rack does not specify what the return value is here
     end
 
+    # :call-seq:
+    #   ios.rewind    => 0
+    #
+    # Positions the *ios* pointer to the beginning of input, returns
+    # the offset (zero) of the +ios+ pointer.  Subsequent reads will
+    # start from the beginning of the previously-buffered input.
     def rewind
       @tmp.rewind # Rack does not specify what the return value is here
     end
