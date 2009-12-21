@@ -11,12 +11,12 @@ gems := rack-1.0.1
 # fork+exec heavy with Ruby.
 prefix = $(HOME)
 ifeq ($(r19),)
-  ruby := $(prefix)/bin/ruby
+  RUBY := $(prefix)/bin/ruby
   gem_paths := $(addprefix $(prefix)/lib/ruby/gems/1.8/gems/,$(gems))
 else
   prefix := $(prefix)/ruby-1.9
   export PATH := $(prefix)/bin:$(PATH)
-  ruby := $(prefix)/bin/ruby --disable-gems
+  RUBY := $(prefix)/bin/ruby --disable-gems
   gem_paths := $(addprefix $(prefix)/lib/ruby/gems/1.9.1/gems/,$(gems))
 endif
 

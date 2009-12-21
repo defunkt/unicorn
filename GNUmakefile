@@ -1,21 +1,28 @@
 # use GNU Make to run tests in parallel, and without depending on RubyGems
 all:: test
+
 ruby = ruby
 rake = rake
 ragel = ragel
+
 GIT_URL = git://git.bogomips.org/unicorn.git
 RLFLAGS = -G2
+
+# lower-case vars are deprecated
+RUBY = $(ruby)
+RAKE = $(rake)
+RAGEL = $(ragel)
 
 GIT-VERSION-FILE: .FORCE-GIT-VERSION-FILE
 	@./GIT-VERSION-GEN
 -include GIT-VERSION-FILE
 -include local.mk
-ruby_bin := $(shell which $(ruby))
+ruby_bin := $(shell which $(RUBY))
 ifeq ($(DLEXT),) # "so" for Linux
-  DLEXT := $(shell $(ruby) -rrbconfig -e 'puts Config::CONFIG["DLEXT"]')
+  DLEXT := $(shell $(RUBY) -rrbconfig -e 'puts Config::CONFIG["DLEXT"]')
 endif
 ifeq ($(RUBY_VERSION),)
-  RUBY_VERSION := $(shell $(ruby) -e 'puts RUBY_VERSION')
+  RUBY_VERSION := $(shell $(RUBY) -e 'puts RUBY_VERSION')
 endif
 
 # dunno how to implement this as concisely in Ruby, and hell, I love awk
@@ -45,9 +52,9 @@ inst_deps := $(c_files) $(rb_files) GNUmakefile test/test_helper.rb
 
 ragel: $(ext)/unicorn_http.c
 $(ext)/unicorn_http.c: $(rl_files)
-	cd $(@D) && $(ragel) unicorn_http.rl -C $(RLFLAGS) -o $(@F)
+	cd $(@D) && $(RAGEL) unicorn_http.rl -C $(RLFLAGS) -o $(@F)
 $(ext)/Makefile: $(ext)/extconf.rb $(c_files)
-	cd $(@D) && $(ruby) extconf.rb
+	cd $(@D) && $(RUBY) extconf.rb
 $(ext)/unicorn_http.$(DLEXT): $(ext)/Makefile
 	$(MAKE) -C $(@D)
 lib/unicorn_http.$(DLEXT): $(ext)/unicorn_http.$(DLEXT)
@@ -65,11 +72,11 @@ $(test_prefix)/.stamp: $(inst_deps)
 
 # this is only intended to be run within $(test_prefix)
 shebang: $(bins)
-	$(ruby) -i -p -e '$$_.gsub!(%r{^#!.*$$},"#!$(ruby_bin)")' $^
+	$(RUBY) -i -p -e '$$_.gsub!(%r{^#!.*$$},"#!$(ruby_bin)")' $^
 
 t_log := $(T_log) $(T_n_log)
 test: $(T) $(T_n)
-	@cat $(t_log) | $(ruby) test/aggregate.rb
+	@cat $(t_log) | $(RUBY) test/aggregate.rb
 	@$(RM) $(t_log)
 
 test-exec: $(wildcard test/exec/test_*.rb)
@@ -87,18 +94,18 @@ else
        # so we use a stamp file to indicate success and
        # have rm fail if the stamp didn't get created
        stamp = $@$(log_suffix).ok
-       quiet_pre = @echo $(ruby) $(arg) $(TEST_OPTS); ! test -f $(stamp) && (
+       quiet_pre = @echo $(RUBY) $(arg) $(TEST_OPTS); ! test -f $(stamp) && (
        quiet_post = && > $(stamp) )2>&1 | tee $(t); \
          rm $(stamp) 2>/dev/null && $(check_test)
 endif
 
 # not all systems have setsid(8), we need it because we spam signals
 # stupidly in some tests...
-rb_setsid := $(ruby) -e 'Process.setsid' -e 'exec *ARGV'
+rb_setsid := $(RUBY) -e 'Process.setsid' -e 'exec *ARGV'
 
 # TRACER='strace -f -o $(t).strace -s 100000'
 run_test = $(quiet_pre) \
-  $(rb_setsid) $(TRACER) $(ruby) -w $(arg) $(TEST_OPTS) $(quiet_post) || \
+  $(rb_setsid) $(TRACER) $(RUBY) -w $(arg) $(TEST_OPTS) $(quiet_post) || \
   (sed "s,^,$(extra): ," >&2 < $(t); exit 1)
 
 %.n: arg = $(subst .n,,$(subst --, -n ,$@))
@@ -121,7 +128,7 @@ install: $(bins) $(ext)/unicorn_http.c
 	$(RM) -r .install-tmp
 	mkdir .install-tmp
 	cp -p bin/* .install-tmp
-	$(ruby) setup.rb all
+	$(RUBY) setup.rb all
 	$(RM) $^
 	mv .install-tmp/* bin/
 	$(RM) -r .install-tmp
@@ -153,7 +160,7 @@ manifest: $(pkg_extra) man
 	$(RM) $@+
 
 NEWS: GIT-VERSION-FILE
-	$(rake) -s news_rdoc > $@+
+	$(RAKE) -s news_rdoc > $@+
 	mv $@+ $@
 
 SINCE = 0.94.0
@@ -184,13 +191,13 @@ doc: .document $(ext)/unicorn_http.c NEWS ChangeLog
 	cd doc && for i in $(base_bins); do \
 	  sed -e '/"documentation">/r man1/'$$i'.1.html' \
 		< $${i}_1.html > tmp && mv tmp $${i}_1.html; done
-	$(ruby) -i -p -e \
+	$(RUBY) -i -p -e \
 	  '$$_.gsub!("</title>",%q{\&$(call atom,$(cgit_atom))})' \
 	  doc/ChangeLog.html
-	$(ruby) -i -p -e \
+	$(RUBY) -i -p -e \
 	  '$$_.gsub!("</title>",%q{\&$(call atom,$(news_atom))})' \
 	  doc/NEWS.html doc/README.html
-	$(rake) -s news_atom > doc/NEWS.atom.xml
+	$(RAKE) -s news_atom > doc/NEWS.atom.xml
 	cd doc && ln README.html tmp && mv tmp index.html
 	$(RM) $(man1_bins)
 
@@ -224,10 +231,10 @@ release_changes := release_changes-$(VERSION)
 release-notes: $(release_notes)
 release-changes: $(release_changes)
 $(release_changes):
-	$(rake) -s release_changes > $@+
+	$(RAKE) -s release_changes > $@+
 	$(VISUAL) $@+ && test -s $@+ && mv $@+ $@
 $(release_notes):
-	GIT_URL=$(GIT_URL) $(rake) -s release_notes > $@+
+	GIT_URL=$(GIT_URL) $(RAKE) -s release_notes > $@+
 	$(VISUAL) $@+ && test -s $@+ && mv $@+ $@
 
 # ensures we're actually on the tagged $(VERSION), only used for release
