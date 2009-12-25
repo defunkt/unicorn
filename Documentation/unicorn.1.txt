@@ -13,8 +13,8 @@ unicorn [-c CONFIG_FILE] [-E RACK_ENV] [-D] [RACKUP_FILE]
 # DESCRIPTION
 
 A rackup(1)-like command to launch Rack applications using Unicorn.
-It is expected to be started in your application root (APP_ROOT), but
-"Dir.chdir" may also be executed in the CONFIG_FILE or RACKUP_FILE.
+It is expected to be started in your application root (APP_ROOT),
+but the "working_directory" directive may be used in the CONFIG_FILE.
 
 While Unicorn takes a myriad of command-line options for
 compatibility with ruby(1) and rackup(1), it is recommended to stick
@@ -33,10 +33,9 @@ with rackup(1) but strongly discouraged.
 # UNICORN OPTIONS
 -c, \--config-file CONFIG_FILE
 :   Path to the Unicorn-specific config file.  The config file is
-    implemented as a Ruby DSL, so Ruby code may executed (e.g.
-    "Dir.chdir", "Process::UID.change_privilege").  See the RDoc/ri
-    for the *Unicorn::Configurator* class for the full list of
-    directives available from the DSL.
+    implemented as a Ruby DSL, so Ruby code may executed.
+    See the RDoc/ri for the *Unicorn::Configurator* class for the full
+    list of directives available from the DSL.
 
 -D, \--daemonize
 :   Run daemonized in the background.  The process is detached from
