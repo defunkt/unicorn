@@ -19,21 +19,42 @@ class Unicorn::Launcher
   #     the directory it was started in when being re-executed
   #     to pickup code changes if the original deployment directory
   #     is a symlink or otherwise got replaced.
-  def self.daemonize!
+  def self.daemonize!(options = {})
     $stdin.reopen("/dev/null")
+    $stdin.sync = true # may not do anything...
 
     # We only start a new process group if we're not being reexecuted
     # and inheriting file descriptors from our parent
     unless ENV['UNICORN_FD']
-      exit if fork
-      Process.setsid
-      exit if fork
+      # grandparent - reads pipe, exits when master is ready
+      #  \_ parent  - exits immediately ASAP
+      #      \_ unicorn master - writes to pipe when ready
 
-      # $stderr/$stderr can/will be redirected separately in the Unicorn config
-      Unicorn::Configurator::DEFAULTS[:stderr_path] = "/dev/null"
-      Unicorn::Configurator::DEFAULTS[:stdout_path] = "/dev/null"
+      rd, wr = IO.pipe
+      grandparent = $$
+      if fork
+        wr.close # grandparent does not write
+      else
+        rd.close # unicorn master does not read
+        Process.setsid
+        exit if fork # parent dies now
+      end
+
+      if grandparent == $$
+        # this will block until HttpServer#join runs (or it dies)
+        master_pid = rd.sysread(16).to_i
+        exit!(1) unless master_pid > 1
+        exit 0
+      else # unicorn master process
+        options[:ready_pipe] = wr
+        # $stderr/$stderr can/will be redirected separately in the
+        # Unicorn config
+        Unicorn::Configurator::DEFAULTS[:stderr_path] = "/dev/null"
+        Unicorn::Configurator::DEFAULTS[:stdout_path] = "/dev/null"
+
+        # returns so Unicorn.run can happen
+      end
     end
-    $stdin.sync = $stdout.sync = $stderr.sync = true
   end
 
 end

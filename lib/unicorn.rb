@@ -25,7 +25,8 @@ module Unicorn
 
   class << self
     def run(app, options = {})
-      HttpServer.new(app, options).start.join
+      ready_pipe = options.delete(:ready_pipe)
+      HttpServer.new(app, options).start.join(ready_pipe)
     end
   end
 
@@ -313,7 +314,7 @@ module Unicorn
     # (or until a termination signal is sent).  This handles signals
     # one-at-a-time time and we'll happily drop signals in case somebody
     # is signalling us too often.
-    def join
+    def join(ready_pipe = nil)
       # this pipe is used to wake us up from select(2) in #join when signals
       # are trapped.  See trap_deferred
       init_self_pipe!
@@ -324,6 +325,10 @@ module Unicorn
       trap(:CHLD) { |sig_nr| awaken_master }
       proc_name 'master'
       logger.info "master process ready" # test_exec.rb relies on this message
+      if ready_pipe
+        ready_pipe.syswrite($$.to_s)
+        ready_pipe.close
+      end
       begin
         loop do
           reap_all_workers
