@@ -306,6 +306,9 @@ module Unicorn
                      "(#{tries < 0 ? 'infinite' : tries} tries left)"
         sleep(delay)
         retry
+      rescue => err
+        logger.fatal "error adding listener addr=#{address}"
+        raise err
       end
     end
 
