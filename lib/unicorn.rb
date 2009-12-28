@@ -25,8 +25,7 @@ module Unicorn
 
   class << self
     def run(app, options = {})
-      ready_pipe = options.delete(:ready_pipe)
-      HttpServer.new(app, options).start.join(ready_pipe)
+      HttpServer.new(app, options).start.join
     end
   end
 
@@ -39,7 +38,7 @@ module Unicorn
                                 :before_fork, :after_fork, :before_exec,
                                 :logger, :pid, :app, :preload_app,
                                 :reexec_pid, :orig_app, :init_listeners,
-                                :master_pid, :config)
+                                :master_pid, :config, :ready_pipe)
     include ::Unicorn::SocketHelper
 
     # prevents IO objects in here from being GC-ed
@@ -163,6 +162,7 @@ module Unicorn
     def initialize(app, options = {})
       self.app = app
       self.reexec_pid = 0
+      self.ready_pipe = options.delete(:ready_pipe)
       self.init_listeners = options[:listeners] ? options[:listeners].dup : []
       self.config = Configurator.new(options.merge(:use_defaults => true))
       self.listener_opts = {}
@@ -314,7 +314,7 @@ module Unicorn
     # (or until a termination signal is sent).  This handles signals
     # one-at-a-time time and we'll happily drop signals in case somebody
     # is signalling us too often.
-    def join(ready_pipe = nil)
+    def join
       # this pipe is used to wake us up from select(2) in #join when signals
       # are trapped.  See trap_deferred
       init_self_pipe!
@@ -327,7 +327,8 @@ module Unicorn
       logger.info "master process ready" # test_exec.rb relies on this message
       if ready_pipe
         ready_pipe.syswrite($$.to_s)
-        ready_pipe.close
+        ready_pipe.close rescue nil
+        self.ready_pipe = nil
       end
       begin
         loop do
@@ -533,7 +534,11 @@ module Unicorn
         WORKERS.values.include?(worker_nr) and next
         worker = Worker.new(worker_nr, Unicorn::Util.tmpio)
         before_fork.call(self, worker)
-        WORKERS[fork { worker_loop(worker) }] = worker
+        WORKERS[fork {
+          ready_pipe.close if ready_pipe
+          self.ready_pipe = nil
+          worker_loop(worker)
+        }] = worker
       end
     end
 

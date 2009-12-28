@@ -42,7 +42,7 @@ class Unicorn::Launcher
 
       if grandparent == $$
         # this will block until HttpServer#join runs (or it dies)
-        master_pid = rd.sysread(16).to_i
+        master_pid = rd.readpartial(16).to_i
         exit!(1) unless master_pid > 1
         exit 0
       else # unicorn master process
