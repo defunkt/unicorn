@@ -42,8 +42,11 @@ class Unicorn::Launcher
 
       if grandparent == $$
         # this will block until HttpServer#join runs (or it dies)
-        master_pid = rd.readpartial(16).to_i
-        exit!(1) unless master_pid > 1
+        master_pid = (rd.readpartial(16) rescue nil).to_i
+        unless master_pid > 1
+          warn "master failed to start, check stderr log for details"
+          exit!(1)
+        end
         exit 0
       else # unicorn master process
         options[:ready_pipe] = wr
