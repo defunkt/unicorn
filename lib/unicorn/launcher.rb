@@ -1,6 +1,6 @@
 # -*- encoding: binary -*-
 
-$stdin.sync = $stdout.sync = $stderr.sync = true
+$stdout.sync = $stderr.sync = true
 $stdin.binmode
 $stdout.binmode
 $stderr.binmode
@@ -21,7 +21,6 @@ class Unicorn::Launcher
   #     is a symlink or otherwise got replaced.
   def self.daemonize!(options = nil)
     $stdin.reopen("/dev/null")
-    $stdin.sync = true # may not do anything...
 
     # We only start a new process group if we're not being reexecuted
     # and inheriting file descriptors from our parent
