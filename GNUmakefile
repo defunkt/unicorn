@@ -159,7 +159,7 @@ manifest: $(pkg_extra) man
 	cmp $@+ $@ || mv $@+ $@
 	$(RM) $@+
 
-NEWS: GIT-VERSION-FILE
+NEWS: GIT-VERSION-FILE .manifest
 	$(RAKE) -s news_rdoc > $@+
 	mv $@+ $@
 
