@@ -47,7 +47,8 @@ module Unicorn
         headers.each do |key, value|
           next if SKIP.include?(key.downcase)
           if value =~ /\n/
-            out.concat(value.split(/\n/).map! { |v| "#{key}: #{v}\r\n" })
+            # avoiding blank, key-only cookies with /\n+/
+            out.concat(value.split(/\n+/).map! { |v| "#{key}: #{v}\r\n" })
           else
             out << "#{key}: #{value}\r\n"
           end
