@@ -38,7 +38,7 @@ module Unicorn
                                 :before_fork, :after_fork, :before_exec,
                                 :logger, :pid, :app, :preload_app,
                                 :reexec_pid, :orig_app, :init_listeners,
-                                :master_pid, :config)
+                                :master_pid, :config, :ready_pipe)
     include ::Unicorn::SocketHelper
 
     # prevents IO objects in here from being GC-ed
@@ -162,6 +162,7 @@ module Unicorn
     def initialize(app, options = {})
       self.app = app
       self.reexec_pid = 0
+      self.ready_pipe = options.delete(:ready_pipe)
       self.init_listeners = options[:listeners] ? options[:listeners].dup : []
       self.config = Configurator.new(options.merge(:use_defaults => true))
       self.listener_opts = {}
@@ -327,6 +328,11 @@ module Unicorn
       trap(:CHLD) { |sig_nr| awaken_master }
       proc_name 'master'
       logger.info "master process ready" # test_exec.rb relies on this message
+      if ready_pipe
+        ready_pipe.syswrite($$.to_s)
+        ready_pipe.close rescue nil
+        self.ready_pipe = nil
+      end
       begin
         loop do
           reap_all_workers
@@ -531,7 +537,11 @@ module Unicorn
         WORKERS.values.include?(worker_nr) and next
         worker = Worker.new(worker_nr, Unicorn::Util.tmpio)
         before_fork.call(self, worker)
-        WORKERS[fork { worker_loop(worker) }] = worker
+        WORKERS[fork {
+          ready_pipe.close if ready_pipe
+          self.ready_pipe = nil
+          worker_loop(worker)
+        }] = worker
       end
     end
 

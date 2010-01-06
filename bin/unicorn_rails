@@ -202,6 +202,6 @@ end
 
 if daemonize
   options[:pid] = rails_pid
-  Unicorn::Launcher.daemonize!
+  Unicorn::Launcher.daemonize!(options)
 end
 Unicorn.run(app, options)

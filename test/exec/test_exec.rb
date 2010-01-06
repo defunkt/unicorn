@@ -805,7 +805,7 @@ EOF
       exec($unicorn_bin, "-D", "-l#{@addr}:#{@port}", "-c#{ucfg.path}")
     end
     pid, status = Process.waitpid2(pid)
-    assert status.success?, "original process exited successfully"
+    assert ! status.success?, "original process exited successfully"
     sleep 1 # can't waitpid on a daemonized process :<
     assert err.stat.size > 0
   end
