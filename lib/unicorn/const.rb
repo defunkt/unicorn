@@ -7,7 +7,7 @@ module Unicorn
   # gave about a 3% to 10% performance improvement over using the strings directly.
   # Symbols did not really improve things much compared to constants.
   module Const
-    UNICORN_VERSION="0.95.3"
+    UNICORN_VERSION="0.96.0"
 
     DEFAULT_HOST = "0.0.0.0" # default TCP listen host address
     DEFAULT_PORT = 8080      # default TCP listen port
