@@ -250,6 +250,10 @@ module Unicorn
     def stdout_path=(path); redirect_io($stdout, path); end
     def stderr_path=(path); redirect_io($stderr, path); end
 
+    def logger=(obj)
+      HttpRequest::DEFAULTS["rack.logger"] = super
+    end
+
     # sets the path for the PID file of the master process
     def pid=(path)
       if path

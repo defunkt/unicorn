@@ -12,7 +12,7 @@ module Unicorn
       "rack.multiprocess" => true,
       "rack.multithread" => false,
       "rack.run_once" => false,
-      "rack.version" => [1, 0],
+      "rack.version" => [1, 1],
       "SCRIPT_NAME" => "",
 
       # this is not in the Rack spec, but some apps may rely on it

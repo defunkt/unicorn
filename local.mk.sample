@@ -5,7 +5,7 @@
 # This is depends on a bunch of GNU-isms from bash, sed, touch.
 
 DLEXT := so
-gems := rack-1.0.1
+gems := rack-1.1.0
 
 # Avoid loading rubygems to speed up tests because gmake is
 # fork+exec heavy with Ruby.
