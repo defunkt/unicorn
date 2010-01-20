@@ -16,12 +16,9 @@ module Unicorn
     # The basic max request size we'll try to read.
     CHUNK_SIZE=(16 * 1024)
 
-    # This is the maximum header that is allowed before a client is booted.  The parser detects
-    # this, but we'd also like to do this as well.
-    MAX_HEADER=1024 * (80 + 32)
-
-    # Maximum request body size before it is moved out of memory and into a tempfile for reading.
-    MAX_BODY=MAX_HEADER
+    # Maximum request body size before it is moved out of memory and into a
+    # temporary file for reading (112 kilobytes).
+    MAX_BODY=1024 * 112
 
     # common errors we'll send back
     ERROR_400_RESPONSE = "HTTP/1.1 400 Bad Request\r\n\r\n"
