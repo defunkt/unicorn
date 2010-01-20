@@ -210,7 +210,18 @@ module Unicorn
       end
       config_listeners.each { |addr| listen(addr) }
       raise ArgumentError, "no listeners" if LISTENERS.empty?
+
+      # this pipe is used to wake us up from select(2) in #join when signals
+      # are trapped.  See trap_deferred.
+      init_self_pipe!
+
+      # setup signal handlers before writing pid file in case people get
+      # trigger happy and send signals as soon as the pid file exists.
+      # Note that signals don't actually get handled until the #join method
+      QUEUE_SIGS.each { |sig| trap_deferred(sig) }
+      trap(:CHLD) { |_| awaken_master }
       self.pid = config[:pid]
+
       self.master_pid = $$
       build_app! if preload_app
       maintain_worker_count
@@ -322,14 +333,9 @@ module Unicorn
     # one-at-a-time time and we'll happily drop signals in case somebody
     # is signalling us too often.
     def join
-      # this pipe is used to wake us up from select(2) in #join when signals
-      # are trapped.  See trap_deferred
-      init_self_pipe!
       respawn = true
       last_check = Time.now
 
-      QUEUE_SIGS.each { |sig| trap_deferred(sig) }
-      trap(:CHLD) { |sig_nr| awaken_master }
       proc_name 'master'
       logger.info "master process ready" # test_exec.rb relies on this message
       if ready_pipe

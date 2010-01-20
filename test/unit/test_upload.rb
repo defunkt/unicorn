@@ -55,6 +55,7 @@ class UploadTest < Test::Unit::TestCase
   def teardown
     redirect_test_io { @server.stop(true) } if @server
     @random.close
+    reset_sig_handlers
   end
 
   def test_put

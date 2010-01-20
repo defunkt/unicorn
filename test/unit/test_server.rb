@@ -41,6 +41,7 @@ class WebServerTest < Test::Unit::TestCase
       File.truncate("test_stderr.#$$.log", 0)
       @server.stop(true)
     end
+    reset_sig_handlers
   end
 
   def test_preload_app_config

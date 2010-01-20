@@ -40,6 +40,10 @@ class SignalsTest < Test::Unit::TestCase
     @server = nil
   end
 
+  def teardown
+    reset_sig_handlers
+  end
+
   def test_worker_dies_on_dead_master
     pid = fork {
       app = lambda { |env| [ 200, {'X-Pid' => "#$$" }, [] ] }
@@ -190,7 +194,7 @@ class SignalsTest < Test::Unit::TestCase
     killer = fork { loop { Process.kill(:HUP, pid); sleep(0.0001) } }
     buf = ' ' * @bs
     @count.times { sock.syswrite(buf) }
-    Process.kill(:TERM, killer)
+    Process.kill(:KILL, killer)
     Process.waitpid2(killer)
     redirect_test_io { @server.stop(true) }
     # can't check for == since pending signals get merged
