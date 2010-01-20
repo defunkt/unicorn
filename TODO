@@ -1,6 +1,6 @@
 * Documentation improvements
 
-* ensure test suite passes on non-GNU/Linux systems
+* ensure test suite passes on non-GNU/Linux, non-FreeBSD systems
   (likely that it already does)
 
 * fix const-correctness in HTTP parser
