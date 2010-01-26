@@ -3,6 +3,14 @@
 Occasionally odd {issues}[link:ISSUES.html] arise without a transparent or
 acceptable solution.  Those issues are documented here.
 
+* When using "preload_app true", with apps using background threads
+  need to restart them in the after_fork hook because threads are never
+  shared with child processes.  Additionally, any synchronization
+  primitives (Mutexes, Monitors, ConditionVariables) should be
+  reinitialized in case they are held during fork time to avoid
+  deadlocks.  The core Ruby Logger class needlessly uses a MonitorMutex
+  which can be disabled with a {monkey patch}[link:examples/logger_mp_safe.rb]
+
 * Rails 2.3.2 bundles its own version of Rack.  This may cause subtle
   bugs when simultaneously loaded with the system-wide Rack Rubygem
   which Unicorn depends on.  Upgrading to Rails 2.3.4 (or later) is
