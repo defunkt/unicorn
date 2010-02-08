@@ -48,8 +48,11 @@ upgrade)
 	echo >&2 "Couldn't upgrade, starting '$CMD' instead"
 	$CMD
 	;;
+reopen-logs)
+	sig USR1
+	;;
 *)
-	echo >&2 "Usage: $0 <start|stop|restart|upgrade|force-stop>"
+	echo >&2 "Usage: $0 <start|stop|restart|upgrade|force-stop|reopen-logs>"
 	exit 1
 	;;
 esac
