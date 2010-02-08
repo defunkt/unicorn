@@ -8,6 +8,8 @@ APP_ROOT=/home/x/my_app/current
 PID=$APP_ROOT/tmp/pids/unicorn.pid
 CMD="/usr/bin/unicorn -D -c $APP_ROOT/config/unicorn.rb"
 INIT_CONF=$APP_ROOT/config/init.conf
+action="$1"
+set -u
 
 test -f "$INIT_CONF" && . $INIT_CONF
 
@@ -23,7 +25,7 @@ oldsig () {
 	test -s $old_pid && kill -$1 `cat $old_pid`
 }
 
-case $1 in
+case $action in
 start)
 	sig 0 && echo >&2 "Already running" && exit 0
 	$CMD
