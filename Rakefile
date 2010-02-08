@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+autoload :Gem, 'rubygems'
 
 # most tasks are in the GNUmakefile which offers better parallelism
 
@@ -94,8 +95,6 @@ end
 
 desc "print release notes for Rubyforge"
 task :release_notes do
-  require 'rubygems'
-
   spec = Gem::Specification.load('unicorn.gemspec')
   puts spec.description.strip
   puts ""
@@ -110,7 +109,6 @@ end
 
 desc "post to RAA"
 task :raa_update do
-  require 'rubygems'
   require 'net/http'
   require 'net/netrc'
   rc = Net::Netrc.locate('unicorn-raa') or abort "~/.netrc not found"
@@ -177,7 +175,6 @@ end
 
 # optional rake-compiler support in case somebody needs to cross compile
 begin
-  require 'rubygems'
   spec = Gem::Specification.load('unicorn.gemspec')
   require 'rake/extensiontask'
   unless test ?r, "ext/unicorn_http/unicorn_http.c"
