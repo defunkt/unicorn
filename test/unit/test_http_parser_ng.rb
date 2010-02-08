@@ -1,6 +1,5 @@
 # -*- encoding: binary -*-
 
-# coding: binary
 require 'test/test_helper'
 require 'digest/md5'
 
