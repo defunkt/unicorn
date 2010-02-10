@@ -34,9 +34,9 @@ module Unicorn
   # Listener sockets are started in the master process and shared with
   # forked worker children.
 
-  class HttpServer < Struct.new(:listener_opts, :timeout, :worker_processes,
+  class HttpServer < Struct.new(:app, :timeout, :worker_processes,
                                 :before_fork, :after_fork, :before_exec,
-                                :logger, :pid, :app, :preload_app,
+                                :logger, :pid, :listener_opts, :preload_app,
                                 :reexec_pid, :orig_app, :init_listeners,
                                 :master_pid, :config, :ready_pipe)
     include ::Unicorn::SocketHelper
