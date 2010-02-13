@@ -439,7 +439,7 @@ static void hp_mark(void *ptr)
 static VALUE HttpParser_alloc(VALUE klass)
 {
   struct http_parser *hp;
-  return Data_Make_Struct(klass, struct http_parser, hp_mark, NULL, hp);
+  return Data_Make_Struct(klass, struct http_parser, hp_mark, -1, hp);
 }
 
 
