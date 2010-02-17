@@ -1,17 +1,13 @@
 # use GNU Make to run tests in parallel, and without depending on RubyGems
 all:: test
 
-ruby = ruby
-rake = rake
-ragel = ragel
-
 GIT_URL = git://git.bogomips.org/unicorn.git
 RLFLAGS = -G2
 
 # lower-case vars are deprecated
-RUBY = $(ruby)
-RAKE = $(rake)
-RAGEL = $(ragel)
+RUBY = ruby
+RAKE = rake
+RAGEL = ragel
 
 GIT-VERSION-FILE: .FORCE-GIT-VERSION-FILE
 	@./GIT-VERSION-GEN
