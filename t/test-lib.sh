@@ -63,7 +63,7 @@ check_stderr () {
 	set +u
 	_r_err=${1-${r_err}}
 	set -u
-	if grep -i Error $_r_err
+	if grep -v $T $_r_err | grep -i Error
 	then
 		die "Errors found in $_r_err"
 	elif grep SIGKILL $_r_err
