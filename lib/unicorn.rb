@@ -731,6 +731,7 @@ module Unicorn
     end
 
     def load_config!
+      loaded_app = app
       begin
         logger.info "reloading config_file=#{config.config_file}"
         config[:listeners].replace(init_listeners)
@@ -741,9 +742,10 @@ module Unicorn
         self.app = orig_app
         build_app! if preload_app
         logger.info "done reloading config_file=#{config.config_file}"
-      rescue => e
+      rescue StandardError, LoadError, SyntaxError => e
         logger.error "error reloading config_file=#{config.config_file}: " \
                      "#{e.class} #{e.message}"
+        self.app = loaded_app
       end
     end
 
