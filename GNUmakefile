@@ -58,6 +58,7 @@ lib/unicorn_http.$(DLEXT): $(ext)/unicorn_http.$(DLEXT)
 	install -m644 $< $@
 http: lib/unicorn_http.$(DLEXT)
 
+test-install: $(test_prefix)/.stamp
 $(test_prefix)/.stamp: $(inst_deps)
 	mkdir -p $(test_prefix)/.ccache
 	tar cf - $(inst_deps) GIT-VERSION-GEN | \
@@ -282,3 +283,4 @@ gem install-gem: GIT-VERSION-FILE
 endif
 
 .PHONY: .FORCE-GIT-VERSION-FILE doc $(T) $(slow_tests) manifest man
+.PHONY: test-install
