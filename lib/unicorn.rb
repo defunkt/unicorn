@@ -27,6 +27,44 @@ module Unicorn
     def run(app, options = {})
       HttpServer.new(app, options).start.join
     end
+
+    # This returns a lambda to pass in as the app, this does not "build" the
+    # app (which we defer based on the outcome of "preload_app" in the
+    # Unicorn config).  The returned lambda will be called when it is
+    # time to build the app.
+    def builder(ru)
+      lambda do ||
+        inner_app = case ru
+        when /\.ru$/
+          raw = File.open(ru, "rb") { |fp| fp.sysread(fp.stat.size) }
+          raw.sub!(/^__END__\n.*/, '')
+          eval("Rack::Builder.new {(#{raw}\n)}.to_app", TOPLEVEL_BINDING, ru)
+        else
+          require ru
+          Object.const_get(File.basename(ru, '.rb').capitalize)
+        end
+
+        pp({ :inner_app => inner_app }) if $DEBUG
+
+        # return value, matches rackup defaults based on env
+        case ENV["RACK_ENV"]
+        when "development"
+          Rack::Builder.new do
+            use Rack::CommonLogger, $stderr
+            use Rack::ShowExceptions
+            use Rack::Lint
+            run inner_app
+          end.to_app
+        when "deployment"
+          Rack::Builder.new do
+            use Rack::CommonLogger, $stderr
+            run inner_app
+          end.to_app
+        else
+          inner_app
+        end
+      end
+    end
   end
 
   # This is the process manager of Unicorn. This manages worker

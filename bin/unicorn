@@ -108,49 +108,19 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   opts.parse! ARGV
 end
 
-config = ARGV[0] || "config.ru"
-abort "configuration file #{config} not found" unless File.exist?(config)
+ru = ARGV[0] || "config.ru"
+abort "configuration file #{ru} not found" unless File.exist?(ru)
 
-if config =~ /\.ru$/
+if ru =~ /\.ru$/
   # parse embedded command-line options in config.ru comments
-  if File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) } =~ /^#\\(.*)/
+  if File.open(ru, "rb") { |fp| fp.sysread(fp.stat.size) } =~ /^#\\(.*)/
     opts.parse! $1.split(/\s+/)
   end
 end
 
 require 'pp' if $DEBUG
 
-app = lambda do ||
-  # require Rack as late as possible in case $LOAD_PATH is modified
-  # in config.ru or command-line
-  inner_app = case config
-  when /\.ru$/
-    raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }
-    raw.sub!(/^__END__\n.*/, '')
-    eval("Rack::Builder.new {(#{raw}\n)}.to_app", nil, config)
-  else
-    require config
-    Object.const_get(File.basename(config, '.rb').capitalize)
-  end
-  pp({ :inner_app => inner_app }) if $DEBUG
-  case ENV["RACK_ENV"]
-  when "development"
-    Rack::Builder.new do
-      use Rack::CommonLogger, $stderr
-      use Rack::ShowExceptions
-      use Rack::Lint
-      run inner_app
-    end.to_app
-  when "deployment"
-    Rack::Builder.new do
-      use Rack::CommonLogger, $stderr
-      run inner_app
-    end.to_app
-  else
-    inner_app
-  end
-end
-
+app = Unicorn.builder(ru)
 listeners << "#{host}:#{port}" if set_listener
 
 if $DEBUG
