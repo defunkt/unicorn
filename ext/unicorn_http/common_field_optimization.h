@@ -67,7 +67,7 @@ static void init_common_fields(void)
   char tmp[64];
   memcpy(tmp, HTTP_PREFIX, HTTP_PREFIX_LEN);
 
-  for(i = 0; i < ARRAY_SIZE(common_http_fields); cf++, i++) {
+  for(i = ARRAY_SIZE(common_http_fields); --i >= 0; cf++) {
     /* Rack doesn't like certain headers prefixed with "HTTP_" */
     if (!strcmp("CONTENT_LENGTH", cf->name) ||
         !strcmp("CONTENT_TYPE", cf->name)) {
@@ -87,8 +87,8 @@ static VALUE find_common_field(const char *field, size_t flen)
   int i;
   struct common_field *cf = common_http_fields;
 
-  for(i = 0; i < ARRAY_SIZE(common_http_fields); i++, cf++) {
-    if (cf->len == flen && !memcmp(cf->name, field, flen))
+  for(i = ARRAY_SIZE(common_http_fields); --i >= 0; cf++) {
+    if (cf->len == (long)flen && !memcmp(cf->name, field, flen))
       return cf->value;
   }
   return Qnil;

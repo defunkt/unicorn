@@ -236,10 +236,9 @@ static void write_value(VALUE req, struct http_parser *hp,
     rb_hash_aset(req, g_http_host, STR_NEW(mark, fpc));
   }
   action request_uri {
-    size_t len = LEN(mark, fpc);
     VALUE str;
 
-    VALIDATE_MAX_LENGTH(len, REQUEST_URI);
+    VALIDATE_MAX_LENGTH(LEN(mark, fpc), REQUEST_URI);
     str = rb_hash_aset(req, g_request_uri, STR_NEW(mark, fpc));
     /*
      * "OPTIONS * HTTP/1.1\r\n" is a valid request, but we can't have '*'
@@ -263,9 +262,8 @@ static void write_value(VALUE req, struct http_parser *hp,
   action http_version { http_version(hp, req, PTR_TO(mark), LEN(mark, fpc)); }
   action request_path {
     VALUE val;
-    size_t len = LEN(mark, fpc);
 
-    VALIDATE_MAX_LENGTH(len, REQUEST_PATH);
+    VALIDATE_MAX_LENGTH(LEN(mark, fpc), REQUEST_PATH);
     val = rb_hash_aset(req, g_request_path, STR_NEW(mark, fpc));
 
     /* rack says PATH_INFO must start with "/" or be empty */
@@ -314,13 +312,13 @@ static void write_value(VALUE req, struct http_parser *hp,
 
   action skip_chunk_data {
   skip_chunk_data_hack: {
-    size_t nr = MIN(hp->len.chunk, REMAINING);
+    size_t nr = MIN((size_t)hp->len.chunk, REMAINING);
     memcpy(RSTRING_PTR(req) + hp->s.dest_offset, fpc, nr);
     hp->s.dest_offset += nr;
     hp->len.chunk -= nr;
     p += nr;
     assert(hp->len.chunk >= 0 && "negative chunk length");
-    if (hp->len.chunk > REMAINING) {
+    if ((size_t)hp->len.chunk > REMAINING) {
       HP_FL_SET(hp, INCHUNK);
       goto post_exec;
     } else {
@@ -360,7 +358,8 @@ static void http_parser_execute(struct http_parser *hp,
   p = buffer+off;
   pe = buffer+len;
 
-  assert(pe - p == len - off && "pointers aren't same distance");
+  assert((void *)(pe - p) == (void *)(len - off) &&
+         "pointers aren't same distance");
 
   if (HP_FL_TEST(hp, INCHUNK)) {
     HP_FL_UNSET(hp, INCHUNK);

@@ -47,7 +47,7 @@ static void rb_18_str_set_len(VALUE str, long len)
 #  define rb_str_modify(x) do {} while (0)
 #endif /* ! defined(HAVE_RB_STR_MODIFY) */
 
-static inline int str_cstr_eq(VALUE val, const char *ptr, size_t len)
+static inline int str_cstr_eq(VALUE val, const char *ptr, long len)
 {
   return (RSTRING_LEN(val) == len && !memcmp(ptr, RSTRING_PTR(val), len));
 }
@@ -56,7 +56,7 @@ static inline int str_cstr_eq(VALUE val, const char *ptr, size_t len)
   str_cstr_eq(val, const_str, sizeof(const_str) - 1)
 
 /* strcasecmp isn't locale independent */
-static int str_cstr_case_eq(VALUE val, const char *ptr, size_t len)
+static int str_cstr_case_eq(VALUE val, const char *ptr, long len)
 {
   if (RSTRING_LEN(val) == len) {
     const char *v = RSTRING_PTR(val);
