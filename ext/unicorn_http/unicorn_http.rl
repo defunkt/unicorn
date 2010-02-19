@@ -674,10 +674,13 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
 
 void Init_unicorn_http(void)
 {
+  VALUE mUnicorn, cHttpParser;
+
   mUnicorn = rb_define_module("Unicorn");
+  cHttpParser = rb_define_class_under(mUnicorn, "HttpParser", rb_cObject);
   eHttpParserError =
          rb_define_class_under(mUnicorn, "HttpParserError", rb_eIOError);
-  cHttpParser = rb_define_class_under(mUnicorn, "HttpParser", rb_cObject);
+
   init_globals();
   rb_define_alloc_func(cHttpParser, HttpParser_alloc);
   rb_define_method(cHttpParser, "initialize", HttpParser_init,0);

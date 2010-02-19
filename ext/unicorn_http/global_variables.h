@@ -1,7 +1,5 @@
 #ifndef global_variables_h
 #define global_variables_h
-static VALUE mUnicorn;
-static VALUE cHttpParser;
 static VALUE eHttpParserError;
 
 static VALUE g_rack_url_scheme;
@@ -61,7 +59,7 @@ DEF_MAX_LENGTH(REQUEST_PATH, 1024);
 DEF_MAX_LENGTH(QUERY_STRING, (1024 * 10));
 DEF_MAX_LENGTH(HEADER, (1024 * (80 + 32)));
 
-void init_globals(void)
+static void init_globals(void)
 {
   DEF_GLOBAL(rack_url_scheme, "rack.url_scheme");
   DEF_GLOBAL(request_method, "REQUEST_METHOD");
