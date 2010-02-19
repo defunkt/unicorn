@@ -30,6 +30,19 @@
 #endif /* SIZEOF_OFF_T check */
 
 /*
+ * ragel enforces fpc as a const, and merely casting can make picky
+ * compilers unhappy, so we have this little helper do our dirty work
+ */
+static inline void *deconst(const void *in)
+{
+  union { const void *in; void *out; } tmp;
+
+  tmp.in = in;
+
+  return tmp.out;
+}
+
+/*
  * capitalizes all lower-case ASCII characters and converts dashes
  * to underscores for HTTP headers.  Locale-agnostic.
  */

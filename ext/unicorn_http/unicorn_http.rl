@@ -136,7 +136,7 @@ static inline void hp_invalid_if_trailer(struct http_parser *hp)
 }
 
 static void write_cont_value(struct http_parser *hp,
-                             const char *buffer, const char *p)
+                             char *buffer, const char *p)
 {
   char *vptr;
 
@@ -154,7 +154,7 @@ static void write_cont_value(struct http_parser *hp,
   if (RSTRING_LEN(hp->cont) > 0)
     --hp->mark;
 
-  vptr = (char *)PTR_TO(mark);
+  vptr = PTR_TO(mark);
 
   if (RSTRING_LEN(hp->cont) > 0) {
     assert((' ' == *vptr || '\t' == *vptr) && "invalid leading white space");
@@ -220,8 +220,8 @@ static void write_value(VALUE req, struct http_parser *hp,
   action mark {MARK(mark, fpc); }
 
   action start_field { MARK(start.field, fpc); }
-  action snake_upcase_field { snake_upcase_char((char *)fpc); }
-  action downcase_char { downcase_char((char *)fpc); }
+  action snake_upcase_field { snake_upcase_char(deconst(fpc)); }
+  action downcase_char { downcase_char(deconst(fpc)); }
   action write_field { hp->s.field_len = LEN(start.field, fpc); }
   action start_value { MARK(mark, fpc); }
   action write_value { write_value(req, hp, buffer, fpc); }
@@ -344,7 +344,7 @@ static void http_parser_init(struct http_parser *hp)
 
 /** exec **/
 static void http_parser_execute(struct http_parser *hp,
-  VALUE req, const char *buffer, size_t len)
+  VALUE req, char *buffer, size_t len)
 {
   const char *p, *pe;
   int cs = hp->cs;
