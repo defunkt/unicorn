@@ -28,8 +28,7 @@ module Unicorn
 
       def chown_logs(uid, gid)
         ObjectSpace.each_object(File) do |fp|
-          is_log?(fp) or next
-          fp.chown(uid, gid)
+          fp.chown(uid, gid) if is_log?(fp)
         end
       end
 
