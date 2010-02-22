@@ -24,7 +24,7 @@ module Unicorn
 
     # Being explicitly single-threaded, we have certain advantages in
     # not having to worry about variables being clobbered :)
-    BUF = ' ' * Const::CHUNK_SIZE # initial size, may grow
+    BUF = ""
     PARSER = HttpParser.new
     REQ = {}
 
