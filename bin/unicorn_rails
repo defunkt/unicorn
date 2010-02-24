@@ -122,21 +122,19 @@ require 'pp' if $DEBUG
 
 # this won't run until after forking if preload_app is false
 app = lambda do ||
-  # Load Rails and the private version of Rack it bundles.
+  # Load Rails and (possibly) the private version of Rack it bundles.
   begin
     require 'config/boot'
   rescue LoadError => err
     abort "#$0 must be run inside RAILS_ROOT: #{err.inspect}"
   end
-  defined?(::RAILS_ROOT) or abort "RAILS_ROOT not defined by config/boot"
-  defined?(::RAILS_ENV) or abort "RAILS_ENV not defined by config/boot"
-  defined?(::Rails::VERSION::STRING) or
-    abort "Rails::VERSION::STRING not defined by config/boot"
 
   inner_app = case config
   when nil
     require 'config/environment'
 
+    defined?(::Rails::VERSION::STRING) or
+      abort "Rails::VERSION::STRING not defined by config/{boot,environment}"
     # it seems Rails >=2.2 support Rack, but only >=2.3 requires it
     old_rails = case ::Rails::VERSION::MAJOR
     when 0, 1 then true
