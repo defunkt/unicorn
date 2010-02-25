@@ -120,68 +120,72 @@ end
 
 require 'pp' if $DEBUG
 
-# this won't run until after forking if preload_app is false
-app = lambda do ||
-  # Load Rails and (possibly) the private version of Rack it bundles.
-  begin
-    require 'config/boot'
-  rescue LoadError => err
-    abort "#$0 must be run inside RAILS_ROOT: #{err.inspect}"
+def rails_builder(config, daemonize)
+  # this lambda won't run until after forking if preload_app is false
+  lambda do ||
+    # Load Rails and (possibly) the private version of Rack it bundles.
+    begin
+      require 'config/boot'
+    rescue LoadError => err
+      abort "#$0 must be run inside RAILS_ROOT: #{err.inspect}"
+    end
+
+    inner_app = case config
+    when nil
+      require 'config/environment'
+
+      defined?(::Rails::VERSION::STRING) or
+        abort "Rails::VERSION::STRING not defined by config/{boot,environment}"
+      # it seems Rails >=2.2 support Rack, but only >=2.3 requires it
+      old_rails = case ::Rails::VERSION::MAJOR
+      when 0, 1 then true
+      when 2 then Rails::VERSION::MINOR < 3 ? true : false
+      else
+        false
+      end
+
+      if old_rails
+        require 'unicorn/app/old_rails'
+        Unicorn::App::OldRails.new
+      else
+        ActionController::Dispatcher.new
+      end
+    when /\.ru$/
+      raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }
+      raw.sub!(/^__END__\n.*/, '')
+      eval("Rack::Builder.new {(#{raw}\n)}.to_app", nil, config)
+    else
+      require config
+      Object.const_get(File.basename(config, '.rb').capitalize)
+    end
+
+    Rack::Builder.new do
+      map_path = ENV['RAILS_RELATIVE_URL_ROOT'] || '/'
+      if inner_app.class.to_s == "Unicorn::App::OldRails"
+        if map_path != '/'
+          # patches + tests welcome, but I really cbf to deal with this
+          # since all apps I've ever dealt with just use "/" ...
+          $stderr.puts "relative URL roots may not work for older Rails"
+        end
+        $stderr.puts "LogTailer not available for Rails < 2.3" unless daemonize
+        $stderr.puts "Debugger not available" if $DEBUG
+        map(map_path) do
+          use Unicorn::App::OldRails::Static
+          run inner_app
+        end
+      else
+        use Rails::Rack::LogTailer unless daemonize
+        use Rails::Rack::Debugger if $DEBUG
+        map(map_path) do
+          use Rails::Rack::Static
+          run inner_app
+        end
+      end
+    end.to_app
   end
-
-  inner_app = case config
-  when nil
-    require 'config/environment'
-
-    defined?(::Rails::VERSION::STRING) or
-      abort "Rails::VERSION::STRING not defined by config/{boot,environment}"
-    # it seems Rails >=2.2 support Rack, but only >=2.3 requires it
-    old_rails = case ::Rails::VERSION::MAJOR
-    when 0, 1 then true
-    when 2 then Rails::VERSION::MINOR < 3 ? true : false
-    else
-      false
-    end
-
-    if old_rails
-      require 'unicorn/app/old_rails'
-      Unicorn::App::OldRails.new
-    else
-      ActionController::Dispatcher.new
-    end
-  when /\.ru$/
-    raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }
-    raw.sub!(/^__END__\n.*/, '')
-    eval("Rack::Builder.new {(#{raw}\n)}.to_app", nil, config)
-  else
-    require config
-    Object.const_get(File.basename(config, '.rb').capitalize)
-  end
-
-  Rack::Builder.new do
-    map_path = ENV['RAILS_RELATIVE_URL_ROOT'] || '/'
-    if inner_app.class.to_s == "Unicorn::App::OldRails"
-      if map_path != '/'
-        # patches + tests welcome, but I really cbf to deal with this
-        # since all apps I've ever dealt with just use "/" ...
-        $stderr.puts "relative URL roots may not work for older Rails"
-      end
-      $stderr.puts "LogTailer not available for Rails < 2.3" unless daemonize
-      $stderr.puts "Debugger not available" if $DEBUG
-      map(map_path) do
-        use Unicorn::App::OldRails::Static
-        run inner_app
-      end
-    else
-      use Rails::Rack::LogTailer unless daemonize
-      use Rails::Rack::Debugger if $DEBUG
-      map(map_path) do
-        use Rails::Rack::Static
-        run inner_app
-      end
-    end
-  end.to_app
 end
+
+app = rails_builder(config, daemonize)
 
 listeners << "#{host}:#{port}" if set_listener
 
