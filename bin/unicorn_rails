@@ -4,7 +4,6 @@ require 'unicorn/launcher'
 require 'optparse'
 require 'fileutils'
 
-rails_pid = "#{Unicorn::HttpServer::START_CTX[:cwd]}/tmp/pids/unicorn.pid"
 cmd = File.basename($0)
 daemonize = false
 listeners = []
@@ -198,12 +197,12 @@ if $DEBUG
 end
 
 # ensure Rails standard tmp paths exist
-%w(cache pids sessions sockets).each do |dir|
-  FileUtils.mkdir_p("tmp/#{dir}")
+options[:after_reload] = lambda do
+  FileUtils.mkdir_p(%w(cache pids sessions sockets).map! { |d| "tmp/#{d}" })
 end
 
 if daemonize
-  options[:pid] = rails_pid
+  options[:pid] = "tmp/pids/unicorn.pid"
   Unicorn::Launcher.daemonize!(options)
 end
 Unicorn.run(app, options)

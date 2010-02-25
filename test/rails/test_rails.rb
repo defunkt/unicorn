@@ -92,15 +92,15 @@ logger Logger.new('#{COMMON_TMP.path}')
     redirect_test_io { @pid = fork { exec 'unicorn_rails', "-l#@addr:#@port" } }
     wait_master_ready("test_stderr.#$$.log")
 
-    # temp dirs exist
-    tmp_dirs.each { |dir| assert(File.directory?("tmp/#{dir}")) }
-
     # basic GET
     res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/foo"))
     assert_equal "FOO\n", res.body
     assert_match %r{^text/html\b}, res['Content-Type']
     assert_equal "4", res['Content-Length']
     assert_equal "200 OK", res['Status']
+
+    # temp dirs exist
+    tmp_dirs.each { |dir| assert(File.directory?("tmp/#{dir}")) }
 
     # can we set cookies?
     res = Net::HTTP.get_response(URI.parse("http://#@addr:#@port/foo/xcookie"))

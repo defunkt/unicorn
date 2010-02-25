@@ -10,7 +10,7 @@ module Unicorn
   # See http://unicorn.bogomips.org/examples/unicorn.conf.rb for an
   # example config file.  An example config file for use with nginx is
   # also available at http://unicorn.bogomips.org/examples/nginx.conf
-  class Configurator < Struct.new(:set, :config_file)
+  class Configurator < Struct.new(:set, :config_file, :after_reload)
 
     # Default settings for Unicorn
     DEFAULTS = {
@@ -34,6 +34,10 @@ module Unicorn
       self.set = Hash.new(:unset)
       use_defaults = defaults.delete(:use_defaults)
       self.config_file = defaults.delete(:config_file)
+
+      # after_reload is only used by unicorn_rails, unsupported otherwise
+      self.after_reload = defaults.delete(:after_reload)
+
       set.merge!(DEFAULTS) if use_defaults
       defaults.each { |key, value| self.send(key, value) }
       Hash === set[:listener_opts] or
@@ -53,6 +57,9 @@ module Unicorn
         test(?w, path) || test(?w, File.dirname(path)) or \
               raise ArgumentError, "directory for #{var}=#{path} not writable"
       end
+
+      # unicorn_rails creates dirs here after working_directory is bound
+      after_reload.call if after_reload
     end
 
     def commit!(server, options = {}) #:nodoc:
