@@ -13,19 +13,19 @@ module Unicorn
   #
   # When processing uploads, Unicorn exposes a TeeInput object under
   # "rack.input" of the Rack environment.
-  class TeeInput < Struct.new(:socket, :req, :parser, :buf)
+  class TeeInput < Struct.new(:socket, :req, :parser, :buf, :len, :tmp, :buf2)
 
     # Initializes a new TeeInput object.  You normally do not have to call
     # this unless you are writing an HTTP server.
     def initialize(*args)
       super(*args)
-      @size = parser.content_length
-      @tmp = @size && @size < Const::MAX_BODY ? StringIO.new("") : Util.tmpio
-      @buf2 = buf.dup
+      self.len = parser.content_length
+      self.tmp = len && len < Const::MAX_BODY ? StringIO.new("") : Util.tmpio
+      self.buf2 = buf.dup
       if buf.size > 0
-        parser.filter_body(@buf2, buf) and finalize_input
-        @tmp.write(@buf2)
-        @tmp.seek(0)
+        parser.filter_body(buf2, buf) and finalize_input
+        tmp.write(buf2)
+        tmp.seek(0)
       end
     end
 
@@ -40,16 +40,16 @@ module Unicorn
     # all of the input stream before returning since there's no other
     # way to determine the size of the request body beforehand.
     def size
-      @size and return @size
+      len and return len
 
       if socket
-        pos = @tmp.pos
-        while tee(Const::CHUNK_SIZE, @buf2)
+        pos = tmp.pos
+        while tee(Const::CHUNK_SIZE, buf2)
         end
-        @tmp.seek(pos)
+        tmp.seek(pos)
       end
 
-      @size = @tmp.size
+      self.len = tmp.size
     end
 
     # :call-seq:
@@ -72,22 +72,22 @@ module Unicorn
     # any data and only block when nothing is available (providing
     # IO#readpartial semantics).
     def read(*args)
-      socket or return @tmp.read(*args)
+      socket or return tmp.read(*args)
 
       length = args.shift
       if nil == length
-        rv = @tmp.read || ""
-        while tee(Const::CHUNK_SIZE, @buf2)
-          rv << @buf2
+        rv = tmp.read || ""
+        while tee(Const::CHUNK_SIZE, buf2)
+          rv << buf2
         end
         rv
       else
-        rv = args.shift || @buf2.dup
-        diff = @tmp.size - @tmp.pos
+        rv = args.shift || buf2.dup
+        diff = tmp.size - tmp.pos
         if 0 == diff
           ensure_length(tee(length, rv), length)
         else
-          ensure_length(@tmp.read(diff > length ? length : diff, rv), length)
+          ensure_length(tmp.read(diff > length ? length : diff, rv), length)
         end
       end
     end
@@ -102,26 +102,26 @@ module Unicorn
     # This takes zero arguments for strict Rack::Lint compatibility,
     # unlike IO#gets.
     def gets
-      socket or return @tmp.gets
+      socket or return tmp.gets
       nil == $/ and return read
 
-      orig_size = @tmp.size
-      if @tmp.pos == orig_size
-        tee(Const::CHUNK_SIZE, @buf2) or return nil
-        @tmp.seek(orig_size)
+      orig_size = tmp.size
+      if tmp.pos == orig_size
+        tee(Const::CHUNK_SIZE, buf2) or return nil
+        tmp.seek(orig_size)
       end
 
-      line = @tmp.gets # cannot be nil here since size > pos
+      line = tmp.gets # cannot be nil here since size > pos
       $/ == line[-$/.size, $/.size] and return line
 
-      # unlikely, if we got here, then @tmp is at EOF
+      # unlikely, if we got here, then tmp is at EOF
       begin
-        orig_size = @tmp.pos
-        tee(Const::CHUNK_SIZE, @buf2) or break
-        @tmp.seek(orig_size)
-        line << @tmp.gets
+        orig_size = tmp.pos
+        tee(Const::CHUNK_SIZE, buf2) or break
+        tmp.seek(orig_size)
+        line << tmp.gets
         $/ == line[-$/.size, $/.size] and return line
-        # @tmp is at EOF again here, retry the loop
+        # tmp is at EOF again here, retry the loop
       end while true
 
       line
@@ -147,7 +147,7 @@ module Unicorn
     # the offset (zero) of the +ios+ pointer.  Subsequent reads will
     # start from the beginning of the previously-buffered input.
     def rewind
-      @tmp.rewind # Rack does not specify what the return value is here
+      tmp.rewind # Rack does not specify what the return value is here
     end
 
   private
@@ -160,7 +160,7 @@ module Unicorn
         # _entire_ request has been sent, and those will not have
         # raised EOFError on us.
         socket.close if socket
-        raise ClientShutdown, "bytes_read=#{@tmp.size}", []
+        raise ClientShutdown, "bytes_read=#{tmp.size}", []
       when HttpParserError
         e.set_backtrace([])
       end
@@ -173,8 +173,8 @@ module Unicorn
     def tee(length, dst)
       unless parser.body_eof?
         if parser.filter_body(dst, socket.readpartial(length, buf)).nil?
-          @tmp.write(dst)
-          @tmp.seek(0, IO::SEEK_END) # workaround FreeBSD/OSX + MRI 1.8.x bug
+          tmp.write(dst)
+          tmp.seek(0, IO::SEEK_END) # workaround FreeBSD/OSX + MRI 1.8.x bug
           return dst
         end
       end
@@ -201,13 +201,13 @@ module Unicorn
     # streaming input bodies, this is a no-op for
     # "Transfer-Encoding: chunked" requests.
     def ensure_length(dst, length)
-      # @size is nil for chunked bodies, so we can't ensure length for those
+      # len is nil for chunked bodies, so we can't ensure length for those
       # since they could be streaming bidirectionally and we don't want to
       # block the caller in that case.
-      return dst if dst.nil? || @size.nil?
+      return dst if dst.nil? || len.nil?
 
-      while dst.size < length && tee(length - dst.size, @buf2)
-        dst << @buf2
+      while dst.size < length && tee(length - dst.size, buf2)
+        dst << buf2
       end
 
       dst

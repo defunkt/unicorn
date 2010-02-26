@@ -71,8 +71,8 @@ class TestTeeInput < Test::Unit::TestCase
     ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
     assert_equal 0, @parser.content_length
     assert @parser.body_eof?
-    assert_equal StringIO, ti.instance_eval { @tmp.class }
-    assert_equal 0, ti.instance_eval { @tmp.pos }
+    assert_equal StringIO, ti.tmp.class
+    assert_equal 0, ti.tmp.pos
     assert_equal 5, ti.size
     assert_equal 'hello', ti.read
     assert_equal '', ti.read
@@ -99,8 +99,8 @@ class TestTeeInput < Test::Unit::TestCase
     ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
     assert_equal 0, @parser.content_length
     assert @parser.body_eof?
-    assert_kind_of File, ti.instance_eval { @tmp }
-    assert_equal 0, ti.instance_eval { @tmp.pos }
+    assert_kind_of File, ti.tmp
+    assert_equal 0, ti.tmp.pos
     assert_equal Unicorn::Const::MAX_BODY + 1, ti.size
   end
 
@@ -125,9 +125,9 @@ class TestTeeInput < Test::Unit::TestCase
     ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
     assert_equal Unicorn::Const::MAX_BODY, @parser.content_length
     assert ! @parser.body_eof?
-    assert_kind_of File, ti.instance_eval { @tmp }
-    assert_equal 0, ti.instance_eval { @tmp.pos }
-    assert_equal 1, ti.instance_eval { @tmp.size }
+    assert_kind_of File, ti.tmp
+    assert_equal 0, ti.tmp.pos
+    assert_equal 1, ti.tmp.size
     assert_equal Unicorn::Const::MAX_BODY + 1, ti.size
     nr = Unicorn::Const::MAX_BODY / 4
     pid = fork {
@@ -165,19 +165,19 @@ class TestTeeInput < Test::Unit::TestCase
     @wr.close
     ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
     assert_nil @parser.content_length
-    assert_nil ti.instance_eval { @size }
+    assert_nil ti.len
     assert ! @parser.body_eof?
     assert_equal 25, ti.size
     assert @parser.body_eof?
-    assert_equal 25, ti.instance_eval { @size }
-    assert_equal 0, ti.instance_eval { @tmp.pos }
+    assert_equal 25, ti.len
+    assert_equal 0, ti.tmp.pos
     assert_nothing_raised { ti.rewind }
-    assert_equal 0, ti.instance_eval { @tmp.pos }
+    assert_equal 0, ti.tmp.pos
     assert_equal 'abcdeabcdeabcdeabcde', ti.read(20)
-    assert_equal 20, ti.instance_eval { @tmp.pos }
+    assert_equal 20, ti.tmp.pos
     assert_nothing_raised { ti.rewind }
-    assert_equal 0, ti.instance_eval { @tmp.pos }
-    assert_kind_of File, ti.instance_eval { @tmp }
+    assert_equal 0, ti.tmp.pos
+    assert_kind_of File, ti.tmp
     status = nil
     assert_nothing_raised { pid, status = Process.waitpid2(pid) }
     assert status.success?
@@ -203,7 +203,7 @@ class TestTeeInput < Test::Unit::TestCase
     }
     ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
     assert_nil @parser.content_length
-    assert_nil ti.instance_eval { @size }
+    assert_nil ti.len
     assert ! @parser.body_eof?
     chunks.each do |chunk|
       wr.write('.')
