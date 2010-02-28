@@ -21,7 +21,7 @@ module Unicorn
       super(*args)
       self.len = parser.content_length
       self.tmp = len && len < Const::MAX_BODY ? StringIO.new("") : Util.tmpio
-      self.buf2 = buf.dup
+      self.buf2 = ""
       if buf.size > 0
         parser.filter_body(buf2, buf) and finalize_input
         tmp.write(buf2)
@@ -82,7 +82,7 @@ module Unicorn
         end
         rv
       else
-        rv = args.shift || buf2.dup
+        rv = args.shift || ""
         diff = tmp.size - tmp.pos
         if 0 == diff
           ensure_length(tee(length, rv), length)
