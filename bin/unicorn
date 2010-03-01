@@ -112,11 +112,10 @@ ru = ARGV[0] || "config.ru"
 abort "configuration file #{ru} not found" unless File.exist?(ru)
 
 app = Unicorn.builder(ru, opts)
-require 'pp' if $DEBUG
-
 listeners << "#{host}:#{port}" if set_listener
 
 if $DEBUG
+  require 'pp'
   pp({
     :unicorn_options => options,
     :app => app,
