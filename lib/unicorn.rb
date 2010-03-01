@@ -35,15 +35,13 @@ module Unicorn
     def builder(ru, opts)
       if ru =~ /\.ru\z/
         # parse embedded command-line options in config.ru comments
-        if File.open(ru, "rb") { |fp| fp.sysread(fp.stat.size) } =~ /^#\\(.*)/
-          opts.parse! $1.split(/\s+/)
-        end
+        /^#\\(.*)/ =~ File.read(ru) and opts.parse!($1.split(/\s+/))
       end
 
       lambda do ||
         inner_app = case ru
         when /\.ru$/
-          raw = File.open(ru, "rb") { |fp| fp.sysread(fp.stat.size) }
+          raw = File.read(ru)
           raw.sub!(/^__END__\n.*/, '')
           eval("Rack::Builder.new {(#{raw}\n)}.to_app", TOPLEVEL_BINDING, ru)
         else

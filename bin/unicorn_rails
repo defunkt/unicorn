@@ -110,14 +110,10 @@ end
 
 config = ARGV[0] || (File.exist?('config.ru') ? 'config.ru' : nil)
 
-if config && config =~ /\.ru$/
+if config && config =~ /\.ru\z/
   # parse embedded command-line options in config.ru comments
-  if File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) } =~ /^#\\(.*)/
-    opts.parse! $1.split(/\s+/)
-  end
+  /^#\\(.*)/ =~ File.read(config) and opts.parse!($1.split(/\s+/))
 end
-
-require 'pp' if $DEBUG
 
 def rails_builder(config, daemonize)
   # this lambda won't run until after forking if preload_app is false
@@ -185,6 +181,7 @@ def rails_builder(config, daemonize)
 end
 
 app = rails_builder(config, daemonize)
+require 'pp' if $DEBUG
 
 listeners << "#{host}:#{port}" if set_listener
 
