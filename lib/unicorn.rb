@@ -2,8 +2,8 @@
 
 require 'fcntl'
 require 'unicorn/socket_helper'
+require 'etc'
 autoload :Rack, 'rack'
-autoload :Etc, 'etc'
 
 # Unicorn module containing all of the classes (include C extensions) for running
 # a Unicorn web server.  It contains a minimalist HTTP server with just enough
