@@ -336,6 +336,17 @@ module Unicorn
       HttpServer::START_CTX[:cwd] = ENV["PWD"] = path
     end
 
+    # Runs worker processes as the specified +user+ and +group+.
+    # The master process always stays running as the user who started it.
+    # This switch will occur after calling the after_fork hook, and only
+    # if the Worker#user method is not called in the after_fork hook
+    def user(user, group = nil)
+      # raises ArgumentError on invalid user/group
+      Etc.getpwnam(user)
+      Etc.getgrnam(group) if group
+      set[:user] = [ user, group ]
+    end
+
     # expands "unix:path/to/foo" to a socket relative to the current path
     # expands pathnames of sockets if relative to "~" or "~username"
     # expands "*:port and ":port" to "0.0.0.0:port"

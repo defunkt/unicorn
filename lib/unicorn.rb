@@ -3,6 +3,7 @@
 require 'fcntl'
 require 'unicorn/socket_helper'
 autoload :Rack, 'rack'
+autoload :Etc, 'etc'
 
 # Unicorn module containing all of the classes (include C extensions) for running
 # a Unicorn web server.  It contains a minimalist HTTP server with just enough
@@ -81,7 +82,7 @@ module Unicorn
                                 :before_fork, :after_fork, :before_exec,
                                 :logger, :pid, :listener_opts, :preload_app,
                                 :reexec_pid, :orig_app, :init_listeners,
-                                :master_pid, :config, :ready_pipe)
+                                :master_pid, :config, :ready_pipe, :user)
     include ::Unicorn::SocketHelper
 
     # prevents IO objects in here from being GC-ed
@@ -162,9 +163,7 @@ module Unicorn
     # releases of Unicorn.  You may need to access it in the
     # before_fork/after_fork hooks.  See the Unicorn::Configurator RDoc
     # for examples.
-    class Worker < Struct.new(:nr, :tmp)
-
-      autoload :Etc, 'etc'
+    class Worker < Struct.new(:nr, :tmp, :switched)
 
       # worker objects may be compared to just plain numbers
       def ==(other_nr)
@@ -194,6 +193,7 @@ module Unicorn
           Process::GID.change_privilege(gid)
         end
         Process.euid != uid and Process::UID.change_privilege(uid)
+        self.switched = true
       end
 
     end
@@ -659,6 +659,7 @@ module Unicorn
       LISTENERS.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
       worker.tmp.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       after_fork.call(self, worker) # can drop perms
+      worker.user(*user) if user.kind_of?(Array) && ! worker.switched
       self.timeout /= 2.0 # halve it for select()
       build_app! unless preload_app
     end
