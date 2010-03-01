@@ -111,16 +111,9 @@ end
 ru = ARGV[0] || "config.ru"
 abort "configuration file #{ru} not found" unless File.exist?(ru)
 
-if ru =~ /\.ru$/
-  # parse embedded command-line options in config.ru comments
-  if File.open(ru, "rb") { |fp| fp.sysread(fp.stat.size) } =~ /^#\\(.*)/
-    opts.parse! $1.split(/\s+/)
-  end
-end
-
+app = Unicorn.builder(ru, opts)
 require 'pp' if $DEBUG
 
-app = Unicorn.builder(ru)
 listeners << "#{host}:#{port}" if set_listener
 
 if $DEBUG

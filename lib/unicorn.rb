@@ -32,7 +32,14 @@ module Unicorn
     # app (which we defer based on the outcome of "preload_app" in the
     # Unicorn config).  The returned lambda will be called when it is
     # time to build the app.
-    def builder(ru)
+    def builder(ru, opts)
+      if ru =~ /\.ru\z/
+        # parse embedded command-line options in config.ru comments
+        if File.open(ru, "rb") { |fp| fp.sysread(fp.stat.size) } =~ /^#\\(.*)/
+          opts.parse! $1.split(/\s+/)
+        end
+      end
+
       lambda do ||
         inner_app = case ru
         when /\.ru$/
