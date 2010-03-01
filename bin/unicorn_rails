@@ -4,7 +4,6 @@ require 'unicorn/launcher'
 require 'optparse'
 require 'fileutils'
 
-cmd = File.basename($0)
 daemonize = false
 listeners = []
 options = { :listeners => listeners }
@@ -13,6 +12,7 @@ set_listener = false
 ENV['RAILS_ENV'] ||= "development"
 
 opts = OptionParser.new("", 24, '  ') do |opts|
+  cmd = File.basename($0)
   opts.banner = "Usage: #{cmd} " \
                 "[ruby options] [#{cmd} options] [rackup config file]"
   opts.separator "Ruby options:"
