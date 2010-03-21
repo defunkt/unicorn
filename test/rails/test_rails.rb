@@ -234,7 +234,7 @@ logger Logger.new('#{COMMON_TMP.path}')
   def test_alt_url_root_config_env
     # cbf to actually work on this since I never use this feature (ewong)
     return unless ROR_V[0] >= 2 && ROR_V[1] >= 3
-    tmp = Tempfile.new(nil)
+    tmp = Tempfile.new('')
     tmp.syswrite("ENV['RAILS_RELATIVE_URL_ROOT'] = '/poo'\n")
     redirect_test_io do
       @pid = fork { exec 'unicorn_rails', "-l#@addr:#@port", "-c", tmp.path }

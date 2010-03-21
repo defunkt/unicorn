@@ -7,7 +7,7 @@ class TestUtil < Test::Unit::TestCase
 
   EXPECT_FLAGS = File::WRONLY | File::APPEND
   def test_reopen_logs_noop
-    tmp = Tempfile.new(nil)
+    tmp = Tempfile.new('')
     tmp.reopen(tmp.path, 'a')
     tmp.sync = true
     ext = tmp.external_encoding rescue nil
@@ -21,14 +21,14 @@ class TestUtil < Test::Unit::TestCase
   end
 
   def test_reopen_logs_renamed
-    tmp = Tempfile.new(nil)
+    tmp = Tempfile.new('')
     tmp_path = tmp.path.freeze
     tmp.reopen(tmp_path, 'a')
     tmp.sync = true
     ext = tmp.external_encoding rescue nil
     int = tmp.internal_encoding rescue nil
     before = tmp.stat.inspect
-    to = Tempfile.new(nil)
+    to = Tempfile.new('')
     File.rename(tmp_path, to.path)
     assert ! File.exist?(tmp_path)
     Unicorn::Util.reopen_logs
@@ -45,7 +45,7 @@ class TestUtil < Test::Unit::TestCase
   end
 
   def test_reopen_logs_renamed_with_encoding
-    tmp = Tempfile.new(nil)
+    tmp = Tempfile.new('')
     tmp_path = tmp.path.dup.freeze
     Encoding.list.each { |encoding|
       File.open(tmp_path, "a:#{encoding.to_s}") { |fp|
@@ -68,7 +68,7 @@ class TestUtil < Test::Unit::TestCase
   end if STDIN.respond_to?(:external_encoding)
 
   def test_reopen_logs_renamed_with_internal_encoding
-    tmp = Tempfile.new(nil)
+    tmp = Tempfile.new('')
     tmp_path = tmp.path.dup.freeze
     Encoding.list.each { |ext|
       Encoding.list.each { |int|
