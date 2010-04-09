@@ -5,8 +5,7 @@ require 'optparse'
 
 ENV["RACK_ENV"] ||= "development"
 daemonize = false
-listeners = []
-options = { :listeners => listeners }
+options = { :listeners => [] }
 host, port = Unicorn::Const::DEFAULT_HOST, Unicorn::Const::DEFAULT_PORT
 set_listener = false
 
@@ -81,7 +80,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
           "listen on HOST:PORT or PATH",
           "this may be specified multiple times",
           "(default: #{Unicorn::Const::DEFAULT_LISTEN})") do |address|
-    listeners << address
+    options[:listeners] << address
   end
 
   opts.on("-c", "--config-file FILE", "Unicorn-specific config file") do |f|
@@ -112,7 +111,7 @@ ru = ARGV[0] || "config.ru"
 abort "configuration file #{ru} not found" unless File.exist?(ru)
 
 app = Unicorn.builder(ru, opts)
-listeners << "#{host}:#{port}" if set_listener
+options[:listeners] << "#{host}:#{port}" if set_listener
 
 if $DEBUG
   require 'pp'

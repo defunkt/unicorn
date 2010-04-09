@@ -5,8 +5,7 @@ require 'optparse'
 require 'fileutils'
 
 daemonize = false
-listeners = []
-options = { :listeners => listeners }
+options = { :listeners => [] }
 host, port = Unicorn::Const::DEFAULT_HOST, Unicorn::Const::DEFAULT_PORT
 set_listener = false
 ENV['RAILS_ENV'] ||= "development"
@@ -70,7 +69,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
           "listen on HOST:PORT or PATH",
           "this may be specified multiple times",
           "(default: #{Unicorn::Const::DEFAULT_LISTEN})") do |address|
-    listeners << address
+    options[:listeners] << address
   end
 
   opts.on("-c", "--config-file FILE", "Unicorn-specific config file") do |f|
@@ -181,7 +180,7 @@ def rails_builder(ru, daemonize)
 end
 
 app = rails_builder(ru, daemonize)
-listeners << "#{host}:#{port}" if set_listener
+options[:listeners] << "#{host}:#{port}" if set_listener
 
 if $DEBUG
   require 'pp'
