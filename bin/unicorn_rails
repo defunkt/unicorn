@@ -146,7 +146,7 @@ def rails_builder(config, daemonize)
         ActionController::Dispatcher.new
       end
     when /\.ru$/
-      raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }
+      raw = File.read(config)
       raw.sub!(/^__END__\n.*/, '')
       eval("Rack::Builder.new {(#{raw}\n)}.to_app", TOPLEVEL_BINDING, config)
     else
