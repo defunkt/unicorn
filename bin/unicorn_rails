@@ -148,7 +148,7 @@ def rails_builder(config, daemonize)
     when /\.ru$/
       raw = File.open(config, "rb") { |fp| fp.sysread(fp.stat.size) }
       raw.sub!(/^__END__\n.*/, '')
-      eval("Rack::Builder.new {(#{raw}\n)}.to_app", nil, config)
+      eval("Rack::Builder.new {(#{raw}\n)}.to_app", TOPLEVEL_BINDING, config)
     else
       require config
       Object.const_get(File.basename(config, '.rb').capitalize)
