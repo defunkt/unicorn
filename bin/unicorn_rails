@@ -108,14 +108,14 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   opts.parse! ARGV
 end
 
-config = ARGV[0] || (File.exist?('config.ru') ? 'config.ru' : nil)
+ru = ARGV[0] || (File.exist?('config.ru') ? 'config.ru' : nil)
 
-if config && config =~ /\.ru\z/
+if ru && ru =~ /\.ru\z/
   # parse embedded command-line options in config.ru comments
-  /^#\\(.*)/ =~ File.read(config) and opts.parse!($1.split(/\s+/))
+  /^#\\(.*)/ =~ File.read(ru) and opts.parse!($1.split(/\s+/))
 end
 
-def rails_builder(config, daemonize)
+def rails_builder(ru, daemonize)
   # this lambda won't run until after forking if preload_app is false
   lambda do ||
     # Load Rails and (possibly) the private version of Rack it bundles.
@@ -125,7 +125,7 @@ def rails_builder(config, daemonize)
       abort "#$0 must be run inside RAILS_ROOT: #{err.inspect}"
     end
 
-    inner_app = case config
+    inner_app = case ru
     when nil
       require 'config/environment'
 
@@ -146,12 +146,12 @@ def rails_builder(config, daemonize)
         ActionController::Dispatcher.new
       end
     when /\.ru$/
-      raw = File.read(config)
+      raw = File.read(ru)
       raw.sub!(/^__END__\n.*/, '')
-      eval("Rack::Builder.new {(#{raw}\n)}.to_app", TOPLEVEL_BINDING, config)
+      eval("Rack::Builder.new {(#{raw}\n)}.to_app", TOPLEVEL_BINDING, ru)
     else
-      require config
-      Object.const_get(File.basename(config, '.rb').capitalize)
+      require ru
+      Object.const_get(File.basename(ru, '.rb').capitalize)
     end
 
     Rack::Builder.new do
@@ -180,7 +180,7 @@ def rails_builder(config, daemonize)
   end
 end
 
-app = rails_builder(config, daemonize)
+app = rails_builder(ru, daemonize)
 listeners << "#{host}:#{port}" if set_listener
 
 if $DEBUG
