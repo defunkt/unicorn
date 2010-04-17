@@ -402,9 +402,12 @@ module Unicorn
             # machine) comes out of suspend/hibernation
             if (last_check + timeout) >= (last_check = Time.now)
               murder_lazy_workers
+            else
+              # wait for workers to wakeup on suspend
+              master_sleep(timeout/2.0 + 1)
             end
             maintain_worker_count if respawn
-            master_sleep
+            master_sleep(1)
           when :QUIT # graceful shutdown
             break
           when :TERM, :INT # immediate shutdown
@@ -485,9 +488,9 @@ module Unicorn
 
     # wait for a signal hander to wake us up and then consume the pipe
     # Wake up every second anyways to run murder_lazy_workers
-    def master_sleep
+    def master_sleep(sec)
       begin
-        ready = IO.select([SELF_PIPE.first], nil, nil, 1) or return
+        ready = IO.select([SELF_PIPE.first], nil, nil, sec) or return
         ready.first && ready.first.first or return
         loop { SELF_PIPE.first.read_nonblock(Const::CHUNK_SIZE) }
       rescue Errno::EAGAIN, Errno::EINTR
