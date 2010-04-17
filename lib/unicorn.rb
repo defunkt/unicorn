@@ -1,8 +1,17 @@
 # -*- encoding: binary -*-
 
 require 'fcntl'
-require 'unicorn/socket_helper'
 require 'etc'
+require 'unicorn/socket_helper'
+require 'unicorn/const'
+require 'unicorn/http_request'
+require 'unicorn/configurator'
+require 'unicorn/util'
+require 'unicorn/tee_input'
+
+# autoload this so the app can prefer a different version, we
+# don't rely on Rack itself for much and should be compatible for
+# 1.0.x and 1.1.x+
 autoload :Rack, 'rack'
 
 # Unicorn module containing all of the classes (include C extensions) for running
@@ -17,12 +26,10 @@ module Unicorn
   class ClientShutdown < EOFError
   end
 
-  autoload :Const, 'unicorn/const'
-  autoload :HttpRequest, 'unicorn/http_request'
+  # we load HttpResponse last since it depends on Rack, and we
+  # want the application to be able to specify Rack (if they're
+  # *not* using config.ru)
   autoload :HttpResponse, 'unicorn/http_response'
-  autoload :Configurator, 'unicorn/configurator'
-  autoload :TeeInput, 'unicorn/tee_input'
-  autoload :Util, 'unicorn/util'
 
   class << self
     def run(app, options = {})
@@ -808,7 +815,7 @@ module Unicorn
 
         # exploit COW in case of preload_app.  Also avoids race
         # conditions in Rainbows! since load/require are not thread-safe
-        Unicorn.constants.each { |x| Unicorn.const_get(x) }
+        Unicorn.const_get :HttpResponse
       end
     end
 
