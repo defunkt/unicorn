@@ -416,4 +416,24 @@ class HttpParserNgTest < Test::Unit::TestCase
     end
   end
 
+  def test_negative_content_length
+    req = {}
+    str = "PUT / HTTP/1.1\r\n" \
+          "Content-Length: -1\r\n" \
+          "\r\n"
+    assert_raises(HttpParserError) do
+      @parser.headers(req, str)
+    end
+  end
+
+  def test_invalid_content_length
+    req = {}
+    str = "PUT / HTTP/1.1\r\n" \
+          "Content-Length: zzzzz\r\n" \
+          "\r\n"
+    assert_raises(HttpParserError) do
+      @parser.headers(req, str)
+    end
+  end
+
 end
