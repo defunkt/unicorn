@@ -108,8 +108,12 @@ static off_t parse_length(const char *value, size_t length)
 {
   off_t rv;
 
-  for (rv = 0; length-- && rv >= 0; ++value)
-    rv = step_incr(rv, *value, 10);
+  for (rv = 0; length-- && rv >= 0; ++value) {
+    if (*value >= '0' && *value <= '9')
+      rv = step_incr(rv, *value, 10);
+    else
+      return -1;
+  }
 
   return rv;
 }
