@@ -44,6 +44,18 @@ acceptable solution.  Those issues are documented here.
     where the unicorn gem is installed (e.g.
     /usr/lib/ruby/gems/1.8/gems/unicorn-VERSION/lib)
 
+  With current versions of isolate, it is also recommended that you
+  disable it with the <tt>before_exec</tt> hook prevent the PATH and
+  RUBYOPT environment variable modifications from propagating between
+  upgrades in your Unicorn config file:
+
+        before_exec do
+          Isolate.disable
+        end
+
+  Future versions (unreleased as of 2010.04.20) of isolate will not
+  require this as environment variable modifications will be idempotent.
+
 * WONTFIX: code reloading and restarts with Sinatra 0.3.x (and likely older
   versions) apps is broken.  The workaround is to force production
   mode to disable code reloading as well as disabling "run" in your
