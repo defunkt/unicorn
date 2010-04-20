@@ -49,7 +49,7 @@ acceptable solution.  Those issues are documented here.
   RUBYOPT environment variable modifications from propagating between
   upgrades in your Unicorn config file:
 
-        before_exec do
+        before_exec do |server|
           Isolate.disable
         end
 
