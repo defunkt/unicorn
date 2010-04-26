@@ -13,6 +13,6 @@ NEWS
 ChangeLog
 lib
 ext/unicorn_http/unicorn_http.c
-unicorn.1
-unicorn_rails.1
+unicorn_1
+unicorn_rails_1
 ISSUES
