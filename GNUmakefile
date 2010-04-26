@@ -187,10 +187,11 @@ doc: .document $(ext)/unicorn_http.c NEWS ChangeLog
 	$(MAKE) -C Documentation install-html install-man
 	install -m644 $(man1_paths) doc/
 	cd doc && for i in $(base_bins); do \
-	  $(RM) $${i}.1.html; \
-	  ln $${i}_1.html $${i}.1.html; \
+	  $(RM) 1.html $${i}.1.html; \
 	  sed -e '/"documentation">/r man1/'$$i'.1.html' \
-		< $${i}.1.html > tmp && mv tmp $${i}_1.html; done
+		< $${i}_1.html > tmp && mv tmp $${i}_1.html; \
+	  ln $${i}_1.html $${i}.1.html; \
+	  done
 	$(RUBY) -i -p -e \
 	  '$$_.gsub!("</title>",%q{\&$(call atom,$(cgit_atom))})' \
 	  doc/ChangeLog.html
