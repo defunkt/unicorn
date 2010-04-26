@@ -187,7 +187,7 @@ doc: .document $(ext)/unicorn_http.c NEWS ChangeLog
 	install -m644 $(man1_paths) doc/
 	cd doc && for i in $(base_bins); do \
 	  sed -e '/"documentation">/r man1/'$$i'.1.html' \
-		< $${i}_1.html > tmp && mv tmp $${i}_1.html; done
+		< $${i}_1.html > tmp.html && mv tmp.html $${i}_1.html; done
 	$(RUBY) -i -p -e \
 	  '$$_.gsub!("</title>",%q{\&$(call atom,$(cgit_atom))})' \
 	  doc/ChangeLog.html
