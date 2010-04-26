@@ -299,12 +299,8 @@ static void write_value(VALUE req, struct http_parser *hp,
   }
 
   action end_chunked_body {
-    if (HP_FL_TEST(hp, HASTRAILER)) {
-      HP_FL_SET(hp, INTRAILER);
-      cs = http_parser_en_Trailers;
-    } else {
-      cs = http_parser_first_final;
-    }
+    HP_FL_SET(hp, INTRAILER);
+    cs = http_parser_en_Trailers;
     ++p;
     assert(p <= pe && "buffer overflow after chunked body");
     goto post_exec;

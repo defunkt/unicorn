@@ -172,6 +172,10 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal '', str
     assert ! @parser.body_eof?
     assert_equal "", @parser.filter_body(tmp, "\r\n0\r\n")
+    assert_equal "", tmp
+    assert @parser.body_eof?
+    assert_equal req, @parser.trailers(req, moo = "\r\n")
+    assert_equal "", moo
     assert @parser.body_eof?
     assert ! @parser.keepalive?
   end

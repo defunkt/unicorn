@@ -160,7 +160,7 @@ class TestTeeInput < Test::Unit::TestCase
     pid = fork {
       @rd.close
       5.times { @wr.write("5\r\nabcde\r\n") }
-      @wr.write("0\r\n")
+      @wr.write("0\r\n\r\n")
     }
     @wr.close
     ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
@@ -199,7 +199,7 @@ class TestTeeInput < Test::Unit::TestCase
         rd.read(1) == "." and
           @wr.write("#{'%x' % [ chunk.size]}\r\n#{chunk}\r\n")
       end
-      @wr.write("0\r\n")
+      @wr.write("0\r\n\r\n")
     }
     ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
     assert_nil @parser.content_length
@@ -210,6 +210,34 @@ class TestTeeInput < Test::Unit::TestCase
       assert_equal chunk, ti.read(16384)
     end
     _, status = Process.waitpid2(pid)
+    assert status.success?
+  end
+
+  def test_chunked_with_trailer
+    @parser = Unicorn::HttpParser.new
+    @buf = "POST / HTTP/1.1\r\n" \
+           "Host: localhost\r\n" \
+           "Trailer: Hello\r\n" \
+           "Transfer-Encoding: chunked\r\n" \
+           "\r\n"
+    assert_equal @env, @parser.headers(@env, @buf)
+    assert_equal "", @buf
+
+    pid = fork {
+      @rd.close
+      5.times { @wr.write("5\r\nabcde\r\n") }
+      @wr.write("0\r\n")
+      @wr.write("Hello: World\r\n\r\n")
+    }
+    @wr.close
+    ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
+    assert_nil @parser.content_length
+    assert_nil ti.len
+    assert ! @parser.body_eof?
+    assert_equal 25, ti.size
+    assert_equal "World", @env['HTTP_HELLO']
+    status = nil
+    assert_nothing_raised { pid, status = Process.waitpid2(pid) }
     assert status.success?
   end
 
