@@ -136,6 +136,8 @@ module Unicorn
       end
     end
 
+    module_function :sock_name
+
     # casts a given Socket to be a TCPServer or UNIXServer
     def server_cast(sock)
       begin

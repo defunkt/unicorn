@@ -283,5 +283,9 @@ class WebServerTest < Test::Unit::TestCase
     }
   end
 
+  def test_listener_names
+    assert_equal [ "127.0.0.1:#@port" ], Unicorn.listener_names
+  end
+
 end
 

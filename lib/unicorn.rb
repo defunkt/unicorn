@@ -78,6 +78,13 @@ module Unicorn
         end
       end
     end
+
+    # returns an array of strings representing TCP listen socket addresses
+    # and Unix domain socket paths.  This is useful for use with
+    # Raindrops::Middleware under Linux: http://raindrops.bogomips.org/
+    def listener_names
+      HttpServer::LISTENERS.map { |io| SocketHelper.sock_name(io) }
+    end
   end
 
   # This is the process manager of Unicorn. This manages worker
