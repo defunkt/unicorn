@@ -2,17 +2,14 @@
 
 require 'fcntl'
 require 'etc'
+require 'rack'
 require 'unicorn/socket_helper'
 require 'unicorn/const'
 require 'unicorn/http_request'
 require 'unicorn/configurator'
 require 'unicorn/util'
 require 'unicorn/tee_input'
-
-# autoload this so the app can prefer a different version, we
-# don't rely on Rack itself for much and should be compatible for
-# 1.0.x and 1.1.x+
-autoload :Rack, 'rack'
+require 'unicorn/http_response'
 
 # Unicorn module containing all of the classes (include C extensions) for running
 # a Unicorn web server.  It contains a minimalist HTTP server with just enough
@@ -25,11 +22,6 @@ module Unicorn
   # for client shutdowns/disconnects.
   class ClientShutdown < EOFError
   end
-
-  # we load HttpResponse last since it depends on Rack, and we
-  # want the application to be able to specify Rack (if they're
-  # *not* using config.ru)
-  autoload :HttpResponse, 'unicorn/http_response'
 
   class << self
     def run(app, options = {})
@@ -822,10 +814,6 @@ module Unicorn
           Gem.refresh
         end
         self.app = app.call
-
-        # exploit COW in case of preload_app.  Also avoids race
-        # conditions in Rainbows! since load/require are not thread-safe
-        Unicorn.const_get :HttpResponse
       end
     end
 
