@@ -137,12 +137,6 @@ module Unicorn
     # * :cwd - the working directory of the application, this is where
     # you originally started Unicorn.
     #
-    # The following example may be used in your Unicorn config file to
-    # change your working directory during a config reload (HUP) without
-    # upgrading or restarting:
-    #
-    #   Dir.chdir(Unicorn::HttpServer::START_CTX[:cwd] = path)
-    #
     # To change your unicorn executable to a different path without downtime,
     # you can set the following in your Unicorn config file, HUP and then
     # continue with the traditional USR2 + QUIT upgrade steps:
