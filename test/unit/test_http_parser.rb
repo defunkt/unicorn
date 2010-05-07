@@ -51,6 +51,14 @@ class HttpParserTest < Test::Unit::TestCase
     assert parser.keepalive?
   end
 
+  def test_tab_lws
+    parser = HttpParser.new
+    req = {}
+    tmp = "GET / HTTP/1.1\r\nHost:\tfoo.bar\r\n\r\n"
+    assert_equal req.object_id, parser.headers(req, tmp).object_id
+    assert_equal "foo.bar", req['HTTP_HOST']
+  end
+
   def test_connection_close_no_ka
     parser = HttpParser.new
     req = {}

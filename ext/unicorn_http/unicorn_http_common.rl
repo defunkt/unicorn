@@ -54,7 +54,7 @@
 
   value_cont = lws+ any* >start_value %write_cont_value;
 
-  message_header = ((field_name ":" " "* field_value)|value_cont) :> CRLF;
+  message_header = ((field_name ":" lws* field_value)|value_cont) :> CRLF;
   chunk_ext_val = token*;
   chunk_ext_name = token*;
   chunk_extension = ( ";" " "* chunk_ext_name ("=" chunk_ext_val)? )*;
