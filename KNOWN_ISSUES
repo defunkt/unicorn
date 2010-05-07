@@ -3,6 +3,9 @@
 Occasionally odd {issues}[link:ISSUES.html] arise without a transparent or
 acceptable solution.  Those issues are documented here.
 
+* For notes on sandboxing tools such as Bundler or Isolate,
+  see the {Sandbox}[link:Sandbox.html] page.
+
 * Under Ruby 1.9.1, methods like Array#shuffle and Array#sample will
   segfault if called after forking.  This is fixed in trunk (r26936) and
   should be backported to the next 1.9.1 stable release (after p378).
