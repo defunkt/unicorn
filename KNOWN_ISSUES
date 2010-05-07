@@ -32,30 +32,6 @@ acceptable solution.  Those issues are documented here.
   Note: the workaround described in the article above only made
   the issue more subtle and we didn't notice them immediately.
 
-* Installing "unicorn" as a system-wide Rubygem and using the
-  {isolate}[http://github.com/jbarnette/isolate] gem may cause issues if
-  you're using any of the bundled application-level libraries in
-  unicorn/app/* (for compatibility with CGI-based applications, Rails <=
-  2.2.2, or ExecCgi).  For now workarounds include:
-
-  * installing the same version of unicorn as a system-wide Rubygem
-    _and_ isolating unicorn as well.
-  * explicitly setting RUBYLIB or $LOAD_PATH to include any gem path
-    where the unicorn gem is installed (e.g.
-    /usr/lib/ruby/gems/1.8/gems/unicorn-VERSION/lib)
-
-  With current versions of isolate, it is also recommended that you
-  disable it with the <tt>before_exec</tt> hook prevent the PATH and
-  RUBYOPT environment variable modifications from propagating between
-  upgrades in your Unicorn config file:
-
-        before_exec do |server|
-          Isolate.disable
-        end
-
-  Future versions (unreleased as of 2010.04.20) of isolate will not
-  require this as environment variable modifications will be idempotent.
-
 * WONTFIX: code reloading and restarts with Sinatra 0.3.x (and likely older
   versions) apps is broken.  The workaround is to force production
   mode to disable code reloading as well as disabling "run" in your
