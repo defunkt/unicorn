@@ -140,5 +140,6 @@ Unicorn may still outweigh the drawbacks for these applications.
 
 The {Rainbows!}[http://rainbows.rubyforge.org/] aims to fill the gap for
 odd corner cases where the nginx + Unicorn combination is not enough.
-Keep in mind that Rainbows! is still very new (as of October 2009), far
-more ambitious, and far less tested than Unicorn.
+While Rainbows! management/administration is largely identical to
+Unicorn, Rainbows! is far more ambitious and has seen little real-world
+usage.
