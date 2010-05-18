@@ -52,7 +52,7 @@ application-level libraries in unicorn/app/* (for compatibility
 with CGI-based applications, Rails <= 2.2.2, or ExecCgi).
 For now workarounds include doing one of the following:
 
-1. Isolating unicorn, setting GEM_HOME to your isolate path,
+1. Isolating unicorn, setting GEM_HOME to your Isolate path,
    and running the isolated version of unicorn.  You *must* set
    GEM_HOME before running your isolated unicorn install in this way.
 
@@ -65,14 +65,14 @@ For now workarounds include doing one of the following:
 
 === RUBYOPT pollution from SIGUSR2 upgrades
 
-With 1.x versions of isolate, it is also recommended that you
-disable it with the <tt>before_exec</tt> hook prevent the PATH and
+If you are using Isolate, using Isolate 2.x is strongly recommended as
+environment modifications are idempotent.
+
+If you are stuck with 1.x versions of Isolate, it is recommended that
+you disable it with the <tt>before_exec</tt> hook prevent the PATH and
 RUBYOPT environment variable modifications from propagating between
-upgrades in your unicorn config file:
+upgrades in your Unicorn config file:
 
         before_exec do |server|
           Isolate.disable
         end
-
-Isolate 2.x (in prerelease as of 2010.05.07) will not require this as
-environment variable modifications will be idempotent.
