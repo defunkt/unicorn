@@ -16,7 +16,7 @@ A rackup(1)-like command to launch Rack applications using Unicorn.
 It is expected to be started in your application root (APP_ROOT),
 but the "working_directory" directive may be used in the CONFIG_FILE.
 
-While Unicorn takes a myriad of command-line options for
+While unicorn takes a myriad of command-line options for
 compatibility with ruby(1) and rackup(1), it is recommended to stick
 to the few command-line options specified in the SYNOPSIS and use
 the CONFIG_FILE as much as possible.
