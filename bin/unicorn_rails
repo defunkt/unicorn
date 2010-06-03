@@ -109,53 +109,30 @@ end
 
 ru = ARGV[0] || (File.exist?('config.ru') ? 'config.ru' : nil)
 
-if ru && ru =~ /\.ru\z/
-  # parse embedded command-line options in config.ru comments
-  /^#\\(.*)/ =~ File.read(ru) and opts.parse!($1.split(/\s+/))
-end
-
-def rails_builder(ru, daemonize)
+def rails_builder(daemonize)
   # this lambda won't run until after forking if preload_app is false
   lambda do ||
     # Load Rails and (possibly) the private version of Rack it bundles.
     begin
       require 'config/boot'
+      require 'config/environment'
     rescue LoadError => err
       abort "#$0 must be run inside RAILS_ROOT: #{err.inspect}"
     end
 
-    inner_app = case ru
-    when nil
-      require 'config/environment'
-
-      defined?(::Rails::VERSION::STRING) or
-        abort "Rails::VERSION::STRING not defined by config/{boot,environment}"
-      # it seems Rails >=2.2 support Rack, but only >=2.3 requires it
-      old_rails = case ::Rails::VERSION::MAJOR
-      when 0, 1 then true
-      when 2 then Rails::VERSION::MINOR < 3 ? true : false
-      else
-        false
-      end
-
-      if old_rails
-        require 'unicorn/app/old_rails'
-        Unicorn::App::OldRails.new
-      else
-        ActionController::Dispatcher.new
-      end
-    when /\.ru$/
-      raw = File.read(ru)
-      raw.sub!(/^__END__\n.*/, '')
-      eval("Rack::Builder.new {(#{raw}\n)}.to_app", TOPLEVEL_BINDING, ru)
+    defined?(::Rails::VERSION::STRING) or
+      abort "Rails::VERSION::STRING not defined by config/{boot,environment}"
+    # it seems Rails >=2.2 support Rack, but only >=2.3 requires it
+    old_rails = case ::Rails::VERSION::MAJOR
+    when 0, 1 then true
+    when 2 then Rails::VERSION::MINOR < 3 ? true : false
     else
-      require ru
-      Object.const_get(File.basename(ru, '.rb').capitalize)
+      false
     end
 
     Rack::Builder.new do
       map_path = ENV['RAILS_RELATIVE_URL_ROOT'] || '/'
-      if inner_app.class.to_s == "Unicorn::App::OldRails"
+      if old_rails
         if map_path != '/'
           # patches + tests welcome, but I really cbf to deal with this
           # since all apps I've ever dealt with just use "/" ...
@@ -163,23 +140,24 @@ def rails_builder(ru, daemonize)
         end
         $stderr.puts "LogTailer not available for Rails < 2.3" unless daemonize
         $stderr.puts "Debugger not available" if $DEBUG
+        require 'unicorn/app/old_rails'
         map(map_path) do
           use Unicorn::App::OldRails::Static
-          run inner_app
+          run Unicorn::App::OldRails.new
         end
       else
         use Rails::Rack::LogTailer unless daemonize
         use Rails::Rack::Debugger if $DEBUG
         map(map_path) do
           use Rails::Rack::Static
-          run inner_app
+          run ActionController::Dispatcher.new
         end
       end
     end.to_app
   end
 end
 
-app = rails_builder(ru, daemonize)
+app = ru ? Unicorn.builder(ru, opts) : rails_builder(daemonize)
 options[:listeners] << "#{host}:#{port}" if set_listener
 
 if $DEBUG
