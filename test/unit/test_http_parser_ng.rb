@@ -26,7 +26,7 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal 0, hdr.size
     assert ! @parser.keepalive?
     assert @parser.headers?
-    assert 123, @parser.content_length
+    assert_equal 123, @parser.content_length
   end
 
   def test_identity_step_headers
