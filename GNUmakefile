@@ -208,6 +208,11 @@ $(rails_git)/info/cloned-stamp:
 	git clone --mirror -q $(rails_git_url) $(rails_git)
 	> $@
 
+$(rails_git)/info/v2.3.8-stamp: $(rails_git)/info/cloned-stamp
+	cd $(rails_git) && git fetch
+	cd $(rails_git) && git rev-parse --verify refs/tags/v2.3.8
+	> $@
+
 rails_tests := $(addsuffix .r,$(addprefix $(T_r).,$(rails_vers)))
 test-rails: $(rails_tests)
 $(T_r).%.r: t = $(addsuffix $(log_suffix),$@)
@@ -218,7 +223,7 @@ $(T_r).%.r: export PATH := $(test_prefix)/bin:$(PATH)
 $(T_r).%.r: export RUBYLIB := $(test_prefix):$(test_prefix)/lib:$(RUBYLIB)
 $(T_r).%.r: export UNICORN_RAILS_TEST_VERSION = $(rv)
 $(T_r).%.r: export RAILS_GIT_REPO = $(CURDIR)/$(rails_git)
-$(T_r).%.r: $(test_prefix)/.stamp $(rails_git)/info/cloned-stamp
+$(T_r).%.r: $(test_prefix)/.stamp $(rails_git)/info/v2.3.8-stamp
 	$(run_test)
 
 ifneq ($(VERSION),)
