@@ -4,6 +4,7 @@ all::
 pid := $(shell echo $$PPID)
 
 RUBY = ruby
+RAKE = rake
 -include ../local.mk
 ifeq ($(RUBY_VERSION),)
   RUBY_VERSION := $(shell $(RUBY) -e 'puts RUBY_VERSION')
@@ -52,6 +53,7 @@ $(test_prefix)/.stamp:
 	$(MAKE) -C .. test-install
 
 $(T): export RUBY := $(RUBY)
+$(T): export RAKE := $(RAKE)
 $(T): export PATH := $(test_prefix)/bin:$(PATH)
 $(T): export RUBYLIB := $(test_prefix)/lib:$(RUBYLIB)
 $(T): dep $(test_prefix)/.stamp trash/.gitignore

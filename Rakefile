@@ -189,3 +189,24 @@ begin
   end
 rescue LoadError
 end
+
+task :isolate do
+  require 'isolate'
+  opts = {
+    :system => false,
+    :path => "tmp/isolate/ruby-#{RUBY_VERSION}",
+    :multiruby => false, # we want "1.8.7" instead of "1.8"
+  }
+
+  # C extensions aren't binary-compatible across Ruby versions
+  fork { Isolate.now!(opts) { gem 'sqlite3-ruby', '1.2.5' } }
+
+  # pure Ruby gems can be shared across all Rubies
+  %w(3.0.0.beta3).each do |rails_ver|
+    opts[:path] = "tmp/isolate/rails-#{rails_ver}"
+    fork { Isolate.now!(opts) { gem 'rails', rails_ver } }
+  end
+
+  failed = Process.waitall.delete_if { |(_,status)| status.success? }
+  abort failed.inspect unless failed.empty?
+end
