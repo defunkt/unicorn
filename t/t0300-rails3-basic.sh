@@ -14,9 +14,10 @@ esac
 arch_gems=../tmp/isolate/ruby-$RUBY_VERSION/gems
 rails_gems=../tmp/isolate/rails-$RAILS_VERSION/gems
 rails_bin="$rails_gems/rails-$RAILS_VERSION/bin/rails"
-test -d "$arch_gems" || die "$arch_gems non existent, run '$RAKE isolate'"
-test -d "$rails_gems" || die "$rails_gems non existent, run '$RAKE isolate'"
-test -x "$rails_bin" || die "$rails_bin not found, run '$RAKE isolate'"
+if ! test -d "$arch_gems" || ! test -d "$rails_gems" || ! test -x "$rails_bin"
+then
+	( cd ../ && $RAKE isolate )
+fi
 
 for i in $arch_gems/*-* $rails_gems/*-*
 do
