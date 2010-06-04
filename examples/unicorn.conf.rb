@@ -1,4 +1,9 @@
-# Sample configuration file for Unicorn (not Rack)
+# Sample verbose configuration file for Unicorn (not Rack)
+#
+# This configuration file documents many features of Unicorn
+# that may not be needed for some applications. See
+# http://unicorn.bogomips.org/examples/unicorn.conf.minimal.rb
+# for a much simpler configuration file.
 #
 # See http://unicorn.bogomips.org/Unicorn/Configurator.html for complete
 # documentation.
@@ -22,8 +27,9 @@ timeout 30
 # feel free to point this anywhere accessible on the filesystem
 pid "/path/to/app/shared/pids/unicorn.pid"
 
-# some applications/frameworks log to stderr or stdout, so prevent
-# them from going to /dev/null when daemonized here:
+# By default, the Unicorn logger will write to stderr.
+# Additionally, ome applications/frameworks log to stderr or stdout,
+# so prevent them from going to /dev/null when daemonized here:
 stderr_path "/path/to/app/shared/log/unicorn.stderr.log"
 stdout_path "/path/to/app/shared/log/unicorn.stdout.log"
 

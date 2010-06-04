@@ -7,9 +7,11 @@ module Unicorn
 
   # Implements a simple DSL for configuring a Unicorn server.
   #
-  # See http://unicorn.bogomips.org/examples/unicorn.conf.rb for an
-  # example config file.  An example config file for use with nginx is
-  # also available at http://unicorn.bogomips.org/examples/nginx.conf
+  # See http://unicorn.bogomips.org/examples/unicorn.conf.rb and
+  # http://unicorn.bogomips.org/examples/unicorn.conf.minimal.rb
+  # example configuration files.  An example config file for use with
+  # nginx is also available at
+  # http://unicorn.bogomips.org/examples/nginx.conf
   class Configurator < Struct.new(:set, :config_file, :after_reload)
 
     # Default settings for Unicorn
@@ -78,6 +80,10 @@ module Unicorn
     # sets object to the +new+ Logger-like object.  The new logger-like
     # object must respond to the following methods:
     #  +debug+, +info+, +warn+, +error+, +fatal+, +close+
+    # The default Logger will log its output to the path specified
+    # by +stderr_path+.  If you're running Unicorn daemonized, then
+    # you must specify a path to prevent error messages from going
+    # to /dev/null.
     def logger(new)
       %w(debug info warn error fatal close).each do |m|
         new.respond_to?(m) and next
@@ -310,11 +316,19 @@ module Unicorn
     # file will be opened with the File::APPEND flag and writes
     # synchronized to the kernel (but not necessarily to _disk_) so
     # multiple processes can safely append to it.
+    #
+    # If you are daemonizing and using the default +logger+, it is important
+    # to specify this as errors will otherwise be lost to /dev/null.
+    # Some applications/libraries may also triggering warnings that go to
+    # stderr, and they will end up here.
     def stderr_path(path)
       set_path(:stderr_path, path)
     end
 
-    # Same as stderr_path, except for $stdout
+    # Same as stderr_path, except for $stdout.  Not many Rack applications
+    # write to $stdout, but any that do will have their output written here.
+    # It is safe to point this to the same location a stderr_path.
+    # Like stderr_path, this defaults to /dev/null when daemonized.
     def stdout_path(path)
       set_path(:stdout_path, path)
     end
