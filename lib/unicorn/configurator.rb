@@ -79,13 +79,13 @@ module Unicorn
 
     # sets object to the +new+ Logger-like object.  The new logger-like
     # object must respond to the following methods:
-    #  +debug+, +info+, +warn+, +error+, +fatal+, +close+
+    #  +debug+, +info+, +warn+, +error+, +fatal+
     # The default Logger will log its output to the path specified
     # by +stderr_path+.  If you're running Unicorn daemonized, then
     # you must specify a path to prevent error messages from going
     # to /dev/null.
     def logger(new)
-      %w(debug info warn error fatal close).each do |m|
+      %w(debug info warn error fatal).each do |m|
         new.respond_to?(m) and next
         raise ArgumentError, "logger=#{new} does not respond to method=#{m}"
       end
