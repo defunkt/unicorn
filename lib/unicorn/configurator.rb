@@ -56,7 +56,7 @@ module Unicorn
       [ :pid, :stderr_path, :stdout_path ].each do |var|
         String === (path = set[var]) or next
         path = File.expand_path(path)
-        test(?w, path) || test(?w, File.dirname(path)) or \
+        File.writable?(path) || File.writable?(File.dirname(path)) or \
               raise ArgumentError, "directory for #{var}=#{path} not writable"
       end
 
@@ -341,7 +341,7 @@ module Unicorn
       path = File.expand_path(path)
       if config_file &&
          config_file[0] != ?/ &&
-         ! test(?r, "#{path}/#{config_file}")
+         ! File.readable?("#{path}/#{config_file}")
         raise ArgumentError,
               "config_file=#{config_file} would not be accessible in" \
               " working_directory=#{path}"

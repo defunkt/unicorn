@@ -176,11 +176,11 @@ end
 # optional rake-compiler support in case somebody needs to cross compile
 begin
   mk = "ext/unicorn_http/Makefile"
-  if test ?r, mk
+  if File.readable?(mk)
     warn "run 'gmake -C ext/unicorn_http clean' and\n" \
          "remove #{mk} before using rake-compiler"
   else
-    unless test ?r, "ext/unicorn_http/unicorn_http.c"
+    unless File.readable?("ext/unicorn_http/unicorn_http.c")
       abort "run 'gmake ragel' or 'make ragel' to generate the Ragel source"
     end
     spec = Gem::Specification.load('unicorn.gemspec')
