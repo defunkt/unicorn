@@ -128,6 +128,8 @@ class TestSocketHelper < Test::Unit::TestCase
     @unix_server = server_cast(unix_listener_socket)
     assert_equal @unix_listener.fileno, @unix_server.fileno
     assert UNIXServer === @unix_server
+    assert_equal(@unix_server.path, @unix_listener.path,
+                 "##{@unix_server.path} != #{@unix_listener.path}")
     assert File.socket?(@unix_server.path)
     assert_equal @unix_listener_path, sock_name(@unix_server)
 
