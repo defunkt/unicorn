@@ -197,6 +197,15 @@ static void write_value(VALUE req, struct http_parser *hp,
     assert_frozen(f);
   }
 
+  /*
+   * ignore "Version" headers since they conflict with the HTTP_VERSION
+   * rack env variable.
+   */
+  if (rb_str_cmp(f, g_http_version) == 0) {
+    hp->cont = Qnil;
+    return;
+  }
+
   e = rb_hash_aref(req, f);
   if (NIL_P(e)) {
     hp->cont = rb_hash_aset(req, f, v);

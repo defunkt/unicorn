@@ -440,4 +440,24 @@ class HttpParserNgTest < Test::Unit::TestCase
     end
   end
 
+  def test_ignore_version_header
+    http = "GET / HTTP/1.1\r\nVersion: hello\r\n\r\n"
+    req = {}
+    assert_equal req, @parser.headers(req, http)
+    assert_equal '', http
+    expect = {
+      "SERVER_NAME" => "localhost",
+      "rack.url_scheme" => "http",
+      "REQUEST_PATH" => "/",
+      "SERVER_PROTOCOL" => "HTTP/1.1",
+      "PATH_INFO" => "/",
+      "HTTP_VERSION" => "HTTP/1.1",
+      "REQUEST_URI" => "/",
+      "SERVER_PORT" => "80",
+      "REQUEST_METHOD" => "GET",
+      "QUERY_STRING" => ""
+    }
+    assert_equal expect, req
+  end
+
 end
