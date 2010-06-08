@@ -899,25 +899,38 @@ EOF
     wait_workers_ready("test_stderr.#$$.log", 1)
     uri = URI.parse("http://#@addr:#@port/")
     pids = Tempfile.new('worker_pids')
+    r, w = IO.pipe
     hitter = fork {
+      r.close
       bodies = Hash.new(0)
       at_exit { pids.syswrite(bodies.inspect) }
       trap(:TERM) { exit(0) }
+      nr = 0
       loop {
         rv = Net::HTTP.get(uri)
         pid = rv.to_i
         exit!(1) if pid <= 0
         bodies[pid] += 1
+        nr += 1
+        if nr == 1
+          w.syswrite('1')
+        elsif bodies.size > 1
+          w.syswrite('2')
+          sleep
+        end
       }
     }
-    sleep 5 # racy
+    w.close
+    assert_equal '1', r.read(1)
     daemon_pid = File.read(pid_file.path).to_i
     assert daemon_pid > 0
     Process.kill(:HUP, daemon_pid)
-    sleep 5 # racy
+    assert_equal '2', r.read(1)
     assert_nothing_raised { Process.kill(:TERM, hitter) }
     _, hitter_status = Process.waitpid2(hitter)
-    assert hitter_status.success?
+    assert(hitter_status.success?,
+           "invalid: #{hitter_status.inspect} #{File.read(pids.path)}" \
+           "#{File.read("test_stderr.#$$.log")}")
     pids.sysseek(0)
     pids = eval(pids.read)
     assert_kind_of(Hash, pids)
