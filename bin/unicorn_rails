@@ -109,6 +109,24 @@ end
 
 ru = ARGV[0] || (File.exist?('config.ru') ? 'config.ru' : nil)
 
+def rails_dispatcher
+  if ::Rails::VERSION::MAJOR >= 3 && ::File.exist?('config/application.rb')
+    if ::File.read('config/application.rb') =~ /^module\s+([\w:]+)\s*$/
+      app_module = Object.const_get($1)
+      begin
+        result = app_module::Application
+      rescue NameError
+      end
+    end
+  end
+
+  if result.nil? && defined?(ActionController::Dispatcher)
+    result = ActionController::Dispatcher.new
+  end
+
+  result || abort("Unable to locate the application dispatcher class")
+end
+
 def rails_builder(daemonize)
   # this lambda won't run until after forking if preload_app is false
   lambda do ||
@@ -149,8 +167,12 @@ def rails_builder(daemonize)
         use Rails::Rack::LogTailer unless daemonize
         use Rails::Rack::Debugger if $DEBUG
         map(map_path) do
-          use Rails::Rack::Static
-          run ActionController::Dispatcher.new
+          if defined?(ActionDispatch::Static)
+            use ActionDispatch::Static, "#{Rails.root}/public"
+          else
+            use Rails::Rack::Static
+          end
+          run rails_dispatcher
         end
       end
     end.to_app
