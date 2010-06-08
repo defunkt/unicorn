@@ -20,6 +20,10 @@ unless try_require('rack')
   do_test = false
 end
 
+if ENV['RBX_SKIP']
+  do_test = false
+end
+
 class ExecTest < Test::Unit::TestCase
   trap(:QUIT, 'IGNORE')
 
