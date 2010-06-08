@@ -54,12 +54,7 @@ module Unicorn
           rescue Errno::ENOENT
           end
 
-          open_arg = 'a'
-          if fp.respond_to?(:external_encoding) && enc = fp.external_encoding
-            open_arg << ":#{enc.to_s}"
-            enc = fp.internal_encoding and open_arg << ":#{enc.to_s}"
-          end
-          File.open(fp.path, 'ab') { |tmpfp| fp.reopen(tmpfp) }
+          File.open(fp.path, 'a') { |tmpfp| fp.reopen(tmpfp) }
           fp.sync = true
           new_st = fp.stat
           if orig_st.uid != new_st.uid || orig_st.gid != new_st.gid
