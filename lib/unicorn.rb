@@ -483,11 +483,11 @@ module Unicorn
     # Wake up every second anyways to run murder_lazy_workers
     def master_sleep(sec)
       begin
-        ready = IO.select([SELF_PIPE.first], nil, nil, sec) or return
-        ready.first && ready.first.first or return
-        loop { SELF_PIPE.first.read_nonblock(Const::CHUNK_SIZE) }
+        IO.select([ SELF_PIPE.first ], nil, nil, sec) or return
+        SELF_PIPE.first.read_nonblock(Const::CHUNK_SIZE, HttpRequest::BUF)
       rescue Errno::EAGAIN, Errno::EINTR
-      end
+        break
+      end while true
     end
 
     def awaken_master
