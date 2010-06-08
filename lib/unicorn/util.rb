@@ -22,6 +22,7 @@ module Unicorn
 
         ! fp.closed? &&
           fp.sync &&
+          fp.path &&
           fp.path[0] == ?/ &&
           (fp.fcntl(Fcntl::F_GETFL) & append_flags) == append_flags
       end
@@ -41,10 +42,11 @@ module Unicorn
       #   4) unbuffered (as far as userspace buffering goes, not O_SYNC)
       # Returns the number of files reopened
       def reopen_logs
+        to_reopen = []
         nr = 0
+        ObjectSpace.each_object(File) { |fp| is_log?(fp) and to_reopen << fp }
 
-        ObjectSpace.each_object(File) do |fp|
-          is_log?(fp) or next
+        to_reopen.each do |fp|
           orig_st = fp.stat
           begin
             b = File.stat(fp.path)
@@ -64,7 +66,8 @@ module Unicorn
             fp.chown(orig_st.uid, orig_st.gid)
           end
           nr += 1
-        end # each_object
+        end
+
         nr
       end
 
