@@ -173,8 +173,20 @@ static void write_value(VALUE req, struct http_parser *hp,
   VALIDATE_MAX_LENGTH(LEN(mark, p), FIELD_VALUE);
   v = LEN(mark, p) == 0 ? rb_str_buf_new(128) : STR_NEW(mark, p);
   if (NIL_P(f)) {
-    VALIDATE_MAX_LENGTH(hp->s.field_len, FIELD_NAME);
-    f = uncommon_field(PTR_TO(start.field), hp->s.field_len);
+    const char *field = PTR_TO(start.field);
+    size_t flen = hp->s.field_len;
+
+    VALIDATE_MAX_LENGTH(flen, FIELD_NAME);
+
+    /*
+     * ignore "Version" headers since they conflict with the HTTP_VERSION
+     * rack env variable.
+     */
+    if (CONST_MEM_EQ("VERSION", field, flen)) {
+      hp->cont = Qnil;
+      return;
+    }
+    f = uncommon_field(field, flen);
   } else if (f == g_http_connection) {
     hp_keepalive_connection(hp, v);
   } else if (f == g_content_length) {
@@ -195,15 +207,6 @@ static void write_value(VALUE req, struct http_parser *hp,
   } else {
     assert(TYPE(f) == T_STRING && "memoized object is not a string");
     assert_frozen(f);
-  }
-
-  /*
-   * ignore "Version" headers since they conflict with the HTTP_VERSION
-   * rack env variable.
-   */
-  if (rb_str_cmp(f, g_http_version) == 0) {
-    hp->cont = Qnil;
-    return;
   }
 
   e = rb_hash_aref(req, f);
