@@ -7,7 +7,8 @@ set +u
 set -e
 RUBY="${RUBY-ruby}"
 RUBY_VERSION=${RUBY_VERSION-$($RUBY -e 'puts RUBY_VERSION')}
-t_pfx=$PWD/trash/$T-$RUBY_VERSION
+RUBY_ENGINE=${RUBY_ENGINE-$($RUBY -e 'puts((RUBY_ENGINE rescue "ruby"))')}
+t_pfx=$PWD/trash/$T-$RUBY_ENGINE-$RUBY_VERSION
 set -u
 
 PATH=$PWD/bin:$PATH

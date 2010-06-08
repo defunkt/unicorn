@@ -5,6 +5,7 @@ GIT_URL = git://git.bogomips.org/unicorn.git
 RLFLAGS = -G2
 
 # lower-case vars are deprecated
+MRI = ruby
 RUBY = ruby
 RAKE = rake
 RAGEL = ragel
@@ -21,20 +22,22 @@ ifeq ($(RUBY_VERSION),)
   RUBY_VERSION := $(shell $(RUBY) -e 'puts RUBY_VERSION')
 endif
 
+RUBY_ENGINE := $(shell $(RUBY) -e 'puts((RUBY_ENGINE rescue "ruby"))')
+
 # dunno how to implement this as concisely in Ruby, and hell, I love awk
 awk_slow := awk '/def test_/{print FILENAME"--"$$2".n"}' 2>/dev/null
 
 rails_vers := $(subst test/rails/app-,,$(wildcard test/rails/app-*))
 slow_tests := test/unit/test_server.rb test/exec/test_exec.rb \
   test/unit/test_signals.rb test/unit/test_upload.rb
-log_suffix = .$(RUBY_VERSION).log
+log_suffix = .$(RUBY_ENGINE).$(RUBY_VERSION).log
 T_r := $(wildcard test/rails/test*.rb)
 T := $(filter-out $(slow_tests) $(T_r), $(wildcard test/*/test*.rb))
 T_n := $(shell $(awk_slow) $(slow_tests))
 T_log := $(subst .rb,$(log_suffix),$(T))
 T_n_log := $(subst .n,$(log_suffix),$(T_n))
 T_r_log := $(subst .r,$(log_suffix),$(T_r))
-test_prefix = $(CURDIR)/test/install-$(RUBY_VERSION)
+test_prefix = $(CURDIR)/test/$(RUBY_ENGINE)-$(RUBY_VERSION)
 
 ext := ext/unicorn_http
 c_files := $(ext)/unicorn_http.c $(wildcard $(ext)/*.h)
@@ -65,16 +68,16 @@ $(test_prefix)/.stamp: $(inst_deps)
 	tar cf - $(inst_deps) GIT-VERSION-GEN | \
 	  (cd $(test_prefix) && tar xf -)
 	$(MAKE) -C $(test_prefix) clean
-	$(MAKE) -C $(test_prefix) http shebang
+	$(MAKE) -C $(test_prefix) http shebang RUBY="$(RUBY)"
 	> $@
 
 # this is only intended to be run within $(test_prefix)
 shebang: $(bins)
-	$(RUBY) -i -p -e '$$_.gsub!(%r{^#!.*$$},"#!$(ruby_bin)")' $^
+	$(MRI) -i -p -e '$$_.gsub!(%r{^#!.*$$},"#!$(ruby_bin)")' $^
 
 t_log := $(T_log) $(T_n_log)
 test: $(T) $(T_n)
-	@cat $(t_log) | $(RUBY) test/aggregate.rb
+	@$(MRI) test/aggregate.rb < $(t_log)
 	@$(RM) $(t_log)
 
 test-exec: $(wildcard test/exec/test_*.rb)

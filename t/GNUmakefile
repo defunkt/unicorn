@@ -14,12 +14,15 @@ ifeq ($(RUBY_VERSION),)
   $(error unable to detect RUBY_VERSION)
 endif
 
+RUBY_ENGINE := $(shell $(RUBY) -e 'puts((RUBY_ENGINE rescue "ruby"))')
+export RUBY_ENGINE
+
 T = $(wildcard t[0-9][0-9][0-9][0-9]-*.sh)
 
 all:: $(T)
 
 # can't rely on "set -o pipefail" since we don't require bash or ksh93 :<
-t_pfx = trash/$@-$(RUBY_VERSION)
+t_pfx = trash/$@-$(RUBY_ENGINE)-$(RUBY_VERSION)
 TEST_OPTS =
 # TRACER = strace -f -o $(t_pfx).strace -s 100000
 # TRACER = /usr/bin/time -o $(t_pfx).time
@@ -48,7 +51,7 @@ $(deps):
 	@mv $@.$(pid) $@
 dep: $(deps)
 
-test_prefix := $(CURDIR)/../test/install-$(RUBY_VERSION)
+test_prefix := $(CURDIR)/../test/$(RUBY_ENGINE)-$(RUBY_VERSION)
 $(test_prefix)/.stamp:
 	$(MAKE) -C .. test-install
 
