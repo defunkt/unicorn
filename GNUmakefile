@@ -85,6 +85,11 @@ test-unit: $(wildcard test/unit/test_*.rb)
 $(slow_tests): $(test_prefix)/.stamp
 	@$(MAKE) $(shell $(awk_slow) $@)
 
+test-integration: $(test_prefix)/.stamp
+	$(MAKE) -C t
+
+test-all: test test-rails test-integration
+
 TEST_OPTS = -v
 check_test = grep '0 failures, 0 errors' $(t) >/dev/null
 ifndef V
