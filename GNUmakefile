@@ -168,7 +168,7 @@ NEWS: GIT-VERSION-FILE .manifest
 	$(RAKE) -s news_rdoc > $@+
 	mv $@+ $@
 
-SINCE = 0.97.1
+SINCE = 0.99.0
 ChangeLog: LOG_VERSION = \
   $(shell git rev-parse -q "$(GIT_VERSION)" >/dev/null 2>&1 && \
           echo $(GIT_VERSION) || git describe)
