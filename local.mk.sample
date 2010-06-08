@@ -5,22 +5,34 @@
 # This is depends on a bunch of GNU-isms from bash, sed, touch.
 
 DLEXT := so
-gems := rack-1.1.0
 
 # Avoid loading rubygems to speed up tests because gmake is
 # fork+exec heavy with Ruby.
 prefix = $(HOME)
-ifeq ($(r19),)
-  RUBY := $(prefix)/bin/ruby
-  gem_paths := $(addprefix $(prefix)/lib/ruby/gems/1.8/gems/,$(gems))
+ifeq ($(r192),)
+  ifeq ($(r19),)
+    ifeq ($(rbx),)
+      RUBY := $(prefix)/bin/ruby
+    else
+      prefix := $(prefix)/rbx
+      export PATH := $(prefix)/bin:$(PATH)
+      RUBY := $(prefix)/bin/rbx
+    endif
+  else
+    prefix := $(prefix)/ruby-1.9
+    export PATH := $(prefix)/bin:$(PATH)
+    RUBY := $(prefix)/bin/ruby --disable-gems
+  endif
 else
-  prefix := $(prefix)/ruby-1.9
+  prefix := $(prefix)/ruby-1.9.2
   export PATH := $(prefix)/bin:$(PATH)
   RUBY := $(prefix)/bin/ruby --disable-gems
-  gem_paths := $(addprefix $(prefix)/lib/ruby/gems/1.9.1/gems/,$(gems))
 endif
 
-ifdef gem_paths
+# FIXME: use isolate more
+ifndef RUBYLIB
+  gems := rack-1.1.0
+  gem_paths := $(addprefix $(HOME)/lib/ruby/gems/1.8/gems/,$(gems))
   sp :=
   sp +=
   export RUBYLIB := $(subst $(sp),:,$(addsuffix /lib,$(gem_paths)))
@@ -30,33 +42,17 @@ endif
 # SHELL := /bin/bash -e -o pipefail
 SHELL := /bin/ksh93 -e -o pipefail
 
-full-test: test-18 test-19
+full-test: test-18 test-191 test-192 test-rbx
+
+# FIXME: keep eye on Rubinius activity and wait for fixes from upstream
+# so we don't need RBX_SKIP anymore
+test-rbx: export RBX_SKIP := 1
+test-rbx: export RUBY := $(RUBY)
+test-rbx:
+	$(MAKE) test test-integration rbx=T 2>&1 |sed -e 's!^!rbx !'
 test-18:
-	$(MAKE) test test-rails 2>&1 | sed -e 's!^!1.8 !'
-test-19:
-	$(MAKE) test test-rails r19=1 2>&1 | sed -e 's!^!1.9 !'
-
-latest: NEWS
-	@awk 'BEGIN{RS="=== ";ORS=""}NR==2{sub(/\n$$/,"");print RS""$$0 }' < $<
-
-# publishes docs to http://unicorn.bogomips.org
-publish_doc:
-	-git set-file-times
-	$(RM) -r doc ChangeLog NEWS
-	$(MAKE) doc LOG_VERSION=$(shell git tag -l | tail -1)
-	$(MAKE) -s latest > doc/LATEST
-	find doc/images doc/js -type f | \
-		TZ=UTC xargs touch -d '1970-01-01 00:00:00' doc/rdoc.css
-	$(MAKE) doc_gz
-	tar cf - $$(git ls-files examples/) | (cd doc && tar xf -)
-	chmod 644 $$(find doc -type f)
-	rsync -av doc/ dcvr:/srv/unicorn/
-	git ls-files | xargs touch
-
-# Create gzip variants of the same timestamp as the original so nginx
-# "gzip_static on" can serve the gzipped versions directly.
-doc_gz: docs = $(shell find doc -type f ! -regex '^.*\.\(gif\|jpg\|png\|gz\)$$')
-doc_gz:
-	touch doc/NEWS.atom.xml -d "$$(awk 'NR==1{print $$4,$$5,$$6}' NEWS)"
-	for i in $(docs); do \
-	  gzip --rsyncable -9 < $$i > $$i.gz; touch -r $$i $$i.gz; done
+	$(MAKE) test-all 2>&1 |sed 's!^!1.8 !'
+test-191:
+	$(MAKE) test-all r19=1 2>&1 |sed 's!^!1.9.1 !'
+test-192:
+	$(MAKE) test-all r192=1 2>&1 |sed 's!^!1.9.2 !'

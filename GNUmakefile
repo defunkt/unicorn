@@ -4,7 +4,6 @@ all:: test
 GIT_URL = git://git.bogomips.org/unicorn.git
 RLFLAGS = -G2
 
-# lower-case vars are deprecated
 MRI = ruby
 RUBY = ruby
 RAKE = rake
@@ -77,7 +76,7 @@ shebang: $(bins)
 
 t_log := $(T_log) $(T_n_log)
 test: $(T) $(T_n)
-	@$(MRI) test/aggregate.rb < $(t_log)
+	@cat $(t_log) | $(MRI) test/aggregate.rb
 	@$(RM) $(t_log)
 
 test-exec: $(wildcard test/exec/test_*.rb)
@@ -209,6 +208,29 @@ doc: .document $(ext)/unicorn_http.c NEWS ChangeLog
 	$(RAKE) -s news_atom > doc/NEWS.atom.xml
 	cd doc && ln README.html tmp && mv tmp index.html
 	$(RM) $(man1_rdoc)
+
+# publishes docs to http://unicorn.bogomips.org
+publish_doc:
+	-git set-file-times
+	$(RM) -r doc ChangeLog NEWS
+	$(MAKE) doc LOG_VERSION=$(shell git tag -l | tail -1)
+	@awk 'BEGIN{RS="=== ";ORS=""}NR==2{sub(/\n$$/,"");print RS""$$0 }' \
+	 < NEWS > doc/LATEST
+	find doc/images doc/js -type f | \
+		TZ=UTC xargs touch -d '1970-01-01 00:00:00' doc/rdoc.css
+	$(MAKE) doc_gz
+	tar cf - $$(git ls-files examples/) | (cd doc && tar xf -)
+	chmod 644 $$(find doc -type f)
+	rsync -av doc/ unicorn.bogomips.org:/srv/unicorn/
+	git ls-files | xargs touch
+
+# Create gzip variants of the same timestamp as the original so nginx
+# "gzip_static on" can serve the gzipped versions directly.
+doc_gz: docs = $(shell find doc -type f ! -regex '^.*\.\(gif\|jpg\|png\|gz\)$$')
+doc_gz:
+	touch doc/NEWS.atom.xml -d "$$(awk 'NR==1{print $$4,$$5,$$6}' NEWS)"
+	for i in $(docs); do \
+	  gzip --rsyncable -9 < $$i > $$i.gz; touch -r $$i $$i.gz; done
 
 rails_git_url = git://github.com/rails/rails.git
 rails_git := vendor/rails.git
