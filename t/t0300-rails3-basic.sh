@@ -40,7 +40,7 @@ t_begin "setup and start" && {
 	$RAKE db:sessions:create
 	$RAKE db:migrate
 	unicorn_setup
-	unicorn -D -c $unicorn_config
+	unicorn_rails -D -c $unicorn_config
 	unicorn_wait_start
 }
 
