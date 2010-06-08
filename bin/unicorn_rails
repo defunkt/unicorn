@@ -132,8 +132,8 @@ def rails_builder(daemonize)
   lambda do ||
     # Load Rails and (possibly) the private version of Rack it bundles.
     begin
-      require 'config/boot'
-      require 'config/environment'
+      require ::File.expand_path('config/boot')
+      require ::File.expand_path('config/environment')
     rescue LoadError => err
       abort "#$0 must be run inside RAILS_ROOT: #{err.inspect}"
     end
