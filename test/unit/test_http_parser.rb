@@ -550,6 +550,8 @@ class HttpParserTest < Test::Unit::TestCase
       diff = after - before
       assert(diff < 10000, "memory grew more than 10M: #{diff}")
     end
-  end if RUBY_PLATFORM =~ /linux/ && File.readable?(LINUX_PROC_PID_STATUS)
+  end if RUBY_PLATFORM =~ /linux/ &&
+         File.readable?(LINUX_PROC_PID_STATUS) &&
+         !defined?(RUBY_ENGINE)
 
 end
