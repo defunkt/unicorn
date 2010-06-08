@@ -791,7 +791,7 @@ module Unicorn
         logger.info "done reloading config_file=#{config.config_file}"
       rescue StandardError, LoadError, SyntaxError => e
         logger.error "error reloading config_file=#{config.config_file}: " \
-                     "#{e.class} #{e.message}"
+                     "#{e.class} #{e.message} #{e.backtrace}"
         self.app = loaded_app
       end
     end
