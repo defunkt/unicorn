@@ -197,16 +197,20 @@ task :isolate do
     :path => "tmp/isolate/ruby-#{RUBY_VERSION}",
     :multiruby => false, # we want "1.8.7" instead of "1.8"
   }
+  fp = File.open(__FILE__, "rb")
+  fp.flock(File::LOCK_EX)
 
   # C extensions aren't binary-compatible across Ruby versions
-  fork { Isolate.now!(opts) { gem 'sqlite3-ruby', '1.2.5' } }
+  pid = fork { Isolate.now!(opts) { gem 'sqlite3-ruby', '1.2.5' } }
+  _, status = Process.waitpid2(pid)
+  status.success? or abort status.inspect
 
   # pure Ruby gems can be shared across all Rubies
   %w(3.0.0.beta3).each do |rails_ver|
     opts[:path] = "tmp/isolate/rails-#{rails_ver}"
-    fork { Isolate.now!(opts) { gem 'rails', rails_ver } }
+    pid = fork { Isolate.now!(opts) { gem 'rails', rails_ver } }
+    _, status = Process.waitpid2(pid)
+    status.success? or abort status.inspect
   end
-
-  failed = Process.waitall.delete_if { |(_,status)| status.success? }
-  abort failed.inspect unless failed.empty?
+  fp.flock(File::LOCK_UN)
 end
