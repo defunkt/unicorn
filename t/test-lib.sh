@@ -4,6 +4,12 @@
 . ./my-tap-lib.sh
 
 set +u
+
+# sometimes we rely on http_proxy to avoid wasting bandwidth with Isolate
+# and multiple Ruby versions
+NO_PROXY=${UNICORN_TEST_ADDR-127.0.0.1}
+export NO_PROXY
+
 set -e
 RUBY="${RUBY-ruby}"
 RUBY_VERSION=${RUBY_VERSION-$($RUBY -e 'puts RUBY_VERSION')}

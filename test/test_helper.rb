@@ -8,6 +8,9 @@
 
 STDIN.sync = STDOUT.sync = STDERR.sync = true # buffering makes debugging hard
 
+# FIXME: move curl-dependent tests into t/
+ENV['NO_PROXY'] ||= ENV['UNICORN_TEST_ADDR'] || '127.0.0.1'
+
 # Some tests watch a log file or a pid file to spring up to check state
 # Can't rely on inotify on non-Linux and logging to a pipe makes things
 # more complicated
