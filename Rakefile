@@ -192,9 +192,10 @@ end
 
 task :isolate do
   require 'isolate'
+  ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'
   opts = {
     :system => false,
-    :path => "tmp/isolate/ruby-#{RUBY_VERSION}",
+    :path => "tmp/isolate/#{ruby_engine}-#{RUBY_VERSION}",
     :multiruby => false, # we want "1.8.7" instead of "1.8"
   }
   fp = File.open(__FILE__, "rb")
