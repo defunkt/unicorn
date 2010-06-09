@@ -179,7 +179,7 @@ begin
   if File.readable?(mk)
     warn "run 'gmake -C ext/unicorn_http clean' and\n" \
          "remove #{mk} before using rake-compiler"
-  else
+  elsif ENV['VERSION']
     unless File.readable?("ext/unicorn_http/unicorn_http.c")
       abort "run 'gmake ragel' or 'make ragel' to generate the Ragel source"
     end
