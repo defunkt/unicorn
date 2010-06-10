@@ -82,6 +82,9 @@ check_stderr () {
 # unicorn_setup
 unicorn_setup () {
 	eval $(unused_listen)
+	port=$(expr $listen : '[^:]*:\([0-9]\+\)')
+	host=$(expr $listen : '\([^:]*\):[0-9]\+')
+
 	rtmpfiles unicorn_config pid r_err r_out fifo tmp ok
 	cat > $unicorn_config <<EOF
 listen "$listen"

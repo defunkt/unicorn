@@ -8,9 +8,6 @@ t_begin "setup and start" && {
 	rm -rf $t_pfx.app
 	mkdir $t_pfx.app
 
-	port=$(expr $listen : '[^:]*:\([0-9]\+\)')
-	host=$(expr $listen : '\([^:]*\):[0-9]\+')
-
 	cat > $t_pfx.app/config.ru <<EOF
 #\--daemonize --host $host --port $port
 use Rack::ContentLength
