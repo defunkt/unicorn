@@ -154,10 +154,10 @@ def rails_builder(daemonize)
         if map_path != '/'
           # patches + tests welcome, but I really cbf to deal with this
           # since all apps I've ever dealt with just use "/" ...
-          $stderr.puts "relative URL roots may not work for older Rails"
+          warn "relative URL roots may not work for older Rails"
         end
-        $stderr.puts "LogTailer not available for Rails < 2.3" unless daemonize
-        $stderr.puts "Debugger not available" if $DEBUG
+        warn "LogTailer not available for Rails < 2.3" unless daemonize
+        warn "Debugger not available" if $DEBUG
         require 'unicorn/app/old_rails'
         map(map_path) do
           use Unicorn::App::OldRails::Static
