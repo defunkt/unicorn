@@ -107,8 +107,6 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   opts.parse! ARGV
 end
 
-ru = ARGV[0] || (File.exist?('config.ru') ? 'config.ru' : nil)
-
 def rails_dispatcher
   if ::Rails::VERSION::MAJOR >= 3 && ::File.exist?('config/application.rb')
     if ::File.read('config/application.rb') =~ /^module\s+([\w:]+)\s*$/
@@ -127,9 +125,20 @@ def rails_dispatcher
   result || abort("Unable to locate the application dispatcher class")
 end
 
-def rails_builder(daemonize)
+def rails_builder(ru, opts, daemonize)
+  return Unicorn.builder(ru, opts) if ru
+
+  # allow Configurator to parse cli switches embedded in the ru file
+  Unicorn::Configurator::RACKUP.update(:file => :rails, :optparse => opts)
+
   # this lambda won't run until after forking if preload_app is false
+  # this runs after config file reloading
   lambda do ||
+    # Rails 3 includes a config.ru, use it if we find it after
+    # working_directory is bound.
+    ::File.exist?('config.ru') and
+      return Unicorn.builder('config.ru', opts).call
+
     # Load Rails and (possibly) the private version of Rack it bundles.
     begin
       require ::File.expand_path('config/boot')
@@ -179,7 +188,7 @@ def rails_builder(daemonize)
   end
 end
 
-app = ru ? Unicorn.builder(ru, opts) : rails_builder(daemonize)
+app = rails_builder(ARGV[0], opts, daemonize)
 options[:listeners] << "#{host}:#{port}" if set_listener
 
 if $DEBUG

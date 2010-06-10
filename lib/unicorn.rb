@@ -33,11 +33,10 @@ module Unicorn
     # Unicorn config).  The returned lambda will be called when it is
     # time to build the app.
     def builder(ru, opts)
-      if ru =~ /\.ru\z/
-        # parse embedded command-line options in config.ru comments
-        /^#\\(.*)/ =~ File.read(ru) and opts.parse!($1.split(/\s+/))
-      end
+      # allow Configurator to parse cli switches embedded in the ru file
+      Unicorn::Configurator::RACKUP.update(:file => ru, :optparse => opts)
 
+      # always called after config file parsing, may be called after forking
       lambda do ||
         inner_app = case ru
         when /\.ru$/

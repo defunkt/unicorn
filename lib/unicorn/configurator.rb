@@ -13,6 +13,12 @@ module Unicorn
   # nginx is also available at
   # http://unicorn.bogomips.org/examples/nginx.conf
   class Configurator < Struct.new(:set, :config_file, :after_reload)
+    # :stopdoc:
+    # used to stash stuff for deferred processing of cli options in
+    # config.ru after "working_directory" is bound.  Do not rely on
+    # this being around later on...
+    RACKUP = {}
+    # :startdoc:
 
     # Default settings for Unicorn
     DEFAULTS = {
@@ -51,6 +57,8 @@ module Unicorn
     def reload #:nodoc:
       instance_eval(File.read(config_file), config_file) if config_file
 
+      parse_rackup_file
+
       # working_directory binds immediately (easier error checking that way),
       # now ensure any paths we changed are correctly set.
       [ :pid, :stderr_path, :stdout_path ].each do |var|
@@ -66,6 +74,9 @@ module Unicorn
 
     def commit!(server, options = {}) #:nodoc:
       skip = options[:skip] || []
+      if ready_pipe = RACKUP.delete(:ready_pipe)
+        server.ready_pipe = ready_pipe
+      end
       set.each do |key, value|
         value == :unset and next
         skip.include?(key) and next
@@ -409,6 +420,51 @@ module Unicorn
         raise ArgumentError, "invalid type: #{var}=#{my_proc.inspect}"
       end
       set[var] = my_proc
+    end
+
+    # this is called _after_ working_directory is bound.  This only
+    # parses the embedded switches in .ru files
+    # (for "rackup" compatibility)
+    def parse_rackup_file # :nodoc:
+      ru = RACKUP[:file] or return # we only return here in unit tests
+
+      # :rails means use (old) Rails autodetect
+      if ru == :rails
+        File.readable?('config.ru') or return
+        ru = 'config.ru'
+      end
+
+      File.readable?(ru) or
+        raise ArgumentError, "rackup file (#{ru}) not readable"
+
+      # it could be a .rb file, too, we don't parse those manually
+      ru =~ /\.ru\z/ or return
+
+      /^#\\(.*)/ =~ File.read(ru) or return
+      warn "ru cli opts: #{$1}"
+      RACKUP[:optparse].parse!($1.split(/\s+/))
+
+      # XXX ugly as hell, WILL FIX in 2.x (along with Rainbows!/Zbatery)
+      host, port, set_listener, options, daemonize =
+                      eval("[ host, port, set_listener, options, daemonize ]",
+                           TOPLEVEL_BINDING)
+
+      warn [ :host, :port, :set_listener, :options, :daemonize ].inspect
+      warn [ ru, host, port, set_listener, options, daemonize ].inspect
+      # XXX duplicate code from bin/unicorn{,_rails}
+      set[:listeners] << "#{host}:#{port}" if set_listener
+
+      if daemonize
+        # unicorn_rails wants a default pid path, (not plain 'unicorn')
+        if ru == :rails
+          spid = set[:pid]
+          pid('tmp/pids/unicorn.pid') if spid.nil? || spid == :unset
+        end
+        unless RACKUP[:daemonized]
+          Unicorn::Launcher.daemonize!(options)
+          RACKUP[:ready_pipe] = options.delete(:ready_pipe)
+        end
+      end
     end
 
   end

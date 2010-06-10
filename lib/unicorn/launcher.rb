@@ -56,8 +56,9 @@ class Unicorn::Launcher
       end
     end
     # $stderr/$stderr can/will be redirected separately in the Unicorn config
-    Unicorn::Configurator::DEFAULTS[:stderr_path] = "/dev/null"
-    Unicorn::Configurator::DEFAULTS[:stdout_path] = "/dev/null"
+    Unicorn::Configurator::DEFAULTS[:stderr_path] ||= "/dev/null"
+    Unicorn::Configurator::DEFAULTS[:stdout_path] ||= "/dev/null"
+    Unicorn::Configurator::RACKUP[:daemonized] = true
   end
 
 end
