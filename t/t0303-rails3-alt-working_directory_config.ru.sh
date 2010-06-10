@@ -1,4 +1,9 @@
 #!/bin/sh
+if test -n "$RBX_SKIP"
+then
+	echo "$0 is broken under Rubinius for now"
+	exit 0
+fi
 . ./test-rails3.sh
 
 t_plan 4 "Rails 3 (beta) inside alt working_directory (w/ config.ru)"

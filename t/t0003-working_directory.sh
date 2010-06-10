@@ -1,5 +1,11 @@
 #!/bin/sh
+if test -n "$RBX_SKIP"
+then
+	echo "$0 is broken under Rubinius for now"
+	exit 0
+fi
 . ./test-lib.sh
+
 t_plan 4 "config.ru inside alt working_directory"
 
 t_begin "setup and start" && {
