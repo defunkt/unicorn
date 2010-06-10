@@ -207,7 +207,7 @@ task :isolate do
   status.success? or abort status.inspect
 
   # pure Ruby gems can be shared across all Rubies
-  %w(3.0.0.beta3).each do |rails_ver|
+  %w(3.0.0.beta4).each do |rails_ver|
     opts[:path] = "tmp/isolate/rails-#{rails_ver}"
     pid = fork { Isolate.now!(opts) { gem 'rails', rails_ver } }
     _, status = Process.waitpid2(pid)
