@@ -106,5 +106,5 @@ rsha1 () {
 
 	# last resort, see comments in sha1sum.rb for reasoning
 	test -n "$_cmd" || _cmd=sha1sum.rb
-	expr "$($_cmd < random_blob)" : '\([a-f0-9]\{40\}\)'
+	expr "$($_cmd)" : '\([a-f0-9]\{40\}\)'
 }
