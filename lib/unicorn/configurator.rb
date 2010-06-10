@@ -441,7 +441,6 @@ module Unicorn
       ru =~ /\.ru\z/ or return
 
       /^#\\(.*)/ =~ File.read(ru) or return
-      warn "ru cli opts: #{$1}"
       RACKUP[:optparse].parse!($1.split(/\s+/))
 
       # XXX ugly as hell, WILL FIX in 2.x (along with Rainbows!/Zbatery)
@@ -449,8 +448,6 @@ module Unicorn
                       eval("[ host, port, set_listener, options, daemonize ]",
                            TOPLEVEL_BINDING)
 
-      warn [ :host, :port, :set_listener, :options, :daemonize ].inspect
-      warn [ ru, host, port, set_listener, options, daemonize ].inspect
       # XXX duplicate code from bin/unicorn{,_rails}
       set[:listeners] << "#{host}:#{port}" if set_listener
 
