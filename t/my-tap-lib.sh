@@ -188,9 +188,10 @@ then
 
 	(
 		# use a subshell so seds are not waitable
-		$SED -e 's/^/#: /' $t_stdout &
-		$SED -e 's/^/#! /' $t_stderr &
+		$SED -e 's/^/#: /' < $t_stdout &
+		$SED -e 's/^/#! /' < $t_stderr &
 	) &
+	wait
 	exec > $t_stdout 2> $t_stderr
 else
 	exec > /dev/null 2> /dev/null
