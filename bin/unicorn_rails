@@ -176,9 +176,7 @@ def rails_builder(ru, opts, daemonize)
         use Rails::Rack::LogTailer unless daemonize
         use Rails::Rack::Debugger if $DEBUG
         map(map_path) do
-          if defined?(ActionDispatch::Static)
-            use ActionDispatch::Static, "#{Rails.root}/public"
-          else
+          unless defined?(ActionDispatch::Static)
             use Rails::Rack::Static
           end
           run rails_dispatcher

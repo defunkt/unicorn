@@ -18,7 +18,7 @@ t_begin "setup and start" && {
 
 # add more tests here
 t_begin "hit with curl" && {
-	curl -v http://$listen/ || :
+	test xHELLO = x"$(curl -sSf http://$listen/x.txt)"
 }
 
 t_begin "killing succeeds" && {
