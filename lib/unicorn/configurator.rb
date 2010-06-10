@@ -59,6 +59,9 @@ module Unicorn
 
       parse_rackup_file
 
+      # unicorn_rails creates dirs here after working_directory is bound
+      after_reload.call if after_reload
+
       # working_directory binds immediately (easier error checking that way),
       # now ensure any paths we changed are correctly set.
       [ :pid, :stderr_path, :stdout_path ].each do |var|
@@ -67,9 +70,6 @@ module Unicorn
         File.writable?(path) || File.writable?(File.dirname(path)) or \
               raise ArgumentError, "directory for #{var}=#{path} not writable"
       end
-
-      # unicorn_rails creates dirs here after working_directory is bound
-      after_reload.call if after_reload
     end
 
     def commit!(server, options = {}) #:nodoc:
@@ -456,7 +456,7 @@ module Unicorn
 
       if daemonize
         # unicorn_rails wants a default pid path, (not plain 'unicorn')
-        if ru == :rails
+        if after_reload
           spid = set[:pid]
           pid('tmp/pids/unicorn.pid') if spid.nil? || spid == :unset
         end
