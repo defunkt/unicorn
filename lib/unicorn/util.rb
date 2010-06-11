@@ -14,7 +14,7 @@ module Unicorn
     end
   end
 
-  class Util
+  module Util
     class << self
 
       def is_log?(fp)

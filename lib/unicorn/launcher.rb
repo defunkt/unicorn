@@ -7,7 +7,7 @@ $stderr.binmode
 
 require 'unicorn'
 
-class Unicorn::Launcher
+module Unicorn::Launcher
 
   # We don't do a lot of standard daemonization stuff:
   #   * umask is whatever was set by the parent process at startup
