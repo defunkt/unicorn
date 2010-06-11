@@ -6,11 +6,12 @@ then
 fi
 . ./test-rails3.sh
 
-t_plan 4 "Rails 3 (beta) inside alt working_directory (w/ config.ru)"
+t_plan 5 "Rails 3 (beta) inside alt working_directory (w/ config.ru)"
 
 t_begin "setup and start" && {
 	unicorn_setup
-	rtmpfiles unicorn_config_tmp
+	rtmpfiles unicorn_config_tmp usock
+	rm -f $usock
 	rails3_app=$(cd rails3-app && pwd)
 	rm -rf $t_pfx.app
 	mkdir $t_pfx.app
@@ -21,7 +22,7 @@ t_begin "setup and start" && {
 	unicorn_setup
 	rm $pid
 
-	echo "#\\--daemonize --host $host --port $port" \
+	echo "#\\--daemonize --host $host --port $port -l $usock" \
 	     >> $t_pfx.app/config.ru
 
 	# we have --host/--port in config.ru instead
@@ -44,6 +45,10 @@ t_begin "pids in the right place" && {
 
 t_begin "static file serving works" && {
 	test x"$(curl -sSf http://$listen/x.txt)" = xHELLO
+}
+
+t_begin "socket created" && {
+	test -S $usock
 }
 
 t_begin "killing succeeds" && {
