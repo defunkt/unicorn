@@ -1,4 +1,4 @@
-= \Unicorn: Rack HTTP server for fast clients and Unix
+= Unicorn: Rack HTTP server for fast clients and Unix
 
 \Unicorn is an HTTP server for Rack applications designed to only serve
 fast clients on low-latency, high-bandwidth connections and take
