@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
 
   s.authors = ["Unicorn hackers"]
   s.date = Time.now.utc.strftime('%Y-%m-%d')
-  s.description = File.read("README").split(/\n\n/)[1]
+  s.description = File.read("README").split(/\n\n/)[1].delete('/')
   s.email = %q{mongrel-unicorn@rubyforge.org}
   s.executables = %w(unicorn unicorn_rails)
   s.extensions = %w(ext/unicorn_http/extconf.rb)
