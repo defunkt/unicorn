@@ -311,7 +311,22 @@ module Unicorn
     #
     # In addition to reloading the unicorn-specific config settings,
     # SIGHUP will reload application code in the working
-    # directory/symlink when workers are gracefully restarted.
+    # directory/symlink when workers are gracefully restarted when
+    # preload_app=false (the default).  As reloading the application
+    # sometimes requires RubyGems updates, +Gem.refresh+ is always
+    # called before the application is loaded (for RubyGems users).
+    #
+    # During deployments, care should _always_ be taken to ensure your
+    # applications are properly deployed and running.  Using
+    # preload_app=false (the default) means you _must_ check if
+    # your application is responding properly after a deployment.
+    # Improperly deployed applications can go into a spawn loop
+    # if the application fails to load.  While your children are
+    # in a spawn loop, it is is possible to fix an application
+    # by properly deploying all required code and dependencies.
+    # Using preload_app=true means any application load error will
+    # cause the master process to exit with an error.
+
     def preload_app(bool)
       case bool
       when TrueClass, FalseClass
@@ -344,9 +359,9 @@ module Unicorn
       set_path(:stdout_path, path)
     end
 
-    # sets the working directory for Unicorn.  This ensures USR2 will
+    # sets the working directory for Unicorn.  This ensures SIGUSR2 will
     # start a new instance of Unicorn in this directory.  This may be
-    # a symlink.
+    # a symlink, a common scenario for Capistrano users.
     def working_directory(path)
       # just let chdir raise errors
       path = File.expand_path(path)
