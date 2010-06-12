@@ -22,6 +22,7 @@ static void rb_18_str_set_len(VALUE str, long len)
   RSTRING(str)->len = len;
   RSTRING(str)->ptr[len] = '\0';
 }
+#  define rb_str_set_len(str,len) rb_18_str_set_len(str,len)
 #endif /* !defined(HAVE_RB_STR_SET_LEN) */
 
 /* not all Ruby implementations support frozen objects (Rubinius does not) */
