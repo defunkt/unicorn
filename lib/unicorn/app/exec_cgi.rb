@@ -120,7 +120,8 @@ module Unicorn::App
     # ensures rack.input is a file handle that we can redirect stdin to
     def force_file_input(env)
       inp = env['rack.input']
-      if inp.size == 0 # inp could be a StringIO or StringIO-like object
+      # inp could be a StringIO or StringIO-like object
+      if inp.respond_to?(:size) && inp.size == 0
         ::File.open('/dev/null', 'rb')
       else
         tmp = Unicorn::Util.tmpio
