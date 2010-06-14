@@ -39,6 +39,12 @@ module Unicorn
     # For Transfer-Encoding:chunked requests, this requires consuming
     # all of the input stream before returning since there's no other
     # way to determine the size of the request body beforehand.
+    #
+    # This method is no longer part of the Rack specification as of
+    # Rack 1.2, so its use is not recommended.  This method only exists
+    # for compatibility with Rack applications designed for Rack 1.1 and
+    # earlier.  Most applications should only need to call +read+ with a
+    # specified +length+ in a loop until it returns +nil+.
     def size
       len and return len
 
