@@ -22,7 +22,6 @@ module Unicorn
 
         ! fp.closed? &&
           fp.sync &&
-          fp.path &&
           fp.path[0] == ?/ &&
           (fp.fcntl(Fcntl::F_GETFL) & append_flags) == append_flags
       end
