@@ -97,7 +97,7 @@ class TestSocketHelper < Test::Unit::TestCase
     a = bind_listen(tcp_server)
     assert_equal a.fileno, tcp_server.fileno
     assert_equal a.fileno, @tcp_listener.fileno
-  end unless ENV["RBX_SKIP"]
+  end
 
   def test_bind_listen_unix_rebind
     test_bind_listen_unix
@@ -139,11 +139,11 @@ class TestSocketHelper < Test::Unit::TestCase
     assert_equal @tcp_listener.fileno, @tcp_server.fileno
     assert TCPServer === @tcp_server
     assert_equal @tcp_listener_name, sock_name(@tcp_server)
-  end unless ENV["RBX_SKIP"]
+  end
 
   def test_sock_name
     test_server_cast
     sock_name(@unix_server)
-  end unless ENV["RBX_SKIP"]
+  end
 
 end

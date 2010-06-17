@@ -20,10 +20,6 @@ unless try_require('rack')
   do_test = false
 end
 
-if ENV['RBX_SKIP']
-  do_test = false
-end
-
 class ExecTest < Test::Unit::TestCase
   trap(:QUIT, 'IGNORE')
 
@@ -613,7 +609,7 @@ EOF
     results = retry_hit(["http://#{@addr}:#{@port}/"])
     assert_equal String, results[0].class
     assert_shutdown(pid)
-  end
+  end unless ENV['RBX_SKIP']
 
   def test_config_ru_alt_path
     config_path = "#{@tmpdir}/foo.ru"

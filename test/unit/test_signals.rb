@@ -201,6 +201,6 @@ class SignalsTest < Test::Unit::TestCase
     assert size_before < @tmp.stat.size
     assert_equal pid, sock.sysread(4096)[/\r\nX-Pid: (\d+)\r\n/, 1].to_i
     sock.close
-  end unless ENV['RBX_SKIP']
+  end
 
 end
