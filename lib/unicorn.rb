@@ -816,12 +816,7 @@ module Unicorn
     end
 
     def redirect_io(io, path)
-      File.open(path, 'ab') do |fp|
-        io.reopen(fp)
-
-        # workaround for http://github.com/evanphx/rubinius/issues/360
-        io.instance_variable_set(:@path, path) if io.path.nil?
-      end if path
+      File.open(path, 'ab') { |fp| io.reopen(fp) } if path
       io.sync = true
     end
 
