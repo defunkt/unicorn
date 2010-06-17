@@ -5,8 +5,11 @@ t_plan 5 "Rails 3 (beta) inside alt working_directory (no embedded switches)"
 
 t_begin "setup and start" && {
 	unicorn_setup
-	rtmpfiles unicorn_config_tmp usock
-	rm -f $usock
+	rtmpfiles unicorn_config_tmp usocket
+	if test -e $usocket
+	then
+		die "unexpected $usocket"
+	fi
 	rails3_app=$(cd rails3-app && pwd)
 	rm -rf $t_pfx.app
 	mkdir $t_pfx.app
@@ -21,7 +24,7 @@ t_begin "setup and start" && {
 	echo "working_directory '$t_pfx.app'" >> $unicorn_config_tmp
 	cd /
 	unicorn_rails -c $unicorn_config_tmp \
-	  --daemonize --host $host --port $port -l $usock
+	  --daemonize --host $host --port $port -l $usocket
 }
 
 t_begin "pids in the right place" && {
@@ -39,7 +42,7 @@ t_begin "static file serving works" && {
 }
 
 t_begin "socket created" && {
-	test -S $usock
+	test -S $usocket
 }
 
 t_begin "killing succeeds" && {

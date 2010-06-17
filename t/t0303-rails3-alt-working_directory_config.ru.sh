@@ -10,8 +10,11 @@ t_plan 5 "Rails 3 (beta) inside alt working_directory (w/ config.ru)"
 
 t_begin "setup and start" && {
 	unicorn_setup
-	rtmpfiles unicorn_config_tmp usock
-	rm -f $usock
+	rtmpfiles unicorn_config_tmp usocket
+	if test -e $usocket
+	then
+		die "unexpected $usocket"
+	fi
 	rails3_app=$(cd rails3-app && pwd)
 	rm -rf $t_pfx.app
 	mkdir $t_pfx.app
@@ -22,7 +25,7 @@ t_begin "setup and start" && {
 	unicorn_setup
 	rm $pid
 
-	echo "#\\--daemonize --host $host --port $port -l $usock" \
+	echo "#\\--daemonize --host $host --port $port -l $usocket" \
 	     >> $t_pfx.app/config.ru
 
 	# we have --host/--port in config.ru instead
@@ -48,7 +51,7 @@ t_begin "static file serving works" && {
 }
 
 t_begin "socket created" && {
-	test -S $usock
+	test -S $usocket
 }
 
 t_begin "killing succeeds" && {
