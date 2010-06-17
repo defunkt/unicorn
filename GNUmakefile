@@ -8,6 +8,7 @@ MRI = ruby
 RUBY = ruby
 RAKE = rake
 RAGEL = ragel
+RSYNC = rsync
 
 GIT-VERSION-FILE: .FORCE-GIT-VERSION-FILE
 	@./GIT-VERSION-GEN
@@ -221,7 +222,7 @@ publish_doc:
 	$(MAKE) doc_gz
 	tar cf - $$(git ls-files examples/) | (cd doc && tar xf -)
 	chmod 644 $$(find doc -type f)
-	rsync -av doc/ unicorn.bogomips.org:/srv/unicorn/
+	$(RSYNC) -av doc/ unicorn.bogomips.org:/srv/unicorn/
 	git ls-files | xargs touch
 
 # Create gzip variants of the same timestamp as the original so nginx
