@@ -15,12 +15,22 @@ module Unicorn
   # "rack.input" of the Rack environment.
   class TeeInput < Struct.new(:socket, :req, :parser, :buf, :len, :tmp, :buf2)
 
+    # The maximum size (in +bytes+) to buffer in memory before
+    # resorting to a temporary file.  Default is 112 kilobytes.
+    @@client_body_buffer_size = Unicorn::Const::MAX_BODY
+
+    # The I/O chunk size (in +bytes+) for I/O operations where
+    # the size cannot be user-specified when a method is called.
+    # The default is 16 kilobytes.
+    @@io_chunk_size = Unicorn::Const::CHUNK_SIZE
+
     # Initializes a new TeeInput object.  You normally do not have to call
     # this unless you are writing an HTTP server.
     def initialize(*args)
       super(*args)
       self.len = parser.content_length
-      self.tmp = len && len < Const::MAX_BODY ? StringIO.new("") : Util.tmpio
+      self.tmp = len && len < @@client_body_buffer_size ?
+                 StringIO.new("") : Unicorn::Util.tmpio
       self.buf2 = ""
       if buf.size > 0
         parser.filter_body(buf2, buf) and finalize_input
@@ -50,7 +60,7 @@ module Unicorn
 
       if socket
         pos = tmp.pos
-        while tee(Const::CHUNK_SIZE, buf2)
+        while tee(@@io_chunk_size, buf2)
         end
         tmp.seek(pos)
       end
@@ -83,7 +93,7 @@ module Unicorn
       length = args.shift
       if nil == length
         rv = tmp.read || ""
-        while tee(Const::CHUNK_SIZE, buf2)
+        while tee(@@io_chunk_size, buf2)
           rv << buf2
         end
         rv
@@ -113,7 +123,7 @@ module Unicorn
 
       orig_size = tmp.size
       if tmp.pos == orig_size
-        tee(Const::CHUNK_SIZE, buf2) or return nil
+        tee(@@io_chunk_size, buf2) or return nil
         tmp.seek(orig_size)
       end
 
@@ -123,7 +133,7 @@ module Unicorn
       # unlikely, if we got here, then tmp is at EOF
       begin
         orig_size = tmp.pos
-        tee(Const::CHUNK_SIZE, buf2) or break
+        tee(@@io_chunk_size, buf2) or break
         tmp.seek(orig_size)
         line << tmp.gets
         $/ == line[-$/.size, $/.size] and return line
@@ -195,7 +205,7 @@ module Unicorn
         # will catch EOFError when app is processing it, otherwise in
         # initialize we never get any chance to enter the app so the
         # EOFError will just get trapped by Unicorn and not the Rack app
-        buf << socket.readpartial(Const::CHUNK_SIZE)
+        buf << socket.readpartial(@@io_chunk_size)
       end
       self.socket = nil
     end
