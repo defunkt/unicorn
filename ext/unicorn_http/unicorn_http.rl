@@ -684,7 +684,7 @@ void Init_unicorn_http(void)
 {
   VALUE mUnicorn, cHttpParser;
 
-  mUnicorn = rb_define_module("Unicorn");
+  mUnicorn = rb_const_get(rb_cObject, rb_intern("Unicorn"));
   cHttpParser = rb_define_class_under(mUnicorn, "HttpParser", rb_cObject);
   eHttpParserError =
          rb_define_class_under(mUnicorn, "HttpParserError", rb_eIOError);
