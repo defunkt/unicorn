@@ -25,7 +25,7 @@ module Unicorn
       if buf.size > 0
         parser.filter_body(buf2, buf) and finalize_input
         tmp.write(buf2)
-        tmp.seek(0)
+        tmp.rewind
       end
     end
 
