@@ -54,6 +54,20 @@ before_fork do |server, worker|
 end
   EOS
 
+  WORKING_DIRECTORY_CHECK_RU = <<-EOS
+use Rack::ContentLength
+run lambda { |env|
+  pwd = ENV['PWD']
+  a = ::File.stat(pwd)
+  b = ::File.stat(Dir.pwd)
+  if (a.ino == b.ino && a.dev == b.dev)
+    [ 200, { 'Content-Type' => 'text/plain' }, [ pwd ] ]
+  else
+    [ 404, { 'Content-Type' => 'text/plain' }, [] ]
+  end
+}
+  EOS
+
   def setup
     @pwd = Dir.pwd
     @tmpfile = Tempfile.new('unicorn_exec_test')
@@ -87,10 +101,7 @@ end
     File.unlink(other.path)
     Dir.mkdir(other.path)
     File.open("config.ru", "wb") do |fp|
-      fp.syswrite <<EOF
-use Rack::ContentLength
-run proc { |env| [ 200, { 'Content-Type' => 'text/plain' }, [ Dir.pwd ] ] }
-EOF
+      fp.syswrite WORKING_DIRECTORY_CHECK_RU
     end
     FileUtils.cp("config.ru", other.path + "/config.ru")
     Dir.chdir(@tmpdir)
@@ -138,10 +149,7 @@ EOF
     File.unlink(other.path)
     Dir.mkdir(other.path)
     File.open("config.ru", "wb") do |fp|
-      fp.syswrite <<EOF
-use Rack::ContentLength
-run proc { |env| [ 200, { 'Content-Type' => 'text/plain' }, [ Dir.pwd ] ] }
-EOF
+      fp.syswrite WORKING_DIRECTORY_CHECK_RU
     end
     FileUtils.cp("config.ru", other.path + "/config.ru")
     tmp = Tempfile.new('unicorn.config')
@@ -177,10 +185,7 @@ EOF
     File.unlink(other.path)
     Dir.mkdir(other.path)
     File.open("config.ru", "wb") do |fp|
-      fp.syswrite <<EOF
-use Rack::ContentLength
-run proc { |env| [ 200, { 'Content-Type' => 'text/plain' }, [ Dir.pwd ] ] }
-EOF
+      fp.syswrite WORKING_DIRECTORY_CHECK_RU
     end
     FileUtils.cp("config.ru", other.path + "/config.ru")
     system('mkfifo', "#{other.path}/fifo")
