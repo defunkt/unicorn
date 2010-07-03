@@ -12,6 +12,14 @@ module Unicorn
       # from /usr/include/linux/tcp.h
       TCP_DEFER_ACCEPT = 9 unless defined?(TCP_DEFER_ACCEPT)
 
+      # The semantics for TCP_DEFER_ACCEPT changed in Linux 2.6.32+
+      # with commit d1b99ba41d6c5aa1ed2fc634323449dd656899e9
+      # This change shouldn't affect Unicorn users behind nginx (a
+      # value of 1 remains an optimization), but Rainbows! users may
+      # want to use a higher value on Linux 2.6.32+ to protect against
+      # denial-of-service attacks
+      TCP_DEFER_ACCEPT_DEFAULT = 1
+
       # do not send out partial frames (Linux)
       TCP_CORK = 3 unless defined?(TCP_CORK)
     when /freebsd(([1-4]\..{1,2})|5\.[0-4])/
@@ -25,10 +33,16 @@ module Unicorn
       # The struct made by pack() is defined in /usr/include/sys/socket.h
       # as accept_filter_arg
       unless `/sbin/sysctl -nq net.inet.accf.http`.empty?
-        # set set the "httpready" accept filter in FreeBSD if available
-        # if other protocols are to be supported, this may be
-        # String#replace-d with "dataready" arguments instead
-        FILTER_ARG = ['httpready', nil].pack('a16a240')
+        # struct accept_filter_arg {
+        #   char af_name[16];
+        #   char af_arg[240];
+        # };
+        #
+        # +af_name+ is either "httpready" or "dataready",
+        # though other filters may be supported by FreeBSD
+        def accf_arg(af_name)
+          [ af_name, nil ].pack('a16a240')
+        end
       end
     end
 
@@ -49,10 +63,18 @@ module Unicorn
       end
 
       # No good reason to ever have deferred accepts off
+      # (except maybe benchmarking)
       if defined?(TCP_DEFER_ACCEPT)
-        sock.setsockopt(SOL_TCP, TCP_DEFER_ACCEPT, 1)
-      elsif defined?(SO_ACCEPTFILTER) && defined?(FILTER_ARG)
-        sock.setsockopt(SOL_SOCKET, SO_ACCEPTFILTER, FILTER_ARG)
+        # this differs from nginx, since nginx doesn't allow us to
+        # configure the the timeout...
+        tmp = { :tcp_defer_accept => true }.update(opt)
+        seconds = tmp[:tcp_defer_accept]
+        seconds = TCP_DEFER_ACCEPT_DEFAULT if seconds == true
+        seconds and sock.setsockopt(SOL_TCP, TCP_DEFER_ACCEPT, seconds)
+      elsif defined?(SO_ACCEPTFILTER) && respond_to?(:accf_arg)
+        tmp = { :accept_filter => 'httpready' }.update(opt)
+        name = tmp[:accept_filter] and
+          sock.setsockopt(SOL_SOCKET, SO_ACCEPTFILTER, accf_arg(name))
       end
     end
 

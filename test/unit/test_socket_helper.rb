@@ -146,4 +146,28 @@ class TestSocketHelper < Test::Unit::TestCase
     sock_name(@unix_server)
   end
 
+  def test_tcp_defer_accept_default
+    port = unused_port @test_addr
+    name = "#@test_addr:#{port}"
+    sock = bind_listen(name)
+    cur = sock.getsockopt(Socket::SOL_TCP, TCP_DEFER_ACCEPT).unpack('i')[0]
+    assert cur >= 1
+  end if defined?(TCP_DEFER_ACCEPT)
+
+  def test_tcp_defer_accept_disable
+    port = unused_port @test_addr
+    name = "#@test_addr:#{port}"
+    sock = bind_listen(name, :tcp_defer_accept => false)
+    cur = sock.getsockopt(Socket::SOL_TCP, TCP_DEFER_ACCEPT).unpack('i')[0]
+    assert_equal 0, cur
+  end if defined?(TCP_DEFER_ACCEPT)
+
+  def test_tcp_defer_accept_nr
+    port = unused_port @test_addr
+    name = "#@test_addr:#{port}"
+    sock = bind_listen(name, :tcp_defer_accept => 60)
+    cur = sock.getsockopt(Socket::SOL_TCP, TCP_DEFER_ACCEPT).unpack('i')[0]
+    assert cur > 1
+  end if defined?(TCP_DEFER_ACCEPT)
+
 end
