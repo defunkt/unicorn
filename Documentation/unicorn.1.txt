@@ -36,6 +36,9 @@ with rackup(1) but strongly discouraged.
     implemented as a Ruby DSL, so Ruby code may executed.
     See the RDoc/ri for the *Unicorn::Configurator* class for the full
     list of directives available from the DSL.
+    Using an absolute path for for CONFIG_FILE is recommended as it
+    makes multiple instances of Unicorn easily distinguishable when
+    viewing ps(1) output.
 
 -D, \--daemonize
 :   Run daemonized in the background.  The process is detached from
