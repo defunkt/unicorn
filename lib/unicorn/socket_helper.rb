@@ -31,28 +31,13 @@ module Unicorn
 
       # do not send out partial frames (Linux)
       TCP_CORK = 3 unless defined?(TCP_CORK)
-    when /freebsd(([1-4]\..{1,2})|5\.[0-4])/
-      # Do nothing for httpready, just closing a bug when freebsd <= 5.4
-      TCP_NOPUSH = 4 unless defined?(TCP_NOPUSH) # :nodoc:
     when /freebsd/
       # do not send out partial frames (FreeBSD)
       TCP_NOPUSH = 4 unless defined?(TCP_NOPUSH)
 
-      # Use the HTTP accept filter if available.
-      # The struct made by pack() is defined in /usr/include/sys/socket.h
-      # as accept_filter_arg
-      unless `/sbin/sysctl -nq net.inet.accf.http`.empty?
-        # struct accept_filter_arg {
-        #   char af_name[16];
-        #   char af_arg[240];
-        # };
-        #
-        # +af_name+ is either "httpready" or "dataready",
-        # though other filters may be supported by FreeBSD
-        def accf_arg(af_name)
-          [ af_name, nil ].pack('a16a240')
-        end
-      end
+      def accf_arg(af_name)
+        [ af_name, nil ].pack('a16a240')
+      end if defined?(SO_ACCEPTFILTER)
     end
 
     def set_tcp_sockopt(sock, opt)
@@ -81,10 +66,16 @@ module Unicorn
         seconds = DEFAULTS[:tcp_defer_accept] if seconds == true
         seconds = 0 unless seconds # nil/false means disable this
         sock.setsockopt(SOL_TCP, TCP_DEFER_ACCEPT, seconds)
-      elsif defined?(SO_ACCEPTFILTER) && respond_to?(:accf_arg)
+      elsif respond_to?(:accf_arg)
         tmp = DEFAULTS.merge(opt)
-        name = tmp[:accept_filter] and
-          sock.setsockopt(SOL_SOCKET, SO_ACCEPTFILTER, accf_arg(name))
+        if name = tmp[:accept_filter]
+          begin
+            sock.setsockopt(SOL_SOCKET, SO_ACCEPTFILTER, accf_arg(name))
+          rescue => e
+            logger.error("#{sock_name(sock)} " \
+                         "failed to set accept_filter=#{name} (#{e.inspect})")
+          end
+        end
       end
     end
 
