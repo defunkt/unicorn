@@ -101,14 +101,11 @@ module Unicorn
       end
       sock.listen(opt[:backlog] || 1024)
       rescue => e
-        if respond_to?(:logger)
-          logger.error "error setting socket options: #{e.inspect}"
-          logger.error e.backtrace.join("\n")
-        end
+        logger.error "error setting socket options: #{e.inspect}"
+        logger.error e.backtrace.join("\n")
     end
 
     def log_buffer_sizes(sock, pfx = '')
-      respond_to?(:logger) or return
       rcvbuf = sock.getsockopt(SOL_SOCKET, SO_RCVBUF).unpack('i')
       sndbuf = sock.getsockopt(SOL_SOCKET, SO_SNDBUF).unpack('i')
       logger.info "#{pfx}#{sock_name(sock)} rcvbuf=#{rcvbuf} sndbuf=#{sndbuf}"
@@ -123,9 +120,7 @@ module Unicorn
       sock = if address[0] == ?/
         if File.exist?(address)
           if File.socket?(address)
-            if self.respond_to?(:logger)
-              logger.info "unlinking existing socket=#{address}"
-            end
+            logger.info "unlinking existing socket=#{address}"
             File.unlink(address)
           else
             raise ArgumentError,
