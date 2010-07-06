@@ -6,19 +6,28 @@ module Unicorn
   module SocketHelper
     include Socket::Constants
 
-    # configure platform-specific options (only tested on Linux 2.6 so far)
-    case RUBY_PLATFORM
-    when /linux/
-      # from /usr/include/linux/tcp.h
-      TCP_DEFER_ACCEPT = 9 unless defined?(TCP_DEFER_ACCEPT)
-
+    # :stopdoc:
+    # internal interface, only used by Rainbows!/Zbatery
+    DEFAULTS = {
       # The semantics for TCP_DEFER_ACCEPT changed in Linux 2.6.32+
       # with commit d1b99ba41d6c5aa1ed2fc634323449dd656899e9
       # This change shouldn't affect Unicorn users behind nginx (a
       # value of 1 remains an optimization), but Rainbows! users may
       # want to use a higher value on Linux 2.6.32+ to protect against
       # denial-of-service attacks
-      TCP_DEFER_ACCEPT_DEFAULT = 1
+      :tcp_defer_accept => 1,
+
+      # FreeBSD, we need to override this to 'dataready' when we
+      # eventually get HTTPS support
+      :accept_filter => 'httpready',
+    }
+    #:startdoc:
+
+    # configure platform-specific options (only tested on Linux 2.6 so far)
+    case RUBY_PLATFORM
+    when /linux/
+      # from /usr/include/linux/tcp.h
+      TCP_DEFER_ACCEPT = 9 unless defined?(TCP_DEFER_ACCEPT)
 
       # do not send out partial frames (Linux)
       TCP_CORK = 3 unless defined?(TCP_CORK)
@@ -67,12 +76,13 @@ module Unicorn
       if defined?(TCP_DEFER_ACCEPT)
         # this differs from nginx, since nginx doesn't allow us to
         # configure the the timeout...
-        tmp = { :tcp_defer_accept => true }.update(opt)
+        tmp = DEFAULTS.merge(opt)
         seconds = tmp[:tcp_defer_accept]
-        seconds = TCP_DEFER_ACCEPT_DEFAULT if seconds == true
-        seconds and sock.setsockopt(SOL_TCP, TCP_DEFER_ACCEPT, seconds)
+        seconds = DEFAULTS[:tcp_defer_accept] if seconds == true
+        seconds = 0 unless seconds # nil/false means disable this
+        sock.setsockopt(SOL_TCP, TCP_DEFER_ACCEPT, seconds)
       elsif defined?(SO_ACCEPTFILTER) && respond_to?(:accf_arg)
-        tmp = { :accept_filter => 'httpready' }.update(opt)
+        tmp = DEFAULTS.merge(opt)
         name = tmp[:accept_filter] and
           sock.setsockopt(SOL_SOCKET, SO_ACCEPTFILTER, accf_arg(name))
       end
