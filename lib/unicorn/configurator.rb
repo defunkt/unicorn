@@ -273,6 +273,41 @@ module Unicorn
     # This has no effect on TCP listeners.
     #
     # Default: 0 (world read/writable)
+    #
+    # +:tcp_defer_accept:+ defer accept() until data is ready (Linux-only)
+    #
+    # For Linux 2.6.32 and later, this is the number of retransmits to
+    # defer an accept() for if no data arrives, but the client will
+    # eventually be accepted after the specified number of retransmits
+    # regardless of whether data is ready.
+    #
+    # For Linux before 2.6.32, this is a boolean option, and
+    # accepts are _always_ deferred indefinitely if no data arrives.
+    # This is similar to <code>:accept_filter => "dataready"</code>
+    # under FreeBSD.
+    #
+    # Specifying +true+ is synonymous for the default value(s) below,
+    # and +false+ or +nil+ is synonymous for a value of zero.
+    #
+    # A value of +1+ is a good optimization for local networks
+    # and trusted clients.  For Rainbows! and Zbatery users, a higher
+    # value (e.g. +60+) provides more protection against some
+    # denial-of-service attacks.  There is no good reason to ever
+    # disable this with a +zero+ value when serving HTTP.
+    #
+    # Default: 1 retransmit for \Unicorn, 60 for Rainbows! 0.95.0\+
+    #
+    # +:accept_filter: defer accept() until data is ready (FreeBSD-only)
+    #
+    # This enables either the "dataready" or (default) "httpready"
+    # accept() filter under FreeBSD.  This is intended as an
+    # optimization to reduce context switches with common GET/HEAD
+    # requests.  For Rainbows! and Zbatery users, this provides
+    # some protection against certain denial-of-service attacks, too.
+    #
+    # There is no good reason to change from the default.
+    #
+    # Default: "httpready"
     def listen(address, opt = {})
       address = expand_addr(address)
       if String === address
