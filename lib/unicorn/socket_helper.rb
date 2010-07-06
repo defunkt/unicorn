@@ -1,5 +1,5 @@
 # -*- encoding: binary -*-
-
+# :enddoc:
 require 'socket'
 
 module Unicorn
