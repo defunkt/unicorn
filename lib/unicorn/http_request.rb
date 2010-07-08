@@ -53,7 +53,7 @@ module Unicorn
       #  that client may be a proxy, gateway, or other intermediary
       #  acting on behalf of the actual source client."
       REQ[Const::REMOTE_ADDR] =
-                    TCPSocket === socket ? socket.peeraddr.last : LOCALHOST
+                    TCPSocket === socket ? socket.peeraddr[-1] : LOCALHOST
 
       # short circuit the common case with small GET requests first
       if PARSER.headers(REQ, socket.readpartial(Const::CHUNK_SIZE, BUF)).nil?

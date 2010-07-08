@@ -482,8 +482,8 @@ module Unicorn
     # Wake up every second anyways to run murder_lazy_workers
     def master_sleep(sec)
       begin
-        IO.select([ SELF_PIPE.first ], nil, nil, sec) or return
-        SELF_PIPE.first.read_nonblock(Const::CHUNK_SIZE, HttpRequest::BUF)
+        IO.select([ SELF_PIPE[0] ], nil, nil, sec) or return
+        SELF_PIPE[0].read_nonblock(Const::CHUNK_SIZE, HttpRequest::BUF)
       rescue Errno::EAGAIN, Errno::EINTR
         break
       end while true
@@ -491,7 +491,7 @@ module Unicorn
 
     def awaken_master
       begin
-        SELF_PIPE.last.write_nonblock('.') # wakeup master process from select
+        SELF_PIPE[1].write_nonblock('.') # wakeup master process from select
       rescue Errno::EAGAIN, Errno::EINTR
         # pipe is full, master should wake up anyways
         retry
@@ -635,7 +635,7 @@ module Unicorn
       client.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       response = app.call(env = REQUEST.read(client))
 
-      if 100 == response.first.to_i
+      if 100 == response[0].to_i
         client.write(Const::EXPECT_100_RESPONSE)
         env.delete(Const::HTTP_EXPECT)
         response = app.call(env)
@@ -684,7 +684,7 @@ module Unicorn
       ready = LISTENERS
 
       # closing anything we IO.select on will raise EBADF
-      trap(:USR1) { nr = -65536; SELF_PIPE.first.close rescue nil }
+      trap(:USR1) { nr = -65536; SELF_PIPE[0].close rescue nil }
       trap(:QUIT) { alive = nil; LISTENERS.each { |s| s.close rescue nil } }
       [:TERM, :INT].each { |sig| trap(sig) { exit!(0) } } # instant shutdown
       logger.info "worker=#{worker.nr} ready"
@@ -725,7 +725,7 @@ module Unicorn
         begin
           # timeout used so we can detect parent death:
           ret = IO.select(LISTENERS, nil, SELF_PIPE, timeout) or redo
-          ready = ret.first
+          ready = ret[0]
         rescue Errno::EINTR
           ready = LISTENERS
         rescue Errno::EBADF
