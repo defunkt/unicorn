@@ -119,7 +119,7 @@ class Unicorn::TeeInput < Struct.new(:socket, :req, :parser,
   # unlike IO#gets.
   def gets
     socket or return tmp.gets
-    nil == $/ and return read
+    sep = $/ or return read
 
     orig_size = tmp.size
     if tmp.pos == orig_size
@@ -127,8 +127,9 @@ class Unicorn::TeeInput < Struct.new(:socket, :req, :parser,
       tmp.seek(orig_size)
     end
 
+    sep_size = Rack::Utils.bytesize(sep)
     line = tmp.gets # cannot be nil here since size > pos
-    $/ == line[-$/.size, $/.size] and return line
+    sep == line[-sep_size, sep_size] and return line
 
     # unlikely, if we got here, then tmp is at EOF
     begin
@@ -136,7 +137,7 @@ class Unicorn::TeeInput < Struct.new(:socket, :req, :parser,
       tee(@@io_chunk_size, buf2) or break
       tmp.seek(orig_size)
       line << tmp.gets
-      $/ == line[-$/.size, $/.size] and return line
+      sep == line[-sep_size, sep_size] and return line
       # tmp is at EOF again here, retry the loop
     end while true
 
