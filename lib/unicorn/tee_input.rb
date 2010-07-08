@@ -1,5 +1,4 @@
 # -*- encoding: binary -*-
-require 'stringio'
 
 # acts like tee(1) on an input input to provide a input-like stream
 # while providing rewindable semantics through a File/StringIO backing
