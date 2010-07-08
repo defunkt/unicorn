@@ -2,6 +2,7 @@
 
 require 'fcntl'
 require 'etc'
+require 'stringio'
 require 'rack'
 require 'unicorn/socket_helper'
 require 'unicorn/const'
