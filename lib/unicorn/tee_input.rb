@@ -176,8 +176,8 @@ private
       # _entire_ request has been sent, and those will not have
       # raised EOFError on us.
       socket.close if socket
-      raise ClientShutdown, "bytes_read=#{tmp.size}", []
-    when HttpParserError
+      raise Unicorn::ClientShutdown, "bytes_read=#{tmp.size}", []
+    when Unicorn::HttpParserError
       e.set_backtrace([])
     end
     raise e
