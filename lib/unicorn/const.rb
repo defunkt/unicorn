@@ -8,8 +8,8 @@ module Unicorn
   # Symbols did not really improve things much compared to constants.
   module Const
 
-    # The current version of Unicorn, currently 1.1.1
-    UNICORN_VERSION="1.1.1"
+    # The current version of Unicorn, currently 1.1.2
+    UNICORN_VERSION="1.1.2"
 
     DEFAULT_HOST = "0.0.0.0" # default TCP listen host address
     DEFAULT_PORT = 8080      # default TCP listen port
