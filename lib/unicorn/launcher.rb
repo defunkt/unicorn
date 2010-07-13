@@ -24,11 +24,7 @@ module Unicorn::Launcher
 
     # We only start a new process group if we're not being reexecuted
     # and inheriting file descriptors from our parent
-    if ENV['UNICORN_FD']
-      exit if fork
-      Process.setsid
-      exit if fork
-    else
+    unless ENV['UNICORN_FD']
       # grandparent - reads pipe, exits when master is ready
       #  \_ parent  - exits immediately ASAP
       #      \_ unicorn master - writes to pipe when ready
