@@ -312,6 +312,11 @@ module Unicorn
       if path
         if x = valid_pid?(path)
           return path if pid && path == pid && x == $$
+          if x == reexec_pid && pid =~ /\.oldbin\z/
+            logger.warn("will not set pid=#{path} while reexec-ed "\
+                        "child is running PID:#{x}")
+            return
+          end
           raise ArgumentError, "Already running on PID:#{x} " \
                                "(or pid=#{path} is stale)"
         end
