@@ -423,10 +423,12 @@ module Unicorn
               respawn = false
               logger.info "gracefully stopping all workers"
               kill_each_worker(:QUIT)
+              self.worker_processes = 0
             else
               logger.info "SIGWINCH ignored because we're not daemonized"
             end
           when :TTIN
+            respawn = true
             self.worker_processes += 1
           when :TTOU
             self.worker_processes -= 1 if self.worker_processes > 0
