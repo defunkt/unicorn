@@ -519,8 +519,8 @@ module Unicorn
             proc_name 'master'
           else
             worker = WORKERS.delete(wpid) and worker.tmp.close rescue nil
-            logger.info "reaped #{status.inspect} " \
-                        "worker=#{worker.nr rescue 'unknown'}"
+            m = "reaped #{status.inspect} worker=#{worker.nr rescue 'unknown'}"
+            status.success? ? logger.info(m) : logger.error(m)
           end
         end
       rescue Errno::ECHILD
