@@ -392,65 +392,59 @@ module Unicorn
         self.ready_pipe = nil
       end
       begin
-        loop do
-          reap_all_workers
-          case SIG_QUEUE.shift
-          when nil
-            # avoid murdering workers after our master process (or the
-            # machine) comes out of suspend/hibernation
-            if (last_check + timeout) >= (last_check = Time.now)
-              murder_lazy_workers
-            else
-              # wait for workers to wakeup on suspend
-              master_sleep(timeout/2.0 + 1)
-            end
-            maintain_worker_count if respawn
-            master_sleep(1)
-          when :QUIT # graceful shutdown
-            break
-          when :TERM, :INT # immediate shutdown
-            stop(false)
-            break
-          when :USR1 # rotate logs
-            logger.info "master reopening logs..."
-            Unicorn::Util.reopen_logs
-            logger.info "master done reopening logs"
-            kill_each_worker(:USR1)
-          when :USR2 # exec binary, stay alive in case something went wrong
+        reap_all_workers
+        case SIG_QUEUE.shift
+        when nil
+          # avoid murdering workers after our master process (or the
+          # machine) comes out of suspend/hibernation
+          if (last_check + timeout) >= (last_check = Time.now)
+            murder_lazy_workers
+          else
+            # wait for workers to wakeup on suspend
+            master_sleep(timeout/2.0 + 1)
+          end
+          maintain_worker_count if respawn
+          master_sleep(1)
+        when :QUIT # graceful shutdown
+          break
+        when :TERM, :INT # immediate shutdown
+          stop(false)
+          break
+        when :USR1 # rotate logs
+          logger.info "master reopening logs..."
+          Unicorn::Util.reopen_logs
+          logger.info "master done reopening logs"
+          kill_each_worker(:USR1)
+        when :USR2 # exec binary, stay alive in case something went wrong
+          reexec
+        when :WINCH
+          if Process.ppid == 1 || Process.getpgrp != $$
+            respawn = false
+            logger.info "gracefully stopping all workers"
+            kill_each_worker(:QUIT)
+            self.worker_processes = 0
+          else
+            logger.info "SIGWINCH ignored because we're not daemonized"
+          end
+        when :TTIN
+          respawn = true
+          self.worker_processes += 1
+        when :TTOU
+          self.worker_processes -= 1 if self.worker_processes > 0
+        when :HUP
+          respawn = true
+          if config.config_file
+            load_config!
+          else # exec binary and exit if there's no config file
+            logger.info "config_file not present, reexecuting binary"
             reexec
-          when :WINCH
-            if Process.ppid == 1 || Process.getpgrp != $$
-              respawn = false
-              logger.info "gracefully stopping all workers"
-              kill_each_worker(:QUIT)
-              self.worker_processes = 0
-            else
-              logger.info "SIGWINCH ignored because we're not daemonized"
-            end
-          when :TTIN
-            respawn = true
-            self.worker_processes += 1
-          when :TTOU
-            self.worker_processes -= 1 if self.worker_processes > 0
-          when :HUP
-            respawn = true
-            if config.config_file
-              load_config!
-              redo # immediate reaping since we may have QUIT workers
-            else # exec binary and exit if there's no config file
-              logger.info "config_file not present, reexecuting binary"
-              reexec
-              break
-            end
           end
         end
       rescue Errno::EINTR
-        retry
       rescue => e
         logger.error "Unhandled master loop exception #{e.inspect}."
         logger.error e.backtrace.join("\n")
-        retry
-      end
+      end while true
       stop # gracefully shutdown all workers on our way out
       logger.info "master complete"
       unlink_pid_safe(pid) if pid
@@ -489,42 +483,34 @@ module Unicorn
     # wait for a signal hander to wake us up and then consume the pipe
     # Wake up every second anyways to run murder_lazy_workers
     def master_sleep(sec)
-      begin
-        IO.select([ SELF_PIPE[0] ], nil, nil, sec) or return
-        SELF_PIPE[0].read_nonblock(Const::CHUNK_SIZE, HttpRequest::BUF)
+      IO.select([ SELF_PIPE[0] ], nil, nil, sec) or return
+      SELF_PIPE[0].read_nonblock(Const::CHUNK_SIZE, HttpRequest::BUF)
       rescue Errno::EAGAIN, Errno::EINTR
-        break
-      end while true
     end
 
     def awaken_master
-      begin
-        SELF_PIPE[1].write_nonblock('.') # wakeup master process from select
+      SELF_PIPE[1].write_nonblock('.') # wakeup master process from select
       rescue Errno::EAGAIN, Errno::EINTR
-        # pipe is full, master should wake up anyways
-        retry
-      end
     end
 
     # reaps all unreaped workers
     def reap_all_workers
       begin
-        loop do
-          wpid, status = Process.waitpid2(-1, Process::WNOHANG)
-          wpid or break
-          if reexec_pid == wpid
-            logger.error "reaped #{status.inspect} exec()-ed"
-            self.reexec_pid = 0
-            self.pid = pid.chomp('.oldbin') if pid
-            proc_name 'master'
-          else
-            worker = WORKERS.delete(wpid) and worker.tmp.close rescue nil
-            m = "reaped #{status.inspect} worker=#{worker.nr rescue 'unknown'}"
-            status.success? ? logger.info(m) : logger.error(m)
-          end
+        wpid, status = Process.waitpid2(-1, Process::WNOHANG)
+        wpid or return
+        if reexec_pid == wpid
+          logger.error "reaped #{status.inspect} exec()-ed"
+          self.reexec_pid = 0
+          self.pid = pid.chomp('.oldbin') if pid
+          proc_name 'master'
+        else
+          worker = WORKERS.delete(wpid) and worker.tmp.close rescue nil
+          m = "reaped #{status.inspect} worker=#{worker.nr rescue 'unknown'}"
+          status.success? ? logger.info(m) : logger.error(m)
         end
       rescue Errno::ECHILD
-      end
+        break
+      end while true
     end
 
     # reexecutes the START_CTX with a new binary
@@ -565,8 +551,7 @@ module Unicorn
         # relies on FD inheritence.
         (3..1024).each do |io|
           next if listener_fds.include?(io)
-          io = IO.for_fd(io) rescue nil
-          io or next
+          io = IO.for_fd(io) rescue next
           IO_PURGATORY << io
           io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
         end
@@ -730,15 +715,13 @@ module Unicorn
 
         ppid == Process.ppid or return
         alive.chmod(m = 0 == m ? 1 : 0)
-        begin
-          # timeout used so we can detect parent death:
-          ret = IO.select(LISTENERS, nil, SELF_PIPE, timeout) or redo
-          ready = ret[0]
-        rescue Errno::EINTR
-          ready = LISTENERS
-        rescue Errno::EBADF
-          nr < 0 or return
-        end
+
+        # timeout used so we can detect parent death:
+        ret = IO.select(LISTENERS, nil, SELF_PIPE, timeout) and ready = ret[0]
+      rescue Errno::EINTR
+        ready = LISTENERS
+      rescue Errno::EBADF
+        nr < 0 or return
       rescue => e
         if alive
           logger.error "Unhandled listen loop exception #{e.inspect}."
@@ -750,11 +733,9 @@ module Unicorn
     # delivers a signal to a worker and fails gracefully if the worker
     # is no longer running.
     def kill_worker(signal, wpid)
-      begin
-        Process.kill(signal, wpid)
+      Process.kill(signal, wpid)
       rescue Errno::ESRCH
         worker = WORKERS.delete(wpid) and worker.tmp.close rescue nil
-      end
     end
 
     # delivers a signal to each worker
@@ -774,33 +755,28 @@ module Unicorn
     # nil otherwise.
     def valid_pid?(path)
       wpid = File.read(path).to_i
-      wpid <= 0 and return nil
-      begin
-        Process.kill(0, wpid)
-        wpid
-      rescue Errno::ESRCH
+      wpid <= 0 and return
+      Process.kill(0, wpid)
+      wpid
+      rescue Errno::ESRCH, Errno::ENOENT
         # don't unlink stale pid files, racy without non-portable locking...
-      end
-      rescue Errno::ENOENT
     end
 
     def load_config!
       loaded_app = app
-      begin
-        logger.info "reloading config_file=#{config.config_file}"
-        config[:listeners].replace(init_listeners)
-        config.reload
-        config.commit!(self)
-        kill_each_worker(:QUIT)
-        Unicorn::Util.reopen_logs
-        self.app = orig_app
-        build_app! if preload_app
-        logger.info "done reloading config_file=#{config.config_file}"
-      rescue StandardError, LoadError, SyntaxError => e
-        logger.error "error reloading config_file=#{config.config_file}: " \
-                     "#{e.class} #{e.message} #{e.backtrace}"
-        self.app = loaded_app
-      end
+      logger.info "reloading config_file=#{config.config_file}"
+      config[:listeners].replace(init_listeners)
+      config.reload
+      config.commit!(self)
+      kill_each_worker(:QUIT)
+      Unicorn::Util.reopen_logs
+      self.app = orig_app
+      build_app! if preload_app
+      logger.info "done reloading config_file=#{config.config_file}"
+    rescue StandardError, LoadError, SyntaxError => e
+      logger.error "error reloading config_file=#{config.config_file}: " \
+                   "#{e.class} #{e.message} #{e.backtrace}"
+      self.app = loaded_app
     end
 
     # returns an array of string names for the given listener array
