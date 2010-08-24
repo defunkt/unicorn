@@ -100,7 +100,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   end
 
   opts.on_tail("-v", "--version", "Show version") do
-    puts " v#{Unicorn::Const::UNICORN_VERSION}"
+    puts "#{cmd} v#{Unicorn::Const::UNICORN_VERSION}"
     exit
   end
 

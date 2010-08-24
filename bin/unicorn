@@ -10,8 +10,9 @@ host, port = Unicorn::Const::DEFAULT_HOST, Unicorn::Const::DEFAULT_PORT
 set_listener = false
 
 opts = OptionParser.new("", 24, '  ') do |opts|
-  opts.banner = "Usage: #{File.basename($0)} " \
-                "[ruby options] [unicorn options] [rackup config file]"
+  cmd = File.basename($0)
+  opts.banner = "Usage: #{cmd} " \
+                "[ruby options] [#{cmd} options] [rackup config file]"
 
   opts.separator "Ruby options:"
 
@@ -39,7 +40,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
     require library
   end
 
-  opts.separator "Unicorn options:"
+  opts.separator "#{cmd} options:"
 
   # some of these switches exist for rackup command-line compatibility,
 
@@ -100,7 +101,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   end
 
   opts.on_tail("-v", "--version", "Show version") do
-    puts "unicorn v#{Unicorn::Const::UNICORN_VERSION}"
+    puts "#{cmd} v#{Unicorn::Const::UNICORN_VERSION}"
     exit
   end
 
