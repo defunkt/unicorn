@@ -90,6 +90,7 @@ module Unicorn
                                 :reexec_pid, :orig_app, :init_listeners,
                                 :master_pid, :config, :ready_pipe, :user)
     include ::Unicorn::SocketHelper
+    include ::Unicorn::HttpResponse
 
     # prevents IO objects in here from being GC-ed
     IO_PURGATORY = []
@@ -626,14 +627,16 @@ module Unicorn
     # in 3 easy steps: read request, call app, write app response
     def process_client(client)
       client.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
-      response = app.call(env = REQUEST.read(client))
+      r = app.call(env = REQUEST.read(client))
 
-      if 100 == response[0].to_i
+      if 100 == r[0].to_i
         client.write(Const::EXPECT_100_RESPONSE)
         env.delete(Const::HTTP_EXPECT)
-        response = app.call(env)
+        r = app.call(env)
       end
-      HttpResponse.write(client, response, HttpRequest::PARSER.headers?)
+      # r may be frozen or const, so don't modify it
+      HttpRequest::PARSER.headers? or r = [ r[0], nil, r[2] ]
+      http_response_write(client, r)
     rescue => e
       handle_error(client, e)
     end
