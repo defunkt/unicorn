@@ -62,18 +62,18 @@ module Unicorn
 
           begin
             File.open(fp.path, 'a') { |tmpfp| fp.reopen(tmpfp) }
+            fp.sync = true
+            new_st = fp.stat
+
+            # this should only happen in the master:
+            if orig_st.uid != new_st.uid || orig_st.gid != new_st.gid
+              fp.chown(orig_st.uid, orig_st.gid)
+            end
+
+            nr += 1
           rescue IOError, Errno::EBADF
-            next
+            # not much we can do...
           end
-          fp.sync = true
-          new_st = fp.stat
-
-          # this should only happen in the master:
-          if orig_st.uid != new_st.uid || orig_st.gid != new_st.gid
-            fp.chown(orig_st.uid, orig_st.gid)
-          end
-
-          nr += 1
         end
 
         nr
