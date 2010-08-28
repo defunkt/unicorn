@@ -24,6 +24,8 @@ module Unicorn
           fp.sync &&
           fp.path[0] == ?/ &&
           (fp.fcntl(Fcntl::F_GETFL) & append_flags) == append_flags
+        rescue IOError, Errno::EBADF
+          false
       end
 
       def chown_logs(uid, gid)
@@ -46,19 +48,31 @@ module Unicorn
         ObjectSpace.each_object(File) { |fp| is_log?(fp) and to_reopen << fp }
 
         to_reopen.each do |fp|
-          orig_st = fp.stat
+          orig_st = begin
+            fp.stat
+          rescue IOError, Errno::EBADF
+            next
+          end
+
           begin
             b = File.stat(fp.path)
             next if orig_st.ino == b.ino && orig_st.dev == b.dev
           rescue Errno::ENOENT
           end
 
-          File.open(fp.path, 'a') { |tmpfp| fp.reopen(tmpfp) }
+          begin
+            File.open(fp.path, 'a') { |tmpfp| fp.reopen(tmpfp) }
+          rescue IOError, Errno::EBADF
+            next
+          end
           fp.sync = true
           new_st = fp.stat
+
+          # this should only happen in the master:
           if orig_st.uid != new_st.uid || orig_st.gid != new_st.gid
             fp.chown(orig_st.uid, orig_st.gid)
           end
+
           nr += 1
         end
 
