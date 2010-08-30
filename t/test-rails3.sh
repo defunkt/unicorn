@@ -1,5 +1,5 @@
 . ./test-lib.sh
-RAILS_VERSION=${RAILS_VERSION-3.0.0.rc2}
+RAILS_VERSION=${RAILS_VERSION-3.0.0}
 case $RUBY_VERSION in
 1.8.7|1.9.2) ;;
 *)
