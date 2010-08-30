@@ -9,13 +9,19 @@ require 'logger'
 # nginx is also available at
 # http://unicorn.bogomips.org/examples/nginx.conf
 class Unicorn::Configurator < Struct.new(:set, :config_file, :after_reload)
+  # :stopdoc:
   # used to stash stuff for deferred processing of cli options in
   # config.ru after "working_directory" is bound.  Do not rely on
   # this being around later on...
-  RACKUP = {} # :nodoc:
+  RACKUP = {
+    :daemonize => false,
+    :host => Unicorn::Const::DEFAULT_HOST,
+    :port => Unicorn::Const::DEFAULT_PORT,
+    :set_listener => false,
+    :options => { :listeners => [] }
+  }
 
   # Default settings for Unicorn
-  # :stopdoc:
   DEFAULTS = {
     :timeout => 60,
     :logger => Logger.new($stderr),
@@ -54,6 +60,9 @@ class Unicorn::Configurator < Struct.new(:set, :config_file, :after_reload)
     instance_eval(File.read(config_file), config_file) if config_file
 
     parse_rackup_file
+
+    RACKUP[:set_listener] and
+      set[:listeners] << "#{RACKUP[:host]}:#{RACKUP[:port]}"
 
     # unicorn_rails creates dirs here after working_directory is bound
     after_reload.call if after_reload
@@ -489,23 +498,15 @@ private
     /^#\\(.*)/ =~ File.read(ru) or return
     RACKUP[:optparse].parse!($1.split(/\s+/))
 
-    # XXX ugly as hell, WILL FIX in 2.x (along with Rainbows!/Zbatery)
-    host, port, set_listener, options, daemonize =
-                    eval("[ host, port, set_listener, options, daemonize ]",
-                         TOPLEVEL_BINDING)
-
-    # XXX duplicate code from bin/unicorn{,_rails}
-    set[:listeners] << "#{host}:#{port}" if set_listener
-
-    if daemonize
+    if RACKUP[:daemonize]
       # unicorn_rails wants a default pid path, (not plain 'unicorn')
       if after_reload
         spid = set[:pid]
         pid('tmp/pids/unicorn.pid') if spid.nil? || spid == :unset
       end
       unless RACKUP[:daemonized]
-        Unicorn::Launcher.daemonize!(options)
-        RACKUP[:ready_pipe] = options.delete(:ready_pipe)
+        Unicorn::Launcher.daemonize!(RACKUP[:options])
+        RACKUP[:ready_pipe] = RACKUP[:options].delete(:ready_pipe)
       end
     end
   end

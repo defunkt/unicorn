@@ -20,6 +20,7 @@ module Unicorn::Launcher
   #     to pickup code changes if the original deployment directory
   #     is a symlink or otherwise got replaced.
   def self.daemonize!(options)
+    cfg = Unicorn::Configurator
     $stdin.reopen("/dev/null")
 
     # We only start a new process group if we're not being reexecuted
@@ -52,9 +53,9 @@ module Unicorn::Launcher
       end
     end
     # $stderr/$stderr can/will be redirected separately in the Unicorn config
-    Unicorn::Configurator::DEFAULTS[:stderr_path] ||= "/dev/null"
-    Unicorn::Configurator::DEFAULTS[:stdout_path] ||= "/dev/null"
-    Unicorn::Configurator::RACKUP[:daemonized] = true
+    cfg::DEFAULTS[:stderr_path] ||= "/dev/null"
+    cfg::DEFAULTS[:stdout_path] ||= "/dev/null"
+    cfg::RACKUP[:daemonized] = true
   end
 
 end

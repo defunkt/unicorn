@@ -614,7 +614,7 @@ EOF
     results = retry_hit(["http://#{@addr}:#{@port}/"])
     assert_equal String, results[0].class
     assert_shutdown(pid)
-  end unless ENV['RBX_SKIP']
+  end
 
   def test_config_ru_alt_path
     config_path = "#{@tmpdir}/foo.ru"
