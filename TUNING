@@ -22,7 +22,13 @@ See Unicorn::Configurator for details on the config file format.
   listeners under Linux 2.6 because auto-tuning is enabled.  UNIX domain
   sockets do not have auto-tuning buffer sizes; so increasing those will
   allow syscalls and task switches to be saved for larger requests
-  and responses.
+  and responses.  If your app only generates small responses or expects
+  small requests, you may shrink the buffer sizes to save memory, too.
+
+* Having socket buffers too large can also be detrimental or have
+  little effect.  Huge buffers can put more pressure on the allocator
+  and may also thrash CPU caches, cancelling out performance gains
+  one would normally expect.
 
 * Setting "preload_app true" can allow copy-on-write-friendly GC to
   be used to save memory.  It will probably not work out of the box with
