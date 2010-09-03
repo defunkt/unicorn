@@ -27,6 +27,12 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert ! @parser.keepalive?
     assert @parser.headers?
     assert_equal 123, @parser.content_length
+    dst = ""
+    buf = '.' * 123
+    @parser.filter_body(dst, buf)
+    assert_equal '.' * 123, dst
+    assert_equal "", buf
+    assert @parser.keepalive?
   end
 
   def test_identity_step_headers
@@ -41,6 +47,12 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal 0, str.size
     assert ! @parser.keepalive?
     assert @parser.headers?
+    dst = ""
+    buf = '.' * 123
+    @parser.filter_body(dst, buf)
+    assert_equal '.' * 123, dst
+    assert_equal "", buf
+    assert @parser.keepalive?
   end
 
   def test_identity_oneshot_header
@@ -50,6 +62,12 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal '123', req['CONTENT_LENGTH']
     assert_equal 0, str.size
     assert ! @parser.keepalive?
+    assert @parser.headers?
+    dst = ""
+    buf = '.' * 123
+    @parser.filter_body(dst, buf)
+    assert_equal '.' * 123, dst
+    assert_equal "", buf
   end
 
   def test_identity_oneshot_header_with_body
@@ -67,7 +85,7 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal 0, str.size
     assert_equal tmp, body
     assert_equal "", @parser.filter_body(tmp, str)
-    assert ! @parser.keepalive?
+    assert @parser.keepalive?
   end
 
   def test_identity_oneshot_header_with_body_partial
@@ -85,7 +103,7 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_nil rv
     assert_equal "", str
     assert_equal str.object_id, @parser.filter_body(tmp, str).object_id
-    assert ! @parser.keepalive?
+    assert @parser.keepalive?
   end
 
   def test_identity_oneshot_header_with_body_slop
@@ -99,7 +117,7 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal "G", @parser.filter_body(tmp, str)
     assert_equal 1, tmp.size
     assert_equal "a", tmp
-    assert ! @parser.keepalive?
+    assert @parser.keepalive?
   end
 
   def test_chunked
@@ -122,6 +140,10 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal rv.object_id, @parser.filter_body(tmp, rv).object_id
     assert_equal "PUT", rv
     assert ! @parser.keepalive?
+    rv << "TY: FOO\r\n\r\n"
+    assert_equal req, @parser.trailers(req, rv)
+    assert_equal "FOO", req["HTTP_PUTTY"]
+    assert @parser.keepalive?
   end
 
   def test_two_chunks
@@ -177,7 +199,7 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal req, @parser.trailers(req, moo = "\r\n")
     assert_equal "", moo
     assert @parser.body_eof?
-    assert ! @parser.keepalive?
+    assert @parser.keepalive?
   end
 
   def test_two_chunks_oneshot
@@ -237,7 +259,7 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_nil @parser.trailers(req, str << "\r")
     assert_equal req, @parser.trailers(req, str << "\nGET / ")
     assert_equal "GET / ", str
-    assert ! @parser.keepalive?
+    assert @parser.keepalive?
   end
 
   def test_trailers_slowly
@@ -297,14 +319,12 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal req, @parser.headers(req, str)
     assert_nil @parser.content_length
     assert_raise(HttpParserError) { @parser.filter_body('', str) }
-    assert ! @parser.keepalive?
   end
 
   def test_overflow_content_length
     n = HttpParser::LENGTH_MAX + 1
     str = "PUT / HTTP/1.1\r\nContent-Length: #{n}\r\n\r\n"
     assert_raise(HttpParserError) { @parser.headers({}, str) }
-    assert ! @parser.keepalive?
   end
 
   def test_bad_chunk
@@ -315,13 +335,11 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal req, @parser.headers(req, str)
     assert_nil @parser.content_length
     assert_raise(HttpParserError) { @parser.filter_body('', str) }
-    assert ! @parser.keepalive?
   end
 
   def test_bad_content_length
     str = "PUT / HTTP/1.1\r\nContent-Length: 7ff\r\n\r\n"
     assert_raise(HttpParserError) { @parser.headers({}, str) }
-    assert ! @parser.keepalive?
   end
 
   def test_bad_trailers
@@ -338,7 +356,6 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal '', str
     str << "Transfer-Encoding: identity\r\n\r\n"
     assert_raise(HttpParserError) { @parser.trailers(req, str) }
-    assert ! @parser.keepalive?
   end
 
   def test_repeat_headers

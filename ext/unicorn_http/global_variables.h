@@ -26,8 +26,6 @@ static VALUE g_http;
 static VALUE g_http_09;
 static VALUE g_http_10;
 static VALUE g_http_11;
-static VALUE g_GET;
-static VALUE g_HEAD;
 
 /** Defines common length and error messages for input length validation. */
 #define DEF_MAX_LENGTH(N, length) \
@@ -82,8 +80,6 @@ static void init_globals(void)
   DEF_GLOBAL(http_11, "HTTP/1.1");
   DEF_GLOBAL(http_10, "HTTP/1.0");
   DEF_GLOBAL(http_09, "HTTP/0.9");
-  DEF_GLOBAL(GET, "GET");
-  DEF_GLOBAL(HEAD, "HEAD");
 }
 
 #undef DEF_GLOBAL

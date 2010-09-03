@@ -18,12 +18,12 @@
 #define UH_FL_HASTRAILER 0x8
 #define UH_FL_INTRAILER 0x10
 #define UH_FL_INCHUNK  0x20
-#define UH_FL_KAMETHOD 0x40
+#define UH_FL_REQEOF 0x40
 #define UH_FL_KAVERSION 0x80
 #define UH_FL_HASHEADER 0x100
 
-/* both of these flags need to be set for keepalive to be supported */
-#define UH_FL_KEEPALIVE (UH_FL_KAMETHOD | UH_FL_KAVERSION)
+/* all of these flags need to be set for keepalive to be supported */
+#define UH_FL_KEEPALIVE (UH_FL_KAVERSION | UH_FL_REQEOF | UH_FL_HASHEADER)
 
 /* keep this small for Rainbows! since every client has one */
 struct http_parser {
@@ -79,46 +79,29 @@ static void parser_error(const char *msg)
  */
 static void hp_keepalive_connection(struct http_parser *hp, VALUE val)
 {
-  /* REQUEST_METHOD is always set before any headers */
-  if (HP_FL_TEST(hp, KAMETHOD)) {
-    if (STR_CSTR_CASE_EQ(val, "keep-alive")) {
-      /* basically have HTTP/1.0 masquerade as HTTP/1.1+ */
-      HP_FL_SET(hp, KAVERSION);
-    } else if (STR_CSTR_CASE_EQ(val, "close")) {
-      /*
-       * it doesn't matter what HTTP version or request method we have,
-       * if a client says "Connection: close", we disable keepalive
-       */
-      HP_FL_UNSET(hp, KEEPALIVE);
-    } else {
-      /*
-       * client could've sent anything, ignore it for now.  Maybe
-       * "HP_FL_UNSET(hp, KEEPALIVE);" just in case?
-       * Raising an exception might be too mean...
-       */
-    }
+  if (STR_CSTR_CASE_EQ(val, "keep-alive")) {
+    /* basically have HTTP/1.0 masquerade as HTTP/1.1+ */
+    HP_FL_SET(hp, KAVERSION);
+  } else if (STR_CSTR_CASE_EQ(val, "close")) {
+    /*
+     * it doesn't matter what HTTP version or request method we have,
+     * if a client says "Connection: close", we disable keepalive
+     */
+    HP_FL_UNSET(hp, KAVERSION);
+  } else {
+    /*
+     * client could've sent anything, ignore it for now.  Maybe
+     * "HP_FL_UNSET(hp, KAVERSION);" just in case?
+     * Raising an exception might be too mean...
+     */
   }
 }
 
 static void
 request_method(struct http_parser *hp, const char *ptr, size_t len)
 {
-  VALUE v;
+  VALUE v = rb_str_new(ptr, len);
 
-  /*
-   * we only support keepalive for GET and HEAD requests for now other
-   * methods are too rarely seen to be worth optimizing.  POST is unsafe
-   * since some clients send extra bytes after POST bodies.
-   */
-  if (CONST_MEM_EQ("GET", ptr, len)) {
-    HP_FL_SET(hp, KAMETHOD);
-    v = g_GET;
-  } else if (CONST_MEM_EQ("HEAD", ptr, len)) {
-    HP_FL_SET(hp, KAMETHOD);
-    v = g_HEAD;
-  } else {
-    v = rb_str_new(ptr, len);
-  }
   rb_hash_aset(hp->env, g_request_method, v);
 }
 
@@ -206,7 +189,8 @@ static void write_value(struct http_parser *hp,
     hp->len.content = parse_length(RSTRING_PTR(v), RSTRING_LEN(v));
     if (hp->len.content < 0)
       parser_error("invalid Content-Length");
-    HP_FL_SET(hp, HASBODY);
+    if (hp->len.content != 0)
+      HP_FL_SET(hp, HASBODY);
     hp_invalid_if_trailer(hp);
   } else if (f == g_http_transfer_encoding) {
     if (STR_CSTR_CASE_EQ(v, "chunked")) {
@@ -305,6 +289,7 @@ static void write_value(struct http_parser *hp,
       if (HP_FL_TEST(hp, CHUNKED))
         cs = http_parser_en_ChunkedBody;
     } else {
+      HP_FL_SET(hp, REQEOF);
       assert(!HP_FL_TEST(hp, CHUNKED) && "chunked encoding without body!");
     }
     /*
@@ -559,6 +544,8 @@ static VALUE HttpParser_parse(VALUE self)
       hp->cs == http_parser_en_ChunkedBody) {
     advance_str(data, hp->offset + 1);
     hp->offset = 0;
+    if (HP_FL_TEST(hp, INTRAILER))
+      HP_FL_SET(hp, REQEOF);
 
     return hp->env;
   }
@@ -710,8 +697,10 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
 
       memcpy(RSTRING_PTR(buf), dptr, nr);
       hp->len.content -= nr;
-      if (hp->len.content == 0)
+      if (hp->len.content == 0) {
+        HP_FL_SET(hp, REQEOF);
         hp->cs = http_parser_first_final;
+      }
       advance_str(data, nr);
       rb_str_set_len(buf, nr);
       data = Qnil;
