@@ -24,6 +24,9 @@ this:
 Then use HUP to reload, and then continue with the USR2+QUIT upgrade
 sequence.
 
+Environment variable pollution when exec-ing a new process (with USR2)
+is the primary issue with sandboxing tools such as Bundler and Isolate.
+
 == Bundler
 
 === Running
@@ -41,6 +44,12 @@ expect the tips for Isolate (below) apply, too.
 This is no longer be an issue as of bundler 0.9.17
 
 ref: http://mid.gmane.org/8FC34B23-5994-41CC-B5AF-7198EF06909E@tramchase.com
+
+=== Other ENV pollution issues
+
+You may need to set or reset BUNDLE_GEMFILE, GEM_HOME, GEM_PATH and PATH
+environment variables in the before_exec hook as illustrated by
+http://gist.github.com/534668
 
 == Isolate
 
