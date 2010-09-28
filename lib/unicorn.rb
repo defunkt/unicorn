@@ -449,7 +449,7 @@ module Unicorn
     # Wake up every second anyways to run murder_lazy_workers
     def master_sleep(sec)
       IO.select([ SELF_PIPE[0] ], nil, nil, sec) or return
-      SELF_PIPE[0].read_nonblock(Const::CHUNK_SIZE, HttpRequest::BUF)
+      SELF_PIPE[0].read_nonblock(Const::CHUNK_SIZE)
       rescue Errno::EAGAIN, Errno::EINTR
     end
 
@@ -599,7 +599,7 @@ module Unicorn
         r = app.call(env)
       end
       # r may be frozen or const, so don't modify it
-      HttpRequest::PARSER.headers? or r = [ r[0], nil, r[2] ]
+      REQUEST.response_headers? or r = [ r[0], nil, r[2] ]
       http_response_write(client, r)
     rescue => e
       handle_error(client, e)

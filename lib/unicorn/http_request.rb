@@ -21,11 +21,15 @@ module Unicorn
     NULL_IO = StringIO.new("")
     LOCALHOST = '127.0.0.1'
 
-    # Being explicitly single-threaded, we have certain advantages in
-    # not having to worry about variables being clobbered :)
-    BUF = ""
-    PARSER = HttpParser.new
-    REQ = {}
+    def initialize
+      @parser = Unicorn::HttpParser.new
+      @buf = ""
+      @env = {}
+    end
+
+    def response_headers?
+      @parser.headers?
+    end
 
     # Does the majority of the IO processing.  It has been written in
     # Ruby using about 8 different IO processing strategies.
@@ -41,8 +45,8 @@ module Unicorn
     # This does minimal exception trapping and it is up to the caller
     # to handle any socket errors (e.g. user aborted upload).
     def read(socket)
-      REQ.clear
-      PARSER.reset
+      @env.clear
+      @parser.reset
 
       # From http://www.ietf.org/rfc/rfc3875:
       # "Script authors should be aware that the REMOTE_ADDR and
@@ -51,21 +55,20 @@ module Unicorn
       #  identify the client for the immediate request to the server;
       #  that client may be a proxy, gateway, or other intermediary
       #  acting on behalf of the actual source client."
-      REQ[Const::REMOTE_ADDR] =
+      @env[Const::REMOTE_ADDR] =
                     TCPSocket === socket ? socket.peeraddr[-1] : LOCALHOST
 
       # short circuit the common case with small GET requests first
-      if PARSER.headers(REQ, socket.readpartial(Const::CHUNK_SIZE, BUF)).nil?
+      if @parser.headers(@env, socket.readpartial(Const::CHUNK_SIZE, @buf)).nil?
         # Parser is not done, queue up more data to read and continue parsing
         # an Exception thrown from the PARSER will throw us out of the loop
         begin
-          BUF << socket.readpartial(Const::CHUNK_SIZE)
-        end while PARSER.headers(REQ, BUF).nil?
+          @buf << socket.readpartial(Const::CHUNK_SIZE)
+        end while @parser.headers(@env, @buf).nil?
       end
-      REQ[Const::RACK_INPUT] = 0 == PARSER.content_length ?
-                   NULL_IO : Unicorn::TeeInput.new(socket, REQ, PARSER, BUF)
-      REQ.update(DEFAULTS)
+      @env[Const::RACK_INPUT] = 0 == @parser.content_length ?
+                   NULL_IO : Unicorn::TeeInput.new(socket, @env, @parser, @buf)
+      @env.merge!(DEFAULTS)
     end
-
   end
 end
