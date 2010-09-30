@@ -21,6 +21,8 @@ module Unicorn
     NULL_IO = StringIO.new("")
     LOCALHOST = '127.0.0.1'
 
+    attr_reader :env, :parser, :buf
+
     def initialize
       @parser = Unicorn::HttpParser.new
       @buf = ""
@@ -67,7 +69,7 @@ module Unicorn
         end while @parser.headers(@env, @buf).nil?
       end
       @env[Const::RACK_INPUT] = 0 == @parser.content_length ?
-                   NULL_IO : Unicorn::TeeInput.new(socket, @env, @parser, @buf)
+                   NULL_IO : Unicorn::TeeInput.new(socket, self)
       @env.merge!(DEFAULTS)
     end
   end

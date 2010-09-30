@@ -25,8 +25,11 @@ class Unicorn::TeeInput < Struct.new(:socket, :req, :parser,
 
   # Initializes a new TeeInput object.  You normally do not have to call
   # this unless you are writing an HTTP server.
-  def initialize(*args)
-    super(*args)
+  def initialize(socket, request)
+    self.socket = socket
+    self.req = request.env
+    self.parser = request.parser
+    self.buf = request.buf
     self.len = parser.content_length
     self.tmp = len && len < @@client_body_buffer_size ?
                StringIO.new("") : Unicorn::Util.tmpio

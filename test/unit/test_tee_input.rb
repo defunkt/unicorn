@@ -5,6 +5,7 @@ require 'digest/sha1'
 require 'unicorn'
 
 class TestTeeInput < Test::Unit::TestCase
+  MockRequest = Struct.new(:env, :parser, :buf)
 
   def setup
     @rs = $/
@@ -27,8 +28,8 @@ class TestTeeInput < Test::Unit::TestCase
   end
 
   def test_gets_long
-    init_parser("hello", 5 + (4096 * 4 * 3) + "#$/foo#$/".size)
-    ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
+    r = init_request("hello", 5 + (4096 * 4 * 3) + "#$/foo#$/".size)
+    ti = Unicorn::TeeInput.new(@rd, r)
     status = line = nil
     pid = fork {
       @rd.close
@@ -48,8 +49,8 @@ class TestTeeInput < Test::Unit::TestCase
   end
 
   def test_gets_short
-    init_parser("hello", 5 + "#$/foo".size)
-    ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
+    r = init_request("hello", 5 + "#$/foo".size)
+    ti = Unicorn::TeeInput.new(@rd, r)
     status = line = nil
     pid = fork {
       @rd.close
@@ -67,8 +68,8 @@ class TestTeeInput < Test::Unit::TestCase
   end
 
   def test_small_body
-    init_parser('hello')
-    ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
+    r = init_request('hello')
+    ti = Unicorn::TeeInput.new(@rd, r)
     assert_equal 0, @parser.content_length
     assert @parser.body_eof?
     assert_equal StringIO, ti.tmp.class
@@ -80,8 +81,8 @@ class TestTeeInput < Test::Unit::TestCase
   end
 
   def test_read_with_buffer
-    init_parser('hello')
-    ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
+    r = init_request('hello')
+    ti = Unicorn::TeeInput.new(@rd, r)
     buf = ''
     rv = ti.read(4, buf)
     assert_equal 'hell', rv
@@ -95,8 +96,8 @@ class TestTeeInput < Test::Unit::TestCase
   end
 
   def test_big_body
-    init_parser('.' * Unicorn::Const::MAX_BODY << 'a')
-    ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
+    r = init_request('.' * Unicorn::Const::MAX_BODY << 'a')
+    ti = Unicorn::TeeInput.new(@rd, r)
     assert_equal 0, @parser.content_length
     assert @parser.body_eof?
     assert_kind_of File, ti.tmp
@@ -106,9 +107,9 @@ class TestTeeInput < Test::Unit::TestCase
 
   def test_read_in_full_if_content_length
     a, b = 300, 3
-    init_parser('.' * b, 300)
+    r = init_request('.' * b, 300)
     assert_equal 300, @parser.content_length
-    ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
+    ti = Unicorn::TeeInput.new(@rd, r)
     pid = fork {
       @wr.write('.' * 197)
       sleep 1 # still a *potential* race here that would make the test moot...
@@ -121,8 +122,8 @@ class TestTeeInput < Test::Unit::TestCase
   end
 
   def test_big_body_multi
-    init_parser('.', Unicorn::Const::MAX_BODY + 1)
-    ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
+    r = init_request('.', Unicorn::Const::MAX_BODY + 1)
+    ti = Unicorn::TeeInput.new(@rd, r)
     assert_equal Unicorn::Const::MAX_BODY, @parser.content_length
     assert ! @parser.body_eof?
     assert_kind_of File, ti.tmp
@@ -163,7 +164,7 @@ class TestTeeInput < Test::Unit::TestCase
       @wr.write("0\r\n\r\n")
     }
     @wr.close
-    ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
+    ti = Unicorn::TeeInput.new(@rd, MockRequest.new(@env, @parser, @buf))
     assert_nil @parser.content_length
     assert_nil ti.len
     assert ! @parser.body_eof?
@@ -201,7 +202,7 @@ class TestTeeInput < Test::Unit::TestCase
       end
       @wr.write("0\r\n\r\n")
     }
-    ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
+    ti = Unicorn::TeeInput.new(@rd, MockRequest.new(@env, @parser, @buf))
     assert_nil @parser.content_length
     assert_nil ti.len
     assert ! @parser.body_eof?
@@ -230,7 +231,7 @@ class TestTeeInput < Test::Unit::TestCase
       @wr.write("Hello: World\r\n\r\n")
     }
     @wr.close
-    ti = Unicorn::TeeInput.new(@rd, @env, @parser, @buf)
+    ti = Unicorn::TeeInput.new(@rd, MockRequest.new(@env, @parser, @buf))
     assert_nil @parser.content_length
     assert_nil ti.len
     assert ! @parser.body_eof?
@@ -243,7 +244,7 @@ class TestTeeInput < Test::Unit::TestCase
 
 private
 
-  def init_parser(body, size = nil)
+  def init_request(body, size = nil)
     @parser = Unicorn::HttpParser.new
     body = body.to_s.freeze
     @buf = "POST / HTTP/1.1\r\n" \
@@ -252,6 +253,7 @@ private
            "\r\n#{body}"
     assert_equal @env, @parser.headers(@env, @buf)
     assert_equal body, @buf
+    MockRequest.new(@env, @parser, @buf)
   end
 
 end
