@@ -111,8 +111,14 @@ module Unicorn
       sock = if address[0] == ?/
         if File.exist?(address)
           if File.socket?(address)
-            logger.info "unlinking existing socket=#{address}"
-            File.unlink(address)
+            begin
+              UNIXSocket.new(address).close
+              # fall through, try to bind(2) and fail with EADDRINUSE
+              # (or succeed from a small race condition we can't sanely avoid).
+            rescue Errno::ECONNREFUSED
+              logger.info "unlinking existing socket=#{address}"
+              File.unlink(address)
+            end
           else
             raise ArgumentError,
                   "socket=#{address} specified but it is not a socket!"
