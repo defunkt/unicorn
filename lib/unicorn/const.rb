@@ -29,8 +29,6 @@ module Unicorn
     EXPECT_100_RESPONSE = "HTTP/1.1 100 Continue\r\n\r\n"
 
     # A frozen format for this is about 15% faster
-    REMOTE_ADDR="REMOTE_ADDR".freeze
-    RACK_INPUT="rack.input".freeze
     HTTP_EXPECT="HTTP_EXPECT"
   end
 
