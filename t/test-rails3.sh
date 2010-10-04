@@ -13,7 +13,7 @@ rails_gems=../tmp/isolate/rails-$RAILS_VERSION/gems
 rails_bin="$rails_gems/rails-$RAILS_VERSION/bin/rails"
 if ! test -d "$arch_gems" || ! test -d "$rails_gems" || ! test -x "$rails_bin"
 then
-	( cd ../ && $RAKE isolate )
+	( cd ../ && ./script/isolate_for_tests )
 fi
 
 for i in $arch_gems/*-* $rails_gems/*-*

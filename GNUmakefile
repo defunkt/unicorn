@@ -24,6 +24,14 @@ endif
 
 RUBY_ENGINE := $(shell $(RUBY) -e 'puts((RUBY_ENGINE rescue "ruby"))')
 
+isolate_libs := tmp/isolate/.$(RUBY_ENGINE)-$(RUBY_VERSION).libs
+MYLIBS = $(RUBYLIB):$(shell cat $(isolate_libs) 2>/dev/null || \
+                      ($(RUBY) ./script/isolate_for_tests >/dev/null && \
+                      cat $(isolate_libs) 2>/dev/null))
+
+echo:
+	@echo $(MYLIBS)
+
 # dunno how to implement this as concisely in Ruby, and hell, I love awk
 awk_slow := awk '/def test_/{print FILENAME"--"$$2".n"}' 2>/dev/null
 
@@ -117,14 +125,14 @@ run_test = $(quiet_pre) \
 %.n: arg = $(subst .n,,$(subst --, -n ,$@))
 %.n: t = $(subst .n,$(log_suffix),$@)
 %.n: export PATH := $(test_prefix)/bin:$(PATH)
-%.n: export RUBYLIB := $(test_prefix):$(test_prefix)/lib:$(RUBYLIB)
+%.n: export RUBYLIB := $(test_prefix):$(test_prefix)/lib:$(MYLIBS)
 %.n: $(test_prefix)/.stamp
 	$(run_test)
 
 $(T): arg = $@
 $(T): t = $(subst .rb,$(log_suffix),$@)
 $(T): export PATH := $(test_prefix)/bin:$(PATH)
-$(T): export RUBYLIB := $(test_prefix):$(test_prefix)/lib:$(RUBYLIB)
+$(T): export RUBYLIB := $(test_prefix):$(test_prefix)/lib:$(MYLIBS)
 $(T): $(test_prefix)/.stamp
 	$(run_test)
 
@@ -251,7 +259,7 @@ $(T_r).%.r: rv = $(subst .r,,$(subst $(T_r).,,$@))
 $(T_r).%.r: extra = ' 'v$(rv)
 $(T_r).%.r: arg = $(T_r)
 $(T_r).%.r: export PATH := $(test_prefix)/bin:$(PATH)
-$(T_r).%.r: export RUBYLIB := $(test_prefix):$(test_prefix)/lib:$(RUBYLIB)
+$(T_r).%.r: export RUBYLIB := $(test_prefix):$(test_prefix)/lib:$(MYLIBS)
 $(T_r).%.r: export UNICORN_RAILS_TEST_VERSION = $(rv)
 $(T_r).%.r: export RAILS_GIT_REPO = $(CURDIR)/$(rails_git)
 $(T_r).%.r: $(test_prefix)/.stamp $(rails_git)/info/v2.3.8-stamp

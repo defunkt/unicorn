@@ -37,15 +37,6 @@ else
   RUBY := $(prefix)/bin/ruby --disable-gems
 endif
 
-# FIXME: use isolate more
-ifndef RUBYLIB
-  gems := rack-1.1.0
-  gem_paths := $(addprefix $(HOME)/lib/ruby/gems/1.8/gems/,$(gems))
-  sp :=
-  sp +=
-  export RUBYLIB := $(subst $(sp),:,$(addsuffix /lib,$(gem_paths)))
-endif
-
 # pipefail is THE reason to use bash (v3+) or never revisions of ksh93
 # SHELL := /bin/bash -e -o pipefail
 SHELL := /bin/ksh93 -e -o pipefail

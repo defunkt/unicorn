@@ -17,6 +17,13 @@ endif
 RUBY_ENGINE := $(shell $(RUBY) -e 'puts((RUBY_ENGINE rescue "ruby"))')
 export RUBY_ENGINE
 
+isolate_libs := ../tmp/isolate/.$(RUBY_ENGINE)-$(RUBY_VERSION).libs
+MYLIBS := $(shell cat $(isolate_libs))
+ifeq ($(MY_LIBS),)
+  ignore := $(shell cd .. && $(RUBY) ./script/isolate_for_tests)
+  MYLIBS := $(shell cat $(isolate_libs))
+endif
+
 T = $(wildcard t[0-9][0-9][0-9][0-9]-*.sh)
 
 all:: $(T)
@@ -58,7 +65,7 @@ $(test_prefix)/.stamp:
 $(T): export RUBY := $(RUBY)
 $(T): export RAKE := $(RAKE)
 $(T): export PATH := $(test_prefix)/bin:$(PATH)
-$(T): export RUBYLIB := $(test_prefix)/lib:$(RUBYLIB)
+$(T): export RUBYLIB := $(test_prefix)/lib:$(MYLIBS)
 $(T): dep $(test_prefix)/.stamp trash/.gitignore
 	$(TRACER) $(SHELL) $(SH_TEST_OPTS) $@ $(TEST_OPTS)
 
