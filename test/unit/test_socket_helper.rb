@@ -101,7 +101,14 @@ class TestSocketHelper < Test::Unit::TestCase
 
   def test_bind_listen_unix_rebind
     test_bind_listen_unix
-    new_listener = bind_listen(@unix_listener_path)
+    new_listener = nil
+    assert_raises(Errno::EADDRINUSE) do
+      new_listener = bind_listen(@unix_listener_path)
+    end
+    assert_nothing_raised do
+      File.unlink(@unix_listener_path)
+      new_listener = bind_listen(@unix_listener_path)
+    end
     assert UNIXServer === new_listener
     assert new_listener.fileno != @unix_listener.fileno
     assert_equal sock_name(new_listener), sock_name(@unix_listener)
