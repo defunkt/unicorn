@@ -64,11 +64,11 @@ class Unicorn::HttpRequest
     @env[REMOTE_ADDR] = socket.kgio_addr
 
     # short circuit the common case with small GET requests first
-    if @parser.headers(@env, socket.readpartial(16384, @buf)).nil?
+    if @parser.headers(@env, socket.kgio_read!(16384, @buf)).nil?
       # Parser is not done, queue up more data to read and continue parsing
       # an Exception thrown from the PARSER will throw us out of the loop
       begin
-        @buf << socket.readpartial(16384)
+        @buf << socket.kgio_read!(16384)
       end while @parser.headers(@env, @buf).nil?
     end
     @env[RACK_INPUT] = 0 == @parser.content_length ?

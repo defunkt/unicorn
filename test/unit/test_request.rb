@@ -11,6 +11,7 @@ class RequestTest < Test::Unit::TestCase
 
   class MockRequest < StringIO
     alias_method :readpartial, :sysread
+    alias_method :kgio_read!, :sysread
     alias_method :read_nonblock, :sysread
     def kgio_addr
       '127.0.0.1'
@@ -166,6 +167,9 @@ class RequestTest < Test::Unit::TestCase
     def client.kgio_read(*args)
       readpartial(*args)
     rescue EOFError
+    end
+    def client.kgio_read!(*args)
+      readpartial(*args)
     end
     client.syswrite(
       "PUT / HTTP/1.1\r\n" \
