@@ -26,7 +26,7 @@ RUBY_ENGINE := $(shell $(RUBY) -e 'puts((RUBY_ENGINE rescue "ruby"))')
 
 isolate_libs := tmp/isolate/.$(RUBY_ENGINE)-$(RUBY_VERSION).libs
 MYLIBS = $(RUBYLIB):$(shell cat $(isolate_libs) 2>/dev/null || \
-                      (test -f $(isolate_libs) && \
+                      (test -f ./script/isolate_for_tests  && \
                        $(RUBY) ./script/isolate_for_tests >/dev/null && \
                        cat $(isolate_libs) 2>/dev/null))
 
