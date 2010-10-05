@@ -675,7 +675,7 @@ module Unicorn
 
         # make the following bet: if we accepted clients this round,
         # we're probably reasonably busy, so avoid calling select()
-        # and do a speculative accept_nonblock on ready listeners
+        # and do a speculative non-blocking accept() on ready listeners
         # before we sleep again in select().
         redo unless nr == 0 # (nr < 0) => reopen logs
 
