@@ -166,7 +166,7 @@ class SignalsTest < Test::Unit::TestCase
     expect = @bs * @count
     assert_equal(expect, got, "expect=#{expect} got=#{got}")
     assert_nothing_raised { sock.close }
-  end unless ENV['RBX_SKIP']
+  end
 
   def test_request_read
     app = lambda { |env|
