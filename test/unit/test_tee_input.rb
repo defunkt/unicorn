@@ -10,7 +10,7 @@ class TestTeeInput < Test::Unit::TestCase
   def setup
     @rs = $/
     @env = {}
-    @rd, @wr = IO.pipe
+    @rd, @wr = UNIXSocket.pair
     @rd.sync = @wr.sync = true
     @start_pid = $$
   end
