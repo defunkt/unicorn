@@ -12,7 +12,7 @@ class Unicorn::TmpIO < File
   # buffering is disabled
   def self.new
     fp = begin
-      open("#{Dir::tmpdir}/#{rand}", RDWR|CREAT|EXCL, 0600)
+      super("#{Dir::tmpdir}/#{rand}", RDWR|CREAT|EXCL, 0600)
     rescue Errno::EEXIST
       retry
     end
