@@ -1,35 +1,38 @@
 # -*- encoding: binary -*-
 
-module Unicorn
+# Frequently used constants when constructing requests or responses.
+# Many times the constant just refers to a string with the same
+# contents.  Using these constants gave about a 3% to 10% performance
+# improvement over using the strings directly.  Symbols did not really
+# improve things much compared to constants.
+module Unicorn::Const
 
-  # Frequently used constants when constructing requests or responses.  Many times
-  # the constant just refers to a string with the same contents.  Using these constants
-  # gave about a 3% to 10% performance improvement over using the strings directly.
-  # Symbols did not really improve things much compared to constants.
-  module Const
+  # The current version of Unicorn, currently 2.0.0pre
+  # this constant is deprecated and will soon move to Unicorn::VERSION
+  UNICORN_VERSION="2.0.0pre"
 
-    # The current version of Unicorn, currently 2.0.0pre
-    # this constant is deprecated and will soon move to Unicorn::VERSION
-    UNICORN_VERSION="2.0.0pre"
+  # default TCP listen host address (0.0.0.0, all interfaces)
+  DEFAULT_HOST = "0.0.0.0"
 
-    DEFAULT_HOST = "0.0.0.0" # default TCP listen host address
-    DEFAULT_PORT = 8080      # default TCP listen port
-    DEFAULT_LISTEN = "#{DEFAULT_HOST}:#{DEFAULT_PORT}"
+  # default TCP listen port (8080)
+  DEFAULT_PORT = 8080
 
-    # The basic max request size we'll try to read.
-    CHUNK_SIZE=(16 * 1024)
+  # default TCP listen address and port (0.0.0.0:8080)
+  DEFAULT_LISTEN = "#{DEFAULT_HOST}:#{DEFAULT_PORT}"
 
-    # Maximum request body size before it is moved out of memory and into a
-    # temporary file for reading (112 kilobytes).
-    MAX_BODY=1024 * 112
+  # The basic request body size we'll try to read at once (16 kilobytes).
+  CHUNK_SIZE = 16 * 1024
 
-    # common errors we'll send back
-    ERROR_400_RESPONSE = "HTTP/1.1 400 Bad Request\r\n\r\n"
-    ERROR_500_RESPONSE = "HTTP/1.1 500 Internal Server Error\r\n\r\n"
-    EXPECT_100_RESPONSE = "HTTP/1.1 100 Continue\r\n\r\n"
+  # Maximum request body size before it is moved out of memory and into a
+  # temporary file for reading (112 kilobytes).
+  MAX_BODY = 1024 * 112
 
-    # A frozen format for this is about 15% faster
-    HTTP_EXPECT="HTTP_EXPECT"
-  end
+  # :stopdoc:
+  # common errors we'll send back
+  ERROR_400_RESPONSE = "HTTP/1.1 400 Bad Request\r\n\r\n"
+  ERROR_500_RESPONSE = "HTTP/1.1 500 Internal Server Error\r\n\r\n"
+  EXPECT_100_RESPONSE = "HTTP/1.1 100 Continue\r\n\r\n"
 
+  HTTP_EXPECT = "HTTP_EXPECT"
+  # :startdoc:
 end
