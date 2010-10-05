@@ -126,12 +126,12 @@ module Unicorn
         end
         old_umask = File.umask(opt[:umask] || 0)
         begin
-          UNIXServer.new(address)
+          Kgio::UNIXServer.new(address)
         ensure
           File.umask(old_umask)
         end
       elsif address =~ /^(\d+\.\d+\.\d+\.\d+):(\d+)$/
-        TCPServer.new($1, $2.to_i)
+        Kgio::TCPServer.new($1, $2.to_i)
       else
         raise ArgumentError, "Don't know how to bind: #{address}"
       end
@@ -166,9 +166,9 @@ module Unicorn
     def server_cast(sock)
       begin
         Socket.unpack_sockaddr_in(sock.getsockname)
-        TCPServer.for_fd(sock.fileno)
+        Kgio::TCPServer.for_fd(sock.fileno)
       rescue ArgumentError
-        UNIXServer.for_fd(sock.fileno)
+        Kgio::UNIXServer.for_fd(sock.fileno)
       end
     end
 

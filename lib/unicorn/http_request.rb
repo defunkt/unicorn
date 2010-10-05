@@ -18,7 +18,6 @@ class Unicorn::HttpRequest
   }
 
   NULL_IO = StringIO.new("")
-  LOCALHOST = '127.0.0.1'
 
   # :stopdoc:
   # A frozen format for this is about 15% faster
@@ -62,7 +61,7 @@ class Unicorn::HttpRequest
     #  identify the client for the immediate request to the server;
     #  that client may be a proxy, gateway, or other intermediary
     #  acting on behalf of the actual source client."
-    @env[REMOTE_ADDR] = TCPSocket === socket ? socket.peeraddr[-1] : LOCALHOST
+    @env[REMOTE_ADDR] = socket.kgio_addr
 
     # short circuit the common case with small GET requests first
     if @parser.headers(@env, socket.readpartial(16384, @buf)).nil?

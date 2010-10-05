@@ -4,6 +4,7 @@ require 'fcntl'
 require 'etc'
 require 'stringio'
 require 'rack'
+require 'kgio'
 require 'unicorn/socket_helper'
 require 'unicorn/const'
 require 'unicorn/http_request'
@@ -194,7 +195,7 @@ module Unicorn
       BasicSocket.do_not_reverse_lookup = true
 
       # inherit sockets from parents, they need to be plain Socket objects
-      # before they become UNIXServer or TCPServer
+      # before they become Kgio::UNIXServer or Kgio::TCPServer
       inherited = ENV['UNICORN_FD'].to_s.split(/,/).map do |fd|
         io = Socket.for_fd(fd.to_i)
         set_server_sockopt(io, listener_opts[sock_name(io)])
@@ -207,9 +208,10 @@ module Unicorn
       LISTENERS.replace(inherited)
 
       # we start out with generic Socket objects that get cast to either
-      # TCPServer or UNIXServer objects; but since the Socket objects
-      # share the same OS-level file descriptor as the higher-level *Server
-      # objects; we need to prevent Socket objects from being garbage-collected
+      # Kgio::TCPServer or Kgio::UNIXServer objects; but since the Socket
+      # objects share the same OS-level file descriptor as the higher-level
+      # *Server objects; we need to prevent Socket objects from being
+      # garbage-collected
       config_listeners -= listener_names
       if config_listeners.empty? && LISTENERS.empty?
         config_listeners << Unicorn::Const::DEFAULT_LISTEN
@@ -320,7 +322,7 @@ module Unicorn
       tries = opt[:tries] || 5
       begin
         io = bind_listen(address, opt)
-        unless TCPServer === io || UNIXServer === io
+        unless Kgio::TCPServer === io || Kgio::UNIXServer === io
           IO_PURGATORY << io
           io = server_cast(io)
         end
@@ -449,13 +451,11 @@ module Unicorn
     # Wake up every second anyways to run murder_lazy_workers
     def master_sleep(sec)
       IO.select([ SELF_PIPE[0] ], nil, nil, sec) or return
-      SELF_PIPE[0].read_nonblock(Const::CHUNK_SIZE)
-      rescue Errno::EAGAIN, Errno::EINTR
+      SELF_PIPE[0].kgio_tryread(Const::CHUNK_SIZE)
     end
 
     def awaken_master
-      SELF_PIPE[1].write_nonblock('.') # wakeup master process from select
-      rescue Errno::EAGAIN, Errno::EINTR
+      SELF_PIPE[1].kgio_trywrite('.') # wakeup master process from select
     end
 
     # reaps all unreaped workers
@@ -581,7 +581,7 @@ module Unicorn
         logger.error e.backtrace.join("\n")
         Const::ERROR_500_RESPONSE
       end
-      client.write_nonblock(msg)
+      client.kgio_trywrite(msg)
       client.close
       rescue
         nil
@@ -590,7 +590,6 @@ module Unicorn
     # once a client is accepted, it is processed in its entirety here
     # in 3 easy steps: read request, call app, write app response
     def process_client(client)
-      client.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       r = app.call(env = REQUEST.read(client))
 
       if 100 == r[0].to_i
@@ -665,11 +664,10 @@ module Unicorn
         alive.chmod(m = 0 == m ? 1 : 0)
 
         ready.each do |sock|
-          begin
-            process_client(sock.accept_nonblock)
+          if client = sock.kgio_tryaccept
+            process_client(client)
             nr += 1
             alive.chmod(m = 0 == m ? 1 : 0)
-          rescue Errno::EAGAIN, Errno::ECONNABORTED
           end
           break if nr < 0
         end
@@ -773,7 +771,7 @@ module Unicorn
 
     def init_self_pipe!
       SELF_PIPE.each { |io| io.close rescue nil }
-      SELF_PIPE.replace(IO.pipe)
+      SELF_PIPE.replace(Kgio::Pipe.new)
       SELF_PIPE.each { |io| io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
     end
 

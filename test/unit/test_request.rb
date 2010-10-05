@@ -12,6 +12,9 @@ class RequestTest < Test::Unit::TestCase
   class MockRequest < StringIO
     alias_method :readpartial, :sysread
     alias_method :read_nonblock, :sysread
+    def kgio_addr
+      '127.0.0.1'
+    end
   end
 
   def setup
@@ -159,6 +162,7 @@ class RequestTest < Test::Unit::TestCase
     buf = (' ' * bs).freeze
     length = bs * count
     client = Tempfile.new('big_put')
+    def client.kgio_addr; '127.0.0.1'; end
     client.syswrite(
       "PUT / HTTP/1.1\r\n" \
       "Host: foo\r\n" \
