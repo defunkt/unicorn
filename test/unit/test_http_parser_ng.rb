@@ -440,6 +440,17 @@ class HttpParserNgTest < Test::Unit::TestCase
     end
   end
 
+  def test_backtrace_is_empty
+    begin
+      @parser.headers({}, "AAADFSFDSFD\r\n\r\n")
+      assert false, "should never get here line:#{__LINE__}"
+    rescue HttpParserError => e
+      assert_equal [], e.backtrace
+      return
+    end
+    assert false, "should never get here line:#{__LINE__}"
+  end
+
   def test_ignore_version_header
     http = "GET / HTTP/1.1\r\nVersion: hello\r\n\r\n"
     req = {}

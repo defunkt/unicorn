@@ -35,13 +35,15 @@ static VALUE g_HEAD;
   static const char * const MAX_##N##_LENGTH_ERR = \
     "HTTP element " # N  " is longer than the " # length " allowed length."
 
+NORETURN(static void parser_error(const char *));
+
 /**
  * Validates the max length of given input and throws an HttpParserError
  * exception if over.
  */
 #define VALIDATE_MAX_LENGTH(len, N) do { \
   if (len > MAX_##N##_LENGTH) \
-    rb_raise(eHttpParserError, MAX_##N##_LENGTH_ERR); \
+    parser_error(MAX_##N##_LENGTH_ERR); \
 } while (0)
 
 /** Defines global strings in the init method. */

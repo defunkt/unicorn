@@ -48,6 +48,15 @@ struct http_parser {
 
 static void finalize_header(struct http_parser *hp, VALUE req);
 
+static void parser_error(const char *msg)
+{
+  VALUE exc = rb_exc_new2(eHttpParserError, msg);
+  VALUE bt = rb_ary_new();
+
+  rb_funcall(exc, rb_intern("set_backtrace"), 1, bt);
+  rb_exc_raise(exc);
+}
+
 #define REMAINING (unsigned long)(pe - p)
 #define LEN(AT, FPC) (FPC - buffer - hp->AT)
 #define MARK(M,FPC) (hp->M = (FPC) - buffer)
@@ -132,7 +141,7 @@ http_version(struct http_parser *hp, VALUE req, const char *ptr, size_t len)
 static inline void hp_invalid_if_trailer(struct http_parser *hp)
 {
   if (HP_FL_TEST(hp, INTRAILER))
-    rb_raise(eHttpParserError, "invalid Trailer");
+    parser_error("invalid Trailer");
 }
 
 static void write_cont_value(struct http_parser *hp,
@@ -141,7 +150,7 @@ static void write_cont_value(struct http_parser *hp,
   char *vptr;
 
   if (hp->cont == Qfalse)
-     rb_raise(eHttpParserError, "invalid continuation line");
+     parser_error("invalid continuation line");
   if (NIL_P(hp->cont))
      return; /* we're ignoring this header (probably Host:) */
 
@@ -192,7 +201,7 @@ static void write_value(VALUE req, struct http_parser *hp,
   } else if (f == g_content_length) {
     hp->len.content = parse_length(RSTRING_PTR(v), RSTRING_LEN(v));
     if (hp->len.content < 0)
-      rb_raise(eHttpParserError, "invalid Content-Length");
+      parser_error("invalid Content-Length");
     HP_FL_SET(hp, HASBODY);
     hp_invalid_if_trailer(hp);
   } else if (f == g_http_transfer_encoding) {
@@ -285,7 +294,7 @@ static void write_value(VALUE req, struct http_parser *hp,
   action add_to_chunk_size {
     hp->len.chunk = step_incr(hp->len.chunk, fc, 16);
     if (hp->len.chunk < 0)
-      rb_raise(eHttpParserError, "invalid chunk size");
+      parser_error("invalid chunk size");
   }
   action header_done {
     finalize_header(hp, req);
@@ -550,7 +559,7 @@ static VALUE HttpParser_headers(VALUE self, VALUE req, VALUE data)
   }
 
   if (hp->cs == http_parser_error)
-    rb_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
+    parser_error("Invalid HTTP format, parsing fails.");
 
   return Qnil;
 }
@@ -643,7 +652,7 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
       hp->s.dest_offset = 0;
       http_parser_execute(hp, buf, dptr, dlen);
       if (hp->cs == http_parser_error)
-        rb_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
+        parser_error("Invalid HTTP format, parsing fails.");
 
       assert(hp->s.dest_offset <= hp->offset &&
              "destination buffer overflow");
