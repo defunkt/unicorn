@@ -32,7 +32,7 @@ class Unicorn::TeeInput < Struct.new(:socket, :req, :parser,
     self.buf = request.buf
     self.len = parser.content_length
     self.tmp = len && len < @@client_body_buffer_size ?
-               StringIO.new("") : Unicorn::Util.tmpio
+               StringIO.new("") : Unicorn::TmpIO.new
     self.buf2 = ""
     if buf.size > 0
       parser.filter_body(buf2, buf) and finalize_input

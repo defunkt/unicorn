@@ -1,18 +1,8 @@
 # -*- encoding: binary -*-
 
 require 'fcntl'
-require 'tmpdir'
 
 module Unicorn
-
-  class TmpIO < ::File
-
-    # for easier env["rack.input"] compatibility
-    def size
-      # flush if sync
-      stat.size
-    end
-  end
 
   module Util
     class << self
@@ -78,24 +68,6 @@ module Unicorn
 
         nr
       end
-
-      # creates and returns a new File object.  The File is unlinked
-      # immediately, switched to binary mode, and userspace output
-      # buffering is disabled
-      def tmpio
-        fp = begin
-          TmpIO.open("#{Dir::tmpdir}/#{rand}",
-                     File::RDWR|File::CREAT|File::EXCL, 0600)
-        rescue Errno::EEXIST
-          retry
-        end
-        File.unlink(fp.path)
-        fp.binmode
-        fp.sync = true
-        fp
-      end
-
     end
-
   end
 end

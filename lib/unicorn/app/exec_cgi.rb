@@ -43,7 +43,7 @@ module Unicorn::App
 
     # Calls the app
     def call(env)
-      out, err = Unicorn::Util.tmpio, Unicorn::Util.tmpio
+      out, err = Unicorn::TmpIO.new, Unicorn::TmpIO.new
       inp = force_file_input(env)
       pid = fork { run_child(inp, out, err, env) }
       inp.close
@@ -124,7 +124,7 @@ module Unicorn::App
       if inp.respond_to?(:size) && inp.size == 0
         ::File.open('/dev/null', 'rb')
       else
-        tmp = Unicorn::Util.tmpio
+        tmp = Unicorn::TmpIO.new
 
         buf = inp.read(CHUNK_SIZE)
         begin

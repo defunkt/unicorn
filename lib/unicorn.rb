@@ -9,6 +9,7 @@ require 'unicorn/socket_helper'
 require 'unicorn/const'
 require 'unicorn/http_request'
 require 'unicorn/configurator'
+require 'unicorn/tmpio'
 require 'unicorn/util'
 require 'unicorn/tee_input'
 require 'unicorn/http_response'
@@ -548,7 +549,7 @@ module Unicorn
     def spawn_missing_workers
       (0...worker_processes).each do |worker_nr|
         WORKERS.values.include?(worker_nr) and next
-        worker = Worker.new(worker_nr, Unicorn::Util.tmpio)
+        worker = Worker.new(worker_nr, Unicorn::TmpIO.new)
         before_fork.call(self, worker)
         WORKERS[fork {
           ready_pipe.close if ready_pipe
