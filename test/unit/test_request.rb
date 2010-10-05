@@ -163,6 +163,10 @@ class RequestTest < Test::Unit::TestCase
     length = bs * count
     client = Tempfile.new('big_put')
     def client.kgio_addr; '127.0.0.1'; end
+    def client.kgio_read(*args)
+      readpartial(*args)
+    rescue EOFError
+    end
     client.syswrite(
       "PUT / HTTP/1.1\r\n" \
       "Host: foo\r\n" \

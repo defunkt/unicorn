@@ -171,44 +171,25 @@ class Unicorn::TeeInput < Struct.new(:socket, :req, :parser,
 
 private
 
-  def client_error(e)
-    case e
-    when EOFError
-      # in case client only did a premature shutdown(SHUT_WR)
-      # we do support clients that shutdown(SHUT_WR) after the
-      # _entire_ request has been sent, and those will not have
-      # raised EOFError on us.
-      socket.close if socket
-      raise Unicorn::ClientShutdown, "bytes_read=#{tmp.size}", []
-    when Unicorn::HttpParserError
-      e.set_backtrace([])
-    end
-    raise e
-  end
-
   # tees off a +length+ chunk of data from the input into the IO
   # backing store as well as returning it.  +dst+ must be specified.
   # returns nil if reading from the input returns nil
   def tee(length, dst)
     unless parser.body_eof?
-      if parser.filter_body(dst, socket.readpartial(length, buf)).nil?
+      r = socket.kgio_read(length, buf) or eof!
+      unless parser.filter_body(dst, r)
         tmp.write(dst)
         tmp.seek(0, IO::SEEK_END) # workaround FreeBSD/OSX + MRI 1.8.x bug
         return dst
       end
     end
     finalize_input
-    rescue => e
-      client_error(e)
   end
 
   def finalize_input
     while parser.trailers(req, buf).nil?
-      # Don't worry about raising ClientShutdown here on EOFError, tee()
-      # will catch EOFError when app is processing it, otherwise in
-      # initialize we never get any chance to enter the app so the
-      # EOFError will just get trapped by Unicorn and not the Rack app
-      buf << socket.readpartial(@@io_chunk_size)
+      r = socket.kgio_read(@@io_chunk_size) or eof!
+      buf << r
     end
     self.socket = nil
   end
@@ -232,4 +213,12 @@ private
     dst
   end
 
+  def eof!
+    # in case client only did a premature shutdown(SHUT_WR)
+    # we do support clients that shutdown(SHUT_WR) after the
+    # _entire_ request has been sent, and those will not have
+    # raised EOFError on us.
+    socket.close if socket
+    raise Unicorn::ClientShutdown, "bytes_read=#{tmp.size}", []
+  end
 end

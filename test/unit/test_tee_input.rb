@@ -10,7 +10,7 @@ class TestTeeInput < Test::Unit::TestCase
   def setup
     @rs = $/
     @env = {}
-    @rd, @wr = UNIXSocket.pair
+    @rd, @wr = Kgio::UNIXSocket.pair
     @rd.sync = @wr.sync = true
     @start_pid = $$
   end
