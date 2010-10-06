@@ -7,9 +7,8 @@
 # improve things much compared to constants.
 module Unicorn::Const
 
-  # The current version of Unicorn, currently 2.0.0pre
-  # this constant is deprecated and will soon move to Unicorn::VERSION
-  UNICORN_VERSION="2.0.0pre"
+  # The current version of Unicorn, currently 2.0.0pre1
+  UNICORN_VERSION = "2.0.0pre1"
 
   # default TCP listen host address (0.0.0.0, all interfaces)
   DEFAULT_HOST = "0.0.0.0"
