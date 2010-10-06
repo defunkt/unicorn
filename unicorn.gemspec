@@ -50,7 +50,7 @@ Gem::Specification.new do |s|
   s.add_dependency(%q<rack>)
   s.add_dependency(%q<kgio>, '~> 1.2.0')
 
-  s.add_development_dependency('isolate', '~> 2.0.2')
+  s.add_development_dependency('isolate', '~> 2.1.2')
 
   # s.licenses = %w(GPLv2 Ruby) # licenses= method is not in older RubyGems
 end
