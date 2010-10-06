@@ -15,7 +15,7 @@ def tags
   timefmt = '%Y-%m-%dT%H:%M:%SZ'
   @tags ||= `git tag -l`.split(/\n/).map do |tag|
     next if tag == "v0.0.0"
-    if %r{\Av[\d\.]+\z} =~ tag
+    if %r{\Av[\d\.]+} =~ tag
       header, subject, body = `git cat-file tag #{tag}`.split(/\n\n/, 3)
       header = header.split(/\n/)
       tagger = header.grep(/\Atagger /).first
