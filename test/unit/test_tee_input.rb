@@ -5,7 +5,6 @@ require 'digest/sha1'
 require 'unicorn'
 
 class TestTeeInput < Test::Unit::TestCase
-  MockRequest = Struct.new(:env, :parser, :buf)
 
   def setup
     @rs = $/
@@ -164,7 +163,7 @@ class TestTeeInput < Test::Unit::TestCase
       @wr.write("0\r\n\r\n")
     }
     @wr.close
-    ti = Unicorn::TeeInput.new(@rd, MockRequest.new(@env, @parser, @buf))
+    ti = Unicorn::TeeInput.new(@rd, @parser)
     assert_nil @parser.content_length
     assert_nil ti.len
     assert ! @parser.body_eof?
@@ -202,7 +201,7 @@ class TestTeeInput < Test::Unit::TestCase
       end
       @wr.write("0\r\n\r\n")
     }
-    ti = Unicorn::TeeInput.new(@rd, MockRequest.new(@env, @parser, @buf))
+    ti = Unicorn::TeeInput.new(@rd, @parser)
     assert_nil @parser.content_length
     assert_nil ti.len
     assert ! @parser.body_eof?
@@ -231,7 +230,7 @@ class TestTeeInput < Test::Unit::TestCase
       @wr.write("Hello: World\r\n\r\n")
     }
     @wr.close
-    ti = Unicorn::TeeInput.new(@rd, MockRequest.new(@env, @parser, @buf))
+    ti = Unicorn::TeeInput.new(@rd, @parser)
     assert_nil @parser.content_length
     assert_nil ti.len
     assert ! @parser.body_eof?
@@ -253,7 +252,7 @@ private
            "\r\n#{body}"
     assert_equal @env, @parser.headers(@env, @buf)
     assert_equal body, @buf
-    MockRequest.new(@env, @parser, @buf)
+    @parser
   end
 
 end

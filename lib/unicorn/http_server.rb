@@ -521,7 +521,7 @@ class Unicorn::HttpServer
       r = @app.call(env)
     end
     # r may be frozen or const, so don't modify it
-    @request.response_headers? or r = [ r[0], nil, r[2] ]
+    @request.headers? or r = [ r[0], nil, r[2] ]
     http_response_write(client, r)
   rescue => e
     handle_error(client, e)

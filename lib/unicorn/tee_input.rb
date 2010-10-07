@@ -11,8 +11,8 @@
 #
 # When processing uploads, Unicorn exposes a TeeInput object under
 # "rack.input" of the Rack environment.
-class Unicorn::TeeInput < Struct.new(:socket, :req, :parser,
-                                     :buf, :len, :tmp, :buf2)
+class Unicorn::TeeInput
+  attr_accessor :tmp, :socket, :parser, :env, :buf, :len, :buf2
 
   # The maximum size (in +bytes+) to buffer in memory before
   # resorting to a temporary file.  Default is 112 kilobytes.
@@ -26,18 +26,18 @@ class Unicorn::TeeInput < Struct.new(:socket, :req, :parser,
   # Initializes a new TeeInput object.  You normally do not have to call
   # this unless you are writing an HTTP server.
   def initialize(socket, request)
-    self.socket = socket
-    self.req = request.env
-    self.parser = request.parser
-    self.buf = request.buf
-    self.len = parser.content_length
-    self.tmp = len && len < @@client_body_buffer_size ?
-               StringIO.new("") : Unicorn::TmpIO.new
-    self.buf2 = ""
-    if buf.size > 0
-      parser.filter_body(buf2, buf) and finalize_input
-      tmp.write(buf2)
-      tmp.rewind
+    @socket = socket
+    @parser = request
+    @buf = request.buf
+    @env = request.env
+    @len = request.content_length
+    @tmp = @len && @len < @@client_body_buffer_size ?
+           StringIO.new("") : Unicorn::TmpIO.new
+    @buf2 = ""
+    if @buf.size > 0
+      @parser.filter_body(@buf2, @buf) and finalize_input
+      @tmp.write(@buf2)
+      @tmp.rewind
     end
   end
 
@@ -58,16 +58,16 @@ class Unicorn::TeeInput < Struct.new(:socket, :req, :parser,
   # earlier.  Most applications should only need to call +read+ with a
   # specified +length+ in a loop until it returns +nil+.
   def size
-    len and return len
+    @len and return @len
 
     if socket
-      pos = tmp.pos
-      while tee(@@io_chunk_size, buf2)
+      pos = @tmp.pos
+      while tee(@@io_chunk_size, @buf2)
       end
-      tmp.seek(pos)
+      @tmp.seek(pos)
     end
 
-    self.len = tmp.size
+    @len = @tmp.size
   end
 
   # :call-seq:
@@ -90,22 +90,22 @@ class Unicorn::TeeInput < Struct.new(:socket, :req, :parser,
   # any data and only block when nothing is available (providing
   # IO#readpartial semantics).
   def read(*args)
-    socket or return tmp.read(*args)
+    @socket or return @tmp.read(*args)
 
     length = args.shift
     if nil == length
-      rv = tmp.read || ""
-      while tee(@@io_chunk_size, buf2)
-        rv << buf2
+      rv = @tmp.read || ""
+      while tee(@@io_chunk_size, @buf2)
+        rv << @buf2
       end
       rv
     else
       rv = args.shift || ""
-      diff = tmp.size - tmp.pos
+      diff = @tmp.size - @tmp.pos
       if 0 == diff
         ensure_length(tee(length, rv), length)
       else
-        ensure_length(tmp.read(diff > length ? length : diff, rv), length)
+        ensure_length(@tmp.read(diff > length ? length : diff, rv), length)
       end
     end
   end
@@ -120,27 +120,27 @@ class Unicorn::TeeInput < Struct.new(:socket, :req, :parser,
   # This takes zero arguments for strict Rack::Lint compatibility,
   # unlike IO#gets.
   def gets
-    socket or return tmp.gets
+    @socket or return @tmp.gets
     sep = $/ or return read
 
-    orig_size = tmp.size
-    if tmp.pos == orig_size
-      tee(@@io_chunk_size, buf2) or return nil
-      tmp.seek(orig_size)
+    orig_size = @tmp.size
+    if @tmp.pos == orig_size
+      tee(@@io_chunk_size, @buf2) or return nil
+      @tmp.seek(orig_size)
     end
 
     sep_size = Rack::Utils.bytesize(sep)
-    line = tmp.gets # cannot be nil here since size > pos
+    line = @tmp.gets # cannot be nil here since size > pos
     sep == line[-sep_size, sep_size] and return line
 
-    # unlikely, if we got here, then tmp is at EOF
+    # unlikely, if we got here, then @tmp is at EOF
     begin
-      orig_size = tmp.pos
-      tee(@@io_chunk_size, buf2) or break
-      tmp.seek(orig_size)
-      line << tmp.gets
+      orig_size = @tmp.pos
+      tee(@@io_chunk_size, @buf2) or break
+      @tmp.seek(orig_size)
+      line << @tmp.gets
       sep == line[-sep_size, sep_size] and return line
-      # tmp is at EOF again here, retry the loop
+      # @tmp is at EOF again here, retry the loop
     end while true
 
     line
@@ -166,7 +166,7 @@ class Unicorn::TeeInput < Struct.new(:socket, :req, :parser,
   # the offset (zero) of the +ios+ pointer.  Subsequent reads will
   # start from the beginning of the previously-buffered input.
   def rewind
-    tmp.rewind # Rack does not specify what the return value is here
+    @tmp.rewind # Rack does not specify what the return value is here
   end
 
 private
@@ -175,11 +175,11 @@ private
   # backing store as well as returning it.  +dst+ must be specified.
   # returns nil if reading from the input returns nil
   def tee(length, dst)
-    unless parser.body_eof?
-      r = socket.kgio_read(length, buf) or eof!
-      unless parser.filter_body(dst, r)
-        tmp.write(dst)
-        tmp.seek(0, IO::SEEK_END) # workaround FreeBSD/OSX + MRI 1.8.x bug
+    unless @parser.body_eof?
+      r = @socket.kgio_read(length, @buf) or eof!
+      unless @parser.filter_body(dst, @buf)
+        @tmp.write(dst)
+        @tmp.seek(0, IO::SEEK_END) # workaround FreeBSD/OSX + MRI 1.8.x bug
         return dst
       end
     end
@@ -187,11 +187,11 @@ private
   end
 
   def finalize_input
-    while parser.trailers(req, buf).nil?
-      r = socket.kgio_read(@@io_chunk_size) or eof!
-      buf << r
+    while @parser.trailers(@env, @buf).nil?
+      r = @socket.kgio_read(@@io_chunk_size) or eof!
+      @buf << r
     end
-    self.socket = nil
+    @socket = nil
   end
 
   # tee()s into +dst+ until it is of +length+ bytes (or until
@@ -204,10 +204,10 @@ private
     # len is nil for chunked bodies, so we can't ensure length for those
     # since they could be streaming bidirectionally and we don't want to
     # block the caller in that case.
-    return dst if dst.nil? || len.nil?
+    return dst if dst.nil? || @len.nil?
 
-    while dst.size < length && tee(length - dst.size, buf2)
-      dst << buf2
+    while dst.size < length && tee(length - dst.size, @buf2)
+      dst << @buf2
     end
 
     dst
@@ -218,7 +218,7 @@ private
     # we do support clients that shutdown(SHUT_WR) after the
     # _entire_ request has been sent, and those will not have
     # raised EOFError on us.
-    socket.close if socket
-    raise Unicorn::ClientShutdown, "bytes_read=#{tmp.size}", []
+    @socket.close if @socket
+    raise Unicorn::ClientShutdown, "bytes_read=#{@tmp.size}", []
   end
 end

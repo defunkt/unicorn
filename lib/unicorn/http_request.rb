@@ -2,7 +2,9 @@
 
 require 'unicorn_http'
 
-class Unicorn::HttpRequest
+# TODO: remove redundant names
+Unicorn.const_set(:HttpRequest, Unicorn::HttpParser)
+class Unicorn::HttpParser
 
   # default parameters we merge into the request env for Rack handlers
   DEFAULTS = {
@@ -23,19 +25,8 @@ class Unicorn::HttpRequest
   # A frozen format for this is about 15% faster
   REMOTE_ADDR = 'REMOTE_ADDR'.freeze
   RACK_INPUT = 'rack.input'.freeze
+  TeeInput = Unicorn::TeeInput
   # :startdoc:
-
-  attr_reader :env, :parser, :buf
-
-  def initialize
-    @parser = Unicorn::HttpParser.new
-    @buf = ""
-    @env = {}
-  end
-
-  def response_headers?
-    @parser.headers?
-  end
 
   # Does the majority of the IO processing.  It has been written in
   # Ruby using about 8 different IO processing strategies.
@@ -51,8 +42,8 @@ class Unicorn::HttpRequest
   # This does minimal exception trapping and it is up to the caller
   # to handle any socket errors (e.g. user aborted upload).
   def read(socket)
-    @env.clear
-    @parser.reset
+    reset
+    e = env
 
     # From http://www.ietf.org/rfc/rfc3875:
     # "Script authors should be aware that the REMOTE_ADDR and
@@ -61,18 +52,18 @@ class Unicorn::HttpRequest
     #  identify the client for the immediate request to the server;
     #  that client may be a proxy, gateway, or other intermediary
     #  acting on behalf of the actual source client."
-    @env[REMOTE_ADDR] = socket.kgio_addr
+    e[REMOTE_ADDR] = socket.kgio_addr
 
     # short circuit the common case with small GET requests first
-    if @parser.headers(@env, socket.kgio_read!(16384, @buf)).nil?
+    socket.kgio_read!(16384, buf)
+    if parse.nil?
       # Parser is not done, queue up more data to read and continue parsing
-      # an Exception thrown from the PARSER will throw us out of the loop
+      # an Exception thrown from the parser will throw us out of the loop
       begin
-        @buf << socket.kgio_read!(16384)
-      end while @parser.headers(@env, @buf).nil?
+        buf << socket.kgio_read!(16384)
+      end while parse.nil?
     end
-    @env[RACK_INPUT] = 0 == @parser.content_length ?
-                       NULL_IO : Unicorn::TeeInput.new(socket, self)
-    @env.merge!(DEFAULTS)
+    e[RACK_INPUT] = 0 == content_length ? NULL_IO : TeeInput.new(socket, self)
+    e.merge!(DEFAULTS)
   end
 end
