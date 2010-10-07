@@ -53,8 +53,8 @@ opts = OptionParser.new("", 24, '  ') do |opts|
     rackup_opts[:set_listener] = true
   end
 
-  opts.on("-E", "--env ENVIRONMENT",
-          "use ENVIRONMENT for defaults (default: development)") do |e|
+  opts.on("-E", "--env RACK_ENV",
+          "use RACK_ENV for defaults (default: development)") do |e|
     ENV["RACK_ENV"] = e
   end
 
