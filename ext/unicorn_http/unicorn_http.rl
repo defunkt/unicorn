@@ -553,8 +553,6 @@ static VALUE HttpParser_parse(VALUE self)
   struct http_parser *hp = data_get(self);
   VALUE data = hp->buf;
 
-  rb_str_update(data);
-
   http_parser_execute(hp, RSTRING_PTR(data), RSTRING_LEN(data));
   VALIDATE_MAX_LENGTH(hp->offset, HEADER);
 
@@ -678,7 +676,6 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
   char *dptr;
   long dlen;
 
-  rb_str_update(data);
   dptr = RSTRING_PTR(data);
   dlen = RSTRING_LEN(data);
 

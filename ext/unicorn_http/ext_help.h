@@ -8,10 +8,6 @@
 #define RSTRING_LEN(s) (RSTRING(s)->len)
 #endif /* !defined(RSTRING_LEN) */
 
-#ifndef RUBINIUS
-#  define rb_str_update(x) do {} while (0)
-#endif /* !RUBINIUS */
-
 #ifndef HAVE_RB_STR_SET_LEN
 #  ifdef RUBINIUS
 #    error we should never get here with current Rubinius (1.x)
