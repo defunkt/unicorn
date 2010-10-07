@@ -388,6 +388,7 @@ class HttpParserNgTest < Test::Unit::TestCase
       "*" => { qs => "", pi => "" },
     }.each do |uri,expect|
       assert_equal req, @parser.headers(req.clear, str % [ uri ])
+      req = req.dup
       @parser.reset
       assert_equal uri, req["REQUEST_URI"], "REQUEST_URI mismatch"
       assert_equal expect[qs], req[qs], "#{qs} mismatch"
@@ -412,6 +413,7 @@ class HttpParserNgTest < Test::Unit::TestCase
       "/1?a=b;c=d&e=f" => { qs => "a=b;c=d&e=f", pi => "/1" },
     }.each do |uri,expect|
       assert_equal req, @parser.headers(req.clear, str % [ uri ])
+      req = req.dup
       @parser.reset
       assert_equal uri, req["REQUEST_URI"], "REQUEST_URI mismatch"
       assert_equal "example.com", req["HTTP_HOST"], "Host: mismatch"

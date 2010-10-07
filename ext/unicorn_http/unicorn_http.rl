@@ -39,6 +39,8 @@ struct http_parser {
     size_t field_len; /* only used during header processing */
     size_t dest_offset; /* only used during body processing */
   } s;
+  VALUE buf;
+  VALUE env;
   VALUE cont; /* Qfalse: unset, Qnil: ignored header, T_STRING: append */
   union {
     off_t content;
@@ -46,7 +48,9 @@ struct http_parser {
   } len;
 };
 
-static void finalize_header(struct http_parser *hp, VALUE req);
+static ID id_clear;
+
+static void finalize_header(struct http_parser *hp);
 
 static void parser_error(const char *msg)
 {
@@ -97,7 +101,7 @@ static void hp_keepalive_connection(struct http_parser *hp, VALUE val)
 }
 
 static void
-request_method(struct http_parser *hp, VALUE req, const char *ptr, size_t len)
+request_method(struct http_parser *hp, const char *ptr, size_t len)
 {
   VALUE v;
 
@@ -115,11 +119,11 @@ request_method(struct http_parser *hp, VALUE req, const char *ptr, size_t len)
   } else {
     v = rb_str_new(ptr, len);
   }
-  rb_hash_aset(req, g_request_method, v);
+  rb_hash_aset(hp->env, g_request_method, v);
 }
 
 static void
-http_version(struct http_parser *hp, VALUE req, const char *ptr, size_t len)
+http_version(struct http_parser *hp, const char *ptr, size_t len)
 {
   VALUE v;
 
@@ -134,8 +138,8 @@ http_version(struct http_parser *hp, VALUE req, const char *ptr, size_t len)
   } else {
     v = rb_str_new(ptr, len);
   }
-  rb_hash_aset(req, g_server_protocol, v);
-  rb_hash_aset(req, g_http_version, v);
+  rb_hash_aset(hp->env, g_server_protocol, v);
+  rb_hash_aset(hp->env, g_http_version, v);
 }
 
 static inline void hp_invalid_if_trailer(struct http_parser *hp)
@@ -172,7 +176,7 @@ static void write_cont_value(struct http_parser *hp,
   rb_str_buf_cat(hp->cont, vptr, LEN(mark, p));
 }
 
-static void write_value(VALUE req, struct http_parser *hp,
+static void write_value(struct http_parser *hp,
                         const char *buffer, const char *p)
 {
   VALUE f = find_common_field(PTR_TO(start.field), hp->s.field_len);
@@ -218,9 +222,9 @@ static void write_value(VALUE req, struct http_parser *hp,
     assert_frozen(f);
   }
 
-  e = rb_hash_aref(req, f);
+  e = rb_hash_aref(hp->env, f);
   if (NIL_P(e)) {
-    hp->cont = rb_hash_aset(req, f, v);
+    hp->cont = rb_hash_aset(hp->env, f, v);
   } else if (f == g_http_host) {
     /*
      * ignored, absolute URLs in REQUEST_URI take precedence over
@@ -245,51 +249,47 @@ static void write_value(VALUE req, struct http_parser *hp,
   action downcase_char { downcase_char(deconst(fpc)); }
   action write_field { hp->s.field_len = LEN(start.field, fpc); }
   action start_value { MARK(mark, fpc); }
-  action write_value { write_value(req, hp, buffer, fpc); }
+  action write_value { write_value(hp, buffer, fpc); }
   action write_cont_value { write_cont_value(hp, buffer, fpc); }
-  action request_method {
-    request_method(hp, req, PTR_TO(mark), LEN(mark, fpc));
-  }
+  action request_method { request_method(hp, PTR_TO(mark), LEN(mark, fpc)); }
   action scheme {
-    rb_hash_aset(req, g_rack_url_scheme, STR_NEW(mark, fpc));
+    rb_hash_aset(hp->env, g_rack_url_scheme, STR_NEW(mark, fpc));
   }
-  action host {
-    rb_hash_aset(req, g_http_host, STR_NEW(mark, fpc));
-  }
+  action host { rb_hash_aset(hp->env, g_http_host, STR_NEW(mark, fpc)); }
   action request_uri {
     VALUE str;
 
     VALIDATE_MAX_LENGTH(LEN(mark, fpc), REQUEST_URI);
-    str = rb_hash_aset(req, g_request_uri, STR_NEW(mark, fpc));
+    str = rb_hash_aset(hp->env, g_request_uri, STR_NEW(mark, fpc));
     /*
      * "OPTIONS * HTTP/1.1\r\n" is a valid request, but we can't have '*'
      * in REQUEST_PATH or PATH_INFO or else Rack::Lint will complain
      */
     if (STR_CSTR_EQ(str, "*")) {
       str = rb_str_new(NULL, 0);
-      rb_hash_aset(req, g_path_info, str);
-      rb_hash_aset(req, g_request_path, str);
+      rb_hash_aset(hp->env, g_path_info, str);
+      rb_hash_aset(hp->env, g_request_path, str);
     }
   }
   action fragment {
     VALIDATE_MAX_LENGTH(LEN(mark, fpc), FRAGMENT);
-    rb_hash_aset(req, g_fragment, STR_NEW(mark, fpc));
+    rb_hash_aset(hp->env, g_fragment, STR_NEW(mark, fpc));
   }
   action start_query {MARK(start.query, fpc); }
   action query_string {
     VALIDATE_MAX_LENGTH(LEN(start.query, fpc), QUERY_STRING);
-    rb_hash_aset(req, g_query_string, STR_NEW(start.query, fpc));
+    rb_hash_aset(hp->env, g_query_string, STR_NEW(start.query, fpc));
   }
-  action http_version { http_version(hp, req, PTR_TO(mark), LEN(mark, fpc)); }
+  action http_version { http_version(hp, PTR_TO(mark), LEN(mark, fpc)); }
   action request_path {
     VALUE val;
 
     VALIDATE_MAX_LENGTH(LEN(mark, fpc), REQUEST_PATH);
-    val = rb_hash_aset(req, g_request_path, STR_NEW(mark, fpc));
+    val = rb_hash_aset(hp->env, g_request_path, STR_NEW(mark, fpc));
 
     /* rack says PATH_INFO must start with "/" or be empty */
     if (!STR_CSTR_EQ(val, "*"))
-      rb_hash_aset(req, g_path_info, val);
+      rb_hash_aset(hp->env, g_path_info, val);
   }
   action add_to_chunk_size {
     hp->len.chunk = step_incr(hp->len.chunk, fc, 16);
@@ -297,7 +297,7 @@ static void write_value(VALUE req, struct http_parser *hp,
       parser_error("invalid chunk size");
   }
   action header_done {
-    finalize_header(hp, req);
+    finalize_header(hp);
 
     cs = http_parser_first_final;
     if (HP_FL_TEST(hp, HASBODY)) {
@@ -330,7 +330,7 @@ static void write_value(VALUE req, struct http_parser *hp,
   action skip_chunk_data {
   skip_chunk_data_hack: {
     size_t nr = MIN((size_t)hp->len.chunk, REMAINING);
-    memcpy(RSTRING_PTR(req) + hp->s.dest_offset, fpc, nr);
+    memcpy(RSTRING_PTR(hp->cont) + hp->s.dest_offset, fpc, nr);
     hp->s.dest_offset += nr;
     hp->len.chunk -= nr;
     p += nr;
@@ -353,15 +353,20 @@ static void write_value(VALUE req, struct http_parser *hp,
 static void http_parser_init(struct http_parser *hp)
 {
   int cs = 0;
-  memset(hp, 0, sizeof(struct http_parser));
+  hp->flags = 0;
+  hp->mark = 0;
+  hp->offset = 0;
+  hp->start.field = 0;
+  hp->s.field_len = 0;
+  hp->len.content = 0;
   hp->cont = Qfalse; /* zero on MRI, should be optimized away by above */
   %% write init;
   hp->cs = cs;
 }
 
 /** exec **/
-static void http_parser_execute(struct http_parser *hp,
-  VALUE req, char *buffer, size_t len)
+static void
+http_parser_execute(struct http_parser *hp, char *buffer, size_t len)
 {
   const char *p, *pe;
   int cs = hp->cs;
@@ -401,20 +406,20 @@ static struct http_parser *data_get(VALUE self)
   return hp;
 }
 
-static void finalize_header(struct http_parser *hp, VALUE req)
+static void finalize_header(struct http_parser *hp)
 {
-  VALUE temp = rb_hash_aref(req, g_rack_url_scheme);
+  VALUE temp = rb_hash_aref(hp->env, g_rack_url_scheme);
   VALUE server_name = g_localhost;
   VALUE server_port = g_port_80;
 
   /* set rack.url_scheme to "https" or "http", no others are allowed by Rack */
   if (NIL_P(temp)) {
-    temp = rb_hash_aref(req, g_http_x_forwarded_proto);
+    temp = rb_hash_aref(hp->env, g_http_x_forwarded_proto);
     if (!NIL_P(temp) && STR_CSTR_EQ(temp, "https"))
       server_port = g_port_443;
     else
       temp = g_http;
-    rb_hash_aset(req, g_rack_url_scheme, temp);
+    rb_hash_aset(hp->env, g_rack_url_scheme, temp);
   } else if (STR_CSTR_EQ(temp, "https")) {
     server_port = g_port_443;
   } else {
@@ -422,7 +427,7 @@ static void finalize_header(struct http_parser *hp, VALUE req)
   }
 
   /* parse and set the SERVER_NAME and SERVER_PORT variables */
-  temp = rb_hash_aref(req, g_http_host);
+  temp = rb_hash_aref(hp->env, g_http_host);
   if (!NIL_P(temp)) {
     char *colon = memchr(RSTRING_PTR(temp), ':', RSTRING_LEN(temp));
     if (colon) {
@@ -435,20 +440,22 @@ static void finalize_header(struct http_parser *hp, VALUE req)
       server_name = temp;
     }
   }
-  rb_hash_aset(req, g_server_name, server_name);
-  rb_hash_aset(req, g_server_port, server_port);
+  rb_hash_aset(hp->env, g_server_name, server_name);
+  rb_hash_aset(hp->env, g_server_port, server_port);
   if (!HP_FL_TEST(hp, HASHEADER))
-    rb_hash_aset(req, g_server_protocol, g_http_09);
+    rb_hash_aset(hp->env, g_server_protocol, g_http_09);
 
   /* rack requires QUERY_STRING */
-  if (NIL_P(rb_hash_aref(req, g_query_string)))
-    rb_hash_aset(req, g_query_string, rb_str_new(NULL, 0));
+  if (NIL_P(rb_hash_aref(hp->env, g_query_string)))
+    rb_hash_aset(hp->env, g_query_string, rb_str_new(NULL, 0));
 }
 
 static void hp_mark(void *ptr)
 {
   struct http_parser *hp = ptr;
 
+  rb_gc_mark(hp->buf);
+  rb_gc_mark(hp->env);
   rb_gc_mark(hp->cont);
 }
 
@@ -467,7 +474,11 @@ static VALUE HttpParser_alloc(VALUE klass)
  */
 static VALUE HttpParser_init(VALUE self)
 {
-  http_parser_init(data_get(self));
+  struct http_parser *hp = data_get(self);
+
+  http_parser_init(hp);
+  hp->buf = rb_str_new(NULL, 0);
+  hp->env = rb_hash_new();
 
   return self;
 }
@@ -481,7 +492,11 @@ static VALUE HttpParser_init(VALUE self)
  */
 static VALUE HttpParser_reset(VALUE self)
 {
-  http_parser_init(data_get(self));
+  struct http_parser *hp = data_get(self);
+
+  http_parser_init(hp);
+  rb_funcall(hp->env, id_clear, 0);
+  rb_str_set_len(hp->buf, 0);
 
   return Qnil;
 }
@@ -522,6 +537,42 @@ static VALUE HttpParser_content_length(VALUE self)
 }
 
 /**
+ * Document-method: parse
+ * call-seq:
+ *    parser.parse => env or nil
+ *
+ * Takes a Hash and a String of data, parses the String of data filling
+ * in the Hash returning the Hash if parsing is finished, nil otherwise
+ * When returning the env Hash, it may modify data to point to where
+ * body processing should begin.
+ *
+ * Raises HttpParserError if there are parsing errors.
+ */
+static VALUE HttpParser_parse(VALUE self)
+{
+  struct http_parser *hp = data_get(self);
+  VALUE data = hp->buf;
+
+  rb_str_update(data);
+
+  http_parser_execute(hp, RSTRING_PTR(data), RSTRING_LEN(data));
+  VALIDATE_MAX_LENGTH(hp->offset, HEADER);
+
+  if (hp->cs == http_parser_first_final ||
+      hp->cs == http_parser_en_ChunkedBody) {
+    advance_str(data, hp->offset + 1);
+    hp->offset = 0;
+
+    return hp->env;
+  }
+
+  if (hp->cs == http_parser_error)
+    parser_error("Invalid HTTP format, parsing fails.");
+
+  return Qnil;
+}
+
+/**
  * Document-method: trailers
  * call-seq:
  *    parser.trailers(req, data) => req or nil
@@ -531,37 +582,15 @@ static VALUE HttpParser_content_length(VALUE self)
 
 /**
  * Document-method: headers
- * call-seq:
- *    parser.headers(req, data) => req or nil
- *
- * Takes a Hash and a String of data, parses the String of data filling
- * in the Hash returning the Hash if parsing is finished, nil otherwise
- * When returning the req Hash, it may modify data to point to where
- * body processing should begin.
- *
- * Raises HttpParserError if there are parsing errors.
  */
-static VALUE HttpParser_headers(VALUE self, VALUE req, VALUE data)
+static VALUE HttpParser_headers(VALUE self, VALUE env, VALUE buf)
 {
   struct http_parser *hp = data_get(self);
 
-  rb_str_update(data);
+  hp->env = env;
+  hp->buf = buf;
 
-  http_parser_execute(hp, req, RSTRING_PTR(data), RSTRING_LEN(data));
-  VALIDATE_MAX_LENGTH(hp->offset, HEADER);
-
-  if (hp->cs == http_parser_first_final ||
-      hp->cs == http_parser_en_ChunkedBody) {
-    advance_str(data, hp->offset + 1);
-    hp->offset = 0;
-
-    return req;
-  }
-
-  if (hp->cs == http_parser_error)
-    parser_error("Invalid HTTP format, parsing fails.");
-
-  return Qnil;
+  return HttpParser_parse(self);
 }
 
 static int chunked_eof(struct http_parser *hp)
@@ -619,6 +648,16 @@ static VALUE HttpParser_has_headers(VALUE self)
   return HP_FL_TEST(hp, HASHEADER) ? Qtrue : Qfalse;
 }
 
+static VALUE HttpParser_buf(VALUE self)
+{
+  return data_get(self)->buf;
+}
+
+static VALUE HttpParser_env(VALUE self)
+{
+  return data_get(self)->env;
+}
+
 /**
  * call-seq:
  *    parser.filter_body(buf, data) => nil/data
@@ -650,7 +689,9 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
   if (HP_FL_TEST(hp, CHUNKED)) {
     if (!chunked_eof(hp)) {
       hp->s.dest_offset = 0;
-      http_parser_execute(hp, buf, dptr, dlen);
+      hp->cont = buf;
+      hp->buf = data;
+      http_parser_execute(hp, dptr, dlen);
       if (hp->cs == http_parser_error)
         parser_error("Invalid HTTP format, parsing fails.");
 
@@ -702,13 +743,16 @@ void Init_unicorn_http(void)
   rb_define_alloc_func(cHttpParser, HttpParser_alloc);
   rb_define_method(cHttpParser, "initialize", HttpParser_init,0);
   rb_define_method(cHttpParser, "reset", HttpParser_reset,0);
+  rb_define_method(cHttpParser, "parse", HttpParser_parse, 0);
   rb_define_method(cHttpParser, "headers", HttpParser_headers, 2);
-  rb_define_method(cHttpParser, "filter_body", HttpParser_filter_body, 2);
   rb_define_method(cHttpParser, "trailers", HttpParser_headers, 2);
+  rb_define_method(cHttpParser, "filter_body", HttpParser_filter_body, 2);
   rb_define_method(cHttpParser, "content_length", HttpParser_content_length, 0);
   rb_define_method(cHttpParser, "body_eof?", HttpParser_body_eof, 0);
   rb_define_method(cHttpParser, "keepalive?", HttpParser_keepalive, 0);
   rb_define_method(cHttpParser, "headers?", HttpParser_has_headers, 0);
+  rb_define_method(cHttpParser, "buf", HttpParser_buf, 0);
+  rb_define_method(cHttpParser, "env", HttpParser_env, 0);
 
   /*
    * The maximum size a single chunk when using chunked transfer encoding.
@@ -731,5 +775,6 @@ void Init_unicorn_http(void)
   SET_GLOBAL(g_http_transfer_encoding, "TRANSFER_ENCODING");
   SET_GLOBAL(g_content_length, "CONTENT_LENGTH");
   SET_GLOBAL(g_http_connection, "CONNECTION");
+  id_clear = rb_intern("clear");
 }
 #undef SET_GLOBAL
