@@ -496,7 +496,6 @@ static VALUE HttpParser_reset(VALUE self)
 
   http_parser_init(hp);
   rb_funcall(hp->env, id_clear, 0);
-  rb_str_set_len(hp->buf, 0);
 
   return Qnil;
 }

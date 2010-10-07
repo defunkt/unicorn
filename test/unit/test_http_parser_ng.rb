@@ -473,4 +473,29 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal expect, req
   end
 
+  def test_pipelined_requests
+    expect = {
+      "HTTP_HOST" => "example.com",
+      "SERVER_NAME" => "example.com",
+      "REQUEST_PATH" => "/",
+      "rack.url_scheme" => "http",
+      "SERVER_PROTOCOL" => "HTTP/1.1",
+      "PATH_INFO" => "/",
+      "HTTP_VERSION" => "HTTP/1.1",
+      "REQUEST_URI" => "/",
+      "SERVER_PORT" => "80",
+      "REQUEST_METHOD" => "GET",
+      "QUERY_STRING" => ""
+    }
+    str = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
+    @parser.buf << (str * 2)
+    env1 = @parser.parse.dup
+    assert_equal expect, env1
+    assert_equal str, @parser.buf
+    assert @parser.keepalive?
+    @parser.reset
+    env2 = @parser.parse.dup
+    assert_equal expect, env2
+    assert_equal "", @parser.buf
+  end
 end
