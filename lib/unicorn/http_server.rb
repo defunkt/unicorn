@@ -7,9 +7,10 @@
 class Unicorn::HttpServer
   attr_accessor :app, :request, :timeout, :worker_processes,
                 :before_fork, :after_fork, :before_exec,
-                :logger, :pid, :listener_opts, :preload_app,
+                :listener_opts, :preload_app,
                 :reexec_pid, :orig_app, :init_listeners,
                 :master_pid, :config, :ready_pipe, :user
+  attr_reader :pid, :logger
 
   # :stopdoc:
   include Unicorn::SocketHelper
