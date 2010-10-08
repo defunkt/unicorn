@@ -24,14 +24,11 @@ endif
 
 RUBY_ENGINE := $(shell $(RUBY) -e 'puts((RUBY_ENGINE rescue "ruby"))')
 
-isolate_libs := tmp/isolate/.$(RUBY_ENGINE)-$(RUBY_VERSION).libs
-MYLIBS = $(RUBYLIB):$(shell cat $(isolate_libs) 2>/dev/null || \
-                      (test -f ./script/isolate_for_tests  && \
-                       $(RUBY) ./script/isolate_for_tests >/dev/null && \
-                       cat $(isolate_libs) 2>/dev/null))
-
-echo:
-	@echo $(MYLIBS)
+isolate_libs := tmp/isolate/$(RUBY_ENGINE)-$(RUBY_VERSION).mk
+$(isolate_libs): script/isolate_for_tests
+	@$(RUBY) script/isolate_for_tests
+-include $(isolate_libs)
+MYLIBS = $(RUBYLIB):$(ISOLATE_LIBS)
 
 # dunno how to implement this as concisely in Ruby, and hell, I love awk
 awk_slow := awk '/def test_/{print FILENAME"--"$$2".n"}' 2>/dev/null

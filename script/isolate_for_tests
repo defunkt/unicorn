@@ -24,9 +24,11 @@ end
 _, status = Process.waitpid2(pid)
 status.success? or abort status.inspect
 lib_paths = Dir["#{opts[:path]}/gems/*-*/lib"].map { |x| File.expand_path(x) }
-libs = "tmp/isolate/.#{ruby_engine}-#{RUBY_VERSION}.libs"
-File.open("#{libs}.#$$", "w") { |fp| fp.puts lib_paths.join(':') }
-File.rename("#{libs}.#$$", libs)
+dst = "tmp/isolate/#{ruby_engine}-#{RUBY_VERSION}.mk"
+File.open("#{dst}.#$$", "w") do |fp|
+  fp.puts "ISOLATE_LIBS=#{lib_paths.join(':')}"
+end
+File.rename("#{dst}.#$$", dst)
 
 # pure Ruby gems can be shared across all Rubies
 %w(3.0.0).each do |rails_ver|
