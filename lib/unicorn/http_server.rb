@@ -50,6 +50,10 @@ class Unicorn::HttpServer
   # signal queue used for self-piping
   SIG_QUEUE = []
 
+  # list of signals we care about and trap in master.
+  QUEUE_SIGS = [ :WINCH, :QUIT, :INT, :TERM, :USR1, :USR2, :HUP, :TTIN, :TTOU ]
+
+  # :startdoc:
   # We populate this at startup so we can figure out how to reexecute
   # and upgrade the currently running instance of Unicorn
   # This Hash is considered a stable interface and changing its contents
@@ -82,7 +86,6 @@ class Unicorn::HttpServer
       }.call,
     0 => $0.dup,
   }
-  # :startdoc:
 
   # Creates a working server on host:port (strange things happen if
   # port isn't a Number).  Use HttpServer::run to start the server and
@@ -151,8 +154,8 @@ class Unicorn::HttpServer
     # setup signal handlers before writing pid file in case people get
     # trigger happy and send signals as soon as the pid file exists.
     # Note that signals don't actually get handled until the #join method
-    QUEUE_SIGS.each { |sig| trap_deferred(sig) }
-    trap(:CHLD) { |_| awaken_master }
+    QUEUE_SIGS.each { |sig| trap(sig) { SIG_QUEUE << sig; awaken_master } }
+    trap(:CHLD) { awaken_master }
     self.pid = config[:pid]
 
     self.master_pid = $$
@@ -353,22 +356,6 @@ class Unicorn::HttpServer
   end
 
   private
-
-  # list of signals we care about and trap in master.
-  QUEUE_SIGS = [ :WINCH, :QUIT, :INT, :TERM, :USR1, :USR2, :HUP,
-                 :TTIN, :TTOU ]
-
-  # defer a signal for later processing in #join (master process)
-  def trap_deferred(signal)
-    trap(signal) do |sig_nr|
-      if SIG_QUEUE.size < 5
-        SIG_QUEUE << signal
-        awaken_master
-      else
-        logger.error "ignoring SIG#{signal}, queue=#{SIG_QUEUE.inspect}"
-      end
-    end
-  end
 
   # wait for a signal hander to wake us up and then consume the pipe
   # Wake up every second anyways to run murder_lazy_workers
