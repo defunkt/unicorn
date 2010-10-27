@@ -195,7 +195,7 @@ atom = <link rel="alternate" title="Atom feed" href="$(1)" \
 doc: .document $(ext)/unicorn_http.c NEWS ChangeLog
 	for i in $(man1_rdoc); do echo > $$i; done
 	find bin lib -type f -name '*.rbc' -exec rm -f '{}' ';'
-	rdoc -a -t "$(shell sed -ne '1s/^= //p' README)"
+	rdoc -t "$(shell sed -ne '1s/^= //p' README)"
 	install -m644 COPYING doc/COPYING
 	install -m644 $(shell grep '^[A-Z]' .document)  doc/
 	$(MAKE) -C Documentation install-html install-man

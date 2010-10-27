@@ -36,7 +36,7 @@ Gem::Specification.new do |s|
   s.homepage = %q{http://unicorn.bogomips.org/}
 
   summary = %q{Rack HTTP server for fast clients and Unix}
-  s.rdoc_options = [ "-Na", "-t", "Unicorn: #{summary}" ]
+  s.rdoc_options = [ "-t", "Unicorn: #{summary}" ]
   s.require_paths = %w(lib ext)
   s.rubyforge_project = %q{mongrel}
   s.summary = summary
