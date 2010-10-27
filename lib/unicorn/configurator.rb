@@ -8,7 +8,9 @@ require 'logger'
 # example configuration files.  An example config file for use with
 # nginx is also available at
 # http://unicorn.bogomips.org/examples/nginx.conf
-class Unicorn::Configurator < Struct.new(:set, :config_file, :after_reload)
+class Unicorn::Configurator
+  attr_accessor :set, :config_file, :after_reload
+
   # :stopdoc:
   # used to stash stuff for deferred processing of cli options in
   # config.ru after "working_directory" is bound.  Do not rely on
