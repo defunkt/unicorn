@@ -290,14 +290,14 @@ class Unicorn::HttpServer
       when nil
         # avoid murdering workers after our master process (or the
         # machine) comes out of suspend/hibernation
-        if (last_check + timeout) >= (last_check = Time.now)
-          murder_lazy_workers
+        if (last_check + @timeout) >= (last_check = Time.now)
+          sleep_time = murder_lazy_workers
         else
           # wait for workers to wakeup on suspend
-          master_sleep(timeout/2.0 + 1)
+          sleep_time = @timeout/2.0 + 1
         end
         maintain_worker_count if respawn
-        master_sleep(1)
+        master_sleep(sleep_time)
       when :QUIT # graceful shutdown
         break
       when :TERM, :INT # immediate shutdown
@@ -358,7 +358,6 @@ class Unicorn::HttpServer
   private
 
   # wait for a signal hander to wake us up and then consume the pipe
-  # Wake up every second anyways to run murder_lazy_workers
   def master_sleep(sec)
     IO.select([ SELF_PIPE[0] ], nil, nil, sec) or return
     SELF_PIPE[0].kgio_tryread(11)
@@ -444,15 +443,23 @@ class Unicorn::HttpServer
   # is stale for >timeout seconds, then we'll kill the corresponding
   # worker.
   def murder_lazy_workers
+    t = @timeout
+    next_sleep = 1
     WORKERS.dup.each_pair do |wpid, worker|
       stat = worker.tmp.stat
       # skip workers that disable fchmod or have never fchmod-ed
       stat.mode == 0100600 and next
-      (diff = (Time.now - stat.ctime)) <= timeout and next
+      diff = Time.now - stat.ctime
+      if diff <= t
+        tmp = t - diff
+        next_sleep < tmp and next_sleep = tmp
+        next
+      end
       logger.error "worker=#{worker.nr} PID:#{wpid} timeout " \
-                   "(#{diff}s > #{timeout}s), killing"
+                   "(#{diff}s > #{t}s), killing"
       kill_worker(:KILL, wpid) # take no prisoners for timeout violations
     end
+    next_sleep
   end
 
   def spawn_missing_workers
