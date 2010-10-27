@@ -44,21 +44,24 @@ class Unicorn::Configurator
 
   def initialize(defaults = {}) #:nodoc:
     self.set = Hash.new(:unset)
-    use_defaults = defaults.delete(:use_defaults)
+    @use_defaults = defaults.delete(:use_defaults)
     self.config_file = defaults.delete(:config_file)
 
     # after_reload is only used by unicorn_rails, unsupported otherwise
     self.after_reload = defaults.delete(:after_reload)
 
-    set.merge!(DEFAULTS) if use_defaults
+    set.merge!(DEFAULTS) if @use_defaults
     defaults.each { |key, value| self.__send__(key, value) }
     Hash === set[:listener_opts] or
         set[:listener_opts] = Hash.new { |hash,key| hash[key] = {} }
     Array === set[:listeners] or set[:listeners] = []
-    reload
+    reload(false)
   end
 
-  def reload #:nodoc:
+  def reload(merge_defaults = true) #:nodoc:
+    if merge_defaults && @use_defaults
+      set.merge!(DEFAULTS) if @use_defaults
+    end
     instance_eval(File.read(config_file), config_file) if config_file
 
     parse_rackup_file
@@ -403,7 +406,10 @@ class Unicorn::Configurator
 
   # sets the working directory for Unicorn.  This ensures SIGUSR2 will
   # start a new instance of Unicorn in this directory.  This may be
-  # a symlink, a common scenario for Capistrano users.
+  # a symlink, a common scenario for Capistrano users.  Unlike
+  # all other Unicorn configuration directives, this binds immediately
+  # for error checking and cannot be undone by unsetting it in the
+  # configuration file and reloading.
   def working_directory(path)
     # just let chdir raise errors
     path = File.expand_path(path)
