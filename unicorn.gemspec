@@ -49,7 +49,7 @@ Gem::Specification.new do |s|
   # *strongly* recommended for security reasons.
   s.add_dependency(%q<rack>)
 
-  s.add_development_dependency('isolate', '~> 2.0.2')
+  s.add_development_dependency('isolate', '~> 3.0.0')
 
   # s.licenses = %w(GPLv2 Ruby) # licenses= method is not in older RubyGems
 end
