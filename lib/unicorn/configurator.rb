@@ -43,7 +43,7 @@ class Unicorn::Configurator < Struct.new(:set, :config_file, :after_reload)
     self.after_reload = defaults.delete(:after_reload)
 
     set.merge!(DEFAULTS) if use_defaults
-    defaults.each { |key, value| self.send(key, value) }
+    defaults.each { |key, value| self.__send__(key, value) }
     Hash === set[:listener_opts] or
         set[:listener_opts] = Hash.new { |hash,key| hash[key] = {} }
     Array === set[:listeners] or set[:listeners] = []
