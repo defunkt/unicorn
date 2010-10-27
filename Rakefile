@@ -168,8 +168,12 @@ task :fm_update do
       "changelog" => changelog,
     },
   }.to_json
-  Net::HTTP.start(uri.host, uri.port) do |http|
-    p http.post(uri.path, req, {'Content-Type'=>'application/json'})
+  if ! changelog.strip.empty? && version =~ %r{\A[\d\.]+\d+\z}
+    Net::HTTP.start(uri.host, uri.port) do |http|
+      p http.post(uri.path, req, {'Content-Type'=>'application/json'})
+    end
+  else
+    warn "not updating freshmeat for v#{version}"
   end
 end
 
