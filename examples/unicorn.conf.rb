@@ -63,7 +63,10 @@ before_fork do |server, worker|
   #   end
   # end
   #
-  # # *optionally* throttle the master from forking too quickly by sleeping
+  # Throttle the master from forking too quickly by sleeping.  Due
+  # to the implementation of standard Unix signal handlers, this
+  # helps (but does not completely) prevent identical, repeated signals
+  # from being lost when the receiving process is busy.
   # sleep 1
 end
 
