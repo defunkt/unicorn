@@ -50,7 +50,10 @@ t_begin "reload signal succeeds" && {
 	do
 		sleep 1
 	done
-
+	while ! grep reaped < $r_err >/dev/null
+	do
+		sleep 1
+	done
 	grep 'done reloading' $r_err >/dev/null
 }
 
