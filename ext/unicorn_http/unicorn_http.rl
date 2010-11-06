@@ -619,6 +619,25 @@ static VALUE HttpParser_keepalive(VALUE self)
 
 /**
  * call-seq:
+ *    parser.next? => true or false
+ *
+ * Exactly like HttpParser#keepalive?, except it will reset the internal
+ * parser state if it returns true.
+ */
+static VALUE HttpParser_next(VALUE self)
+{
+  struct http_parser *hp = data_get(self);
+
+  if (HP_FL_ALL(hp, KEEPALIVE)) {
+    http_parser_init(hp);
+    rb_funcall(hp->env, id_clear, 0);
+    return Qtrue;
+  }
+  return Qfalse;
+}
+
+/**
+ * call-seq:
  *    parser.headers? => true or false
  *
  * This should be used to detect if a request has headers (and if
@@ -736,6 +755,7 @@ void Init_unicorn_http(void)
   rb_define_method(cHttpParser, "body_eof?", HttpParser_body_eof, 0);
   rb_define_method(cHttpParser, "keepalive?", HttpParser_keepalive, 0);
   rb_define_method(cHttpParser, "headers?", HttpParser_has_headers, 0);
+  rb_define_method(cHttpParser, "next?", HttpParser_next, 0);
   rb_define_method(cHttpParser, "buf", HttpParser_buf, 0);
   rb_define_method(cHttpParser, "env", HttpParser_env, 0);
 

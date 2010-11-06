@@ -509,8 +509,9 @@ class HttpParserNgTest < Test::Unit::TestCase
     env1 = @parser.parse.dup
     assert_equal expect, env1
     assert_equal str, @parser.buf
-    assert @parser.keepalive?
-    @parser.reset
+    assert ! @parser.env.empty?
+    assert @parser.next?
+    assert @parser.env.empty?
     env2 = @parser.parse.dup
     assert_equal expect, env2
     assert_equal "", @parser.buf
