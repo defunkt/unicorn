@@ -187,7 +187,7 @@ private
   end
 
   def finalize_input
-    while @parser.trailers(@env, @buf).nil?
+    until @parser.parse
       r = @socket.kgio_read(@@io_chunk_size) or eof!
       @buf << r
     end

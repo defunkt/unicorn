@@ -714,6 +714,7 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
     if (hp->len.content > 0) {
       long nr = MIN(dlen, hp->len.content);
 
+      hp->buf = data;
       memcpy(RSTRING_PTR(buf), dptr, nr);
       hp->len.content -= nr;
       if (hp->len.content == 0) {
