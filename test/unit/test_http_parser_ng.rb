@@ -11,6 +11,19 @@ class HttpParserNgTest < Test::Unit::TestCase
     @parser = HttpParser.new
   end
 
+  def test_default_keepalive_is_off
+    assert ! @parser.keepalive?
+    assert ! @parser.next?
+    assert_nothing_raised do
+      @parser.buf << "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
+      @parser.parse
+    end
+    assert @parser.keepalive?
+    @parser.reset
+    assert ! @parser.keepalive?
+    assert ! @parser.next?
+  end
+
   def test_identity_byte_headers
     req = {}
     str = "PUT / HTTP/1.1\r\n"
