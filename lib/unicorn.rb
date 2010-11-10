@@ -73,6 +73,7 @@ class Unicorn::ClientShutdown < EOFError; end
 
 require 'unicorn/const'
 require 'unicorn/socket_helper'
+require 'unicorn/stream_input'
 require 'unicorn/tee_input'
 require 'unicorn/http_request'
 require 'unicorn/configurator'

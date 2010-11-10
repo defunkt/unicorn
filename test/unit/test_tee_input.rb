@@ -4,6 +4,10 @@ require 'test/unit'
 require 'digest/sha1'
 require 'unicorn'
 
+class TeeInput < Unicorn::TeeInput
+  attr_accessor :tmp, :len
+end
+
 class TestTeeInput < Test::Unit::TestCase
 
   def setup
@@ -28,7 +32,7 @@ class TestTeeInput < Test::Unit::TestCase
 
   def test_gets_long
     r = init_request("hello", 5 + (4096 * 4 * 3) + "#$/foo#$/".size)
-    ti = Unicorn::TeeInput.new(@rd, r)
+    ti = TeeInput.new(@rd, r)
     status = line = nil
     pid = fork {
       @rd.close
@@ -49,7 +53,7 @@ class TestTeeInput < Test::Unit::TestCase
 
   def test_gets_short
     r = init_request("hello", 5 + "#$/foo".size)
-    ti = Unicorn::TeeInput.new(@rd, r)
+    ti = TeeInput.new(@rd, r)
     status = line = nil
     pid = fork {
       @rd.close
@@ -68,7 +72,7 @@ class TestTeeInput < Test::Unit::TestCase
 
   def test_small_body
     r = init_request('hello')
-    ti = Unicorn::TeeInput.new(@rd, r)
+    ti = TeeInput.new(@rd, r)
     assert_equal 0, @parser.content_length
     assert @parser.body_eof?
     assert_equal StringIO, ti.tmp.class
@@ -77,11 +81,12 @@ class TestTeeInput < Test::Unit::TestCase
     assert_equal 'hello', ti.read
     assert_equal '', ti.read
     assert_nil ti.read(4096)
+    assert_equal 5, ti.size
   end
 
   def test_read_with_buffer
     r = init_request('hello')
-    ti = Unicorn::TeeInput.new(@rd, r)
+    ti = TeeInput.new(@rd, r)
     buf = ''
     rv = ti.read(4, buf)
     assert_equal 'hell', rv
@@ -96,7 +101,7 @@ class TestTeeInput < Test::Unit::TestCase
 
   def test_big_body
     r = init_request('.' * Unicorn::Const::MAX_BODY << 'a')
-    ti = Unicorn::TeeInput.new(@rd, r)
+    ti = TeeInput.new(@rd, r)
     assert_equal 0, @parser.content_length
     assert @parser.body_eof?
     assert_kind_of File, ti.tmp
@@ -108,7 +113,7 @@ class TestTeeInput < Test::Unit::TestCase
     a, b = 300, 3
     r = init_request('.' * b, 300)
     assert_equal 300, @parser.content_length
-    ti = Unicorn::TeeInput.new(@rd, r)
+    ti = TeeInput.new(@rd, r)
     pid = fork {
       @wr.write('.' * 197)
       sleep 1 # still a *potential* race here that would make the test moot...
@@ -122,12 +127,11 @@ class TestTeeInput < Test::Unit::TestCase
 
   def test_big_body_multi
     r = init_request('.', Unicorn::Const::MAX_BODY + 1)
-    ti = Unicorn::TeeInput.new(@rd, r)
+    ti = TeeInput.new(@rd, r)
     assert_equal Unicorn::Const::MAX_BODY, @parser.content_length
     assert ! @parser.body_eof?
     assert_kind_of File, ti.tmp
     assert_equal 0, ti.tmp.pos
-    assert_equal 1, ti.tmp.size
     assert_equal Unicorn::Const::MAX_BODY + 1, ti.size
     nr = Unicorn::Const::MAX_BODY / 4
     pid = fork {
@@ -138,8 +142,8 @@ class TestTeeInput < Test::Unit::TestCase
     @wr.close
     assert_equal '.', ti.read(1)
     assert_equal Unicorn::Const::MAX_BODY + 1, ti.size
-    nr.times {
-      assert_equal '....', ti.read(4)
+    nr.times { |x|
+      assert_equal '....', ti.read(4), "nr=#{x}"
       assert_equal Unicorn::Const::MAX_BODY + 1, ti.size
     }
     assert_nil ti.read(1)
@@ -163,7 +167,7 @@ class TestTeeInput < Test::Unit::TestCase
       @wr.write("0\r\n\r\n")
     }
     @wr.close
-    ti = Unicorn::TeeInput.new(@rd, @parser)
+    ti = TeeInput.new(@rd, @parser)
     assert_nil @parser.content_length
     assert_nil ti.len
     assert ! @parser.body_eof?
@@ -201,7 +205,7 @@ class TestTeeInput < Test::Unit::TestCase
       end
       @wr.write("0\r\n\r\n")
     }
-    ti = Unicorn::TeeInput.new(@rd, @parser)
+    ti = TeeInput.new(@rd, @parser)
     assert_nil @parser.content_length
     assert_nil ti.len
     assert ! @parser.body_eof?
@@ -230,7 +234,7 @@ class TestTeeInput < Test::Unit::TestCase
       @wr.write("Hello: World\r\n\r\n")
     }
     @wr.close
-    ti = Unicorn::TeeInput.new(@rd, @parser)
+    ti = TeeInput.new(@rd, @parser)
     assert_nil @parser.content_length
     assert_nil ti.len
     assert ! @parser.body_eof?
