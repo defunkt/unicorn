@@ -25,7 +25,15 @@ class Unicorn::HttpParser
   # A frozen format for this is about 15% faster
   REMOTE_ADDR = 'REMOTE_ADDR'.freeze
   RACK_INPUT = 'rack.input'.freeze
-  TeeInput = Unicorn::TeeInput
+  @@input_class = Unicorn::TeeInput
+
+  def self.input_class
+    @@input_class
+  end
+
+  def self.input_class=(klass)
+    @@input_class = klass
+  end
   # :startdoc:
 
   # Does the majority of the IO processing.  It has been written in
@@ -63,7 +71,8 @@ class Unicorn::HttpParser
         buf << socket.kgio_read!(16384)
       end while parse.nil?
     end
-    e[RACK_INPUT] = 0 == content_length ? NULL_IO : TeeInput.new(socket, self)
+    e[RACK_INPUT] = 0 == content_length ?
+                    NULL_IO : @@input_class.new(socket, self)
     e.merge!(DEFAULTS)
   end
 end

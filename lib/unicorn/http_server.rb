@@ -355,6 +355,15 @@ class Unicorn::HttpServer
     kill_each_worker(:KILL)
   end
 
+  def rewindable_input
+    Unicorn::HttpRequest.input_class.method_defined?(:rewind)
+  end
+
+  def rewindable_input=(bool)
+    Unicorn::HttpRequest.input_class = bool ?
+                                Unicorn::TeeInput : Unicorn::StreamInput
+  end
+
   private
 
   # wait for a signal hander to wake us up and then consume the pipe

@@ -39,6 +39,7 @@ class Unicorn::Configurator
       },
     :pid => nil,
     :preload_app => false,
+    :rewindable_input => true, # for Rack 2.x: (Rack::VERSION[0] <= 1),
   }
   #:startdoc:
 
@@ -373,12 +374,22 @@ class Unicorn::Configurator
   # cause the master process to exit with an error.
 
   def preload_app(bool)
-    case bool
-    when TrueClass, FalseClass
-      set[:preload_app] = bool
-    else
-      raise ArgumentError, "preload_app=#{bool.inspect} not a boolean"
-    end
+    set_bool(:preload_app, bool)
+  end
+
+  # Toggles making <code>env["rack.input"]</code> rewindable.
+  # Disabling rewindability can improve performance by lowering
+  # I/O and memory usage for applications that accept uploads.
+  # Keep in mind that the Rack 1.x spec requires
+  # <code>env["rack.input"]</code> to be rewindable, so this allows
+  # intentionally violating the current Rack 1.x spec.
+  #
+  # +rewindable_input+ defaults to +true+ when used with Rack 1.x for
+  # Rack conformance.  When Rack 2.x is finalized, this will most
+  # likely default to +false+ while still conforming to the newer
+  # (less demanding) spec.
+  def rewindable_input(bool)
+    set_bool(:rewindable_input, bool)
   end
 
   # Allow redirecting $stderr to a given path.  Unlike doing this from
@@ -466,6 +477,15 @@ private
       set[var] = path
     else
       raise ArgumentError
+    end
+  end
+
+  def set_bool(var, bool) #:nodoc:
+    case bool
+    when true, false
+      set[var] = bool
+    else
+      raise ArgumentError, "#{var}=#{bool.inspect} not a boolean"
     end
   end
 

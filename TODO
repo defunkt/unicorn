@@ -7,6 +7,3 @@
 * scalability to >= 1024 worker processes for crazy NUMA systems
 
 * Rack 2.x support (when Rack 2.x exists)
-
-* allow disabling "rack.input" rewindability for performance
-  (but violate the Rack 1.x SPEC)
