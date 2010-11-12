@@ -81,10 +81,7 @@ class Unicorn::TeeInput < Unicorn::StreamInput
   # This takes zero arguments for strict Rack::Lint compatibility,
   # unlike IO#gets.
   def gets
-    @socket or return @tmp.gets
-    rv = super
-    # the $/.nil? case is implemented using read, so don't tee() again
-    $/.nil? ? rv : tee(rv)
+    @socket ? tee(super) : @tmp.gets
   end
 
   # :call-seq:

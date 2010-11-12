@@ -43,15 +43,7 @@ class Unicorn::StreamInput
     length = args.shift
     rv = args.shift || ''
     if length.nil?
-      rv.replace(@rbuf)
-      @rbuf.replace('')
-      @socket or return rv
-      until eof?
-        @socket.kgio_read(@@io_chunk_size, @buf) or eof!
-        filter_body(@rbuf, @buf)
-        rv << @rbuf
-      end
-      @rbuf.replace('')
+      read_all(rv)
     else
       if length <= @rbuf.size
         rv.replace(@rbuf.slice(0, length))
@@ -85,7 +77,7 @@ class Unicorn::StreamInput
   def gets
     sep = $/
     if sep.nil?
-      rv = read
+      read_all(rv = '')
       return rv.empty? ? nil : rv
     end
     re = /\A(.*?#{Regexp.escape(sep)})/
@@ -139,6 +131,18 @@ private
     rv = @parser.filter_body(dst, src)
     @bytes_read += dst.size
     rv
+  end
+
+  def read_all(dst)
+    dst.replace(@rbuf)
+    @socket or return
+    until eof?
+      @socket.kgio_read(@@io_chunk_size, @buf) or eof!
+      filter_body(@rbuf, @buf)
+      dst << @rbuf
+    end
+    ensure
+      @rbuf.replace('')
   end
 
   def eof!
