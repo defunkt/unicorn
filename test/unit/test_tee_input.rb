@@ -245,6 +245,28 @@ class TestTeeInput < Test::Unit::TestCase
     assert status.success?
   end
 
+  def test_chunked_and_size_slow
+    @parser = Unicorn::HttpParser.new
+    @buf = "POST / HTTP/1.1\r\n" \
+           "Host: localhost\r\n" \
+           "Trailer: Hello\r\n" \
+           "Transfer-Encoding: chunked\r\n" \
+           "\r\n"
+    assert_equal @env, @parser.headers(@env, @buf)
+    assert_equal "", @buf
+
+    @wr.write("9\r\nabcde")
+    ti = TeeInput.new(@rd, @parser)
+    assert_nil @parser.content_length
+    assert_equal "abcde", ti.read(9)
+    assert ! @parser.body_eof?
+    @wr.write("fghi\r\n0\r\nHello: World\r\n\r\n")
+    assert_equal 9, ti.size
+    assert_equal "fghi", ti.read(9)
+    assert_equal nil, ti.read(9)
+    assert_equal "World", @env['HTTP_HELLO']
+  end
+
 private
 
   def init_request(body, size = nil)

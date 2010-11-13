@@ -43,8 +43,9 @@ class Unicorn::TeeInput < Unicorn::StreamInput
   # specified +length+ in a loop until it returns +nil+.
   def size
     @len and return @len
+    pos = @bytes_read
     consume!
-    @tmp.rewind
+    @tmp.pos = pos
     @len = @bytes_read
   end
 
