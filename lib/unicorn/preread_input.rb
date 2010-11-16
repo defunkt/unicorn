@@ -20,7 +20,7 @@ class PrereadInput
   def call(env)
     buf = ""
     input = env["rack.input"]
-    if buf = input.read(16384)
+    if input.respond_to?(:rewind)
       true while input.read(16384, buf)
       input.rewind
     end
