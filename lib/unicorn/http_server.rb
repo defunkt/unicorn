@@ -500,7 +500,7 @@ class Unicorn::HttpServer
     msg = case e
     when EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF
       Unicorn::Const::ERROR_500_RESPONSE
-    when HttpParserError # try to tell the client they're bad
+    when Unicorn::HttpParserError # try to tell the client they're bad
       Unicorn::Const::ERROR_400_RESPONSE
     else
       logger.error "Read error: #{e.inspect}"
