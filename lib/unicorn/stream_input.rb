@@ -60,7 +60,7 @@ class Unicorn::StreamInput
           @rbuf.replace('')
         end
       end
-      rv = nil if rv.empty?
+      rv = nil if rv.empty? && length != 0
     end
     rv
   end

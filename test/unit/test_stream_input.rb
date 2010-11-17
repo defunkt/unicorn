@@ -129,6 +129,23 @@ class TestStreamInput < Test::Unit::TestCase
     assert_equal '', buf
   end
 
+  def test_read_zero
+    r = init_request('hello')
+    si = Unicorn::StreamInput.new(@rd, r)
+    assert_equal '', si.read(0)
+    buf = 'asdf'
+    rv = si.read(0, buf)
+    assert_equal rv.object_id, buf.object_id
+    assert_equal '', buf
+    assert_equal 'hello', si.read
+    assert_nil si.read(5)
+    assert_equal '', si.read(0)
+    buf = 'hello'
+    rv = si.read(0, buf)
+    assert_equal rv.object_id, buf.object_id
+    assert_equal '', rv
+  end
+
   def init_request(body, size = nil)
     @parser = Unicorn::HttpParser.new
     body = body.to_s.freeze
