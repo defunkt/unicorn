@@ -80,7 +80,7 @@ class Unicorn::StreamInput
     re = /\A(.*?#{Regexp.escape(sep)})/
 
     begin
-      @rbuf.gsub!(re, '') and return $1
+      @rbuf.sub!(re, '') and return $1
       return @rbuf.empty? ? nil : @rbuf.slice!(0, @rbuf.size) if eof?
       @socket.kgio_read(@@io_chunk_size, @buf) or eof!
       filter_body(once = '', @buf)
