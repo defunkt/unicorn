@@ -21,6 +21,13 @@ class TestStreamInput < Test::Unit::TestCase
     Process.waitall
   end
 
+  def test_read_negative
+    r = init_request('hello')
+    si = Unicorn::StreamInput.new(@rd, r)
+    assert_raises(ArgumentError) { si.read(-1) }
+    assert_equal 'hello', si.read
+  end
+
   def test_read_small
     r = init_request('hello')
     si = Unicorn::StreamInput.new(@rd, r)

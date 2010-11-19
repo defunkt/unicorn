@@ -39,28 +39,25 @@ class Unicorn::StreamInput
   # ios.read(length [, buffer]) will return immediately if there is
   # any data and only block when nothing is available (providing
   # IO#readpartial semantics).
-  def read(*args)
-    length = args.shift
-    rv = args.shift || ''
-    if length.nil?
-      read_all(rv)
-    else
+  def read(length = nil, rv = '')
+    if length
       if length <= @rbuf.size
-        rv.replace(@rbuf.slice(0, length))
-        @rbuf.replace(@rbuf.slice(length, @rbuf.size) || '')
+        length < 0 and raise ArgumentError, "negative length #{length} given"
+        rv.replace(@rbuf.slice!(0, length))
       else
-        rv.replace(@rbuf)
-        length -= @rbuf.size
-        @rbuf.replace('')
-        until length == 0 || eof? || (rv.size > 0 && @chunked)
-          @socket.kgio_read(length, @buf) or eof!
+        to_read = length - @rbuf.size
+        rv.replace(@rbuf.slice!(0, @rbuf.size))
+        until to_read == 0 || eof? || (rv.size > 0 && @chunked)
+          @socket.kgio_read(to_read, @buf) or eof!
           filter_body(@rbuf, @buf)
           rv << @rbuf
-          length -= @rbuf.size
-          @rbuf.replace('')
+          to_read -= @rbuf.size
         end
+        @rbuf.replace('')
       end
       rv = nil if rv.empty? && length != 0
+    else
+      read_all(rv)
     end
     rv
   end
@@ -84,15 +81,7 @@ class Unicorn::StreamInput
 
     begin
       @rbuf.gsub!(re, '') and return $1
-      if eof?
-        if @rbuf.empty?
-          return nil
-        else
-          rv = @rbuf.dup
-          @rbuf.replace('')
-          return rv
-        end
-      end
+      return @rbuf.empty? ? nil : @rbuf.slice!(0, @rbuf.size) if eof?
       @socket.kgio_read(@@io_chunk_size, @buf) or eof!
       filter_body(once = '', @buf)
       @rbuf << once
