@@ -267,6 +267,14 @@ class TestTeeInput < Test::Unit::TestCase
     assert_equal "World", @env['HTTP_HELLO']
   end
 
+  def test_gets_read_mix
+    r = init_request("hello\nasdfasdf")
+    ti = Unicorn::TeeInput.new(@rd, r)
+    assert_equal "hello\n", ti.gets
+    assert_equal "asdfasdf", ti.read(9)
+    assert_nil ti.read(9)
+  end
+
 private
 
   def init_request(body, size = nil)

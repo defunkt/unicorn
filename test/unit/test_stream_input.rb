@@ -153,6 +153,43 @@ class TestStreamInput < Test::Unit::TestCase
     assert_equal '', rv
   end
 
+  def test_gets_read_mix
+    r = init_request("hello\nasdfasdf")
+    si = Unicorn::StreamInput.new(@rd, r)
+    assert_equal "hello\n", si.gets
+    assert_equal "asdfasdf", si.read(9)
+    assert_nil si.read(9)
+  end
+
+  def test_gets_read_mix_chunked
+    r = @parser = Unicorn::HttpParser.new
+    body = "6\r\nhello"
+    @buf = "POST / HTTP/1.1\r\n" \
+           "Host: localhost\r\n" \
+           "Transfer-Encoding: chunked\r\n" \
+           "\r\n#{body}"
+    assert_equal @env, @parser.headers(@env, @buf)
+    assert_equal body, @buf
+    si = Unicorn::StreamInput.new(@rd, r)
+    @wr.syswrite "\n\r\n"
+    assert_equal "hello\n", si.gets
+    @wr.syswrite "8\r\nasdfasdf\r\n"
+    assert_equal"asdfasdf", si.read(9) + si.read(9)
+    @wr.syswrite "0\r\n\r\n"
+    assert_nil si.read(9)
+  end
+
+  def test_gets_read_mix_big
+    r = init_request("hello\n#{'.' * 65536}")
+    si = Unicorn::StreamInput.new(@rd, r)
+    assert_equal "hello\n", si.gets
+    assert_equal '.' * 16384, si.read(16384)
+    assert_equal '.' * 16383, si.read(16383)
+    assert_equal '.' * 16384, si.read(16384)
+    assert_equal '.' * 16385, si.read(16385)
+    assert_nil si.gets
+  end
+
   def init_request(body, size = nil)
     @parser = Unicorn::HttpParser.new
     body = body.to_s.freeze
