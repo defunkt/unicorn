@@ -105,7 +105,7 @@ private
 
   def eof?
     if @parser.body_eof?
-      until @parser.parse
+      while @chunked && ! @parser.parse
         once = @socket.kgio_read(@@io_chunk_size) or eof!
         @buf << once
       end
