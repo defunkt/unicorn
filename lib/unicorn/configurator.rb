@@ -9,6 +9,7 @@ require 'logger'
 # nginx is also available at
 # http://unicorn.bogomips.org/examples/nginx.conf
 class Unicorn::Configurator
+  include Unicorn
   attr_accessor :set, :config_file, :after_reload
 
   # :stopdoc:
