@@ -43,10 +43,10 @@ class Unicorn::TeeInput < Unicorn::StreamInput
   # specified +length+ in a loop until it returns +nil+.
   def size
     @len and return @len
-    pos = @bytes_read
+    pos = @tmp.pos
     consume!
     @tmp.pos = pos
-    @len = @bytes_read
+    @len = @tmp.size
   end
 
   # :call-seq:
@@ -92,7 +92,7 @@ class Unicorn::TeeInput < Unicorn::StreamInput
   # the offset (zero) of the +ios+ pointer.  Subsequent reads will
   # start from the beginning of the previously-buffered input.
   def rewind
-    return 0 if @bytes_read == 0
+    return 0 if 0 == @tmp.size
     consume! if @socket
     @tmp.rewind # Rack does not specify what the return value is here
   end
