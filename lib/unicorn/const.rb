@@ -7,8 +7,8 @@
 # improve things much compared to constants.
 module Unicorn::Const
 
-  # The current version of Unicorn, currently 3.0.1
-  UNICORN_VERSION = "3.0.1"
+  # The current version of Unicorn, currently 3.1.0
+  UNICORN_VERSION = "3.1.0"
 
   # default TCP listen host address (0.0.0.0, all interfaces)
   DEFAULT_HOST = "0.0.0.0"
@@ -23,7 +23,8 @@ module Unicorn::Const
   CHUNK_SIZE = 16 * 1024
 
   # Maximum request body size before it is moved out of memory and into a
-  # temporary file for reading (112 kilobytes).
+  # temporary file for reading (112 kilobytes).  This is the default
+  # value of of client_body_buffer_size.
   MAX_BODY = 1024 * 112
 
   # :stopdoc:

@@ -388,6 +388,8 @@ class Unicorn::Configurator
 
   # The maximum size (in +bytes+) to buffer in memory before
   # resorting to a temporary file.  Default is 112 kilobytes.
+  # This option has no effect if "rewindable_input" is set to
+  # +false+.
   def client_body_buffer_size(bytes)
     set_int(:client_body_buffer_size, bytes, 0)
   end
