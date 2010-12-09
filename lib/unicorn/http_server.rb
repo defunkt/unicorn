@@ -364,6 +364,14 @@ class Unicorn::HttpServer
                                 Unicorn::TeeInput : Unicorn::StreamInput
   end
 
+  def client_body_buffer_size
+    Unicorn::TeeInput.client_body_buffer_size
+  end
+
+  def client_body_buffer_size=(bytes)
+    Unicorn::TeeInput.client_body_buffer_size = bytes
+  end
+
   private
 
   # wait for a signal hander to wake us up and then consume the pipe

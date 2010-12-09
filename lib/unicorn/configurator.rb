@@ -41,6 +41,7 @@ class Unicorn::Configurator
     :pid => nil,
     :preload_app => false,
     :rewindable_input => true, # for Rack 2.x: (Rack::VERSION[0] <= 1),
+    :client_body_buffer_size => Unicorn::Const::MAX_BODY,
   }
   #:startdoc:
 
@@ -181,11 +182,7 @@ class Unicorn::Configurator
   #      server 192.168.0.9:8080 fail_timeout=0;
   #    }
   def timeout(seconds)
-    Numeric === seconds or raise ArgumentError,
-                                "not numeric: timeout=#{seconds.inspect}"
-    seconds >= 3 or raise ArgumentError,
-                                "too low: timeout=#{seconds.inspect}"
-    set[:timeout] = seconds
+    set_int(:timeout, seconds, 3)
   end
 
   # sets the current number of worker_processes to +nr+.  Each worker
@@ -195,11 +192,7 @@ class Unicorn::Configurator
   # the rest of your Unicorn configuration.  See the SIGNALS document
   # for more information.
   def worker_processes(nr)
-    Integer === nr or raise ArgumentError,
-                           "not an integer: worker_processes=#{nr.inspect}"
-    nr >= 0 or raise ArgumentError,
-                           "not non-negative: worker_processes=#{nr.inspect}"
-    set[:worker_processes] = nr
+    set_int(:worker_processes, nr, 1)
   end
 
   # sets listeners to the given +addresses+, replacing or augmenting the
@@ -393,6 +386,12 @@ class Unicorn::Configurator
     set_bool(:rewindable_input, bool)
   end
 
+  # The maximum size (in +bytes+) to buffer in memory before
+  # resorting to a temporary file.  Default is 112 kilobytes.
+  def client_body_buffer_size(bytes)
+    set_int(:client_body_buffer_size, bytes, 0)
+  end
+
   # Allow redirecting $stderr to a given path.  Unlike doing this from
   # the shell, this allows the unicorn process to know the path its
   # writing to and rotate the file if it is used for logging.  The
@@ -471,6 +470,11 @@ class Unicorn::Configurator
   end
 
 private
+  def set_int(var, n, min)
+    Integer === n or raise ArgumentError, "not an integer: #{var}=#{n.inspect}"
+    n >= min or raise ArgumentError, "too low (< #{min}): #{var}=#{n.inspect}"
+    set[var] = n
+  end
 
   def set_path(var, path) #:nodoc:
     case path

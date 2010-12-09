@@ -16,12 +16,24 @@ class Unicorn::TeeInput < Unicorn::StreamInput
   # resorting to a temporary file.  Default is 112 kilobytes.
   @@client_body_buffer_size = Unicorn::Const::MAX_BODY
 
+  # sets the maximum size of request bodies to buffer in memory,
+  # amounts larger than this are buffered to the filesystem
+  def self.client_body_buffer_size=(bytes)
+    @@client_body_buffer_size = bytes
+  end
+
+  # returns the maximum size of request bodies to buffer in memory,
+  # amounts larger than this are buffered to the filesystem
+  def self.client_body_buffer_size
+    @@client_body_buffer_size
+  end
+
   # Initializes a new TeeInput object.  You normally do not have to call
   # this unless you are writing an HTTP server.
   def initialize(socket, request)
     @len = request.content_length
     super
-    @tmp = @len && @len < @@client_body_buffer_size ?
+    @tmp = @len && @len <= @@client_body_buffer_size ?
            StringIO.new("") : Unicorn::TmpIO.new
   end
 
