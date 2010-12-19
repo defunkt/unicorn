@@ -504,9 +504,10 @@ class HttpParserNgTest < Test::Unit::TestCase
   end
 
   def test_pipelined_requests
+    host = "example.com"
     expect = {
-      "HTTP_HOST" => "example.com",
-      "SERVER_NAME" => "example.com",
+      "HTTP_HOST" => host,
+      "SERVER_NAME" => host,
       "REQUEST_PATH" => "/",
       "rack.url_scheme" => "http",
       "SERVER_PROTOCOL" => "HTTP/1.1",
@@ -517,15 +518,19 @@ class HttpParserNgTest < Test::Unit::TestCase
       "REQUEST_METHOD" => "GET",
       "QUERY_STRING" => ""
     }
-    str = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
-    @parser.buf << (str * 2)
+    req1 = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
+    req2 = "GET / HTTP/1.1\r\nHost: www.example.com\r\n\r\n"
+    @parser.buf << (req1 + req2)
     env1 = @parser.parse.dup
     assert_equal expect, env1
-    assert_equal str, @parser.buf
+    assert_equal req2, @parser.buf
     assert ! @parser.env.empty?
     assert @parser.next?
-    assert @parser.env.empty?
+    assert_equal expect, @parser.env
     env2 = @parser.parse.dup
+    host.replace "www.example.com"
+    assert_equal "www.example.com", expect["HTTP_HOST"]
+    assert_equal "www.example.com", expect["SERVER_NAME"]
     assert_equal expect, env2
     assert_equal "", @parser.buf
   end

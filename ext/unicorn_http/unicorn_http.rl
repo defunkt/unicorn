@@ -21,6 +21,7 @@
 #define UH_FL_REQEOF 0x40
 #define UH_FL_KAVERSION 0x80
 #define UH_FL_HASHEADER 0x100
+#define UH_FL_TO_CLEAR 0x200
 
 /* all of these flags need to be set for keepalive to be supported */
 #define UH_FL_KEEPALIVE (UH_FL_KAVERSION | UH_FL_REQEOF | UH_FL_HASHEADER)
@@ -537,6 +538,11 @@ static VALUE HttpParser_parse(VALUE self)
   struct http_parser *hp = data_get(self);
   VALUE data = hp->buf;
 
+  if (hp->flags == UH_FL_TO_CLEAR) {
+    hp->flags = 0;
+    rb_funcall(hp->env, id_clear, 0);
+  }
+
   http_parser_execute(hp, RSTRING_PTR(data), RSTRING_LEN(data));
   VALIDATE_MAX_LENGTH(hp->offset, HEADER);
 
@@ -630,7 +636,7 @@ static VALUE HttpParser_next(VALUE self)
 
   if (HP_FL_ALL(hp, KEEPALIVE)) {
     http_parser_init(hp);
-    rb_funcall(hp->env, id_clear, 0);
+    hp->flags = UH_FL_TO_CLEAR;
     return Qtrue;
   }
   return Qfalse;
