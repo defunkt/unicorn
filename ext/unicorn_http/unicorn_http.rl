@@ -416,60 +416,81 @@ static struct http_parser *data_get(VALUE self)
   return hp;
 }
 
-static void finalize_header(struct http_parser *hp)
+/*
+ * set rack.url_scheme to "https" or "http", no others are allowed by Rack
+ * this resembles the Rack::Request#scheme method as of rack commit
+ * 35bb5ba6746b5d346de9202c004cc926039650c7
+ */
+static void set_url_scheme(VALUE env, VALUE *server_port)
 {
-  VALUE temp = rb_hash_aref(hp->env, g_rack_url_scheme);
-  VALUE server_name = g_localhost;
-  VALUE server_port = g_port_80;
+  VALUE scheme = rb_hash_aref(env, g_rack_url_scheme);
 
-  /*
-   * set rack.url_scheme to "https" or "http", no others are allowed by Rack
-   * this resembles the Rack::Request#scheme method as of rack commit
-   * 35bb5ba6746b5d346de9202c004cc926039650c7
-   */
-  if (NIL_P(temp)) {
-    temp = rb_hash_aref(hp->env, g_http_x_forwarded_ssl);
-    if (!NIL_P(temp) && STR_CSTR_EQ(temp, "on")) {
-      server_port = g_port_443;
-      temp = g_https;
+  if (NIL_P(scheme)) {
+    scheme = rb_hash_aref(env, g_http_x_forwarded_ssl);
+    if (!NIL_P(scheme) && STR_CSTR_EQ(scheme, "on")) {
+      *server_port = g_port_443;
+      scheme = g_https;
     } else {
-      temp = rb_hash_aref(hp->env, g_http_x_forwarded_proto);
-      if (NIL_P(temp)) {
-        temp = g_http;
+      scheme = rb_hash_aref(env, g_http_x_forwarded_proto);
+      if (NIL_P(scheme)) {
+        scheme = g_http;
       } else {
-        long len = RSTRING_LEN(temp);
-        if (len >= 5 && !memcmp(RSTRING_PTR(temp), "https", 5)) {
+        long len = RSTRING_LEN(scheme);
+        if (len >= 5 && !memcmp(RSTRING_PTR(scheme), "https", 5)) {
           if (len != 5)
-            temp = g_https;
-          server_port = g_port_443;
+            scheme = g_https;
+          *server_port = g_port_443;
         } else {
-          temp = g_http;
+          scheme = g_http;
         }
       }
     }
-    rb_hash_aset(hp->env, g_rack_url_scheme, temp);
-  } else if (STR_CSTR_EQ(temp, "https")) {
-    server_port = g_port_443;
+    rb_hash_aset(env, g_rack_url_scheme, scheme);
+  } else if (STR_CSTR_EQ(scheme, "https")) {
+    *server_port = g_port_443;
   } else {
-    assert(server_port == g_port_80 && "server_port not set");
+    assert(*server_port == g_port_80 && "server_port not set");
   }
+}
 
-  /* parse and set the SERVER_NAME and SERVER_PORT variables */
-  temp = rb_hash_aref(hp->env, g_http_host);
-  if (!NIL_P(temp)) {
-    char *colon = memchr(RSTRING_PTR(temp), ':', RSTRING_LEN(temp));
+/*
+ * Parse and set the SERVER_NAME and SERVER_PORT variables
+ * Not supporting X-Forwarded-Host/X-Forwarded-Port in here since
+ * anybody who needs them is using an unsupported configuration and/or
+ * incompetent.  Rack::Request will handle X-Forwarded-{Port,Host} just
+ * fine.
+ */
+static void set_server_vars(VALUE env, VALUE *server_port)
+{
+  VALUE server_name = g_localhost;
+  VALUE host = rb_hash_aref(env, g_http_host);
+
+  if (!NIL_P(host)) {
+    char *host_ptr = RSTRING_PTR(host);
+    long host_len = RSTRING_LEN(host);
+    char *colon = memchr(host_ptr, ':', host_len);
+
     if (colon) {
-      long port_start = colon - RSTRING_PTR(temp) + 1;
+      long port_start = colon - host_ptr + 1;
 
-      server_name = rb_str_substr(temp, 0, colon - RSTRING_PTR(temp));
-      if ((RSTRING_LEN(temp) - port_start) > 0)
-        server_port = rb_str_substr(temp, port_start, RSTRING_LEN(temp));
+      server_name = rb_str_substr(host, 0, colon - host_ptr);
+      if ((host_len - port_start) > 0)
+        *server_port = rb_str_substr(host, port_start, host_len);
     } else {
-      server_name = temp;
+      server_name = host;
     }
   }
-  rb_hash_aset(hp->env, g_server_name, server_name);
-  rb_hash_aset(hp->env, g_server_port, server_port);
+  rb_hash_aset(env, g_server_name, server_name);
+  rb_hash_aset(env, g_server_port, *server_port);
+}
+
+static void finalize_header(struct http_parser *hp)
+{
+  VALUE server_port = g_port_80;
+
+  set_url_scheme(hp->env, &server_port);
+  set_server_vars(hp->env, &server_port);
+
   if (!HP_FL_TEST(hp, HASHEADER))
     rb_hash_aset(hp->env, g_server_protocol, g_http_09);
 
