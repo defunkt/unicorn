@@ -8,7 +8,79 @@ include Unicorn
 class HttpParserNgTest < Test::Unit::TestCase
 
   def setup
+    HttpParser.keepalive_requests = HttpParser::KEEPALIVE_REQUESTS_DEFAULT
     @parser = HttpParser.new
+  end
+
+  def test_keepalive_requests_default_constant
+    assert_kind_of Integer, HttpParser::KEEPALIVE_REQUESTS_DEFAULT
+    assert HttpParser::KEEPALIVE_REQUESTS_DEFAULT >= 0
+  end
+
+  def test_keepalive_requests_setting
+    HttpParser.keepalive_requests = 0
+    assert_equal 0, HttpParser.keepalive_requests
+    HttpParser.keepalive_requests = nil
+    assert HttpParser.keepalive_requests >= 0xffffffff
+    HttpParser.keepalive_requests = 1
+    assert_equal 1, HttpParser.keepalive_requests
+    HttpParser.keepalive_requests = 666
+    assert_equal 666, HttpParser.keepalive_requests
+
+    assert_raises(TypeError) { HttpParser.keepalive_requests = "666" }
+    assert_raises(TypeError) { HttpParser.keepalive_requests = [] }
+  end
+
+  def test_keepalive_requests_with_next?
+    req = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n".freeze
+    expect = {
+      "SERVER_NAME" => "example.com",
+      "HTTP_HOST" => "example.com",
+      "rack.url_scheme" => "http",
+      "REQUEST_PATH" => "/",
+      "SERVER_PROTOCOL" => "HTTP/1.1",
+      "PATH_INFO" => "/",
+      "HTTP_VERSION" => "HTTP/1.1",
+      "REQUEST_URI" => "/",
+      "SERVER_PORT" => "80",
+      "REQUEST_METHOD" => "GET",
+      "QUERY_STRING" => ""
+    }.freeze
+    HttpParser::KEEPALIVE_REQUESTS_DEFAULT.times do |nr|
+      @parser.buf << req
+      assert_equal expect, @parser.parse
+      assert @parser.next?
+    end
+    @parser.buf << req
+    assert_equal expect, @parser.parse
+    assert ! @parser.next?
+  end
+
+  def test_fewer_keepalive_requests_with_next?
+    HttpParser.keepalive_requests = 5
+    @parser = HttpParser.new
+    req = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n".freeze
+    expect = {
+      "SERVER_NAME" => "example.com",
+      "HTTP_HOST" => "example.com",
+      "rack.url_scheme" => "http",
+      "REQUEST_PATH" => "/",
+      "SERVER_PROTOCOL" => "HTTP/1.1",
+      "PATH_INFO" => "/",
+      "HTTP_VERSION" => "HTTP/1.1",
+      "REQUEST_URI" => "/",
+      "SERVER_PORT" => "80",
+      "REQUEST_METHOD" => "GET",
+      "QUERY_STRING" => ""
+    }.freeze
+    5.times do |nr|
+      @parser.buf << req
+      assert_equal expect, @parser.parse
+      assert @parser.next?
+    end
+    @parser.buf << req
+    assert_equal expect, @parser.parse
+    assert ! @parser.next?
   end
 
   def test_default_keepalive_is_off
