@@ -147,6 +147,61 @@ class HttpParserTest < Test::Unit::TestCase
     assert parser.keepalive?
   end
 
+  def test_parse_xfp_https_chained
+    parser = HttpParser.new
+    req = {}
+    tmp = "GET / HTTP/1.0\r\n" \
+          "X-Forwarded-Proto: https,http\r\n\r\n"
+    assert_equal req, parser.headers(req, tmp)
+    assert_equal '443', req['SERVER_PORT'], req.inspect
+    assert_equal 'https', req['rack.url_scheme'], req.inspect
+    assert_equal '', tmp
+  end
+
+  def test_parse_xfp_https_chained_backwards
+    parser = HttpParser.new
+    req = {}
+    tmp = "GET / HTTP/1.0\r\n" \
+          "X-Forwarded-Proto: http,https\r\n\r\n"
+    assert_equal req, parser.headers(req, tmp)
+    assert_equal '80', req['SERVER_PORT'], req.inspect
+    assert_equal 'http', req['rack.url_scheme'], req.inspect
+    assert_equal '', tmp
+  end
+
+  def test_parse_xfp_gopher_is_ignored
+    parser = HttpParser.new
+    req = {}
+    tmp = "GET / HTTP/1.0\r\n" \
+          "X-Forwarded-Proto: gopher\r\n\r\n"
+    assert_equal req, parser.headers(req, tmp)
+    assert_equal '80', req['SERVER_PORT'], req.inspect
+    assert_equal 'http', req['rack.url_scheme'], req.inspect
+    assert_equal '', tmp
+  end
+
+  def test_parse_x_forwarded_ssl_on
+    parser = HttpParser.new
+    req = {}
+    tmp = "GET / HTTP/1.0\r\n" \
+          "X-Forwarded-Ssl: on\r\n\r\n"
+    assert_equal req, parser.headers(req, tmp)
+    assert_equal '443', req['SERVER_PORT'], req.inspect
+    assert_equal 'https', req['rack.url_scheme'], req.inspect
+    assert_equal '', tmp
+  end
+
+  def test_parse_x_forwarded_ssl_off
+    parser = HttpParser.new
+    req = {}
+    tmp = "GET / HTTP/1.0\r\n" \
+          "X-Forwarded-Ssl: off\r\n\r\n"
+    assert_equal req, parser.headers(req, tmp)
+    assert_equal '80', req['SERVER_PORT'], req.inspect
+    assert_equal 'http', req['rack.url_scheme'], req.inspect
+    assert_equal '', tmp
+  end
+
   def test_parse_strange_headers
     parser = HttpParser.new
     req = {}

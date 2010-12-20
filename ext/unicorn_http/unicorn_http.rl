@@ -422,13 +422,31 @@ static void finalize_header(struct http_parser *hp)
   VALUE server_name = g_localhost;
   VALUE server_port = g_port_80;
 
-  /* set rack.url_scheme to "https" or "http", no others are allowed by Rack */
+  /*
+   * set rack.url_scheme to "https" or "http", no others are allowed by Rack
+   * this resembles the Rack::Request#scheme method as of rack commit
+   * 35bb5ba6746b5d346de9202c004cc926039650c7
+   */
   if (NIL_P(temp)) {
-    temp = rb_hash_aref(hp->env, g_http_x_forwarded_proto);
-    if (!NIL_P(temp) && STR_CSTR_EQ(temp, "https"))
+    temp = rb_hash_aref(hp->env, g_http_x_forwarded_ssl);
+    if (!NIL_P(temp) && STR_CSTR_EQ(temp, "on")) {
       server_port = g_port_443;
-    else
-      temp = g_http;
+      temp = g_https;
+    } else {
+      temp = rb_hash_aref(hp->env, g_http_x_forwarded_proto);
+      if (NIL_P(temp)) {
+        temp = g_http;
+      } else {
+        long len = RSTRING_LEN(temp);
+        if (len >= 5 && !memcmp(RSTRING_PTR(temp), "https", 5)) {
+          if (len != 5)
+            temp = g_https;
+          server_port = g_port_443;
+        } else {
+          temp = g_http;
+        }
+      }
+    }
     rb_hash_aset(hp->env, g_rack_url_scheme, temp);
   } else if (STR_CSTR_EQ(temp, "https")) {
     server_port = g_port_443;
