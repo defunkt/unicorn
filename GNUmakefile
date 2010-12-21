@@ -2,6 +2,7 @@
 all:: test
 
 GIT_URL = git://git.bogomips.org/unicorn.git
+CGIT_URL = http://git.bogomips.org/cgit/unicorn.git
 RLFLAGS = -G2
 
 MRI = ruby
@@ -187,7 +188,7 @@ ChangeLog: GIT-VERSION-FILE
 	mv $@+ $@
 
 news_atom := http://unicorn.bogomips.org/NEWS.atom.xml
-cgit_atom := http://git.bogomips.org/cgit/unicorn.git/atom/?h=master
+cgit_atom := $(CGIT_URL)/atom/?h=master
 atom = <link rel="alternate" title="Atom feed" href="$(1)" \
              type="application/atom+xml"/>
 
@@ -195,7 +196,8 @@ atom = <link rel="alternate" title="Atom feed" href="$(1)" \
 doc: .document $(ext)/unicorn_http.c NEWS ChangeLog
 	for i in $(man1_rdoc); do echo > $$i; done
 	find bin lib -type f -name '*.rbc' -exec rm -f '{}' ';'
-	rdoc -t "$(shell sed -ne '1s/^= //p' README)"
+	rdoc --webcvs=$(CGIT_URL)/tree/%s \
+	  -t "$(shell sed -ne '1s/^= //p' README)"
 	install -m644 COPYING doc/COPYING
 	install -m644 $(shell grep '^[A-Z]' .document)  doc/
 	$(MAKE) -C Documentation install-html install-man
