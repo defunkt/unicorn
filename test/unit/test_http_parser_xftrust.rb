@@ -5,11 +5,11 @@ include Unicorn
 
 class HttpParserXFTrustTest < Test::Unit::TestCase
   def setup
-    assert HttpParser.x_forwarded_trust?
+    assert HttpParser.trust_x_forward?
   end
 
   def test_xf_trust_false_xfp
-    HttpParser.x_forwarded_trust = false
+    HttpParser.trust_x_forward = false
     parser = HttpParser.new
     parser.buf << "GET / HTTP/1.1\r\nHost: foo:\r\n" \
                   "X-Forwarded-Proto: https\r\n\r\n"
@@ -21,7 +21,7 @@ class HttpParserXFTrustTest < Test::Unit::TestCase
   end
 
   def test_xf_trust_false_xfs
-    HttpParser.x_forwarded_trust = false
+    HttpParser.trust_x_forward = false
     parser = HttpParser.new
     parser.buf << "GET / HTTP/1.1\r\nHost: foo:\r\n" \
                   "X-Forwarded-SSL: on\r\n\r\n"
@@ -33,6 +33,6 @@ class HttpParserXFTrustTest < Test::Unit::TestCase
   end
 
   def teardown
-    HttpParser.x_forwarded_trust = true
+    HttpParser.trust_x_forward = true
   end
 end

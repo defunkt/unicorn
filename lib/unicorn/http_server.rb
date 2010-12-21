@@ -372,6 +372,14 @@ class Unicorn::HttpServer
     Unicorn::TeeInput.client_body_buffer_size = bytes
   end
 
+  def trust_x_forwarded
+    Unicorn::HttpParser.trust_x_forwarded?
+  end
+
+  def trust_x_forwarded=(bool)
+    Unicorn::HttpParser.trust_x_forwarded = bool
+  end
+
   private
 
   # wait for a signal hander to wake us up and then consume the pipe

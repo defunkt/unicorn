@@ -30,7 +30,7 @@
  * whether or not to trust X-Forwarded-Proto and X-Forwarded-SSL when
  * setting rack.url_scheme
  */
-static VALUE x_forwarded_trust = Qtrue;
+static VALUE trust_x_forward = Qtrue;
 
 static unsigned long keepalive_requests = 100; /* same as nginx */
 
@@ -64,7 +64,7 @@ static VALUE set_ka_req(VALUE self, VALUE val)
 static VALUE set_xftrust(VALUE self, VALUE val)
 {
   if (Qtrue == val || Qfalse == val)
-    x_forwarded_trust = val;
+    trust_x_forward = val;
   else
     rb_raise(rb_eTypeError, "must be true or false");
 
@@ -77,7 +77,7 @@ static VALUE set_xftrust(VALUE self, VALUE val)
  */
 static VALUE xftrust(VALUE self)
 {
-  return x_forwarded_trust;
+  return trust_x_forward;
 }
 
 /* keep this small for Rainbows! since every client has one */
@@ -457,7 +457,7 @@ static void set_url_scheme(VALUE env, VALUE *server_port)
   VALUE scheme = rb_hash_aref(env, g_rack_url_scheme);
 
   if (NIL_P(scheme)) {
-    if (x_forwarded_trust == Qfalse) {
+    if (trust_x_forward == Qfalse) {
       scheme = g_http;
     } else {
       scheme = rb_hash_aref(env, g_http_x_forwarded_ssl);
@@ -888,8 +888,8 @@ void Init_unicorn_http(void)
 
   rb_define_singleton_method(cHttpParser, "keepalive_requests", ka_req, 0);
   rb_define_singleton_method(cHttpParser, "keepalive_requests=", set_ka_req, 1);
-  rb_define_singleton_method(cHttpParser, "x_forwarded_trust=", set_xftrust, 1);
-  rb_define_singleton_method(cHttpParser, "x_forwarded_trust?", xftrust, 0);
+  rb_define_singleton_method(cHttpParser, "trust_x_forwarded=", set_xftrust, 1);
+  rb_define_singleton_method(cHttpParser, "trust_x_forwarded?", xftrust, 0);
 
   init_common_fields();
   SET_GLOBAL(g_http_host, "HOST");
