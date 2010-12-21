@@ -10,9 +10,10 @@ require 'logger'
 # http://unicorn.bogomips.org/examples/nginx.conf
 class Unicorn::Configurator
   include Unicorn
-  attr_accessor :set, :config_file, :after_reload
 
   # :stopdoc:
+  attr_accessor :set, :config_file, :after_reload
+
   # used to stash stuff for deferred processing of cli options in
   # config.ru after "working_directory" is bound.  Do not rely on
   # this being around later on...
@@ -452,7 +453,8 @@ class Unicorn::Configurator
   # Sets whether or not the parser will trust X-Forwarded-Proto and
   # X-Forwarded-SSL headers and set "rack.url_scheme" to "https" accordingly.
   # Rainbows!/Zbatery installations facing untrusted clients directly
-  # should set this to +false+.  This is +true+ by default.
+  # should set this to +false+.  This is +true+ by default as Unicorn
+  # is designed to only sit behind trusted nginx proxies.
   def trust_x_forwarded(bool)
     set_bool(:trust_x_forwarded, bool)
   end
@@ -481,7 +483,7 @@ class Unicorn::Configurator
   end
 
 private
-  def set_int(var, n, min)
+  def set_int(var, n, min) #:nodoc:
     Integer === n or raise ArgumentError, "not an integer: #{var}=#{n.inspect}"
     n >= min or raise ArgumentError, "too low (< #{min}): #{var}=#{n.inspect}"
     set[var] = n
