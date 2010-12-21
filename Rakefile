@@ -20,8 +20,10 @@ def tags
       header = header.split(/\n/)
       tagger = header.grep(/\Atagger /).first
       body ||= "initial"
+      time = Time.at(tagger.split(/ /)[-2].to_i).utc
       {
-        :time => Time.at(tagger.split(/ /)[-2].to_i).utc.strftime(timefmt),
+        :time => time.strftime(timefmt),
+        :ruby_time => time,
         :tagger_name => %r{^tagger ([^<]+)}.match(tagger)[1].strip,
         :tagger_email => %r{<([^>]+)>}.match(tagger)[1].strip,
         :id => `git rev-parse refs/tags/#{tag}`.chomp!,
@@ -40,7 +42,8 @@ desc 'prints news as an Atom feed'
 task :news_atom do
   require 'nokogiri'
   new_tags = tags[0,10]
-  puts(Nokogiri::XML::Builder.new do
+  out = ENV["OUT"] ? File.open(ENV["OUT"], "w") : $stdout
+  out.puts(Nokogiri::XML::Builder.new do
     feed :xmlns => "http://www.w3.org/2005/Atom" do
       id! "http://unicorn.bogomips.org/NEWS.atom.xml"
       title "Unicorn news"
@@ -67,13 +70,19 @@ task :news_atom do
       end
     end
   end.to_xml)
+  if out.respond_to?(:path) && new_tags[0]
+    path = out.path
+    out.close
+    time = new_tags[0][:ruby_time]
+    File.utime(time, time, path)
+  end
 end
 
 desc 'prints RDoc-formatted news'
 task :news_rdoc do
   tags.each do |tag|
     time = tag[:time].tr!('T', ' ').gsub!(/:\d\dZ/, ' UTC')
-    puts "=== #{tag[:tag].sub(/^v/, '')} / #{time}"
+    puts "=== #{tag[:subject]} / #{time}"
     puts ""
 
     body = tag[:body]

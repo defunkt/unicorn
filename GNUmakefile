@@ -214,7 +214,7 @@ doc: .document $(ext)/unicorn_http.c NEWS ChangeLog
 	$(RUBY) -i -p -e \
 	  '$$_.gsub!("</title>",%q{\&$(call atom,$(news_atom))})' \
 	  doc/NEWS.html doc/README.html
-	$(RAKE) -s news_atom > doc/NEWS.atom.xml
+	$(RAKE) -s news_atom OUT=doc/NEWS.atom.xml
 	cd doc && ln README.html tmp && mv tmp index.html
 	$(RM) $(man1_rdoc)
 
@@ -237,7 +237,6 @@ publish_doc:
 # "gzip_static on" can serve the gzipped versions directly.
 doc_gz: docs = $(shell find doc -type f ! -regex '^.*\.\(gif\|jpg\|png\|gz\)$$')
 doc_gz:
-	touch doc/NEWS.atom.xml -d "$$(awk 'NR==1{print $$4,$$5,$$6}' NEWS)"
 	for i in $(docs); do \
 	  gzip --rsyncable -9 < $$i > $$i.gz; touch -r $$i $$i.gz; done
 
