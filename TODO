@@ -1,7 +1,5 @@
 * Documentation improvements
 
-* performance validation (esp. TeeInput)
-
 * improve test suite
 
 * scalability to >= 1024 worker processes for crazy NUMA systems
