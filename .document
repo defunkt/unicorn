@@ -11,6 +11,7 @@ KNOWN_ISSUES
 TODO
 NEWS
 ChangeLog
+LATEST
 lib
 ext/unicorn_http/unicorn_http.c
 unicorn_1
