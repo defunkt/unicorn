@@ -34,7 +34,7 @@ Gem::Specification.new do |s|
   # commented out.  Nevertheless, upgrading to Rails 2.3.4 or later is
   # *strongly* recommended for security reasons.
   s.add_dependency(%q<rack>)
-  s.add_dependency(%q<kgio>, '~> 2.0.0')
+  s.add_dependency(%q<kgio>, '~> 2.1')
 
   s.add_development_dependency('isolate', '~> 3.0.0')
   s.add_development_dependency('wrongdoc', '~> 1.0.1')
