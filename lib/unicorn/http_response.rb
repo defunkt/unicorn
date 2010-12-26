@@ -9,8 +9,6 @@ require 'time'
 #
 # Most header correctness (including Content-Length and Content-Type)
 # is the job of Rack, with the exception of the "Date" and "Status" header.
-#
-# TODO: allow keepalive
 module Unicorn::HttpResponse
 
   # Every standard HTTP code mapped to the appropriate message.
