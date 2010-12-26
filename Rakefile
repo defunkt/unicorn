@@ -51,9 +51,12 @@ task :fm_update do
   uri = URI.parse('http://freshmeat.net/projects/unicorn/releases.json')
   rc = Net::Netrc.locate('unicorn-fm') or abort "~/.netrc not found"
   api_token = rc.password
-  changelog = tags.find { |t| t[:tag] == "v#{version}" }[:body]
+  _, subject, body = `git cat-file tag v#{version}`.split(/\n\n/, 3)
   tmp = Tempfile.new('fm-changelog')
-  tmp.syswrite(changelog)
+  tmp.puts subject
+  tmp.puts
+  tmp.puts body
+  tmp.flush
   system(ENV["VISUAL"], tmp.path) or abort "#{ENV["VISUAL"]} failed: #$?"
   changelog = File.read(tmp.path).strip
 
