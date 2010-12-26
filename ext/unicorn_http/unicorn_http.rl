@@ -637,8 +637,8 @@ static VALUE HttpParser_parse(VALUE self)
   struct http_parser *hp = data_get(self);
   VALUE data = hp->buf;
 
-  if (hp->flags == UH_FL_TO_CLEAR) {
-    hp->flags = 0;
+  if (HP_FL_TEST(hp, TO_CLEAR)) {
+    http_parser_init(hp);
     rb_funcall(hp->env, id_clear, 0);
   }
 
@@ -736,8 +736,7 @@ static VALUE HttpParser_next(VALUE self)
   struct http_parser *hp = data_get(self);
 
   if ((HP_FL_ALL(hp, KEEPALIVE)) && (hp->nr_requests-- != 0)) {
-    http_parser_init(hp);
-    hp->flags = UH_FL_TO_CLEAR;
+    HP_FL_SET(hp, TO_CLEAR);
     return Qtrue;
   }
   return Qfalse;

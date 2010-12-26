@@ -598,6 +598,8 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal req2, @parser.buf
     assert ! @parser.env.empty?
     assert @parser.next?
+    assert @parser.keepalive?
+    assert @parser.headers?
     assert_equal expect, @parser.env
     env2 = @parser.parse.dup
     host.replace "www.example.com"
