@@ -16,6 +16,7 @@ Gem::Specification.new do |s|
   s.name = %q{unicorn}
   s.version = ENV["VERSION"].dup
   s.authors = ["#{name} hackers"]
+  s.summary = summary
   s.date = Time.now.utc.strftime('%Y-%m-%d')
   s.description = readme_description
   s.email = %q{mongrel-unicorn@rubyforge.org}
