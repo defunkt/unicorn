@@ -608,4 +608,26 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal expect, env2
     assert_equal "", @parser.buf
   end
+
+  def test_keepalive_requests_disabled
+    req = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n".freeze
+    expect = {
+      "SERVER_NAME" => "example.com",
+      "HTTP_HOST" => "example.com",
+      "rack.url_scheme" => "http",
+      "REQUEST_PATH" => "/",
+      "SERVER_PROTOCOL" => "HTTP/1.1",
+      "PATH_INFO" => "/",
+      "HTTP_VERSION" => "HTTP/1.1",
+      "REQUEST_URI" => "/",
+      "SERVER_PORT" => "80",
+      "REQUEST_METHOD" => "GET",
+      "QUERY_STRING" => ""
+    }.freeze
+    HttpParser.keepalive_requests = 0
+    @parser = HttpParser.new
+    @parser.buf << req
+    assert_equal expect, @parser.parse
+    assert ! @parser.next?
+  end
 end
