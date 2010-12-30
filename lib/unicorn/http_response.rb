@@ -32,7 +32,7 @@ module Unicorn::HttpResponse
         next if %r{\A(?:Date\z|Status\z|Connection\z)}i =~ key
         if value =~ /\n/
           # avoiding blank, key-only cookies with /\n+/
-          buf << value.split(/\n+/).map! { |v| "#{key}: #{v}\r\n" }.join('')
+          buf << value.split(/\n+/).map! { |v| "#{key}: #{v}\r\n" }.join
         else
           buf << "#{key}: #{value}\r\n"
         end

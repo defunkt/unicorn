@@ -29,18 +29,6 @@ class ResponseTest < Test::Unit::TestCase
     assert_equal 1, out.string.split(/\r\n/).grep(/^Status: 200 OK/).size
   end
 
-  def test_response_OFS_set
-    old_ofs = $,
-    $, = "\f\v"
-    out = StringIO.new
-    http_response_write(out,[200, {"X-k" => "cd","X-y" => "z"}, ["cool"]])
-    assert out.closed?
-    resp = out.string
-    assert ! resp.include?("\f\v"), "output didn't use $, ($OFS)"
-    ensure
-      $, = old_ofs
-  end
-
   def test_response_200
     io = StringIO.new
     http_response_write(io, [200, {}, []])
