@@ -28,7 +28,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal '', req['QUERY_STRING']
 
     assert parser.keepalive?
-    parser.reset
+    parser.clear
     req.clear
 
     http = "G"
@@ -326,7 +326,7 @@ class HttpParserTest < Test::Unit::TestCase
     assert_raises(HttpParserError) { parser.headers(req, bad_http) }
 
     # make sure we can recover
-    parser.reset
+    parser.clear
     req.clear
     assert_equal req, parser.headers(req, "GET / HTTP/1.0\r\n\r\n")
     assert ! parser.keepalive?
@@ -569,7 +569,7 @@ class HttpParserTest < Test::Unit::TestCase
       get = "GET /#{rand_data(10,120)} HTTP/1.1\r\nX-#{rand_data(1024, 1024+(c*1024))}: Test\r\n\r\n"
       assert_raises Unicorn::HttpParserError do
         parser.headers({}, get)
-        parser.reset
+        parser.clear
       end
     end
 
@@ -578,7 +578,7 @@ class HttpParserTest < Test::Unit::TestCase
       get = "GET /#{rand_data(10,120)} HTTP/1.1\r\nX-Test: #{rand_data(1024, 1024+(c*1024), false)}\r\n\r\n"
       assert_raises Unicorn::HttpParserError do
         parser.headers({}, get)
-        parser.reset
+        parser.clear
       end
     end
 
@@ -587,7 +587,7 @@ class HttpParserTest < Test::Unit::TestCase
     get << "X-Test: test\r\n" * (80 * 1024)
     assert_raises Unicorn::HttpParserError do
       parser.headers({}, get)
-      parser.reset
+      parser.clear
     end
 
     # finally just that random garbage gets blocked all the time
@@ -595,7 +595,7 @@ class HttpParserTest < Test::Unit::TestCase
       get = "GET #{rand_data(1024, 1024+(c*1024), false)} #{rand_data(1024, 1024+(c*1024), false)}\r\n\r\n"
       assert_raises Unicorn::HttpParserError do
         parser.headers({}, get)
-        parser.reset
+        parser.clear
       end
     end
 

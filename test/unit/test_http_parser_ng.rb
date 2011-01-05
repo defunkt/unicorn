@@ -91,7 +91,7 @@ class HttpParserNgTest < Test::Unit::TestCase
       @parser.parse
     end
     assert @parser.keepalive?
-    @parser.reset
+    @parser.clear
     assert ! @parser.keepalive?
     assert ! @parser.next?
   end
@@ -491,7 +491,7 @@ class HttpParserNgTest < Test::Unit::TestCase
     }.each do |uri,expect|
       assert_equal req, @parser.headers(req.clear, str % [ uri ])
       req = req.dup
-      @parser.reset
+      @parser.clear
       assert_equal uri, req["REQUEST_URI"], "REQUEST_URI mismatch"
       assert_equal expect[qs], req[qs], "#{qs} mismatch"
       assert_equal expect[pi], req[pi], "#{pi} mismatch"
@@ -516,7 +516,7 @@ class HttpParserNgTest < Test::Unit::TestCase
     }.each do |uri,expect|
       assert_equal req, @parser.headers(req.clear, str % [ uri ])
       req = req.dup
-      @parser.reset
+      @parser.clear
       assert_equal uri, req["REQUEST_URI"], "REQUEST_URI mismatch"
       assert_equal "example.com", req["HTTP_HOST"], "Host: mismatch"
       assert_equal expect[qs], req[qs], "#{qs} mismatch"

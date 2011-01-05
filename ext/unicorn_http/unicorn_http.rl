@@ -572,18 +572,39 @@ static VALUE HttpParser_init(VALUE self)
 
 /**
  * call-seq:
- *    parser.reset => nil
+ *    parser.clear => parser
  *
  * Resets the parser to it's initial state so that you can reuse it
  * rather than making new ones.
  */
-static VALUE HttpParser_reset(VALUE self)
+static VALUE HttpParser_clear(VALUE self)
 {
   struct http_parser *hp = data_get(self);
 
   http_parser_init(hp);
   rb_funcall(hp->env, id_clear, 0);
 
+  return self;
+}
+
+/**
+ * call-seq:
+ *    parser.reset => nil
+ *
+ * Resets the parser to it's initial state so that you can reuse it
+ * rather than making new ones.
+ *
+ * This method is deprecated and to be removed in Unicorn 4.x
+ */
+static VALUE HttpParser_reset(VALUE self)
+{
+  static int warned;
+
+  if (!warned) {
+    rb_warn("Unicorn::HttpParser#reset is deprecated; "
+            "use Unicorn::HttpParser#clear instead");
+  }
+  HttpParser_clear(self);
   return Qnil;
 }
 
@@ -854,8 +875,9 @@ void Init_unicorn_http(void)
 
   init_globals();
   rb_define_alloc_func(cHttpParser, HttpParser_alloc);
-  rb_define_method(cHttpParser, "initialize", HttpParser_init,0);
-  rb_define_method(cHttpParser, "reset", HttpParser_reset,0);
+  rb_define_method(cHttpParser, "initialize", HttpParser_init, 0);
+  rb_define_method(cHttpParser, "clear", HttpParser_clear, 0);
+  rb_define_method(cHttpParser, "reset", HttpParser_reset, 0);
   rb_define_method(cHttpParser, "parse", HttpParser_parse, 0);
   rb_define_method(cHttpParser, "headers", HttpParser_headers, 2);
   rb_define_method(cHttpParser, "trailers", HttpParser_headers, 2);

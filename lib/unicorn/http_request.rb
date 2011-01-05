@@ -50,7 +50,7 @@ class Unicorn::HttpParser
   # This does minimal exception trapping and it is up to the caller
   # to handle any socket errors (e.g. user aborted upload).
   def read(socket)
-    reset
+    clear
     e = env
 
     # From http://www.ietf.org/rfc/rfc3875:
