@@ -20,6 +20,9 @@ module Unicorn
       # FreeBSD, we need to override this to 'dataready' when we
       # eventually get HTTPS support
       :accept_filter => 'httpready',
+
+      # same default value as Mongrel
+      :backlog => 1024,
     }
     #:startdoc:
 
@@ -41,7 +44,6 @@ module Unicorn
     end
 
     def set_tcp_sockopt(sock, opt)
-
       # highly portable, but off by default because we don't do keepalive
       if defined?(TCP_NODELAY) && ! (val = opt[:tcp_nodelay]).nil?
         sock.setsockopt(IPPROTO_TCP, TCP_NODELAY, val ? 1 : 0)
@@ -61,14 +63,12 @@ module Unicorn
       if defined?(TCP_DEFER_ACCEPT)
         # this differs from nginx, since nginx doesn't allow us to
         # configure the the timeout...
-        tmp = DEFAULTS.merge(opt)
-        seconds = tmp[:tcp_defer_accept]
+        seconds = opt[:tcp_defer_accept]
         seconds = DEFAULTS[:tcp_defer_accept] if seconds == true
         seconds = 0 unless seconds # nil/false means disable this
         sock.setsockopt(SOL_TCP, TCP_DEFER_ACCEPT, seconds)
       elsif respond_to?(:accf_arg)
-        tmp = DEFAULTS.merge(opt)
-        if name = tmp[:accept_filter]
+        if name = opt[:accept_filter]
           begin
             sock.setsockopt(SOL_SOCKET, SO_ACCEPTFILTER, accf_arg(name))
           rescue => e
@@ -80,7 +80,7 @@ module Unicorn
     end
 
     def set_server_sockopt(sock, opt)
-      opt ||= {}
+      opt = DEFAULTS.merge(opt || {})
 
       TCPSocket === sock and set_tcp_sockopt(sock, opt)
 
@@ -90,7 +90,7 @@ module Unicorn
         sock.setsockopt(SOL_SOCKET, SO_SNDBUF, opt[:sndbuf]) if opt[:sndbuf]
         log_buffer_sizes(sock, " after: ")
       end
-      sock.listen(opt[:backlog] || 1024)
+      sock.listen(opt[:backlog])
       rescue => e
         logger.error "error setting socket options: #{e.inspect}"
         logger.error e.backtrace.join("\n")
