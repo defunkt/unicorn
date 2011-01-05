@@ -26,7 +26,7 @@ class ResponseTest < Test::Unit::TestCase
 
   def test_response_headers
     out = StringIO.new
-    http_response_write(out,[200, {"X-Whatever" => "stuff"}, ["cool"]])
+    http_response_write(out, 200, {"X-Whatever" => "stuff"}, ["cool"])
     assert out.closed?
 
     assert out.length > 0, "output didn't have data"
@@ -34,7 +34,7 @@ class ResponseTest < Test::Unit::TestCase
 
   def test_response_string_status
     out = StringIO.new
-    http_response_write(out,['200', {}, []])
+    http_response_write(out,'200', {}, [])
     assert out.closed?
     assert out.length > 0, "output didn't have data"
     assert_equal 1, out.string.split(/\r\n/).grep(/^Status: 200 OK/).size
@@ -42,7 +42,7 @@ class ResponseTest < Test::Unit::TestCase
 
   def test_response_200
     io = StringIO.new
-    http_response_write(io, [200, {}, []])
+    http_response_write(io, 200, {}, [])
     assert io.closed?
     assert io.length > 0, "output didn't have data"
   end
@@ -50,7 +50,7 @@ class ResponseTest < Test::Unit::TestCase
   def test_response_with_default_reason
     code = 400
     io = StringIO.new
-    http_response_write(io, [code, {}, []])
+    http_response_write(io, code, {}, [])
     assert io.closed?
     lines = io.string.split(/\r\n/)
     assert_match(/.* Bad Request$/, lines.first,
@@ -59,7 +59,7 @@ class ResponseTest < Test::Unit::TestCase
 
   def test_rack_multivalue_headers
     out = StringIO.new
-    http_response_write(out,[200, {"X-Whatever" => "stuff\nbleh"}, []])
+    http_response_write(out,200, {"X-Whatever" => "stuff\nbleh"}, [])
     assert out.closed?
     assert_match(/^X-Whatever: stuff\r\nX-Whatever: bleh\r\n/, out.string)
   end
@@ -68,7 +68,7 @@ class ResponseTest < Test::Unit::TestCase
   # some broken clients still rely on it
   def test_status_header_added
     out = StringIO.new
-    http_response_write(out,[200, {"X-Whatever" => "stuff"}, []])
+    http_response_write(out,200, {"X-Whatever" => "stuff"}, [])
     assert out.closed?
     assert_equal 1, out.string.split(/\r\n/).grep(/^Status: 200 OK/i).size
   end
@@ -79,7 +79,7 @@ class ResponseTest < Test::Unit::TestCase
   def test_status_header_ignores_app_hash
     out = StringIO.new
     header_hash = {"X-Whatever" => "stuff", 'StaTus' => "666" }
-    http_response_write(out,[200, header_hash, []])
+    http_response_write(out,200, header_hash, [])
     assert out.closed?
     assert_equal 1, out.string.split(/\r\n/).grep(/^Status: 200 OK/i).size
     assert_equal 1, out.string.split(/\r\n/).grep(/^Status:/i).size
@@ -90,7 +90,7 @@ class ResponseTest < Test::Unit::TestCase
     body = StringIO.new(expect_body)
     body.rewind
     out = StringIO.new
-    http_response_write(out,[200, {}, body])
+    http_response_write(out,200, {}, body)
     assert out.closed?
     assert body.closed?
     assert_match(expect_body, out.string.split(/\r\n/).last)
@@ -98,7 +98,7 @@ class ResponseTest < Test::Unit::TestCase
 
   def test_unknown_status_pass_through
     out = StringIO.new
-    http_response_write(out,["666 I AM THE BEAST", {}, [] ])
+    http_response_write(out,"666 I AM THE BEAST", {}, [] )
     assert out.closed?
     headers = out.string.split(/\r\n\r\n/).first.split(/\r\n/)
     assert %r{\AHTTP/\d\.\d 666 I AM THE BEAST\z}.match(headers[0])

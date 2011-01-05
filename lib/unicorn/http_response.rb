@@ -3,7 +3,7 @@
 # You use it by simply doing:
 #
 #   status, headers, body = rack_app.call(env)
-#   http_response_write(socket, [ status, headers, body ])
+#   http_response_write(socket, status, headers, body)
 #
 # Most header correctness (including Content-Length and Content-Type)
 # is the job of Rack, with the exception of the "Date" and "Status" header.
@@ -17,8 +17,7 @@ module Unicorn::HttpResponse
   CRLF = "\r\n"
 
   # writes the rack_response to socket as an HTTP response
-  def http_response_write(socket, rack_response)
-    status, headers, body = rack_response
+  def http_response_write(socket, status, headers, body)
     status = CODES[status.to_i] || status
 
     if headers

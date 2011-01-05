@@ -529,16 +529,15 @@ class Unicorn::HttpServer
   # once a client is accepted, it is processed in its entirety here
   # in 3 easy steps: read request, call app, write app response
   def process_client(client)
-    r = @app.call(env = @request.read(client))
+    status, headers, body = @app.call(env = @request.read(client))
 
-    if 100 == r[0].to_i
+    if 100 == status.to_i
       client.write(Unicorn::Const::EXPECT_100_RESPONSE)
       env.delete(Unicorn::Const::HTTP_EXPECT)
-      r = @app.call(env)
+      status, headers, body = @app.call(env)
     end
-    # r may be frozen or const, so don't modify it
-    @request.headers? or r = [ r[0], nil, r[2] ]
-    http_response_write(client, r)
+    @request.headers? or headers = nil
+    http_response_write(client, status, headers, body)
   rescue => e
     handle_error(client, e)
   end
