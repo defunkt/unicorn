@@ -524,7 +524,6 @@ class Unicorn::HttpServer
     client.kgio_trywrite(msg)
     client.close
     rescue
-      nil
   end
 
   # once a client is accepted, it is processed in its entirety here
