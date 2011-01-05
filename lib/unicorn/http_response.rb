@@ -1,6 +1,4 @@
 # -*- encoding: binary -*-
-require 'time'
-
 # Writes a Rack response to your client using the HTTP/1.1 specification.
 # You use it by simply doing:
 #
@@ -25,7 +23,7 @@ module Unicorn::HttpResponse
 
     if headers
       buf = "HTTP/1.1 #{status}\r\n" \
-            "Date: #{Time.now.httpdate}\r\n" \
+            "Date: #{httpdate}\r\n" \
             "Status: #{status}\r\n" \
             "Connection: close\r\n"
       headers.each do |key, value|

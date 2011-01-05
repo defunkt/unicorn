@@ -12,6 +12,8 @@
 #include "global_variables.h"
 #include "c_util.h"
 
+void init_unicorn_httpdate(void);
+
 #define UH_FL_CHUNKED  0x1
 #define UH_FL_HASBODY  0x2
 #define UH_FL_INBODY   0x4
@@ -897,5 +899,6 @@ void Init_unicorn_http(void)
   SET_GLOBAL(g_content_length, "CONTENT_LENGTH");
   SET_GLOBAL(g_http_connection, "CONNECTION");
   id_clear = rb_intern("clear");
+  init_unicorn_httpdate();
 }
 #undef SET_GLOBAL

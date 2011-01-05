@@ -45,7 +45,7 @@ T_r_log := $(subst .r,$(log_suffix),$(T_r))
 test_prefix = $(CURDIR)/test/$(RUBY_ENGINE)-$(RUBY_VERSION)
 
 ext := ext/unicorn_http
-c_files := $(ext)/unicorn_http.c $(wildcard $(ext)/*.h)
+c_files := $(ext)/unicorn_http.c $(ext)/httpdate.c $(wildcard $(ext)/*.h)
 rl_files := $(wildcard $(ext)/*.rl)
 base_bins := unicorn unicorn_rails
 bins := $(addprefix bin/, $(base_bins))

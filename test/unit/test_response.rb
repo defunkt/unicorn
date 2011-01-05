@@ -7,11 +7,22 @@
 # for more information.
 
 require 'test/test_helper'
+require 'time'
 
 include Unicorn
 
 class ResponseTest < Test::Unit::TestCase
   include Unicorn::HttpResponse
+
+  def test_httpdate
+    before = Time.now.to_i
+    str = httpdate
+    assert_kind_of(String, str)
+    middle = Time.parse(str).to_i
+    after = Time.now.to_i
+    assert before <= middle
+    assert middle <= after
+  end
 
   def test_response_headers
     out = StringIO.new
