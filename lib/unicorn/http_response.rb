@@ -63,7 +63,6 @@ module Unicorn::HttpResponse
     end
 
     body.each { |chunk| socket.write(chunk) }
-    socket.close # flushes and uncorks the socket immediately
     ensure
       body.respond_to?(:close) and body.close
   end

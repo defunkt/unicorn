@@ -15,15 +15,14 @@ class ResponseTest < Test::Unit::TestCase
   def test_response_headers
     out = StringIO.new
     HttpResponse.write(out,[200, {"X-Whatever" => "stuff"}, ["cool"]])
-    assert out.closed?
-
+    assert ! out.closed?
     assert out.length > 0, "output didn't have data"
   end
 
   def test_response_string_status
     out = StringIO.new
     HttpResponse.write(out,['200', {}, []])
-    assert out.closed?
+    assert ! out.closed?
     assert out.length > 0, "output didn't have data"
     assert_equal 1, out.string.split(/\r\n/).grep(/^Status: 200 OK/).size
   end
@@ -33,7 +32,7 @@ class ResponseTest < Test::Unit::TestCase
     $, = "\f\v"
     out = StringIO.new
     HttpResponse.write(out,[200, {"X-k" => "cd","X-y" => "z"}, ["cool"]])
-    assert out.closed?
+    assert ! out.closed?
     resp = out.string
     assert ! resp.include?("\f\v"), "output didn't use $, ($OFS)"
     ensure
@@ -43,7 +42,7 @@ class ResponseTest < Test::Unit::TestCase
   def test_response_200
     io = StringIO.new
     HttpResponse.write(io, [200, {}, []])
-    assert io.closed?
+    assert ! io.closed?
     assert io.length > 0, "output didn't have data"
   end
 
@@ -51,7 +50,7 @@ class ResponseTest < Test::Unit::TestCase
     code = 400
     io = StringIO.new
     HttpResponse.write(io, [code, {}, []])
-    assert io.closed?
+    assert ! io.closed?
     lines = io.string.split(/\r\n/)
     assert_match(/.* Bad Request$/, lines.first,
                  "wrong default reason phrase")
@@ -60,7 +59,7 @@ class ResponseTest < Test::Unit::TestCase
   def test_rack_multivalue_headers
     out = StringIO.new
     HttpResponse.write(out,[200, {"X-Whatever" => "stuff\nbleh"}, []])
-    assert out.closed?
+    assert ! out.closed?
     assert_match(/^X-Whatever: stuff\r\nX-Whatever: bleh\r\n/, out.string)
   end
 
@@ -69,7 +68,7 @@ class ResponseTest < Test::Unit::TestCase
   def test_status_header_added
     out = StringIO.new
     HttpResponse.write(out,[200, {"X-Whatever" => "stuff"}, []])
-    assert out.closed?
+    assert ! out.closed?
     assert_equal 1, out.string.split(/\r\n/).grep(/^Status: 200 OK/i).size
   end
 
@@ -80,7 +79,7 @@ class ResponseTest < Test::Unit::TestCase
     out = StringIO.new
     header_hash = {"X-Whatever" => "stuff", 'StaTus' => "666" }
     HttpResponse.write(out,[200, header_hash, []])
-    assert out.closed?
+    assert ! out.closed?
     assert_equal 1, out.string.split(/\r\n/).grep(/^Status: 200 OK/i).size
     assert_equal 1, out.string.split(/\r\n/).grep(/^Status:/i).size
   end
@@ -91,7 +90,7 @@ class ResponseTest < Test::Unit::TestCase
     body.rewind
     out = StringIO.new
     HttpResponse.write(out,[200, {}, body])
-    assert out.closed?
+    assert ! out.closed?
     assert body.closed?
     assert_match(expect_body, out.string.split(/\r\n/).last)
   end
@@ -99,7 +98,7 @@ class ResponseTest < Test::Unit::TestCase
   def test_unknown_status_pass_through
     out = StringIO.new
     HttpResponse.write(out,["666 I AM THE BEAST", {}, [] ])
-    assert out.closed?
+    assert ! out.closed?
     headers = out.string.split(/\r\n\r\n/).first.split(/\r\n/)
     assert %r{\AHTTP/\d\.\d 666 I AM THE BEAST\z}.match(headers[0])
     status = headers.grep(/\AStatus:/i).first

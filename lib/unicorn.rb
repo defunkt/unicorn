@@ -646,6 +646,7 @@ module Unicorn
         response = app.call(env)
       end
       HttpResponse.write(client, response, HttpRequest::PARSER.headers?)
+      client.close # flushes and uncorks the socket immediately, no keepalive
     rescue => e
       handle_error(client, e)
     end
