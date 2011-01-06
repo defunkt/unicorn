@@ -538,6 +538,7 @@ class Unicorn::HttpServer
     end
     @request.headers? or headers = nil
     http_response_write(client, status, headers, body)
+    client.close # flush and uncork socket immediately, no keepalive
   rescue => e
     handle_error(client, e)
   end
