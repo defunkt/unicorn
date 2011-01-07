@@ -73,18 +73,6 @@ class ResponseTest < Test::Unit::TestCase
     assert_equal 1, out.string.split(/\r\n/).grep(/^Status: 200 OK/i).size
   end
 
-  # we always favor the code returned by the application, since "Status"
-  # in the header hash is not allowed by Rack (but not every app is
-  # fully Rack-compliant).
-  def test_status_header_ignores_app_hash
-    out = StringIO.new
-    header_hash = {"X-Whatever" => "stuff", 'StaTus' => "666" }
-    http_response_write(out,200, header_hash, [])
-    assert ! out.closed?
-    assert_equal 1, out.string.split(/\r\n/).grep(/^Status: 200 OK/i).size
-    assert_equal 1, out.string.split(/\r\n/).grep(/^Status:/i).size
-  end
-
   def test_body_closed
     expect_body = %w(1 2 3 4).join("\n")
     body = StringIO.new(expect_body)

@@ -26,7 +26,7 @@ module Unicorn::HttpResponse
             "Status: #{status}\r\n" \
             "Connection: close\r\n"
       headers.each do |key, value|
-        next if %r{\A(?:Date\z|Status\z|Connection\z)}i =~ key
+        next if %r{\A(?:Date\z|Connection\z)}i =~ key
         if value =~ /\n/
           # avoiding blank, key-only cookies with /\n+/
           buf << value.split(/\n+/).map! { |v| "#{key}: #{v}\r\n" }.join
