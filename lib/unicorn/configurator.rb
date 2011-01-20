@@ -455,7 +455,7 @@ class Unicorn::Configurator
   # Rainbows!/Zbatery installations facing untrusted clients directly
   # should set this to +false+.  This is +true+ by default as Unicorn
   # is designed to only sit behind trusted nginx proxies.
-  def trust_x_forwarded(bool)
+  def trust_x_forwarded(bool) # :nodoc:
     set_bool(:trust_x_forwarded, bool)
   end
 
