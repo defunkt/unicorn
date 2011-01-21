@@ -1,8 +1,9 @@
 # -*- encoding: binary -*-
 autoload :Gem, 'rubygems'
+require 'wrongdoc'
 
-cgit_url = "http://git.bogomips.org/cgit/unicorn.git"
-git_url = ENV['GIT_URL'] || 'git://git.bogomips.org/unicorn.git'
+cgit_url = Wrongdoc.config[:cgit_url]
+git_url = Wrongdoc.config[:git_url]
 
 desc "post to RAA"
 task :raa_update do

@@ -85,13 +85,13 @@ You may also install it via RubyGems on Gemcutter:
 You can get the latest source via git from the following locations
 (these versions may not be stable):
 
-  git://git.bogomips.org/unicorn.git
+  git://bogomips.org/unicorn.git
   git://repo.or.cz/unicorn.git (mirror)
 
 You may browse the code from the web and download the latest snapshot
 tarballs here:
 
-* http://git.bogomips.org/cgit/unicorn.git (cgit)
+* http://bogomips.org/unicorn.git (cgit)
 * http://repo.or.cz/w/unicorn.git (gitweb)
 
 See the HACKING guide on how to contribute and build prerelease gems
