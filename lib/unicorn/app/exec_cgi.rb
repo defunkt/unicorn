@@ -28,6 +28,24 @@ module Unicorn::App
       SERVER_SOFTWARE
     ).map { |x| x.freeze } # frozen strings are faster for Hash assignments
 
+    class Body < Unicorn::TmpIO
+      def body_offset=(n)
+        sysseek(@body_offset = n)
+      end
+
+      def each(&block)
+        sysseek @body_offset
+        # don't use a preallocated buffer for sysread since we can't
+        # guarantee an actual socket is consuming the yielded string
+        # (or if somebody is pushing to an array for eventual concatenation
+        begin
+          yield sysread(CHUNK_SIZE)
+        rescue EOFError
+          break
+        end while true
+      end
+    end
+
     # Intializes the app, example of usage in a config.ru
     #   map "/cgit" do
     #     run Unicorn::App::ExecCgi.new("/path/to/cgit.cgi")
@@ -43,7 +61,7 @@ module Unicorn::App
 
     # Calls the app
     def call(env)
-      out, err = Unicorn::TmpIO.new, Unicorn::TmpIO.new
+      out, err = Body.new, Unicorn::TmpIO.new
       inp = force_file_input(env)
       pid = fork { run_child(inp, out, err, env) }
       inp.close
@@ -87,23 +105,7 @@ module Unicorn::App
         offset = 4
       end
       offset += head.length
-
-      # Allows +out+ to be used as a Rack body.
-      out.instance_eval { class << self; self; end }.instance_eval {
-        define_method(:each) { |&blk|
-          sysseek(offset)
-
-          # don't use a preallocated buffer for sysread since we can't
-          # guarantee an actual socket is consuming the yielded string
-          # (or if somebody is pushing to an array for eventual concatenation
-          begin
-            blk.call(sysread(CHUNK_SIZE))
-          rescue EOFError
-            break
-          end while true
-        }
-      }
-
+      out.body_offset = offset
       size -= offset
       prev = nil
       headers = Rack::Utils::HeaderHash.new
