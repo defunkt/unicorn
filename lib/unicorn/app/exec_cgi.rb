@@ -113,8 +113,9 @@ module Unicorn::App
         when /^[ \t]/ then headers[prev] << "\n#{line}" if prev
         end
       end
+      status = headers.delete("Status") || 200
       headers['Content-Length'] = size.to_s
-      [ 200, headers, out ]
+      [ status, headers, out ]
     end
 
     # ensures rack.input is a file handle that we can redirect stdin to
