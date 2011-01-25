@@ -10,14 +10,6 @@ acceptable solution.  Those issues are documented here.
   uploads are buffered to disk.  Disabling sendfile is required to
   work around this bug which should be fixed in newer versions of FreeBSD.
 
-* Under Ruby 1.9.1, methods like Array#shuffle and Array#sample will
-  segfault if called after forking.  This is fixed in trunk (r26936) and
-  should be backported to the next 1.9.1 stable release (after p378).
-  Until then, it is advisable to call "Kernel.rand" in your after_fork
-  hook to reinitialize the random number generator.
-
-  See http://redmine.ruby-lang.org/issues/show/2962 for more details
-
 * When using "preload_app true", with apps using background threads
   need to restart them in the after_fork hook because threads are never
   shared with child processes.  Additionally, any synchronization
@@ -25,6 +17,15 @@ acceptable solution.  Those issues are documented here.
   reinitialized in case they are held during fork time to avoid
   deadlocks.  The core Ruby Logger class needlessly uses a MonitorMutex
   which can be disabled with a {monkey patch}[link:examples/logger_mp_safe.rb]
+
+== Known Issues (Old)
+
+* Under Ruby 1.9.1, methods like Array#shuffle and Array#sample will
+  segfault if called after forking.  Upgrade to Ruby 1.9.2 or call
+  "Kernel.rand" in your after_fork hook to reinitialize the random
+  number generator.
+
+  See http://redmine.ruby-lang.org/issues/show/2962 for more details
 
 * Rails 2.3.2 bundles its own version of Rack.  This may cause subtle
   bugs when simultaneously loaded with the system-wide Rack Rubygem
