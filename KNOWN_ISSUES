@@ -3,6 +3,11 @@
 Occasionally odd {issues}[link:ISSUES.html] arise without a transparent or
 acceptable solution.  Those issues are documented here.
 
+* Under some versions of Ruby 1.8, it is necessary to call +srand+ in an
+  after_fork hook to get correct random number generation.
+
+  See http://redmine.ruby-lang.org/issues/show/4338
+
 * For notes on sandboxing tools such as Bundler or Isolate,
   see the {Sandbox}[link:Sandbox.html] page.
 
