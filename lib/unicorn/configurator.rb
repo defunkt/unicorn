@@ -247,13 +247,13 @@ class Unicorn::Configurator
   #
   # Default: operating system defaults (usually Nagle's algorithm enabled)
   #
-  # +:tcp_nopush+: enables TCP_CORK in Linux or TCP_NOPUSH in FreeBSD
+  # +:tcp_nopush+: enables/disables TCP_CORK in Linux or TCP_NOPUSH in FreeBSD
   #
-  # This will prevent partial TCP frames from being sent out.
-  # Enabling +tcp_nopush+ is generally not needed or recommended as
-  # controlling +tcp_nodelay+ already provides sufficient latency
-  # reduction whereas Unicorn does not know when the best times are
-  # for flushing corked sockets.
+  # This is enabled by default as of Unicorn 3.4.  This prevents partial
+  # TCP frames from being sent out and reduces wakeups in nginx if it is
+  # on a different machine.  Since Unicorn is only designed for applications
+  # that send the response body quickly without keepalive, sockets will
+  # always be flushed on close to prevent delays.
   #
   # This has no effect on UNIX sockets.
   #

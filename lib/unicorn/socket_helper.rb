@@ -23,6 +23,10 @@ module Unicorn
 
       # same default value as Mongrel
       :backlog => 1024,
+
+      # since we don't do keepalive, we'll always flush-on-close and
+      # this saves packets for everyone.
+      :tcp_nopush => true,
     }
     #:startdoc:
 
