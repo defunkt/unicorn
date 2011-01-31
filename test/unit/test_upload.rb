@@ -145,8 +145,14 @@ class UploadTest < Test::Unit::TestCase
   end
 
   def test_put_excessive_overwrite_closed
+    tmp = Tempfile.new('overwrite_check')
+    tmp.sync = true
     start_server(lambda { |env|
-      while env['rack.input'].read(65536); end
+      nr = 0
+      while buf = env['rack.input'].read(65536)
+        nr += buf.size
+      end
+      tmp.write(nr.to_s)
       [ 200, @hdr, [] ]
     })
     sock = TCPSocket.new(@addr, @port)
@@ -157,7 +163,9 @@ class UploadTest < Test::Unit::TestCase
     assert_raise(Errno::ECONNRESET, Errno::EPIPE) do
       ::Unicorn::Const::CHUNK_SIZE.times { sock.syswrite(buf) }
     end
-    assert_equal "HTTP/1.1 200 OK\r\n", sock.gets
+    assert_nothing_raised { sock.gets }
+    tmp.rewind
+    assert_equal length, tmp.read.to_i
   end
 
   # Despite reading numerous articles and inspecting the 1.9.1-p0 C
