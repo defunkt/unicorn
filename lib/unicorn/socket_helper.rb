@@ -49,17 +49,19 @@ module Unicorn
 
     def set_tcp_sockopt(sock, opt)
       # highly portable, but off by default because we don't do keepalive
-      if defined?(TCP_NODELAY) && ! (val = opt[:tcp_nodelay]).nil?
+      if defined?(TCP_NODELAY)
+        val = opt[:tcp_nodelay]
+        val = DEFAULTS[:tcp_nodelay] if nil == val
         sock.setsockopt(IPPROTO_TCP, TCP_NODELAY, val ? 1 : 0)
       end
 
-      unless (val = opt[:tcp_nopush]).nil?
-        val = val ? 1 : 0
-        if defined?(TCP_CORK) # Linux
-          sock.setsockopt(IPPROTO_TCP, TCP_CORK, val)
-        elsif defined?(TCP_NOPUSH) # TCP_NOPUSH is untested (FreeBSD)
-          sock.setsockopt(IPPROTO_TCP, TCP_NOPUSH, val)
-        end
+      val = opt[:tcp_nopush]
+      val = DEFAULTS[:tcp_nopush] if nil == val
+      val = val ? 1 : 0
+      if defined?(TCP_CORK) # Linux
+        sock.setsockopt(IPPROTO_TCP, TCP_CORK, val)
+      elsif defined?(TCP_NOPUSH) # TCP_NOPUSH is untested (FreeBSD)
+        sock.setsockopt(IPPROTO_TCP, TCP_NOPUSH, val)
       end
 
       # No good reason to ever have deferred accepts off
@@ -68,17 +70,17 @@ module Unicorn
         # this differs from nginx, since nginx doesn't allow us to
         # configure the the timeout...
         seconds = opt[:tcp_defer_accept]
-        seconds = DEFAULTS[:tcp_defer_accept] if seconds == true
+        seconds = DEFAULTS[:tcp_defer_accept] if [true,nil].include?(seconds)
         seconds = 0 unless seconds # nil/false means disable this
         sock.setsockopt(SOL_TCP, TCP_DEFER_ACCEPT, seconds)
       elsif respond_to?(:accf_arg)
-        if name = opt[:accept_filter]
-          begin
-            sock.setsockopt(SOL_SOCKET, SO_ACCEPTFILTER, accf_arg(name))
-          rescue => e
-            logger.error("#{sock_name(sock)} " \
-                         "failed to set accept_filter=#{name} (#{e.inspect})")
-          end
+        name = opt[:accept_filter]
+        name = DEFAULTS[:accept_filter] if nil == name
+        begin
+          sock.setsockopt(SOL_SOCKET, SO_ACCEPTFILTER, accf_arg(name))
+        rescue => e
+          logger.error("#{sock_name(sock)} " \
+                       "failed to set accept_filter=#{name} (#{e.inspect})")
         end
       end
     end
