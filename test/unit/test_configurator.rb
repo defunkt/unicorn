@@ -33,6 +33,14 @@ class TestConfigurator < Test::Unit::TestCase
     assert_equal "0.0.0.0:2007", meth.call('2007')
     assert_equal "0.0.0.0:2007", meth.call(2007)
 
+    %w([::1]:2007 [::]:2007).each do |addr|
+      assert_equal addr, meth.call(addr.dup)
+    end
+
+    # for Rainbows! users only
+    assert_equal "[::]:80", meth.call("[::]")
+    assert_equal "127.6.6.6:80", meth.call("127.6.6.6")
+
     # the next two aren't portable, consider them unsupported for now
     # assert_match %r{\A\d+\.\d+\.\d+\.\d+:2007\z}, meth.call('1:2007')
     # assert_match %r{\A\d+\.\d+\.\d+\.\d+:2007\z}, meth.call('2:2007')

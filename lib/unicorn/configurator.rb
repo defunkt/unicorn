@@ -473,10 +473,10 @@ class Unicorn::Configurator
       File.expand_path(address)
     when %r{\A(?:\*:)?(\d+)\z}
       "0.0.0.0:#$1"
-    when %r{\A(.*):(\d+)\z}
-      # canonicalize the name
-      packed = Socket.pack_sockaddr_in($2.to_i, $1)
-      Socket.unpack_sockaddr_in(packed).reverse!.join(':')
+    when %r{\A\[([a-fA-F0-9:]+)\]\z}, %r/\A((?:\d+\.){3}\d+)\z/
+      canonicalize_tcp($1, 80)
+    when %r{\A\[([a-fA-F0-9:]+)\]:(\d+)\z}, %r{\A(.*):(\d+)\z}
+      canonicalize_tcp($1, $2.to_i)
     else
       address
     end
@@ -487,6 +487,12 @@ private
     Integer === n or raise ArgumentError, "not an integer: #{var}=#{n.inspect}"
     n >= min or raise ArgumentError, "too low (< #{min}): #{var}=#{n.inspect}"
     set[var] = n
+  end
+
+  def canonicalize_tcp(addr, port)
+    packed = Socket.pack_sockaddr_in(port, addr)
+    port, addr = Socket.unpack_sockaddr_in(packed)
+    /:/ =~ addr ? "[#{addr}]:#{port}" : "#{addr}:#{port}"
   end
 
   def set_path(var, path) #:nodoc:

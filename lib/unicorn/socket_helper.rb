@@ -136,13 +136,21 @@ module Unicorn
         ensure
           File.umask(old_umask)
         end
-      elsif address =~ /^(\d+\.\d+\.\d+\.\d+):(\d+)$/
+      elsif /\A(\d+\.\d+\.\d+\.\d+):(\d+)\z/ =~ address ||
+            /\A\[([a-fA-F0-9:]+)\]:(\d+)\z/ =~ address
+        p [ $1, $2 ]
         Kgio::TCPServer.new($1, $2.to_i)
       else
         raise ArgumentError, "Don't know how to bind: #{address}"
       end
       set_server_sockopt(sock, opt)
       sock
+    end
+
+    # returns rfc2732-style (e.g. "[::1]:666") addresses for IPv6
+    def tcp_name(sock)
+      port, addr = Socket.unpack_sockaddr_in(sock.getsockname)
+      /:/ =~ addr ? "[#{addr}]:#{port}" : "#{addr}:#{port}"
     end
 
     # Returns the configuration name of a socket as a string.  sock may
@@ -154,10 +162,10 @@ module Unicorn
       when UNIXServer
         Socket.unpack_sockaddr_un(sock.getsockname)
       when TCPServer
-        Socket.unpack_sockaddr_in(sock.getsockname).reverse!.join(':')
+        tcp_name(sock)
       when Socket
         begin
-          Socket.unpack_sockaddr_in(sock.getsockname).reverse!.join(':')
+          tcp_name(sock)
         rescue ArgumentError
           Socket.unpack_sockaddr_un(sock.getsockname)
         end
