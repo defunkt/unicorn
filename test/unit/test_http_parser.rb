@@ -483,6 +483,158 @@ class HttpParserTest < Test::Unit::TestCase
     assert parser.keepalive? # TODO: read HTTP/1.2 when it's final
   end
 
+  def test_absolute_ipv6_uri
+    parser = HttpParser.new
+    req = {}
+    url = "http://[::1]/foo?q=bar"
+    http = "GET #{url} HTTP/1.1\r\n" \
+           "Host: bad.example.com\r\n\r\n"
+    assert_equal req, parser.headers(req, http)
+    assert_equal 'http', req['rack.url_scheme']
+    assert_equal '/foo?q=bar', req['REQUEST_URI']
+    assert_equal '/foo', req['REQUEST_PATH']
+    assert_equal 'q=bar', req['QUERY_STRING']
+
+    uri = URI.parse(url)
+    assert_equal "[::1]", uri.host,
+                 "URI.parse changed upstream for #{url}? host=#{uri.host}"
+    assert_equal "[::1]", req['HTTP_HOST']
+    assert_equal "[::1]", req['SERVER_NAME']
+    assert_equal '80', req['SERVER_PORT']
+    assert_equal "", http
+    assert parser.keepalive? # TODO: read HTTP/1.2 when it's final
+  end
+
+  def test_absolute_ipv6_uri_alpha
+    parser = HttpParser.new
+    req = {}
+    url = "http://[::a]/"
+    http = "GET #{url} HTTP/1.1\r\n" \
+           "Host: bad.example.com\r\n\r\n"
+    assert_equal req, parser.headers(req, http)
+    assert_equal 'http', req['rack.url_scheme']
+
+    uri = URI.parse(url)
+    assert_equal "[::a]", uri.host,
+                 "URI.parse changed upstream for #{url}? host=#{uri.host}"
+    assert_equal "[::a]", req['HTTP_HOST']
+    assert_equal "[::a]", req['SERVER_NAME']
+    assert_equal '80', req['SERVER_PORT']
+  end
+
+  def test_absolute_ipv6_uri_alpha_2
+    parser = HttpParser.new
+    req = {}
+    url = "http://[::B]/"
+    http = "GET #{url} HTTP/1.1\r\n" \
+           "Host: bad.example.com\r\n\r\n"
+    assert_equal req, parser.headers(req, http)
+    assert_equal 'http', req['rack.url_scheme']
+
+    uri = URI.parse(url)
+    assert_equal "[::B]", uri.host,
+                 "URI.parse changed upstream for #{url}? host=#{uri.host}"
+    assert_equal "[::B]", req['HTTP_HOST']
+    assert_equal "[::B]", req['SERVER_NAME']
+    assert_equal '80', req['SERVER_PORT']
+  end
+
+  def test_absolute_ipv6_uri_with_empty_port
+    parser = HttpParser.new
+    req = {}
+    url = "https://[::1]:/foo?q=bar"
+    http = "GET #{url} HTTP/1.1\r\n" \
+           "Host: bad.example.com\r\n\r\n"
+    assert_equal req, parser.headers(req, http)
+    assert_equal 'https', req['rack.url_scheme']
+    assert_equal '/foo?q=bar', req['REQUEST_URI']
+    assert_equal '/foo', req['REQUEST_PATH']
+    assert_equal 'q=bar', req['QUERY_STRING']
+
+    uri = URI.parse(url)
+    assert_equal "[::1]", uri.host,
+                 "URI.parse changed upstream for #{url}? host=#{uri.host}"
+    assert_equal "[::1]:", req['HTTP_HOST']
+    assert_equal "[::1]", req['SERVER_NAME']
+    assert_equal '443', req['SERVER_PORT']
+    assert_equal "", http
+    assert parser.keepalive? # TODO: read HTTP/1.2 when it's final
+  end
+
+  def test_absolute_ipv6_uri_with_port
+    parser = HttpParser.new
+    req = {}
+    url = "https://[::1]:666/foo?q=bar"
+    http = "GET #{url} HTTP/1.1\r\n" \
+           "Host: bad.example.com\r\n\r\n"
+    assert_equal req, parser.headers(req, http)
+    assert_equal 'https', req['rack.url_scheme']
+    assert_equal '/foo?q=bar', req['REQUEST_URI']
+    assert_equal '/foo', req['REQUEST_PATH']
+    assert_equal 'q=bar', req['QUERY_STRING']
+
+    uri = URI.parse(url)
+    assert_equal "[::1]", uri.host,
+                 "URI.parse changed upstream for #{url}? host=#{uri.host}"
+    assert_equal "[::1]:666", req['HTTP_HOST']
+    assert_equal "[::1]", req['SERVER_NAME']
+    assert_equal '666', req['SERVER_PORT']
+    assert_equal "", http
+    assert parser.keepalive? # TODO: read HTTP/1.2 when it's final
+  end
+
+  def test_ipv6_host_header
+    parser = HttpParser.new
+    req = {}
+    http = "GET / HTTP/1.1\r\n" \
+           "Host: [::1]\r\n\r\n"
+    assert_equal req, parser.headers(req, http)
+    assert_equal "[::1]", req['HTTP_HOST']
+    assert_equal "[::1]", req['SERVER_NAME']
+    assert_equal '80', req['SERVER_PORT']
+    assert_equal "", http
+    assert parser.keepalive? # TODO: read HTTP/1.2 when it's final
+  end
+
+  def test_ipv6_host_header_with_port
+    parser = HttpParser.new
+    req = {}
+    http = "GET / HTTP/1.1\r\n" \
+           "Host: [::1]:666\r\n\r\n"
+    assert_equal req, parser.headers(req, http)
+    assert_equal "[::1]", req['SERVER_NAME']
+    assert_equal '666', req['SERVER_PORT']
+    assert_equal "[::1]:666", req['HTTP_HOST']
+    assert_equal "", http
+    assert parser.keepalive? # TODO: read HTTP/1.2 when it's final
+  end
+
+  def test_ipv6_host_header_with_empty_port
+    parser = HttpParser.new
+    req = {}
+    http = "GET / HTTP/1.1\r\n" \
+           "Host: [::1]:\r\n\r\n"
+    assert_equal req, parser.headers(req, http)
+    assert_equal "[::1]", req['SERVER_NAME']
+    assert_equal '80', req['SERVER_PORT']
+    assert_equal "[::1]:", req['HTTP_HOST']
+    assert_equal "", http
+    assert parser.keepalive? # TODO: read HTTP/1.2 when it's final
+  end
+
+  # XXX Highly unlikely..., just make sure we don't segfault or assert on it
+  def test_broken_ipv6_host_header
+    parser = HttpParser.new
+    req = {}
+    http = "GET / HTTP/1.1\r\n" \
+           "Host: [::1:\r\n\r\n"
+    assert_equal req, parser.headers(req, http)
+    assert_equal "[", req['SERVER_NAME']
+    assert_equal ':1:', req['SERVER_PORT']
+    assert_equal "[::1:", req['HTTP_HOST']
+    assert_equal "", http
+  end
+
   def test_put_body_oneshot
     parser = HttpParser.new
     req = {}

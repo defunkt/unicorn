@@ -505,7 +505,18 @@ static void set_server_vars(VALUE env, VALUE *server_port)
   if (!NIL_P(host)) {
     char *host_ptr = RSTRING_PTR(host);
     long host_len = RSTRING_LEN(host);
-    char *colon = memchr(host_ptr, ':', host_len);
+    char *colon;
+
+    if (*host_ptr == '[') { /* ipv6 address format */
+      char *rbracket = memchr(host_ptr + 1, ']', host_len - 1);
+
+      if (rbracket)
+        colon = (rbracket[1] == ':') ? rbracket + 1 : NULL;
+      else
+        colon = memchr(host_ptr + 1, ':', host_len - 1);
+    } else {
+      colon = memchr(host_ptr, ':', host_len);
+    }
 
     if (colon) {
       long port_start = colon - host_ptr + 1;
