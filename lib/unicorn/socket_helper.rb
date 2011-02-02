@@ -152,6 +152,7 @@ module Unicorn
       port, addr = Socket.unpack_sockaddr_in(sock.getsockname)
       /:/ =~ addr ? "[#{addr}]:#{port}" : "#{addr}:#{port}"
     end
+    module_function :tcp_name
 
     # Returns the configuration name of a socket as a string.  sock may
     # be a string value, in which case it is returned as-is
