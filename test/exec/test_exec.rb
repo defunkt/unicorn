@@ -797,7 +797,6 @@ EOF
 
   def test_daemonize_redirect_fail
     pid_file = "#{@tmpdir}/test.pid"
-    log = Tempfile.new('unicorn_test_log')
     ucfg = Tempfile.new('unicorn_test_config')
     ucfg.syswrite("pid #{pid_file}\"\n")
     err = Tempfile.new('stderr')
@@ -1040,7 +1039,7 @@ EOF
       lock_path = "#{Dir::tmpdir}/unicorn_test." \
                   "#{Unicorn::Const::DEFAULT_LISTEN}.lock"
       begin
-        lock = File.open(lock_path, File::WRONLY|File::CREAT|File::EXCL, 0600)
+        File.open(lock_path, File::WRONLY|File::CREAT|File::EXCL, 0600)
         yield
       rescue Errno::EEXIST
         lock_path = nil

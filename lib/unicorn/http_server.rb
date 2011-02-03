@@ -424,7 +424,6 @@ class Unicorn::HttpServer
 
     if pid
       old_pid = "#{pid}.oldbin"
-      prev_pid = pid.dup
       begin
         self.pid = old_pid  # clear the path for a new pid file
       rescue ArgumentError

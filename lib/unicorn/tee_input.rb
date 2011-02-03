@@ -118,7 +118,7 @@ private
   end
 
   def tee(buffer)
-    if buffer && (n = buffer.size) > 0
+    if buffer && buffer.size > 0
       @tmp.write(buffer)
       @tmp.seek(0, IO::SEEK_END) # workaround FreeBSD/OSX + MRI 1.8.x bug
     end

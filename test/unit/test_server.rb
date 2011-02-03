@@ -10,7 +10,7 @@ require 'test/test_helper'
 
 include Unicorn
 
-class TestHandler 
+class TestHandler
 
   def call(env)
     while env['rack.input'].read(4096)
@@ -19,7 +19,7 @@ class TestHandler
     rescue Unicorn::ClientShutdown, Unicorn::HttpParserError => e
       $stderr.syswrite("#{e.class}: #{e.message} #{e.backtrace.empty?}\n")
       raise e
-   end
+  end
 end
 
 
@@ -169,7 +169,6 @@ class WebServerTest < Test::Unit::TestCase
 
   def test_client_malformed_body
     sock = nil
-    buf = nil
     bs = 15653984
     assert_nothing_raised do
       sock = TCPSocket.new('127.0.0.1', @port)
@@ -271,7 +270,7 @@ class WebServerTest < Test::Unit::TestCase
   def test_file_streamed_request
     body = "a" * (Unicorn::Const::MAX_BODY * 2)
     long = "PUT /test HTTP/1.1\r\nContent-length: #{body.length}\r\n\r\n" + body
-    do_test(long, Unicorn::Const::CHUNK_SIZE * 2 -400)
+    do_test(long, Unicorn::Const::CHUNK_SIZE * 2 - 400)
   end
 
   def test_file_streamed_request_bad_body
@@ -279,13 +278,11 @@ class WebServerTest < Test::Unit::TestCase
     long = "GET /test HTTP/1.1\r\nContent-ength: #{body.length}\r\n\r\n" + body
     assert_raises(EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,
                   Errno::EBADF) {
-      do_test(long, Unicorn::Const::CHUNK_SIZE * 2 -400)
+      do_test(long, Unicorn::Const::CHUNK_SIZE * 2 - 400)
     }
   end
 
   def test_listener_names
     assert_equal [ "127.0.0.1:#@port" ], Unicorn.listener_names
   end
-
 end
-

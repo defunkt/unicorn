@@ -85,9 +85,9 @@ module Unicorn::App
       ENV['GATEWAY_INTERFACE'] = 'CGI/1.1'
       env.keys.grep(/^HTTP_/) { |key| ENV[key] = env[key] }
 
-      a = IO.new(0).reopen(inp)
-      b = IO.new(1).reopen(out)
-      c = IO.new(2).reopen(err)
+      $stdin.reopen(inp)
+      $stdout.reopen(out)
+      $stderr.reopen(err)
       exec(*args)
     end
 

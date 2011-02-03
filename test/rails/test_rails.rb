@@ -265,7 +265,7 @@ logger Logger.new('#{COMMON_TMP.path}')
 
     if @pid
       Process.kill(:QUIT, @pid)
-      pid2, status = Process.waitpid2(@pid)
+      _, status = Process.waitpid2(@pid)
       assert status.success?
     end
 
