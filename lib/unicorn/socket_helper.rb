@@ -138,7 +138,6 @@ module Unicorn
         end
       elsif /\A(\d+\.\d+\.\d+\.\d+):(\d+)\z/ =~ address ||
             /\A\[([a-fA-F0-9:]+)\]:(\d+)\z/ =~ address
-        p [ $1, $2 ]
         Kgio::TCPServer.new($1, $2.to_i)
       else
         raise ArgumentError, "Don't know how to bind: #{address}"
