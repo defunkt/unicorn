@@ -12,7 +12,6 @@ class TestTeeInput < Test::Unit::TestCase
 
   def setup
     @rs = $/
-    @env = {}
     @rd, @wr = Kgio::UNIXSocket.pair
     @rd.sync = @wr.sync = true
     @start_pid = $$
@@ -154,12 +153,12 @@ class TestTeeInput < Test::Unit::TestCase
 
   def test_chunked
     @parser = Unicorn::HttpParser.new
-    @buf = "POST / HTTP/1.1\r\n" \
-           "Host: localhost\r\n" \
-           "Transfer-Encoding: chunked\r\n" \
-           "\r\n"
-    assert_equal @env, @parser.headers(@env, @buf)
-    assert_equal "", @buf
+    @parser.buf << "POST / HTTP/1.1\r\n" \
+                   "Host: localhost\r\n" \
+                   "Transfer-Encoding: chunked\r\n" \
+                   "\r\n"
+    assert @parser.parse
+    assert_equal "", @parser.buf
 
     pid = fork {
       @rd.close
@@ -189,12 +188,13 @@ class TestTeeInput < Test::Unit::TestCase
 
   def test_chunked_ping_pong
     @parser = Unicorn::HttpParser.new
-    @buf = "POST / HTTP/1.1\r\n" \
+    buf = @parser.buf
+    buf << "POST / HTTP/1.1\r\n" \
            "Host: localhost\r\n" \
            "Transfer-Encoding: chunked\r\n" \
            "\r\n"
-    assert_equal @env, @parser.headers(@env, @buf)
-    assert_equal "", @buf
+    assert @parser.parse
+    assert_equal "", buf
     chunks = %w(aa bbb cccc dddd eeee)
     rd, wr = IO.pipe
 
@@ -219,13 +219,14 @@ class TestTeeInput < Test::Unit::TestCase
 
   def test_chunked_with_trailer
     @parser = Unicorn::HttpParser.new
-    @buf = "POST / HTTP/1.1\r\n" \
+    buf = @parser.buf
+    buf << "POST / HTTP/1.1\r\n" \
            "Host: localhost\r\n" \
            "Trailer: Hello\r\n" \
            "Transfer-Encoding: chunked\r\n" \
            "\r\n"
-    assert_equal @env, @parser.headers(@env, @buf)
-    assert_equal "", @buf
+    assert @parser.parse
+    assert_equal "", buf
 
     pid = fork {
       @rd.close
@@ -239,7 +240,7 @@ class TestTeeInput < Test::Unit::TestCase
     assert_nil ti.len
     assert ! @parser.body_eof?
     assert_equal 25, ti.size
-    assert_equal "World", @env['HTTP_HELLO']
+    assert_equal "World", @parser.env['HTTP_HELLO']
     status = nil
     assert_nothing_raised { pid, status = Process.waitpid2(pid) }
     assert status.success?
@@ -247,13 +248,14 @@ class TestTeeInput < Test::Unit::TestCase
 
   def test_chunked_and_size_slow
     @parser = Unicorn::HttpParser.new
-    @buf = "POST / HTTP/1.1\r\n" \
+    buf = @parser.buf
+    buf << "POST / HTTP/1.1\r\n" \
            "Host: localhost\r\n" \
            "Trailer: Hello\r\n" \
            "Transfer-Encoding: chunked\r\n" \
            "\r\n"
-    assert_equal @env, @parser.headers(@env, @buf)
-    assert_equal "", @buf
+    assert @parser.parse
+    assert_equal "", buf
 
     @wr.write("9\r\nabcde")
     ti = TeeInput.new(@rd, @parser)
@@ -264,7 +266,7 @@ class TestTeeInput < Test::Unit::TestCase
     assert_equal 9, ti.size
     assert_equal "fghi", ti.read(9)
     assert_equal nil, ti.read(9)
-    assert_equal "World", @env['HTTP_HELLO']
+    assert_equal "World", @parser.env['HTTP_HELLO']
   end
 
   def test_gets_read_mix
@@ -280,12 +282,14 @@ private
   def init_request(body, size = nil)
     @parser = Unicorn::HttpParser.new
     body = body.to_s.freeze
-    @buf = "POST / HTTP/1.1\r\n" \
+    buf = @parser.buf
+    buf << "POST / HTTP/1.1\r\n" \
            "Host: localhost\r\n" \
            "Content-Length: #{size || body.size}\r\n" \
            "\r\n#{body}"
-    assert_equal @env, @parser.headers(@env, @buf)
-    assert_equal body, @buf
+    assert @parser.parse
+    assert_equal body, buf
+    @buf = buf
     @parser
   end
 

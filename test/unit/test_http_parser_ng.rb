@@ -97,16 +97,17 @@ class HttpParserNgTest < Test::Unit::TestCase
   end
 
   def test_identity_byte_headers
-    req = {}
+    req = @parser.env
     str = "PUT / HTTP/1.1\r\n"
     str << "Content-Length: 123\r\n"
     str << "\r"
-    hdr = ""
+    hdr = @parser.buf
     str.each_byte { |byte|
-      assert_nil @parser.headers(req, hdr << byte.chr)
+      hdr << byte.chr
+      assert_nil @parser.parse
     }
     hdr << "\n"
-    assert_equal req.object_id, @parser.headers(req, hdr).object_id
+    assert_equal req.object_id, @parser.parse.object_id
     assert_equal '123', req['CONTENT_LENGTH']
     assert_equal 0, hdr.size
     assert ! @parser.keepalive?
@@ -121,13 +122,14 @@ class HttpParserNgTest < Test::Unit::TestCase
   end
 
   def test_identity_step_headers
-    req = {}
-    str = "PUT / HTTP/1.1\r\n"
-    assert ! @parser.headers(req, str)
+    req = @parser.env
+    str = @parser.buf
+    str << "PUT / HTTP/1.1\r\n"
+    assert ! @parser.parse
     str << "Content-Length: 123\r\n"
-    assert ! @parser.headers(req, str)
+    assert ! @parser.parse
     str << "\r\n"
-    assert_equal req.object_id, @parser.headers(req, str).object_id
+    assert_equal req.object_id, @parser.parse.object_id
     assert_equal '123', req['CONTENT_LENGTH']
     assert_equal 0, str.size
     assert ! @parser.keepalive?
@@ -141,9 +143,10 @@ class HttpParserNgTest < Test::Unit::TestCase
   end
 
   def test_identity_oneshot_header
-    req = {}
-    str = "PUT / HTTP/1.1\r\nContent-Length: 123\r\n\r\n"
-    assert_equal req.object_id, @parser.headers(req, str).object_id
+    req = @parser.env
+    str = @parser.buf
+    str << "PUT / HTTP/1.1\r\nContent-Length: 123\r\n\r\n"
+    assert_equal req.object_id, @parser.parse.object_id
     assert_equal '123', req['CONTENT_LENGTH']
     assert_equal 0, str.size
     assert ! @parser.keepalive?
@@ -157,11 +160,12 @@ class HttpParserNgTest < Test::Unit::TestCase
 
   def test_identity_oneshot_header_with_body
     body = ('a' * 123).freeze
-    req = {}
-    str = "PUT / HTTP/1.1\r\n" \
-          "Content-Length: #{body.length}\r\n" \
-          "\r\n#{body}"
-    assert_equal req.object_id, @parser.headers(req, str).object_id
+    req = @parser.env
+    str = @parser.buf
+    str << "PUT / HTTP/1.1\r\n" \
+           "Content-Length: #{body.length}\r\n" \
+           "\r\n#{body}"
+    assert_equal req.object_id, @parser.parse.object_id
     assert_equal '123', req['CONTENT_LENGTH']
     assert_equal 123, str.size
     assert_equal body, str
@@ -174,8 +178,9 @@ class HttpParserNgTest < Test::Unit::TestCase
   end
 
   def test_identity_oneshot_header_with_body_partial
-    str = "PUT / HTTP/1.1\r\nContent-Length: 123\r\n\r\na"
-    assert_equal Hash, @parser.headers({}, str).class
+    str = @parser.buf
+    str << "PUT / HTTP/1.1\r\nContent-Length: 123\r\n\r\na"
+    assert_equal Hash, @parser.parse.class
     assert_equal 1, str.size
     assert_equal 'a', str
     tmp = ''
@@ -192,8 +197,9 @@ class HttpParserNgTest < Test::Unit::TestCase
   end
 
   def test_identity_oneshot_header_with_body_slop
-    str = "PUT / HTTP/1.1\r\nContent-Length: 1\r\n\r\naG"
-    assert_equal Hash, @parser.headers({}, str).class
+    str = @parser.buf
+    str << "PUT / HTTP/1.1\r\nContent-Length: 1\r\n\r\naG"
+    assert_equal Hash, @parser.parse.class
     assert_equal 2, str.size
     assert_equal 'aG', str
     tmp = ''
@@ -206,92 +212,96 @@ class HttpParserNgTest < Test::Unit::TestCase
   end
 
   def test_chunked
-    str = "PUT / HTTP/1.1\r\ntransfer-Encoding: chunked\r\n\r\n"
-    req = {}
-    assert_equal req, @parser.headers(req, str)
+    str = @parser.buf
+    req = @parser.env
+    str << "PUT / HTTP/1.1\r\ntransfer-Encoding: chunked\r\n\r\n"
+    assert_equal req, @parser.parse, "msg=#{str}"
     assert_equal 0, str.size
     tmp = ""
-    assert_nil @parser.filter_body(tmp, "6")
+    assert_nil @parser.filter_body(tmp, str << "6")
     assert_equal 0, tmp.size
-    assert_nil @parser.filter_body(tmp, rv = "\r\n")
-    assert_equal 0, rv.size
+    assert_nil @parser.filter_body(tmp, str << "\r\n")
+    assert_equal 0, str.size
     assert_equal 0, tmp.size
     tmp = ""
-    assert_nil @parser.filter_body(tmp, "..")
+    assert_nil @parser.filter_body(tmp, str << "..")
     assert_equal "..", tmp
-    assert_nil @parser.filter_body(tmp, "abcd\r\n0\r\n")
+    assert_nil @parser.filter_body(tmp, str << "abcd\r\n0\r\n")
     assert_equal "abcd", tmp
-    rv = "PUT"
-    assert_equal rv.object_id, @parser.filter_body(tmp, rv).object_id
-    assert_equal "PUT", rv
+    assert_equal str.object_id, @parser.filter_body(tmp, str << "PUT").object_id
+    assert_equal "PUT", str
     assert ! @parser.keepalive?
-    rv << "TY: FOO\r\n\r\n"
-    assert_equal req, @parser.trailers(req, rv)
+    str << "TY: FOO\r\n\r\n"
+    assert_equal req, @parser.parse
     assert_equal "FOO", req["HTTP_PUTTY"]
     assert @parser.keepalive?
   end
 
   def test_two_chunks
-    str = "PUT / HTTP/1.1\r\ntransfer-Encoding: chunked\r\n\r\n"
-    req = {}
-    assert_equal req, @parser.headers(req, str)
+    str = @parser.buf
+    str << "PUT / HTTP/1.1\r\ntransfer-Encoding: chunked\r\n\r\n"
+    req = @parser.env
+    assert_equal req, @parser.parse
     assert_equal 0, str.size
     tmp = ""
-    assert_nil @parser.filter_body(tmp, "6")
+    assert_nil @parser.filter_body(tmp, str << "6")
     assert_equal 0, tmp.size
-    assert_nil @parser.filter_body(tmp, rv = "\r\n")
-    assert_equal "", rv
+    assert_nil @parser.filter_body(tmp, str << "\r\n")
+    assert_equal "", str
     assert_equal 0, tmp.size
     tmp = ""
-    assert_nil @parser.filter_body(tmp, "..")
+    assert_nil @parser.filter_body(tmp, str << "..")
     assert_equal 2, tmp.size
     assert_equal "..", tmp
-    assert_nil @parser.filter_body(tmp, "abcd\r\n1")
+    assert_nil @parser.filter_body(tmp, str << "abcd\r\n1")
     assert_equal "abcd", tmp
-    assert_nil @parser.filter_body(tmp, "\r")
+    assert_nil @parser.filter_body(tmp, str << "\r")
     assert_equal "", tmp
-    assert_nil @parser.filter_body(tmp, "\n")
+    assert_nil @parser.filter_body(tmp, str << "\n")
     assert_equal "", tmp
-    assert_nil @parser.filter_body(tmp, "z")
+    assert_nil @parser.filter_body(tmp, str << "z")
     assert_equal "z", tmp
-    assert_nil @parser.filter_body(tmp, "\r\n")
-    assert_nil @parser.filter_body(tmp, "0")
-    assert_nil @parser.filter_body(tmp, "\r")
-    rv = @parser.filter_body(tmp, buf = "\nGET")
+    assert_nil @parser.filter_body(tmp, str << "\r\n")
+    assert_nil @parser.filter_body(tmp, str << "0")
+    assert_nil @parser.filter_body(tmp, str << "\r")
+    rv = @parser.filter_body(tmp, str << "\nGET")
     assert_equal "GET", rv
-    assert_equal buf.object_id, rv.object_id
+    assert_equal str.object_id, rv.object_id
     assert ! @parser.keepalive?
   end
 
   def test_big_chunk
-    str = "PUT / HTTP/1.1\r\ntransfer-Encoding: chunked\r\n\r\n" \
-          "4000\r\nabcd"
-    req = {}
-    assert_equal req, @parser.headers(req, str)
+    str = @parser.buf
+    str << "PUT / HTTP/1.1\r\ntransfer-Encoding: chunked\r\n\r\n" \
+           "4000\r\nabcd"
+    req = @parser.env
+    assert_equal req, @parser.parse
     tmp = ''
     assert_nil @parser.filter_body(tmp, str)
     assert_equal '', str
-    str = ' ' * 16300
+    str << ' ' * 16300
     assert_nil @parser.filter_body(tmp, str)
     assert_equal '', str
-    str = ' ' * 80
+    str << ' ' * 80
     assert_nil @parser.filter_body(tmp, str)
     assert_equal '', str
     assert ! @parser.body_eof?
-    assert_equal "", @parser.filter_body(tmp, "\r\n0\r\n")
+    assert_equal "", @parser.filter_body(tmp, str << "\r\n0\r\n")
     assert_equal "", tmp
     assert @parser.body_eof?
-    assert_equal req, @parser.trailers(req, moo = "\r\n")
-    assert_equal "", moo
+    str << "\r\n"
+    assert_equal req, @parser.parse
+    assert_equal "", str
     assert @parser.body_eof?
     assert @parser.keepalive?
   end
 
   def test_two_chunks_oneshot
-    str = "PUT / HTTP/1.1\r\ntransfer-Encoding: chunked\r\n\r\n" \
-          "1\r\na\r\n2\r\n..\r\n0\r\n"
-    req = {}
-    assert_equal req, @parser.headers(req, str)
+    str = @parser.buf
+    req = @parser.env
+    str << "PUT / HTTP/1.1\r\ntransfer-Encoding: chunked\r\n\r\n" \
+           "1\r\na\r\n2\r\n..\r\n0\r\n"
+    assert_equal req, @parser.parse
     tmp = ''
     assert_nil @parser.filter_body(tmp, str)
     assert_equal 'a..', tmp
@@ -302,31 +312,33 @@ class HttpParserNgTest < Test::Unit::TestCase
 
   def test_chunks_bytewise
     chunked = "10\r\nabcdefghijklmnop\r\n11\r\n0123456789abcdefg\r\n0\r\n"
-    str = "PUT / HTTP/1.1\r\ntransfer-Encoding: chunked\r\n\r\n#{chunked}"
-    req = {}
-    assert_equal req, @parser.headers(req, str)
-    assert_equal chunked, str
+    str = "PUT / HTTP/1.1\r\ntransfer-Encoding: chunked\r\n\r\n"
+    buf = @parser.buf
+    buf << str
+    req = @parser.env
+    assert_equal req, @parser.parse
+    assert_equal "", buf
     tmp = ''
-    buf = ''
     body = ''
-    str = str[0..-2]
+    str = chunked[0..-2]
     str.each_byte { |byte|
       assert_nil @parser.filter_body(tmp, buf << byte.chr)
       body << tmp
     }
     assert_equal 'abcdefghijklmnop0123456789abcdefg', body
-    rv = @parser.filter_body(tmp, buf << "\n")
+    rv = @parser.filter_body(tmp, buf<< "\n")
     assert_equal rv.object_id, buf.object_id
     assert ! @parser.keepalive?
   end
 
   def test_trailers
-    str = "PUT / HTTP/1.1\r\n" \
-          "Trailer: Content-MD5\r\n" \
-          "transfer-Encoding: chunked\r\n\r\n" \
-          "1\r\na\r\n2\r\n..\r\n0\r\n"
-    req = {}
-    assert_equal req, @parser.headers(req, str)
+    req = @parser.env
+    str = @parser.buf
+    str << "PUT / HTTP/1.1\r\n" \
+           "Trailer: Content-MD5\r\n" \
+           "transfer-Encoding: chunked\r\n\r\n" \
+           "1\r\na\r\n2\r\n..\r\n0\r\n"
+    assert_equal req, @parser.parse
     assert_equal 'Content-MD5', req['HTTP_TRAILER']
     assert_nil req['HTTP_CONTENT_MD5']
     tmp = ''
@@ -341,19 +353,22 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_nil @parser.trailers(req, str)
     assert_equal md5_b64, req['HTTP_CONTENT_MD5']
     assert_equal "CONTENT_MD5: #{md5_b64}\r\n", str
-    assert_nil @parser.trailers(req, str << "\r")
-    assert_equal req, @parser.trailers(req, str << "\nGET / ")
+    str << "\r"
+    assert_nil @parser.parse
+    str << "\nGET / "
+    assert_equal req, @parser.parse
     assert_equal "GET / ", str
     assert @parser.keepalive?
   end
 
   def test_trailers_slowly
-    str = "PUT / HTTP/1.1\r\n" \
-          "Trailer: Content-MD5\r\n" \
-          "transfer-Encoding: chunked\r\n\r\n" \
-          "1\r\na\r\n2\r\n..\r\n0\r\n"
-    req = {}
-    assert_equal req, @parser.headers(req, str)
+    str = @parser.buf
+    str << "PUT / HTTP/1.1\r\n" \
+           "Trailer: Content-MD5\r\n" \
+           "transfer-Encoding: chunked\r\n\r\n" \
+           "1\r\na\r\n2\r\n..\r\n0\r\n"
+    req = @parser.env
+    assert_equal req, @parser.parse
     assert_equal 'Content-MD5', req['HTTP_TRAILER']
     assert_nil req['HTTP_CONTENT_MD5']
     tmp = ''
@@ -371,16 +386,19 @@ class HttpParserNgTest < Test::Unit::TestCase
     }
     assert_equal md5_b64, req['HTTP_CONTENT_MD5']
     assert_equal "CONTENT_MD5: #{md5_b64}\r\n", str
-    assert_nil @parser.trailers(req, str << "\r")
-    assert_equal req, @parser.trailers(req, str << "\n")
+    str << "\r"
+    assert_nil @parser.parse
+    str << "\n"
+    assert_equal req, @parser.parse
   end
 
   def test_max_chunk
-    str = "PUT / HTTP/1.1\r\n" \
-          "transfer-Encoding: chunked\r\n\r\n" \
-          "#{HttpParser::CHUNK_MAX.to_s(16)}\r\na\r\n2\r\n..\r\n0\r\n"
-    req = {}
-    assert_equal req, @parser.headers(req, str)
+    str = @parser.buf
+    str << "PUT / HTTP/1.1\r\n" \
+           "transfer-Encoding: chunked\r\n\r\n" \
+           "#{HttpParser::CHUNK_MAX.to_s(16)}\r\na\r\n2\r\n..\r\n0\r\n"
+    req = @parser.env
+    assert_equal req, @parser.parse
     assert_nil @parser.content_length
     assert_nothing_raised { @parser.filter_body('', str) }
     assert ! @parser.keepalive?
@@ -388,59 +406,61 @@ class HttpParserNgTest < Test::Unit::TestCase
 
   def test_max_body
     n = HttpParser::LENGTH_MAX
-    str = "PUT / HTTP/1.1\r\nContent-Length: #{n}\r\n\r\n"
-    req = {}
-    assert_nothing_raised { @parser.headers(req, str) }
+    @parser.buf << "PUT / HTTP/1.1\r\nContent-Length: #{n}\r\n\r\n"
+    req = @parser.env
+    assert_nothing_raised { @parser.headers(req, @parser.buf) }
     assert_equal n, req['CONTENT_LENGTH'].to_i
     assert ! @parser.keepalive?
   end
 
   def test_overflow_chunk
     n = HttpParser::CHUNK_MAX + 1
-    str = "PUT / HTTP/1.1\r\n" \
-          "transfer-Encoding: chunked\r\n\r\n" \
-          "#{n.to_s(16)}\r\na\r\n2\r\n..\r\n0\r\n"
-    req = {}
-    assert_equal req, @parser.headers(req, str)
+    str = @parser.buf
+    req = @parser.env
+    str << "PUT / HTTP/1.1\r\n" \
+           "transfer-Encoding: chunked\r\n\r\n" \
+           "#{n.to_s(16)}\r\na\r\n2\r\n..\r\n0\r\n"
+    assert_equal req, @parser.parse
     assert_nil @parser.content_length
     assert_raise(HttpParserError) { @parser.filter_body('', str) }
   end
 
   def test_overflow_content_length
     n = HttpParser::LENGTH_MAX + 1
-    str = "PUT / HTTP/1.1\r\nContent-Length: #{n}\r\n\r\n"
-    assert_raise(HttpParserError) { @parser.headers({}, str) }
+    @parser.buf << "PUT / HTTP/1.1\r\nContent-Length: #{n}\r\n\r\n"
+    assert_raise(HttpParserError) { @parser.parse }
   end
 
   def test_bad_chunk
-    str = "PUT / HTTP/1.1\r\n" \
-          "transfer-Encoding: chunked\r\n\r\n" \
-          "#zzz\r\na\r\n2\r\n..\r\n0\r\n"
-    req = {}
-    assert_equal req, @parser.headers(req, str)
+    @parser.buf << "PUT / HTTP/1.1\r\n" \
+                   "transfer-Encoding: chunked\r\n\r\n" \
+                   "#zzz\r\na\r\n2\r\n..\r\n0\r\n"
+    req = @parser.env
+    assert_equal req, @parser.parse
     assert_nil @parser.content_length
-    assert_raise(HttpParserError) { @parser.filter_body('', str) }
+    assert_raise(HttpParserError) { @parser.filter_body("", @parser.buf) }
   end
 
   def test_bad_content_length
-    str = "PUT / HTTP/1.1\r\nContent-Length: 7ff\r\n\r\n"
-    assert_raise(HttpParserError) { @parser.headers({}, str) }
+    @parser.buf << "PUT / HTTP/1.1\r\nContent-Length: 7ff\r\n\r\n"
+    assert_raise(HttpParserError) { @parser.parse }
   end
 
   def test_bad_trailers
-    str = "PUT / HTTP/1.1\r\n" \
-          "Trailer: Transfer-Encoding\r\n" \
-          "transfer-Encoding: chunked\r\n\r\n" \
-          "1\r\na\r\n2\r\n..\r\n0\r\n"
-    req = {}
-    assert_equal req, @parser.headers(req, str)
+    str = @parser.buf
+    req = @parser.env
+    str << "PUT / HTTP/1.1\r\n" \
+           "Trailer: Transfer-Encoding\r\n" \
+           "transfer-Encoding: chunked\r\n\r\n" \
+           "1\r\na\r\n2\r\n..\r\n0\r\n"
+    assert_equal req, @parser.parse
     assert_equal 'Transfer-Encoding', req['HTTP_TRAILER']
     tmp = ''
     assert_nil @parser.filter_body(tmp, str)
     assert_equal 'a..', tmp
     assert_equal '', str
     str << "Transfer-Encoding: identity\r\n\r\n"
-    assert_raise(HttpParserError) { @parser.trailers(req, str) }
+    assert_raise(HttpParserError) { @parser.parse }
   end
 
   def test_repeat_headers
@@ -449,18 +469,19 @@ class HttpParserNgTest < Test::Unit::TestCase
           "Trailer: Content-SHA1\r\n" \
           "transfer-Encoding: chunked\r\n\r\n" \
           "1\r\na\r\n2\r\n..\r\n0\r\n"
-    req = {}
-    assert_equal req, @parser.headers(req, str)
+    req = @parser.env
+    @parser.buf << str
+    assert_equal req, @parser.parse
     assert_equal 'Content-MD5,Content-SHA1', req['HTTP_TRAILER']
     assert ! @parser.keepalive?
   end
 
   def test_parse_simple_request
     parser = HttpParser.new
-    req = {}
-    http = "GET /read-rfc1945-if-you-dont-believe-me\r\n"
-    assert_equal req, parser.headers(req, http)
-    assert_equal '', http
+    req = parser.env
+    parser.buf << "GET /read-rfc1945-if-you-dont-believe-me\r\n"
+    assert_equal req, parser.parse
+    assert_equal '', parser.buf
     expect = {
       "SERVER_NAME"=>"localhost",
       "rack.url_scheme"=>"http",
@@ -556,10 +577,10 @@ class HttpParserNgTest < Test::Unit::TestCase
   end
 
   def test_ignore_version_header
-    http = "GET / HTTP/1.1\r\nVersion: hello\r\n\r\n"
-    req = {}
-    assert_equal req, @parser.headers(req, http)
-    assert_equal '', http
+    @parser.buf << "GET / HTTP/1.1\r\nVersion: hello\r\n\r\n"
+    req = @parser.env
+    assert_equal req, @parser.parse
+    assert_equal '', @parser.buf
     expect = {
       "SERVER_NAME" => "localhost",
       "rack.url_scheme" => "http",
