@@ -110,7 +110,7 @@ def unused_port(addr = '127.0.0.1')
     # when running tests in parallel with gmake.  Create a lock file while
     # we have the port here to ensure that does not happen .
     lock_path = "#{Dir::tmpdir}/unicorn_test.#{addr}:#{port}.lock"
-    File.open(lock_path, File::WRONLY|File::CREAT|File::EXCL, 0600)
+    File.open(lock_path, File::WRONLY|File::CREAT|File::EXCL, 0600).close
     at_exit { File.unlink(lock_path) rescue nil }
   rescue Errno::EEXIST
     sock.close rescue nil
