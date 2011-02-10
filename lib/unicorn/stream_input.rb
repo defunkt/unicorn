@@ -93,7 +93,7 @@ class Unicorn::StreamInput
   #
   # Executes the block for every ``line'' in *ios*, where lines are
   # separated by the global record separator ($/, typically "\n").
-  def each(&block)
+  def each
     while line = gets
       yield line
     end

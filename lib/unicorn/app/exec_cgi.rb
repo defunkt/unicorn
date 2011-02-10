@@ -33,7 +33,7 @@ module Unicorn::App
         sysseek(@body_offset = n)
       end
 
-      def each(&block)
+      def each
         sysseek @body_offset
         # don't use a preallocated buffer for sysread since we can't
         # guarantee an actual socket is consuming the yielded string

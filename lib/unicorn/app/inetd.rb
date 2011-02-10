@@ -47,7 +47,7 @@ module Unicorn::App
         }
       end
 
-      def each(&block)
+      def each
         begin
           rd, = IO.select([err_rd, out_rd])
           rd && rd.first or next

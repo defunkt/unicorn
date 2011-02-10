@@ -38,8 +38,8 @@ module Unicorn
       [ status, headers, self ]
     end
 
-    def each(&block)
-      body.each(&block)
+    def each
+      body.each { |x| yield x }
     end
 
     # in Unicorn, this is closed _after_ the client socket
