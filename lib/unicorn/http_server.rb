@@ -582,7 +582,7 @@ class Unicorn::HttpServer
 
     # closing anything we IO.select on will raise EBADF
     trap(:USR1) { nr = -65536; SELF_PIPE[0].close rescue nil }
-    trap(:QUIT) { alive = nil; LISTENERS.each { |s| s.close rescue nil } }
+    trap(:QUIT) { alive = nil; LISTENERS.each { |s| s.close rescue nil }.clear }
     [:TERM, :INT].each { |sig| trap(sig) { exit!(0) } } # instant shutdown
     logger.info "worker=#{worker.nr} ready"
     m = 0
