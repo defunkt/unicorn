@@ -8,6 +8,10 @@ acceptable solution.  Those issues are documented here.
 
   See http://redmine.ruby-lang.org/issues/show/4338
 
+* On Ruby 1.8 prior to Ruby 1.8.7-p248, *BSD platforms have a broken
+  stdio that causes failure for file uploads larger than 112K.  Upgrade
+  your version of Ruby or continue using Unicorn 1.x/3.4.x.
+
 * For notes on sandboxing tools such as Bundler or Isolate,
   see the {Sandbox}[link:Sandbox.html] page.
 
