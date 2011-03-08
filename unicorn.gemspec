@@ -26,7 +26,6 @@ Gem::Specification.new do |s|
   s.files = manifest
   s.homepage = Wrongdoc.config[:rdoc_url]
   s.rdoc_options = rdoc_options
-  s.require_paths = %w(lib ext)
   s.rubyforge_project = %q{mongrel}
   s.test_files = test_files
 
