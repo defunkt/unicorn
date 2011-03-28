@@ -25,5 +25,5 @@ class Unicorn::TmpIO < File
   # for easier env["rack.input"] compatibility with Rack <= 1.1
   def size
     stat.size
-  end
+  end unless File.method_defined?(:size)
 end
