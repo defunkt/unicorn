@@ -7,7 +7,7 @@ t_plan 10 "rack.input read tests"
 t_begin "setup and startup" && {
 	rtmpfiles curl_out curl_err
 	unicorn_setup
-	unicorn -D rack-input-tests.ru -c $unicorn_config
+	unicorn -E none -D rack-input-tests.ru -c $unicorn_config
         blob_sha1=$(rsha1 < random_blob)
 	blob_size=$(wc -c < random_blob)
         t_info "blob_sha1=$blob_sha1"

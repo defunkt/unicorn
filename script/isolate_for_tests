@@ -17,8 +17,8 @@ opts = {
 pid = fork do
   Isolate.now!(opts) do
     gem 'sqlite3-ruby', '1.2.5'
-    gem 'kgio', '2.3.2'
-    gem 'rack', '1.1.0'
+    gem 'kgio', '2.3.3'
+    gem 'rack', '1.2.2'
   end
 end
 _, status = Process.waitpid2(pid)
