@@ -8,7 +8,6 @@ module Unicorn::Util
 
     ! fp.closed? &&
       fp.sync &&
-      fp.path[0] == ?/ &&
       (fp.fcntl(Fcntl::F_GETFL) & append_flags) == append_flags
     rescue IOError, Errno::EBADF
       false
@@ -25,10 +24,12 @@ module Unicorn::Util
   # using logrotate(8) (without copytruncate) or similar tools.
   # A +File+ object is considered for reopening if it is:
   #   1) opened with the O_APPEND and O_WRONLY flags
-  #   2) opened with an absolute path (starts with "/")
-  #   3) the current open file handle does not match its original open path
-  #   4) unbuffered (as far as userspace buffering goes, not O_SYNC)
+  #   2) the current open file handle does not match its original open path
+  #   3) unbuffered (as far as userspace buffering goes, not O_SYNC)
   # Returns the number of files reopened
+  #
+  # In Unicorn 3.5.x and earlier, files must be opened with an absolute
+  # path to be considered a log file.
   def self.reopen_logs
     to_reopen = []
     nr = 0
