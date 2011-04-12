@@ -12,6 +12,13 @@
 # more will usually help for _short_ waits on databases/caches.
 worker_processes 4
 
+# Since Unicorn is never exposed to outside clients, it does not need to
+# run on the standard HTTP port (80), there is no reason to start Unicorn
+# as root unless it's from system init scripts.
+# If running the master process as root and the workers as an unprivileged
+# user, do this to switch euid/egid in the workers (also chowns logs):
+# user "unprivileged_user", "unprivileged_group"
+
 # Help ensure your application will always spawn in the symlinked
 # "current" directory that Capistrano sets up.
 working_directory "/path/to/app/current" # available in 0.94.0+
