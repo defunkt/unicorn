@@ -1,5 +1,6 @@
 # -*- encoding: binary -*-
-
+# :enddoc:
+# no stable API here
 require 'unicorn_http'
 
 # TODO: remove redundant names

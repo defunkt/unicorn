@@ -13,7 +13,6 @@ NEWS
 ChangeLog
 LATEST
 lib
-ext/unicorn_http/unicorn_http.c
 unicorn_1
 unicorn_rails_1
 ISSUES
