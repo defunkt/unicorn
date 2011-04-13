@@ -103,20 +103,24 @@ class Unicorn::Configurator
     set[key]
   end
 
-  # sets object to the +new+ Logger-like object.  The new logger-like
+  # sets object to the +obj+ Logger-like object.  The new Logger-like
   # object must respond to the following methods:
-  #  +debug+, +info+, +warn+, +error+, +fatal+
+  # * debug
+  # * info
+  # * warn
+  # * error
+  # * fatal
   # The default Logger will log its output to the path specified
   # by +stderr_path+.  If you're running Unicorn daemonized, then
   # you must specify a path to prevent error messages from going
   # to /dev/null.
-  def logger(new)
+  def logger(obj)
     %w(debug info warn error fatal).each do |m|
       new.respond_to?(m) and next
       raise ArgumentError, "logger=#{new} does not respond to method=#{m}"
     end
 
-    set[:logger] = new
+    set[:logger] = obj
   end
 
   # sets after_fork hook to a given block.  This block will be called by
@@ -207,109 +211,128 @@ class Unicorn::Configurator
   #
   # The following options may be specified (but are generally not needed):
   #
-  # +:backlog+: this is the backlog of the listen() syscall.
+  # [:backlog => number of clients]
   #
-  # Some operating systems allow negative values here to specify the
-  # maximum allowable value.  In most cases, this number is only
-  # recommendation and there are other OS-specific tunables and
-  # variables that can affect this number.  See the listen(2)
-  # syscall documentation of your OS for the exact semantics of
-  # this.
+  #   This is the backlog of the listen() syscall.
   #
-  # If you are running unicorn on multiple machines, lowering this number
-  # can help your load balancer detect when a machine is overloaded
-  # and give requests to a different machine.
+  #   Some operating systems allow negative values here to specify the
+  #   maximum allowable value.  In most cases, this number is only
+  #   recommendation and there are other OS-specific tunables and
+  #   variables that can affect this number.  See the listen(2)
+  #   syscall documentation of your OS for the exact semantics of
+  #   this.
   #
-  # Default: 1024
+  #   If you are running unicorn on multiple machines, lowering this number
+  #   can help your load balancer detect when a machine is overloaded
+  #   and give requests to a different machine.
   #
-  # +:rcvbuf+, +:sndbuf+: maximum receive and send buffer sizes of sockets
+  #   Default: 1024
   #
-  # These correspond to the SO_RCVBUF and SO_SNDBUF settings which
-  # can be set via the setsockopt(2) syscall.  Some kernels
-  # (e.g. Linux 2.4+) have intelligent auto-tuning mechanisms and
-  # there is no need (and it is sometimes detrimental) to specify them.
+  # [:rcvbuf => bytes, :sndbuf => bytes]
   #
-  # See the socket API documentation of your operating system
-  # to determine the exact semantics of these settings and
-  # other operating system-specific knobs where they can be
-  # specified.
+  #   Maximum receive and send buffer sizes (in bytes) of sockets.
   #
-  # Defaults: operating system defaults
+  #   These correspond to the SO_RCVBUF and SO_SNDBUF settings which
+  #   can be set via the setsockopt(2) syscall.  Some kernels
+  #   (e.g. Linux 2.4+) have intelligent auto-tuning mechanisms and
+  #   there is no need (and it is sometimes detrimental) to specify them.
   #
-  # +:tcp_nodelay+: disables Nagle's algorithm on TCP sockets
+  #   See the socket API documentation of your operating system
+  #   to determine the exact semantics of these settings and
+  #   other operating system-specific knobs where they can be
+  #   specified.
   #
-  # This has no effect on UNIX sockets.
+  #   Defaults: operating system defaults
   #
-  # Default: operating system defaults (usually Nagle's algorithm enabled)
+  # [:tcp_nodelay => true or false]
   #
-  # +:tcp_nopush+: enables/disables TCP_CORK in Linux or TCP_NOPUSH in FreeBSD
+  #   Disables Nagle's algorithm on TCP sockets if +true+
   #
-  # This is enabled by default as of Unicorn 3.4.  This prevents partial
-  # TCP frames from being sent out and reduces wakeups in nginx if it is
-  # on a different machine.  Since Unicorn is only designed for applications
-  # that send the response body quickly without keepalive, sockets will
-  # always be flushed on close to prevent delays.
+  #   This has no effect on UNIX sockets.
   #
-  # This has no effect on UNIX sockets.
+  #   Default: operating system defaults (usually Nagle's algorithm enabled)
   #
-  # +:tries+: times to retry binding a socket if it is already in use
+  # [:tcp_nopush => true or false]
   #
-  # A negative number indicates we will retry indefinitely, this is
-  # useful for migrations and upgrades when individual workers
-  # are binding to different ports.
+  #   Enables/disables TCP_CORK in Linux or TCP_NOPUSH in FreeBSD
   #
-  # Default: 5
+  #   This is enabled by default as of Unicorn 3.4.  This prevents partial
+  #   TCP frames from being sent out and reduces wakeups in nginx if it is
+  #   on a different machine.  Since Unicorn is only designed for applications
+  #   that send the response body quickly without keepalive, sockets will
+  #   always be flushed on close to prevent delays.
   #
-  # +:delay+: seconds to wait between successive +tries+
+  #   This has no effect on UNIX sockets.
   #
-  # Default: 0.5 seconds
+  # [:tries => Integer]
   #
-  # +:umask+: sets the file mode creation mask for UNIX sockets
+  #   Times to retry binding a socket if it is already in use
   #
-  # Typically UNIX domain sockets are created with more liberal
-  # file permissions than the rest of the application.  By default,
-  # we create UNIX domain sockets to be readable and writable by
-  # all local users to give them the same accessibility as
-  # locally-bound TCP listeners.
+  #   A negative number indicates we will retry indefinitely, this is
+  #   useful for migrations and upgrades when individual workers
+  #   are binding to different ports.
   #
-  # This has no effect on TCP listeners.
+  #   Default: 5
   #
-  # Default: 0 (world read/writable)
+  # [:delay => seconds]
   #
-  # +:tcp_defer_accept:+ defer accept() until data is ready (Linux-only)
+  #   Seconds to wait between successive +tries+
   #
-  # For Linux 2.6.32 and later, this is the number of retransmits to
-  # defer an accept() for if no data arrives, but the client will
-  # eventually be accepted after the specified number of retransmits
-  # regardless of whether data is ready.
+  #   Default: 0.5 seconds
   #
-  # For Linux before 2.6.32, this is a boolean option, and
-  # accepts are _always_ deferred indefinitely if no data arrives.
-  # This is similar to <code>:accept_filter => "dataready"</code>
-  # under FreeBSD.
+  # [:umask => mode]
   #
-  # Specifying +true+ is synonymous for the default value(s) below,
-  # and +false+ or +nil+ is synonymous for a value of zero.
+  #   Sets the file mode creation mask for UNIX sockets.  If specified,
+  #   this is usually in octal notation.
   #
-  # A value of +1+ is a good optimization for local networks
-  # and trusted clients.  For Rainbows! and Zbatery users, a higher
-  # value (e.g. +60+) provides more protection against some
-  # denial-of-service attacks.  There is no good reason to ever
-  # disable this with a +zero+ value when serving HTTP.
+  #   Typically UNIX domain sockets are created with more liberal
+  #   file permissions than the rest of the application.  By default,
+  #   we create UNIX domain sockets to be readable and writable by
+  #   all local users to give them the same accessibility as
+  #   locally-bound TCP listeners.
   #
-  # Default: 1 retransmit for \Unicorn, 60 for Rainbows! 0.95.0\+
+  #   This has no effect on TCP listeners.
   #
-  # +:accept_filter: defer accept() until data is ready (FreeBSD-only)
+  #   Default: 0000 (world-read/writable)
   #
-  # This enables either the "dataready" or (default) "httpready"
-  # accept() filter under FreeBSD.  This is intended as an
-  # optimization to reduce context switches with common GET/HEAD
-  # requests.  For Rainbows! and Zbatery users, this provides
-  # some protection against certain denial-of-service attacks, too.
+  # [:tcp_defer_accept => Integer]
   #
-  # There is no good reason to change from the default.
+  #   Defer accept() until data is ready (Linux-only)
   #
-  # Default: "httpready"
+  #   For Linux 2.6.32 and later, this is the number of retransmits to
+  #   defer an accept() for if no data arrives, but the client will
+  #   eventually be accepted after the specified number of retransmits
+  #   regardless of whether data is ready.
+  #
+  #   For Linux before 2.6.32, this is a boolean option, and
+  #   accepts are _always_ deferred indefinitely if no data arrives.
+  #   This is similar to <code>:accept_filter => "dataready"</code>
+  #   under FreeBSD.
+  #
+  #   Specifying +true+ is synonymous for the default value(s) below,
+  #   and +false+ or +nil+ is synonymous for a value of zero.
+  #
+  #   A value of +1+ is a good optimization for local networks
+  #   and trusted clients.  For Rainbows! and Zbatery users, a higher
+  #   value (e.g. +60+) provides more protection against some
+  #   denial-of-service attacks.  There is no good reason to ever
+  #   disable this with a +zero+ value when serving HTTP.
+  #
+  #   Default: 1 retransmit for \Unicorn, 60 for Rainbows! 0.95.0\+
+  #
+  # [:accept_filter => String]
+  #
+  #   defer accept() until data is ready (FreeBSD-only)
+  #
+  #   This enables either the "dataready" or (default) "httpready"
+  #   accept() filter under FreeBSD.  This is intended as an
+  #   optimization to reduce context switches with common GET/HEAD
+  #   requests.  For Rainbows! and Zbatery users, this provides
+  #   some protection against certain denial-of-service attacks, too.
+  #
+  #   There is no good reason to change from the default.
+  #
+  #   Default: "httpready"
   def listen(address, opt = {})
     address = expand_addr(address)
     if String === address
@@ -368,11 +391,11 @@ class Unicorn::Configurator
     set_bool(:preload_app, bool)
   end
 
-  # Toggles making <code>env["rack.input"]</code> rewindable.
+  # Toggles making \env[\"rack.input\"] rewindable.
   # Disabling rewindability can improve performance by lowering
   # I/O and memory usage for applications that accept uploads.
   # Keep in mind that the Rack 1.x spec requires
-  # <code>env["rack.input"]</code> to be rewindable, so this allows
+  # \env[\"rack.input\"] to be rewindable, so this allows
   # intentionally violating the current Rack 1.x spec.
   #
   # +rewindable_input+ defaults to +true+ when used with Rack 1.x for
@@ -438,6 +461,7 @@ class Unicorn::Configurator
   # The master process always stays running as the user who started it.
   # This switch will occur after calling the after_fork hook, and only
   # if the Worker#user method is not called in the after_fork hook
+  # +group+ is optional and will not change if unspecified.
   def user(user, group = nil)
     # raises ArgumentError on invalid user/group
     Etc.getpwnam(user)
@@ -450,6 +474,9 @@ class Unicorn::Configurator
   # Rainbows!/Zbatery installations facing untrusted clients directly
   # should set this to +false+.  This is +true+ by default as Unicorn
   # is designed to only sit behind trusted nginx proxies.
+  #
+  # This has never been publically documented and is subject to removal
+  # in future releases.
   def trust_x_forwarded(bool) # :nodoc:
     set_bool(:trust_x_forwarded, bool)
   end
