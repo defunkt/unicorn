@@ -15,7 +15,7 @@ GIT-VERSION-FILE: .FORCE-GIT-VERSION-FILE
 -include local.mk
 ruby_bin := $(shell which $(RUBY))
 ifeq ($(DLEXT),) # "so" for Linux
-  DLEXT := $(shell $(RUBY) -rrbconfig -e 'puts Config::CONFIG["DLEXT"]')
+  DLEXT := $(shell $(RUBY) -rrbconfig -e 'puts RbConfig::CONFIG["DLEXT"]')
 endif
 ifeq ($(RUBY_VERSION),)
   RUBY_VERSION := $(shell $(RUBY) -e 'puts RUBY_VERSION')
