@@ -132,11 +132,6 @@ class Unicorn::Configurator
   #    # Existing options for Unicorn::Configurator#listen such as
   #    # :backlog, :rcvbuf, :sndbuf are available here as well.
   #    server.listen(addr, :tries => -1, :delay => 5, :backlog => 128)
-  #
-  #    # drop permissions to "www-data" in the worker
-  #    # generally there's no reason to start Unicorn as a priviledged user
-  #    # as it is not recommended to expose Unicorn to public clients.
-  #    worker.user('www-data', 'www-data') if Process.euid == 0
   #  end
   def after_fork(*args, &block)
     set_hook(:after_fork, block_given? ? block : args[0])
