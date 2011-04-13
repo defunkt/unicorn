@@ -302,7 +302,6 @@ class HttpParserTest < Test::Unit::TestCase
              "Host: hello\r\n" \
              "\r\n"
     parser.buf << header
-    req = parser.env
     assert_raises(HttpParserError) { parser.parse }
   end
 

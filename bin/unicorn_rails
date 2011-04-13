@@ -8,7 +8,7 @@ ENV['RAILS_ENV'] ||= "development"
 rackup_opts = Unicorn::Configurator::RACKUP
 options = rackup_opts[:options]
 
-opts = OptionParser.new("", 24, '  ') do |opts|
+op = OptionParser.new("", 24, '  ') do |opts|
   cmd = File.basename($0)
   opts.banner = "Usage: #{cmd} " \
                 "[ruby options] [#{cmd} options] [rackup config file]"
@@ -124,11 +124,11 @@ def rails_dispatcher
   result || abort("Unable to locate the application dispatcher class")
 end
 
-def rails_builder(ru, opts, daemonize)
-  return Unicorn.builder(ru, opts) if ru
+def rails_builder(ru, op, daemonize)
+  return Unicorn.builder(ru, op) if ru
 
   # allow Configurator to parse cli switches embedded in the ru file
-  Unicorn::Configurator::RACKUP.update(:file => :rails, :optparse => opts)
+  Unicorn::Configurator::RACKUP.update(:file => :rails, :optparse => op)
 
   # this lambda won't run until after forking if preload_app is false
   # this runs after config file reloading
@@ -136,7 +136,7 @@ def rails_builder(ru, opts, daemonize)
     # Rails 3 includes a config.ru, use it if we find it after
     # working_directory is bound.
     ::File.exist?('config.ru') and
-      return Unicorn.builder('config.ru', opts).call
+      return Unicorn.builder('config.ru', op).call
 
     # Load Rails and (possibly) the private version of Rack it bundles.
     begin
@@ -185,7 +185,7 @@ def rails_builder(ru, opts, daemonize)
   end
 end
 
-app = rails_builder(ARGV[0], opts, rackup_opts[:daemonize])
+app = rails_builder(ARGV[0], op, rackup_opts[:daemonize])
 
 if $DEBUG
   require 'pp'

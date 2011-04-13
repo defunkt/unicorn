@@ -7,7 +7,7 @@ ENV["RACK_ENV"] ||= "development"
 rackup_opts = Unicorn::Configurator::RACKUP
 options = rackup_opts[:options]
 
-opts = OptionParser.new("", 24, '  ') do |opts|
+op = OptionParser.new("", 24, '  ') do |opts|
   cmd = File.basename($0)
   opts.banner = "Usage: #{cmd} " \
                 "[ruby options] [#{cmd} options] [rackup config file]"
@@ -105,7 +105,7 @@ opts = OptionParser.new("", 24, '  ') do |opts|
   opts.parse! ARGV
 end
 
-app = Unicorn.builder(ARGV[0] || 'config.ru', opts)
+app = Unicorn.builder(ARGV[0] || 'config.ru', op)
 
 if $DEBUG
   require 'pp'
