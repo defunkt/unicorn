@@ -568,6 +568,9 @@ class Unicorn::HttpServer
     Unicorn::Util.reopen_logs
     logger.info "worker=#{worker_nr} done reopening logs"
     init_self_pipe!
+    rescue => e
+      logger.error(e) rescue nil
+      exit!(77) # EX_NOPERM in sysexits.h
   end
 
   # runs inside each forked worker, this sits around and waits
