@@ -116,8 +116,8 @@ class Unicorn::Configurator
   # to /dev/null.
   def logger(obj)
     %w(debug info warn error fatal).each do |m|
-      new.respond_to?(m) and next
-      raise ArgumentError, "logger=#{new} does not respond to method=#{m}"
+      obj.respond_to?(m) and next
+      raise ArgumentError, "logger=#{obj} does not respond to method=#{m}"
     end
 
     set[:logger] = obj
