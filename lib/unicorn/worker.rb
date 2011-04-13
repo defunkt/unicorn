@@ -2,16 +2,23 @@
 
 # This class and its members can be considered a stable interface
 # and will not change in a backwards-incompatible fashion between
-# releases of Unicorn.  You may need to access it in the
-# before_fork/after_fork hooks.  See the Unicorn::Configurator RDoc
-# for examples.
+# releases of \Unicorn.  Knowledge of this class is generally not
+# not needed for most users of \Unicorn.
+#
+# Some users may want to access it in the before_fork/after_fork hooks.
+# See the Unicorn::Configurator RDoc for examples.
 class Unicorn::Worker < Struct.new(:nr, :tmp, :switched)
 
-  # worker objects may be compared to just plain numbers
-  def ==(other_nr)
-    self.nr == other_nr
+  # worker objects may be compared to just plain Integers
+  def ==(other_nr) # :nodoc:
+    nr == other_nr
   end
 
+  # In most cases, you should be using the Unicorn::Configurator#user
+  # directive instead.  This method should only be used if you need
+  # fine-grained control of exactly when you want to change permissions
+  # in your after_fork hooks.
+  #
   # Changes the worker process to the specified +user+ and +group+
   # This is only intended to be called from within the worker
   # process from the +after_fork+ hook.  This should be called in
