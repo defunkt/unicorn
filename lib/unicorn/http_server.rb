@@ -484,14 +484,19 @@ class Unicorn::HttpServer
     next_sleep
   end
 
+  def after_fork_internal
+    @ready_pipe.close if @ready_pipe
+    @ready_pipe = nil
+    srand # http://redmine.ruby-lang.org/issues/4338
+  end
+
   def spawn_missing_workers
     (0...worker_processes).each do |worker_nr|
       WORKERS.values.include?(worker_nr) and next
       worker = Worker.new(worker_nr, Unicorn::TmpIO.new)
       before_fork.call(self, worker)
       WORKERS[fork {
-        ready_pipe.close if ready_pipe
-        self.ready_pipe = nil
+        after_fork_internal
         worker_loop(worker)
       }] = worker
     end
