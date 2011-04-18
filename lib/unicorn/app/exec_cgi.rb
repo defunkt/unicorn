@@ -1,5 +1,5 @@
 # -*- encoding: binary -*-
-
+# :enddoc:
 require 'unicorn'
 
 module Unicorn::App

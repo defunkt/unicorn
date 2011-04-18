@@ -4,15 +4,19 @@
 # processes which in turn handle the I/O and application process.
 # Listener sockets are started in the master process and shared with
 # forked worker children.
+#
+# Users do not need to know the internals of this class, but reading the
+# {source}[http://bogomips.org/unicorn.git/tree/lib/unicorn/http_server.rb]
+# is education for programmers wishing to learn how \Unicorn works.
+# See Unicorn::Configurator for information on how to configure \Unicorn.
 class Unicorn::HttpServer
+  # :stopdoc:
   attr_accessor :app, :request, :timeout, :worker_processes,
                 :before_fork, :after_fork, :before_exec,
                 :listener_opts, :preload_app,
                 :reexec_pid, :orig_app, :init_listeners,
                 :master_pid, :config, :ready_pipe, :user
   attr_reader :pid, :logger
-
-  # :stopdoc:
   include Unicorn::SocketHelper
   include Unicorn::HttpResponse
 
@@ -84,6 +88,7 @@ class Unicorn::HttpServer
   rescue
     Dir.pwd
   end
+  # :stopdoc:
 
   # Creates a working server on host:port (strange things happen if
   # port isn't a Number).  Use HttpServer::run to start the server and

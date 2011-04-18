@@ -5,10 +5,27 @@ require 'stringio'
 require 'rack'
 require 'kgio'
 
+# :stopdoc:
 # Unicorn module containing all of the classes (include C extensions) for
 # running a Unicorn web server.  It contains a minimalist HTTP server with just
 # enough functionality to service web application requests fast as possible.
+# :startdoc:
+
+# \Unicorn exposes very little of an user-visible API and most of its
+# internals are subject to change.  \Unicorn is designed to host Rack
+# applications, so applications should be written against the Rack SPEC
+# and not \Unicorn internals.
 module Unicorn
+
+  # Raised inside TeeInput when a client closes the socket inside the
+  # application dispatch.  This is always raised with an empty backtrace
+  # since there is nothing in the application stack that is responsible
+  # for client shutdowns/disconnects.  This exception is visible to Rack
+  # applications unless PrereadInput middleware is loaded.
+  class ClientShutdown < EOFError
+  end
+
+  # :stopdoc:
   def self.run(app, options = {})
     Unicorn::HttpServer.new(app, options).start.join
   end
@@ -63,14 +80,9 @@ module Unicorn
       Unicorn::SocketHelper.sock_name(io)
     end
   end
+  # :startdoc:
 end
-
-# raised inside TeeInput when a client closes the socket inside the
-# application dispatch.  This is always raised with an empty backtrace
-# since there is nothing in the application stack that is responsible
-# for client shutdowns/disconnects.
-class Unicorn::ClientShutdown < EOFError; end
-
+# :enddoc:
 require 'unicorn/const'
 require 'unicorn/socket_helper'
 require 'unicorn/stream_input'

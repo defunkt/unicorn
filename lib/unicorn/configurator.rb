@@ -207,7 +207,14 @@ class Unicorn::Configurator
     set[:listeners] = addresses
   end
 
-  # adds an +address+ to the existing listener set.
+  # Adds an +address+ to the existing listener set.  May be specified more
+  # than once.  +address+ may be an Integer port number for a TCP port, an
+  # "IP_ADDRESS:PORT" for TCP listeners or a pathname for UNIX domain sockets.
+  #
+  #   listen 3000 # listen to port 3000 on all TCP interfaces
+  #   listen "127.0.0.1:3000"  # listen to port 3000 on the loopback interface
+  #   listen "/tmp/.unicorn.sock" # listen on the given Unix domain socket
+  #   listen "[::1]:3000" # listen to port 3000 on the IPv6 loopback interface
   #
   # The following options may be specified (but are generally not needed):
   #
@@ -333,24 +340,24 @@ class Unicorn::Configurator
   #   There is no good reason to change from the default.
   #
   #   Default: "httpready"
-  def listen(address, opt = {})
+  def listen(address, options = {})
     address = expand_addr(address)
     if String === address
       [ :umask, :backlog, :sndbuf, :rcvbuf, :tries ].each do |key|
-        value = opt[key] or next
+        value = options[key] or next
         Integer === value or
           raise ArgumentError, "not an integer: #{key}=#{value.inspect}"
       end
       [ :tcp_nodelay, :tcp_nopush ].each do |key|
-        (value = opt[key]).nil? and next
+        (value = options[key]).nil? and next
         TrueClass === value || FalseClass === value or
           raise ArgumentError, "not boolean: #{key}=#{value.inspect}"
       end
-      unless (value = opt[:delay]).nil?
+      unless (value = options[:delay]).nil?
         Numeric === value or
           raise ArgumentError, "not numeric: delay=#{value.inspect}"
       end
-      set[:listener_opts][address].merge!(opt)
+      set[:listener_opts][address].merge!(options)
     end
 
     set[:listeners] << address
@@ -484,7 +491,7 @@ class Unicorn::Configurator
   # expands "unix:path/to/foo" to a socket relative to the current path
   # expands pathnames of sockets if relative to "~" or "~username"
   # expands "*:port and ":port" to "0.0.0.0:port"
-  def expand_addr(address) #:nodoc
+  def expand_addr(address) #:nodoc:
     return "0.0.0.0:#{address}" if Integer === address
     return address unless String === address
 

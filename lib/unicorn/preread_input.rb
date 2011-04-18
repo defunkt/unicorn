@@ -13,6 +13,8 @@ module Unicorn
 #     end
 #     run YourApp.new
 class PrereadInput
+
+  # :stopdoc:
   def initialize(app)
     @app = app
   end
@@ -26,5 +28,6 @@ class PrereadInput
     end
     @app.call(env)
   end
+  # :startdoc:
 end
 end

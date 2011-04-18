@@ -1,10 +1,9 @@
 # -*- encoding: binary -*-
-
+# :enddoc:
 # Copyright (c) 2009 Eric Wong
 # You can redistribute it and/or modify it under the same terms as Ruby.
 
 # this class *must* be used with Rack::Chunked
-
 module Unicorn::App
   class Inetd < Struct.new(:cmd)
 

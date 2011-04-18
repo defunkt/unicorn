@@ -1,5 +1,6 @@
 # -*- encoding: binary -*-
 
+# :enddoc:
 # Frequently used constants when constructing requests or responses.
 # Many times the constant just refers to a string with the same
 # contents.  Using these constants gave about a 3% to 10% performance

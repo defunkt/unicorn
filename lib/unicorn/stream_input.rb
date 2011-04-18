@@ -1,7 +1,7 @@
 # -*- encoding: binary -*-
 
 # When processing uploads, Unicorn may expose a StreamInput object under
-# "rack.input" of the Rack (2.x) environment.
+# "rack.input" of the (future) Rack (2.x) environment.
 class Unicorn::StreamInput
   # The I/O chunk size (in +bytes+) for I/O operations where
   # the size cannot be user-specified when a method is called.

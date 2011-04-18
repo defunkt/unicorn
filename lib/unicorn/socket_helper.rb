@@ -17,7 +17,7 @@ module Unicorn
       # denial-of-service attacks
       :tcp_defer_accept => 1,
 
-      # FreeBSD, we need to override this to 'dataready' when we
+      # FreeBSD, we need to override this to 'dataready' if we
       # eventually get HTTPS support
       :accept_filter => 'httpready',
 

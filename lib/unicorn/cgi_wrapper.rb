@@ -1,5 +1,6 @@
 # -*- encoding: binary -*-
 
+# :enddoc:
 # This code is based on the original CGIWrapper from Mongrel
 # Copyright (c) 2005 Zed A. Shaw
 # Copyright (c) 2009 Eric Wong
