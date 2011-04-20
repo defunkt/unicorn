@@ -3,8 +3,15 @@
 Occasionally odd {issues}[link:ISSUES.html] arise without a transparent or
 acceptable solution.  Those issues are documented here.
 
+* PRNGs (pseudo-random number generators) loaded before forking
+  (e.g. "preload_app true") may need to have their internal state
+  reset in the after_fork hook.  Starting with \Unicorn 3.6.0, we
+  have builtin workarounds for Kernel#rand and OpenSSL::Random users,
+  but applications may use other PRNGs.
+
 * Under some versions of Ruby 1.8, it is necessary to call +srand+ in an
-  after_fork hook to get correct random number generation.
+  after_fork hook to get correct random number generation.  We have a builtin
+  workaround for this starting with \Unicorn 3.6.0
 
   See http://redmine.ruby-lang.org/issues/show/4338
 
