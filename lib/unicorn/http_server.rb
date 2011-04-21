@@ -99,7 +99,7 @@ class Unicorn::HttpServer
     @request = Unicorn::HttpRequest.new
     self.reexec_pid = 0
     options = options.dup
-    self.ready_pipe = options.delete(:ready_pipe)
+    @ready_pipe = options.delete(:ready_pipe)
     self.init_listeners = options[:listeners] ? options[:listeners].dup : []
     options[:use_defaults] = true
     self.config = Unicorn::Configurator.new(options)
@@ -282,10 +282,10 @@ class Unicorn::HttpServer
 
     proc_name 'master'
     logger.info "master process ready" # test_exec.rb relies on this message
-    if ready_pipe
-      ready_pipe.syswrite($$.to_s)
-      ready_pipe.close rescue nil
-      self.ready_pipe = nil
+    if @ready_pipe
+      @ready_pipe.syswrite($$.to_s)
+      @ready_pipe.close rescue nil
+      @ready_pipe = nil
     end
     begin
       reap_all_workers
@@ -491,7 +491,7 @@ class Unicorn::HttpServer
 
   def after_fork_internal
     @ready_pipe.close if @ready_pipe
-    @ready_pipe = nil
+    self.ready_pipe = nil # XXX Rainbows! compat, change for Unicorn 4.x
     tmp = srand # http://redmine.ruby-lang.org/issues/4338
 
     # The OpenSSL PRNG is seeded with only the pid, and apps with frequently
