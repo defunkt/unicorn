@@ -492,11 +492,11 @@ class Unicorn::HttpServer
   def after_fork_internal
     @ready_pipe.close if @ready_pipe
     self.ready_pipe = nil # XXX Rainbows! compat, change for Unicorn 4.x
-    tmp = srand # http://redmine.ruby-lang.org/issues/4338
+    srand # http://redmine.ruby-lang.org/issues/4338
 
     # The OpenSSL PRNG is seeded with only the pid, and apps with frequently
     # dying workers can recycle pids
-    OpenSSL::Random.seed(tmp.to_s) if defined?(OpenSSL::Random)
+    OpenSSL::Random.seed(rand.to_s) if defined?(OpenSSL::Random)
   end
 
   def spawn_missing_workers
