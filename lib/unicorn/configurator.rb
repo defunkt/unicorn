@@ -253,23 +253,31 @@ class Unicorn::Configurator
   #
   # [:tcp_nodelay => true or false]
   #
-  #   Disables Nagle's algorithm on TCP sockets if +true+
+  #   Disables Nagle's algorithm on TCP sockets if +true+.
+  #
+  #   Setting this to +true+ can make streaming responses in Rails 3.1
+  #   appear more quickly at the cost of slightly higher bandwidth usage.
+  #   The effect of this option is most visible if nginx is not used,
+  #   but nginx remains highly recommended with \Unicorn.
   #
   #   This has no effect on UNIX sockets.
   #
-  #   Default: operating system defaults (usually Nagle's algorithm enabled)
+  #   Default: +false+ (Nagle's algorithm enabled) in \Unicorn,
+  #   +true+ in Rainbows!
   #
   # [:tcp_nopush => true or false]
   #
   #   Enables/disables TCP_CORK in Linux or TCP_NOPUSH in FreeBSD
   #
-  #   This is enabled by default as of Unicorn 3.4.  This prevents partial
-  #   TCP frames from being sent out and reduces wakeups in nginx if it is
-  #   on a different machine.  Since Unicorn is only designed for applications
-  #   that send the response body quickly without keepalive, sockets will
-  #   always be flushed on close to prevent delays.
+  #   This prevents partial TCP frames from being sent out and reduces
+  #   wakeups in nginx if it is on a different machine.  Since \Unicorn
+  #   is only designed for applications that send the response body
+  #   quickly without keepalive, sockets will always be flushed on close
+  #   to prevent delays.
   #
   #   This has no effect on UNIX sockets.
+  #
+  #   Default: +true+ in \Unicorn 3.4+, +false+ in Rainbows!
   #
   # [:tries => Integer]
   #
