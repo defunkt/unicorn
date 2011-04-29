@@ -21,13 +21,11 @@
 # of memory, and will hurt simpler apps/endpoints that can process
 # multiple requests before incurring GC.
 
-class Unicorn::HttpServer
-  REQ = Unicorn::HttpRequest::REQ
-  alias _process_client process_client
-  undef_method :process_client
+module Unicorn::BigAppGC
   def process_client(client)
-    _process_client(client)
-    REQ.clear
+    super
+    @request.clear
     GC.start
   end
-end if defined?(Unicorn)
+end
+ObjectSpace.each_object(Unicorn::HttpServer) { |s| s.extend(Unicorn::BigAppGC) }
