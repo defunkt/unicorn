@@ -8,6 +8,8 @@ require 'logger'
 # example configuration files.  An example config file for use with
 # nginx is also available at
 # http://unicorn.bogomips.org/examples/nginx.conf
+#
+# See the link:/TUNING.html document for more information on tuning unicorn.
 class Unicorn::Configurator
   include Unicorn
 
