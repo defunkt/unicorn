@@ -1,6 +1,6 @@
 # Run GC after every request, before attempting to accept more connections.
 #
-# You could customize this patch to read REQ["PATH_INFO"] and only
+# You could customize this patch to read @request.env["PATH_INFO"] and only
 # call GC.start after expensive requests.
 #
 # We could have this wrap the response body.close as middleware, but the
