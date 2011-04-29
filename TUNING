@@ -40,7 +40,7 @@ See Unicorn::Configurator for details on the config file format.
 * On POSIX-compliant filesystems, it is safe for multiple threads or
   processes to append to one log file as long as all the processes are
   have them unbuffered (File#sync = true) or they are
-  record(line)-buffered in userspace.
+  record(line)-buffered in userspace before any writes.
 
 * worker_processes should be scaled to the number of processes your
   backend system(s) can support.  DO NOT scale it to the number of
