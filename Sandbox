@@ -3,7 +3,7 @@
 Since unicorn includes executables and is usually used to start a Ruby
 process, there are certain caveats to using it with tools that sandbox
 RubyGems installations such as
-{Bundler}[http://github.com/carlhuda/bundler] or
+{Bundler}[http://gembundler.com/] or
 {Isolate}[http://github.com/jbarnette/isolate].
 
 == General deployment
@@ -45,11 +45,20 @@ This is no longer be an issue as of bundler 0.9.17
 
 ref: http://mid.gmane.org/8FC34B23-5994-41CC-B5AF-7198EF06909E@tramchase.com
 
+=== BUNDLE_GEMFILE for Capistrano users
+
+You may need to set or reset the BUNDLE_GEMFILE environment variable in
+the before_exec hook:
+
+        before_exec do |server|
+          ENV["BUNDLE_GEMFILE"] = "/path/to/app/current/Gemfile"
+        end
+
 === Other ENV pollution issues
 
-You may need to set or reset BUNDLE_GEMFILE, GEM_HOME, GEM_PATH and PATH
-environment variables in the before_exec hook as illustrated by
-http://gist.github.com/534668
+If you're using an older Bundler version (0.9.x), you may need to set or
+reset GEM_HOME, GEM_PATH and PATH environment variables in the
+before_exec hook as illustrated by http://gist.github.com/534668
 
 == Isolate
 
