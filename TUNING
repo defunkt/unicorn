@@ -7,6 +7,7 @@ application running on Unicorn rather than Unicorn itself.
 == \Unicorn Configuration
 
 See Unicorn::Configurator for details on the config file format.
++worker_processes+ is the most-commonly needed tuning parameter.
 
 === Unicorn::Configurator#worker_processes
 
@@ -26,6 +27,8 @@ See Unicorn::Configurator for details on the config file format.
 * Never, ever, increase worker_processes to the point where the system
   runs out of physical memory and hits swap.  Production servers should
   never see heavy swap activity.
+
+=== Unicorn::Configurator#listen Options
 
 * Setting a very low value for the :backlog parameter in "listen"
   directives can allow failover to happen more quickly if your
@@ -48,6 +51,11 @@ See Unicorn::Configurator for details on the config file format.
   little effect.  Huge buffers can put more pressure on the allocator
   and may also thrash CPU caches, cancelling out performance gains
   one would normally expect.
+
+* UNIX domain sockets are slighly faster than TCP sockets, but only
+  work if nginx is on the same machine.
+
+== Other \Unicorn settings
 
 * Setting "preload_app true" can allow copy-on-write-friendly GC to
   be used to save memory.  It will probably not work out of the box with
