@@ -106,17 +106,32 @@ struct http_parser {
   } len;
 };
 
-static ID id_clear;
+static ID id_clear, id_set_backtrace;
 
 static void finalize_header(struct http_parser *hp);
+
+NORETURN(static void raise_with_empty_bt(VALUE));
+
+static void raise_with_empty_bt(VALUE exc)
+{
+  VALUE bt = rb_ary_new();
+
+	rb_funcall(exc, id_set_backtrace, 1, bt);
+	rb_exc_raise(exc);
+}
 
 static void parser_error(const char *msg)
 {
   VALUE exc = rb_exc_new2(eHttpParserError, msg);
-  VALUE bt = rb_ary_new();
 
-  rb_funcall(exc, rb_intern("set_backtrace"), 1, bt);
-  rb_exc_raise(exc);
+  raise_with_empty_bt(exc);
+}
+
+static void raise_414(const char *msg)
+{
+  VALUE exc = rb_exc_new2(eRequestURITooLongError, msg);
+
+  raise_with_empty_bt(exc);
 }
 
 #define REMAINING (unsigned long)(pe - p)
@@ -301,7 +316,7 @@ static void write_value(struct http_parser *hp,
   action request_uri {
     VALUE str;
 
-    VALIDATE_MAX_LENGTH(LEN(mark, fpc), REQUEST_URI);
+    VALIDATE_MAX_URI_LENGTH(LEN(mark, fpc), REQUEST_URI);
     str = rb_hash_aset(hp->env, g_request_uri, STR_NEW(mark, fpc));
     /*
      * "OPTIONS * HTTP/1.1\r\n" is a valid request, but we can't have '*'
@@ -314,19 +329,19 @@ static void write_value(struct http_parser *hp,
     }
   }
   action fragment {
-    VALIDATE_MAX_LENGTH(LEN(mark, fpc), FRAGMENT);
+    VALIDATE_MAX_URI_LENGTH(LEN(mark, fpc), FRAGMENT);
     rb_hash_aset(hp->env, g_fragment, STR_NEW(mark, fpc));
   }
   action start_query {MARK(start.query, fpc); }
   action query_string {
-    VALIDATE_MAX_LENGTH(LEN(start.query, fpc), QUERY_STRING);
+    VALIDATE_MAX_URI_LENGTH(LEN(start.query, fpc), QUERY_STRING);
     rb_hash_aset(hp->env, g_query_string, STR_NEW(start.query, fpc));
   }
   action http_version { http_version(hp, PTR_TO(mark), LEN(mark, fpc)); }
   action request_path {
     VALUE val;
 
-    VALIDATE_MAX_LENGTH(LEN(mark, fpc), REQUEST_PATH);
+    VALIDATE_MAX_URI_LENGTH(LEN(mark, fpc), REQUEST_PATH);
     val = rb_hash_aset(hp->env, g_request_path, STR_NEW(mark, fpc));
 
     /* rack says PATH_INFO must start with "/" or be empty */
@@ -883,6 +898,9 @@ void Init_unicorn_http(void)
   cHttpParser = rb_define_class_under(mUnicorn, "HttpParser", rb_cObject);
   eHttpParserError =
          rb_define_class_under(mUnicorn, "HttpParserError", rb_eIOError);
+  eRequestURITooLongError =
+         rb_define_class_under(mUnicorn, "RequestURITooLongError",
+                               eHttpParserError);
 
   init_globals();
   rb_define_alloc_func(cHttpParser, HttpParser_alloc);
@@ -932,6 +950,7 @@ void Init_unicorn_http(void)
   SET_GLOBAL(g_content_length, "CONTENT_LENGTH");
   SET_GLOBAL(g_http_connection, "CONNECTION");
   id_clear = rb_intern("clear");
+  id_set_backtrace = rb_intern("set_backtrace");
   init_unicorn_httpdate();
 }
 #undef SET_GLOBAL

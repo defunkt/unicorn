@@ -31,6 +31,7 @@ module Unicorn::Const
   # :stopdoc:
   # common errors we'll send back
   ERROR_400_RESPONSE = "HTTP/1.1 400 Bad Request\r\n\r\n"
+  ERROR_414_RESPONSE = "HTTP/1.1 414 Request-URI Too Long\r\n\r\n"
   ERROR_500_RESPONSE = "HTTP/1.1 500 Internal Server Error\r\n\r\n"
   EXPECT_100_RESPONSE = "HTTP/1.1 100 Continue\r\n\r\n"
 
