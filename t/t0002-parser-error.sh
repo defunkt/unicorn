@@ -26,10 +26,10 @@ t_begin "response should be a 400" && {
 
 t_begin "send a huge Request URI (REQUEST_PATH > (12 * 1024))" && {
 	rm -f $tmp
+	cat $fifo > $tmp &
 	(
-		cat $fifo > $tmp &
 		set -e
-		trap 'wait && echo ok > $ok' EXIT
+		trap 'echo ok > $ok' EXIT
 		printf 'GET /'
 		for i in $(awk </dev/null 'BEGIN{for(i=0;i<1024;i++) print i}')
 		do
@@ -38,18 +38,19 @@ t_begin "send a huge Request URI (REQUEST_PATH > (12 * 1024))" && {
 		printf ' HTTP/1.1\r\nHost: example.com\r\n\r\n'
 	) | socat - TCP:$listen > $fifo || :
 	test xok = x$(cat $ok)
+	wait
 }
 
-t_begin "response should be a 414" && {
+t_begin "response should be a 414 (REQUEST_PATH)" && {
 	grep -F 'HTTP/1.1 414 Request-URI Too Long' $tmp
 }
 
 t_begin "send a huge Request URI (QUERY_STRING > (10 * 1024))" && {
 	rm -f $tmp
+	cat $fifo > $tmp &
 	(
-		cat $fifo > $tmp &
 		set -e
-		trap 'wait && echo ok > $ok' EXIT
+		trap 'echo ok > $ok' EXIT
 		printf 'GET /hello-world?a'
 		for i in $(awk </dev/null 'BEGIN{for(i=0;i<1024;i++) print i}')
 		do
@@ -58,18 +59,19 @@ t_begin "send a huge Request URI (QUERY_STRING > (10 * 1024))" && {
 		printf ' HTTP/1.1\r\nHost: example.com\r\n\r\n'
 	) | socat - TCP:$listen > $fifo || :
 	test xok = x$(cat $ok)
+	wait
 }
 
-t_begin "response should be a 414" && {
+t_begin "response should be a 414 (QUERY_STRING)" && {
 	grep -F 'HTTP/1.1 414 Request-URI Too Long' $tmp
 }
 
 t_begin "send a huge Request URI (FRAGMENT > 1024)" && {
 	rm -f $tmp
+	cat $fifo > $tmp &
 	(
-		cat $fifo > $tmp &
 		set -e
-		trap 'wait && echo ok > $ok' EXIT
+		trap 'echo ok > $ok' EXIT
 		printf 'GET /hello-world#a'
 		for i in $(awk </dev/null 'BEGIN{for(i=0;i<64;i++) print i}')
 		do
@@ -78,9 +80,10 @@ t_begin "send a huge Request URI (FRAGMENT > 1024)" && {
 		printf ' HTTP/1.1\r\nHost: example.com\r\n\r\n'
 	) | socat - TCP:$listen > $fifo || :
 	test xok = x$(cat $ok)
+	wait
 }
 
-t_begin "response should be a 414" && {
+t_begin "response should be a 414 (FRAGMENT)" && {
 	grep -F 'HTTP/1.1 414 Request-URI Too Long' $tmp
 }
 
