@@ -25,7 +25,7 @@ module Unicorn::Const
 
   # Maximum request body size before it is moved out of memory and into a
   # temporary file for reading (112 kilobytes).  This is the default
-  # value of of client_body_buffer_size.
+  # value of client_body_buffer_size.
   MAX_BODY = 1024 * 112
 
   # :stopdoc:
