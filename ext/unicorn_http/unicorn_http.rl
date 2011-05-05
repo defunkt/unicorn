@@ -82,6 +82,14 @@ static VALUE xftrust(VALUE self)
   return trust_x_forward;
 }
 
+static size_t MAX_HEADER_LEN = 1024 * (80 + 32); /* same as Mongrel */
+
+/* this is only intended for use with Rainbows! */
+static VALUE set_maxhdrlen(VALUE self, VALUE len)
+{
+  return SIZET2NUM(MAX_HEADER_LEN = NUM2SIZET(len));
+}
+
 /* keep this small for Rainbows! since every client has one */
 struct http_parser {
   int cs; /* Ragel internal state */
@@ -110,28 +118,13 @@ static ID id_clear, id_set_backtrace;
 
 static void finalize_header(struct http_parser *hp);
 
-NORETURN(static void raise_with_empty_bt(VALUE));
-
-static void raise_with_empty_bt(VALUE exc)
+static void parser_raise(VALUE klass, const char *msg)
 {
+  VALUE exc = rb_exc_new2(klass, msg);
   VALUE bt = rb_ary_new();
 
 	rb_funcall(exc, id_set_backtrace, 1, bt);
 	rb_exc_raise(exc);
-}
-
-static void parser_error(const char *msg)
-{
-  VALUE exc = rb_exc_new2(eHttpParserError, msg);
-
-  raise_with_empty_bt(exc);
-}
-
-static void raise_414(const char *msg)
-{
-  VALUE exc = rb_exc_new2(eRequestURITooLongError, msg);
-
-  raise_with_empty_bt(exc);
 }
 
 #define REMAINING (unsigned long)(pe - p)
@@ -201,7 +194,7 @@ http_version(struct http_parser *hp, const char *ptr, size_t len)
 static inline void hp_invalid_if_trailer(struct http_parser *hp)
 {
   if (HP_FL_TEST(hp, INTRAILER))
-    parser_error("invalid Trailer");
+    parser_raise(eHttpParserError, "invalid Trailer");
 }
 
 static void write_cont_value(struct http_parser *hp,
@@ -210,7 +203,7 @@ static void write_cont_value(struct http_parser *hp,
   char *vptr;
 
   if (hp->cont == Qfalse)
-     parser_error("invalid continuation line");
+     parser_raise(eHttpParserError, "invalid continuation line");
   if (NIL_P(hp->cont))
      return; /* we're ignoring this header (probably Host:) */
 
@@ -261,7 +254,7 @@ static void write_value(struct http_parser *hp,
   } else if (f == g_content_length) {
     hp->len.content = parse_length(RSTRING_PTR(v), RSTRING_LEN(v));
     if (hp->len.content < 0)
-      parser_error("invalid Content-Length");
+      parser_raise(eHttpParserError, "invalid Content-Length");
     if (hp->len.content != 0)
       HP_FL_SET(hp, HASBODY);
     hp_invalid_if_trailer(hp);
@@ -351,7 +344,7 @@ static void write_value(struct http_parser *hp,
   action add_to_chunk_size {
     hp->len.chunk = step_incr(hp->len.chunk, fc, 16);
     if (hp->len.chunk < 0)
-      parser_error("invalid chunk size");
+      parser_raise(eHttpParserError, "invalid chunk size");
   }
   action header_done {
     finalize_header(hp);
@@ -692,7 +685,8 @@ static VALUE HttpParser_parse(VALUE self)
   }
 
   http_parser_execute(hp, RSTRING_PTR(data), RSTRING_LEN(data));
-  VALIDATE_MAX_LENGTH(hp->offset, HEADER);
+  if (hp->offset > MAX_HEADER_LEN)
+    parser_raise(e413, "HTTP header is too large");
 
   if (hp->cs == http_parser_first_final ||
       hp->cs == http_parser_en_ChunkedBody) {
@@ -705,7 +699,7 @@ static VALUE HttpParser_parse(VALUE self)
   }
 
   if (hp->cs == http_parser_error)
-    parser_error("Invalid HTTP format, parsing fails.");
+    parser_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
 
   return Qnil;
 }
@@ -871,7 +865,7 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
       hp->buf = data;
       http_parser_execute(hp, dptr, dlen);
       if (hp->cs == http_parser_error)
-        parser_error("Invalid HTTP format, parsing fails.");
+        parser_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
 
       assert(hp->s.dest_offset <= hp->offset &&
              "destination buffer overflow");
@@ -919,8 +913,9 @@ void Init_unicorn_http(void)
   cHttpParser = rb_define_class_under(mUnicorn, "HttpParser", rb_cObject);
   eHttpParserError =
          rb_define_class_under(mUnicorn, "HttpParserError", rb_eIOError);
-  eRequestURITooLongError =
-         rb_define_class_under(mUnicorn, "RequestURITooLongError",
+  e413 = rb_define_class_under(mUnicorn, "RequestEntityTooLargeError",
+                               eHttpParserError);
+  e414 = rb_define_class_under(mUnicorn, "RequestURITooLongError",
                                eHttpParserError);
 
   init_globals();
@@ -964,6 +959,7 @@ void Init_unicorn_http(void)
   rb_define_singleton_method(cHttpParser, "keepalive_requests=", set_ka_req, 1);
   rb_define_singleton_method(cHttpParser, "trust_x_forwarded=", set_xftrust, 1);
   rb_define_singleton_method(cHttpParser, "trust_x_forwarded?", xftrust, 0);
+  rb_define_singleton_method(cHttpParser, "max_header_len=", set_maxhdrlen, 1);
 
   init_common_fields();
   SET_GLOBAL(g_http_host, "HOST");

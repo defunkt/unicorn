@@ -36,6 +36,22 @@ static void rb_18_str_set_len(VALUE str, long len)
 #  endif
 #endif /* ! defined(OFFT2NUM) */
 
+#if !defined(SIZET2NUM)
+#  if SIZEOF_SIZE_T == SIZEOF_LONG
+#    define SIZET2NUM(n) ULONG2NUM(n)
+#  else
+#    define SIZET2NUM(n) ULL2NUM(n)
+#  endif
+#endif /* ! defined(SIZET2NUM) */
+
+#if !defined(NUM2SIZET)
+#  if SIZEOF_SIZE_T == SIZEOF_LONG
+#    define NUM2SIZET(n) ((size_t)NUM2ULONG(n))
+#  else
+#    define NUM2SIZET(n) ((size_t)NUM2ULL(n))
+#  endif
+#endif /* ! defined(NUM2SIZET) */
+
 #ifndef HAVE_RB_STR_MODIFY
 #  define rb_str_modify(x) do {} while (0)
 #endif /* ! defined(HAVE_RB_STR_MODIFY) */

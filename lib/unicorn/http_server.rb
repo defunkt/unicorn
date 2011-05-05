@@ -529,6 +529,8 @@ class Unicorn::HttpServer
       Unicorn::Const::ERROR_500_RESPONSE
     when Unicorn::RequestURITooLongError
       Unicorn::Const::ERROR_414_RESPONSE
+    when Unicorn::RequestEntityTooLargeError
+      Unicorn::Const::ERROR_413_RESPONSE
     when Unicorn::HttpParserError # try to tell the client they're bad
       Unicorn::Const::ERROR_400_RESPONSE
     else
