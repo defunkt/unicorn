@@ -711,6 +711,27 @@ static VALUE HttpParser_parse(VALUE self)
 }
 
 /**
+ * Document-method: parse
+ * call-seq:
+ *    parser.add_parse(buffer) => env or nil
+ *
+ * adds the contents of +buffer+ to the internal buffer and attempts to
+ * continue parsing.  Returns the +env+ Hash on success or nil if more
+ * data is needed.
+ *
+ * Raises HttpParserError if there are parsing errors.
+ */
+static VALUE HttpParser_add_parse(VALUE self, VALUE buffer)
+{
+  struct http_parser *hp = data_get(self);
+
+  Check_Type(buffer, T_STRING);
+  rb_str_buf_append(hp->buf, buffer);
+
+  return HttpParser_parse(self);
+}
+
+/**
  * Document-method: trailers
  * call-seq:
  *    parser.trailers(req, data) => req or nil
@@ -908,6 +929,7 @@ void Init_unicorn_http(void)
   rb_define_method(cHttpParser, "clear", HttpParser_clear, 0);
   rb_define_method(cHttpParser, "reset", HttpParser_reset, 0);
   rb_define_method(cHttpParser, "parse", HttpParser_parse, 0);
+  rb_define_method(cHttpParser, "add_parse", HttpParser_add_parse, 1);
   rb_define_method(cHttpParser, "headers", HttpParser_headers, 2);
   rb_define_method(cHttpParser, "trailers", HttpParser_headers, 2);
   rb_define_method(cHttpParser, "filter_body", HttpParser_filter_body, 2);

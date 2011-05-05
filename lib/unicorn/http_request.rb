@@ -68,9 +68,7 @@ class Unicorn::HttpParser
     if parse.nil?
       # Parser is not done, queue up more data to read and continue parsing
       # an Exception thrown from the parser will throw us out of the loop
-      begin
-        buf << socket.kgio_read!(16384)
-      end while parse.nil?
+      false until add_parse(socket.kgio_read!(16384))
     end
     e[RACK_INPUT] = 0 == content_length ?
                     NULL_IO : @@input_class.new(socket, self)
