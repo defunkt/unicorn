@@ -36,7 +36,7 @@ Gem::Specification.new do |s|
   s.add_dependency(%q<rack>)
   s.add_dependency(%q<kgio>, '~> 2.3')
 
-  s.add_development_dependency('isolate', '~> 3.0.0')
+  s.add_development_dependency('isolate', '~> 3.1')
   s.add_development_dependency('wrongdoc', '~> 1.5')
 
   # s.licenses = %w(GPLv2 Ruby) # licenses= method is not in older RubyGems
