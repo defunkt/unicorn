@@ -35,6 +35,7 @@ File.rename("#{dst}.#$$", dst)
   opts[:path] = "tmp/isolate/rails-#{rails_ver}"
   pid = fork do
     Isolate.now!(opts) do
+      gem 'rake', '0.8.7'
       gem 'rails', rails_ver
     end
   end
