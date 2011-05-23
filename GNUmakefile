@@ -176,7 +176,7 @@ doc: .document $(ext)/unicorn_http.c man html .wrongdoc.yml
 	$(RM) -r doc
 	wrongdoc all
 	install -m644 COPYING doc/COPYING
-	install -m644 $(shell grep '^[A-Z]' .document) doc/
+	install -m644 $(shell LC_ALL=C grep '^[A-Z]' .document) doc/
 	install -m644 $(man1_paths) doc/
 	tar cf - $$(git ls-files examples/) | (cd doc && tar xf -)
 	$(RM) $(man1_rdoc)
