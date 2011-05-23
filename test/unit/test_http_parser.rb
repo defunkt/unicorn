@@ -258,6 +258,20 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal 'hi y x ASDF', req['HTTP_X_ASDF']
   end
 
+  def test_continuation_eats_trailing_spaces
+    parser = HttpParser.new
+    header = "GET / HTTP/1.1\r\n" \
+             "X-ASDF:      \r\n" \
+             "\t\r\n" \
+             "  b  \r\n" \
+             "  ASDF\r\n\r\n"
+    parser.buf << header
+    req = parser.env
+    assert_equal req, parser.parse
+    assert_equal '', parser.buf
+    assert_equal 'b ASDF', req['HTTP_X_ASDF']
+  end
+
   def test_continuation_with_absolute_uri_and_ignored_host_header
     parser = HttpParser.new
     header = "GET http://example.com/ HTTP/1.1\r\n" \
@@ -762,6 +776,48 @@ class HttpParserTest < Test::Unit::TestCase
       end
     end
 
+  end
+
+  def test_leading_tab
+    parser = HttpParser.new
+    get = "GET / HTTP/1.1\r\nHost:\texample.com\r\n\r\n"
+    assert parser.add_parse(get)
+    assert_equal 'example.com', parser.env['HTTP_HOST']
+  end
+
+  def test_trailing_whitespace
+    parser = HttpParser.new
+    get = "GET / HTTP/1.1\r\nHost: example.com \r\n\r\n"
+    assert parser.add_parse(get)
+    assert_equal 'example.com', parser.env['HTTP_HOST']
+  end
+
+  def test_trailing_tab
+    parser = HttpParser.new
+    get = "GET / HTTP/1.1\r\nHost: example.com\t\r\n\r\n"
+    assert parser.add_parse(get)
+    assert_equal 'example.com', parser.env['HTTP_HOST']
+  end
+
+  def test_trailing_multiple_linear_whitespace
+    parser = HttpParser.new
+    get = "GET / HTTP/1.1\r\nHost: example.com\t \t \t\r\n\r\n"
+    assert parser.add_parse(get)
+    assert_equal 'example.com', parser.env['HTTP_HOST']
+  end
+
+  def test_embedded_linear_whitespace_ok
+    parser = HttpParser.new
+    get = "GET / HTTP/1.1\r\nX-Space: hello\t world\t \r\n\r\n"
+    assert parser.add_parse(get)
+    assert_equal "hello\t world", parser.env["HTTP_X_SPACE"]
+  end
+
+  def test_empty_header
+    parser = HttpParser.new
+    get = "GET / HTTP/1.1\r\nHost:  \r\n\r\n"
+    assert parser.add_parse(get)
+    assert_equal '', parser.env['HTTP_HOST']
   end
 
   # so we don't  care about the portability of this test

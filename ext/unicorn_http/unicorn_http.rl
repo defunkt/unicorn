@@ -132,11 +132,26 @@ static void parser_raise(VALUE klass, const char *msg)
 #define MARK(M,FPC) (hp->M = (FPC) - buffer)
 #define PTR_TO(F) (buffer + hp->F)
 #define STR_NEW(M,FPC) rb_str_new(PTR_TO(M), LEN(M, FPC))
+#define STRIPPED_STR_NEW(M,FPC) stripped_str_new(PTR_TO(M), LEN(M, FPC))
 
 #define HP_FL_TEST(hp,fl) ((hp)->flags & (UH_FL_##fl))
 #define HP_FL_SET(hp,fl) ((hp)->flags |= (UH_FL_##fl))
 #define HP_FL_UNSET(hp,fl) ((hp)->flags &= ~(UH_FL_##fl))
 #define HP_FL_ALL(hp,fl) (HP_FL_TEST(hp, fl) == (UH_FL_##fl))
+
+static int is_lws(char c)
+{
+  return (c == ' ' || c == '\t');
+}
+
+static VALUE stripped_str_new(const char *str, long len)
+{
+  long end;
+
+  for (end = len - 1; end >= 0 && is_lws(str[end]); end--);
+
+  return rb_str_new(str, end + 1);
+}
 
 /*
  * handles values of the "Connection:" header, keepalive is implied
@@ -201,6 +216,9 @@ static void write_cont_value(struct http_parser *hp,
                              char *buffer, const char *p)
 {
   char *vptr;
+  long end;
+  long len = LEN(mark, p);
+  long cont_len;
 
   if (hp->cont == Qfalse)
      parser_raise(eHttpParserError, "invalid continuation line");
@@ -210,19 +228,24 @@ static void write_cont_value(struct http_parser *hp,
   assert(TYPE(hp->cont) == T_STRING && "continuation line is not a string");
   assert(hp->mark > 0 && "impossible continuation line offset");
 
-  if (LEN(mark, p) == 0)
+  if (len == 0)
     return;
 
-  if (RSTRING_LEN(hp->cont) > 0)
+  cont_len = RSTRING_LEN(hp->cont);
+  if (cont_len > 0) {
     --hp->mark;
-
+    len = LEN(mark, p);
+  }
   vptr = PTR_TO(mark);
 
-  if (RSTRING_LEN(hp->cont) > 0) {
+  /* normalize tab to space */
+  if (cont_len > 0) {
     assert((' ' == *vptr || '\t' == *vptr) && "invalid leading white space");
     *vptr = ' ';
   }
-  rb_str_buf_cat(hp->cont, vptr, LEN(mark, p));
+
+  for (end = len - 1; end >= 0 && is_lws(vptr[end]); end--);
+  rb_str_buf_cat(hp->cont, vptr, end + 1);
 }
 
 static void write_value(struct http_parser *hp,
@@ -233,7 +256,7 @@ static void write_value(struct http_parser *hp,
   VALUE e;
 
   VALIDATE_MAX_LENGTH(LEN(mark, p), FIELD_VALUE);
-  v = LEN(mark, p) == 0 ? rb_str_buf_new(128) : STR_NEW(mark, p);
+  v = LEN(mark, p) == 0 ? rb_str_buf_new(128) : STRIPPED_STR_NEW(mark, p);
   if (NIL_P(f)) {
     const char *field = PTR_TO(start.field);
     size_t flen = hp->s.field_len;
