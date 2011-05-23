@@ -878,6 +878,7 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
   dlen = RSTRING_LEN(data);
 
   StringValue(buf);
+  rb_str_modify(buf);
   rb_str_resize(buf, dlen); /* we can never copy more than dlen bytes */
   OBJ_TAINT(buf); /* keep weirdo $SAFE users happy */
 
