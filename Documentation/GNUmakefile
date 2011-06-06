@@ -1,7 +1,7 @@
 all::
 
 PANDOC = pandoc
-PANDOC_OPTS = -f markdown --email-obfuscation=none --sanitize-html
+PANDOC_OPTS = -f markdown --email-obfuscation=none
 pandoc = $(PANDOC) $(PANDOC_OPTS)
 pandoc_html = $(pandoc) --toc -t html --no-wrap
 
