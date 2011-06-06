@@ -107,6 +107,17 @@ git itself.  See the Documentation/SubmittingPatches document
 distributed with git on on patch submission guidelines to follow.  Just
 don't email the git mailing list or maintainer with Unicorn patches :)
 
+== Building a Gem
+
+In order to build the gem, you must install the following components:
+
+ * wrongdoc
+ * pandoc
+
+You can build the Unicorn gem with the following command:
+
+  gmake gem
+
 == Running Development Versions
 
 It is easy to install the contents of your git working directory:
