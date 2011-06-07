@@ -164,7 +164,7 @@ pkg_extra := GIT-VERSION-FILE ChangeLog LATEST NEWS \
 ChangeLog: GIT-VERSION-FILE .wrongdoc.yml
 	wrongdoc prepare
 
-.manifest: ChangeLog $(ext)/unicorn_http.c
+.manifest: ChangeLog $(ext)/unicorn_http.c man
 	(git ls-files && for i in $@ $(pkg_extra); do echo $$i; done) | \
 	  LC_ALL=C sort > $@+
 	cmp $@+ $@ || mv $@+ $@
