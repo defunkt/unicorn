@@ -12,6 +12,7 @@ class TestSocketHelper < Test::Unit::TestCase
     @log_tmp = Tempfile.new 'logger'
     @logger = Logger.new(@log_tmp.path)
     @test_addr = ENV['UNICORN_TEST_ADDR'] || '127.0.0.1'
+    @test6_addr = ENV['UNICORN_TEST6_ADDR'] || '::1'
     GC.disable
   end
 
@@ -177,4 +178,11 @@ class TestSocketHelper < Test::Unit::TestCase
     assert cur > 1
   end if defined?(TCP_DEFER_ACCEPT)
 
+  def test_ipv6only
+    port = unused_port "#@test6_addr"
+    sock = bind_listen "[#@test6_addr]:#{port}", :ipv6only => true
+    cur = sock.getsockopt(:IPPROTO_IPV6, :IPV6_V6ONLY).unpack('i')[0]
+    assert_equal 1, cur
+    rescue Errno::EAFNOSUPPORT
+  end if RUBY_VERSION >= "1.9.2"
 end

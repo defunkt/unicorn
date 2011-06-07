@@ -23,9 +23,6 @@ class Unicorn::HttpServer
   # backwards compatibility with 1.x
   Worker = Unicorn::Worker
 
-  # prevents IO objects in here from being GC-ed
-  IO_PURGATORY = []
-
   # all bound listener sockets
   LISTENERS = []
 

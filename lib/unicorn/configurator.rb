@@ -281,6 +281,22 @@ class Unicorn::Configurator
   #
   #   Default: +true+ in \Unicorn 3.4+, +false+ in Rainbows!
   #
+  # [:ipv6only => true or false]
+  #
+  #   This option makes IPv6-capable TCP listeners IPv6-only and unable
+  #   to receive IPv4 queries on dual-stack systems.  A separate IPv4-only
+  #   listener is required if this is true.
+  #
+  #   This option is only available for Ruby 1.9.2 and later.
+  #
+  #   Enabling this option for the IPv6-only listener and having a
+  #   separate IPv4 listener is recommended if you wish to support IPv6
+  #   on the same TCP port.  Otherwise, the value of \env[\"REMOTE_ADDR\"]
+  #   will appear as an ugly IPv4-mapped-IPv6 address for IPv4 clients
+  #   (e.g ":ffff:10.0.0.1" instead of just "10.0.0.1").
+  #
+  #   Default: Operating-system dependent
+  #
   # [:tries => Integer]
   #
   #   Times to retry binding a socket if it is already in use
@@ -358,7 +374,7 @@ class Unicorn::Configurator
         Integer === value or
           raise ArgumentError, "not an integer: #{key}=#{value.inspect}"
       end
-      [ :tcp_nodelay, :tcp_nopush ].each do |key|
+      [ :tcp_nodelay, :tcp_nopush, :ipv6only ].each do |key|
         (value = options[key]).nil? and next
         TrueClass === value || FalseClass === value or
           raise ArgumentError, "not boolean: #{key}=#{value.inspect}"

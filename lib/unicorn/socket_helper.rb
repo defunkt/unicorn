@@ -4,9 +4,12 @@ require 'socket'
 
 module Unicorn
   module SocketHelper
+    # :stopdoc:
     include Socket::Constants
 
-    # :stopdoc:
+    # prevents IO objects in here from being GC-ed
+    IO_PURGATORY = []
+
     # internal interface, only used by Rainbows!/Zbatery
     DEFAULTS = {
       # The semantics for TCP_DEFER_ACCEPT changed in Linux 2.6.32+
@@ -136,14 +139,27 @@ module Unicorn
         ensure
           File.umask(old_umask)
         end
-      elsif /\A(\d+\.\d+\.\d+\.\d+):(\d+)\z/ =~ address ||
-            /\A\[([a-fA-F0-9:]+)\]:(\d+)\z/ =~ address
+      elsif /\A\[([a-fA-F0-9:]+)\]:(\d+)\z/ =~ address
+        new_ipv6_server($1, $2.to_i, opt)
+      elsif /\A(\d+\.\d+\.\d+\.\d+):(\d+)\z/ =~ address
         Kgio::TCPServer.new($1, $2.to_i)
       else
         raise ArgumentError, "Don't know how to bind: #{address}"
       end
       set_server_sockopt(sock, opt)
       sock
+    end
+
+    def new_ipv6_server(addr, port, opt)
+      opt.key?(:ipv6only) or return Kgio::TCPServer.new(addr, port)
+      defined?(IPV6_V6ONLY) or
+        abort "Socket::IPV6_V6ONLY not defined, upgrade Ruby and/or your OS"
+      sock = Socket.new(AF_INET6, SOCK_STREAM, 0)
+      sock.setsockopt(IPPROTO_IPV6, IPV6_V6ONLY, opt[:ipv6only] ? 1 : 0)
+      sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+      sock.bind(Socket.pack_sockaddr_in(port, addr))
+      IO_PURGATORY << sock
+      Kgio::TCPServer.for_fd(sock.fileno)
     end
 
     # returns rfc2732-style (e.g. "[::1]:666") addresses for IPv6
