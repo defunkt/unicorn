@@ -8,8 +8,8 @@
 # improve things much compared to constants.
 module Unicorn::Const
 
-  # The current version of Unicorn, currently 3.6.2
-  UNICORN_VERSION = "3.6.2"
+  # The current version of Unicorn, currently 3.7.0
+  UNICORN_VERSION = "3.7.0"
 
   # default TCP listen host address (0.0.0.0, all interfaces)
   DEFAULT_HOST = "0.0.0.0"
