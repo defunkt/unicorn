@@ -117,4 +117,4 @@ if $DEBUG
 end
 
 Unicorn::Launcher.daemonize!(options) if rackup_opts[:daemonize]
-Unicorn.run(app, options)
+Unicorn::HttpServer.new(app, options).start.join

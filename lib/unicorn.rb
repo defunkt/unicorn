@@ -26,9 +26,6 @@ module Unicorn
   end
 
   # :stopdoc:
-  def self.run(app, options = {})
-    Unicorn::HttpServer.new(app, options).start.join
-  end
 
   # This returns a lambda to pass in as the app, this does not "build" the
   # app (which we defer based on the outcome of "preload_app" in the

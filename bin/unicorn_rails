@@ -205,4 +205,4 @@ if rackup_opts[:daemonize]
   options[:pid] = "tmp/pids/unicorn.pid"
   Unicorn::Launcher.daemonize!(options)
 end
-Unicorn.run(app, options)
+Unicorn::HttpServer.new(app, options).start.join

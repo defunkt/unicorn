@@ -497,14 +497,22 @@ class Unicorn::HttpServer
   end
 
   def spawn_missing_workers
-    (0...worker_processes).each do |worker_nr|
+    worker_nr = -1
+    until (worker_nr += 1) == @worker_processes
       WORKERS.values.include?(worker_nr) and next
       worker = Worker.new(worker_nr, Unicorn::TmpIO.new)
       before_fork.call(self, worker)
-      WORKERS[fork {
-        after_fork_internal
-        worker_loop(worker)
-      }] = worker
+      if pid = fork
+        WORKERS[pid] = worker
+      else
+        begin
+          after_fork_internal
+          worker_loop(worker)
+          exit(0)
+        rescue Object
+          exit!(1)
+        end
+      end
     end
   end
 
