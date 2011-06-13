@@ -908,6 +908,13 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE dst, VALUE src)
     if (hp->len.content > 0) {
       long nr = MIN(srclen, hp->len.content);
 
+      /*
+       * using rb_str_replace() to avoid memcpy() doesn't help in
+       * most cases because a GC-aware programmer will pass an explicit
+       * buffer to env["rack.input"].read and reuse the buffer in a loop.
+       * This causes copy-on-write behavior to be triggered anyways
+       * when the +src+ buffer is modified (when reading off the socket).
+       */
       hp->buf = src;
       memcpy(RSTRING_PTR(dst), srcptr, nr);
       hp->len.content -= nr;
