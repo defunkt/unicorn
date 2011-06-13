@@ -237,6 +237,17 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert @parser.keepalive?
   end
 
+  def test_chunked_empty
+    str = @parser.buf
+    req = @parser.env
+    str << "PUT / HTTP/1.1\r\ntransfer-Encoding: chunked\r\n\r\n"
+    assert_equal req, @parser.parse, "msg=#{str}"
+    assert_equal 0, str.size
+    tmp = ""
+    assert_equal str, @parser.filter_body(tmp, str << "0\r\n\r\n")
+    assert_equal "", tmp
+  end
+
   def test_two_chunks
     str = @parser.buf
     str << "PUT / HTTP/1.1\r\ntransfer-Encoding: chunked\r\n\r\n"
@@ -650,5 +661,48 @@ class HttpParserNgTest < Test::Unit::TestCase
     @parser.buf << req
     assert_equal expect, @parser.parse
     assert ! @parser.next?
+  end
+
+  def test_chunk_only
+    tmp = ""
+    assert_equal @parser, @parser.dechunk!
+    assert_nil @parser.filter_body(tmp, "6\r\n")
+    assert_equal "", tmp
+    assert_nil @parser.filter_body(tmp, "abcdef")
+    assert_equal "abcdef", tmp
+    assert_nil @parser.filter_body(tmp, "\r\n")
+    assert_equal "", tmp
+    src = "0\r\n\r\n"
+    assert_equal src.object_id, @parser.filter_body(tmp, src).object_id
+    assert_equal "", tmp
+  end
+
+  def test_chunk_only_bad_align
+    tmp = ""
+    assert_equal @parser, @parser.dechunk!
+    assert_nil @parser.filter_body(tmp, "6\r\na")
+    assert_equal "a", tmp
+    assert_nil @parser.filter_body(tmp, "bcde")
+    assert_equal "bcde", tmp
+    assert_nil @parser.filter_body(tmp, "f\r")
+    assert_equal "f", tmp
+    src = "\n0\r\n\r\n"
+    assert_equal src.object_id, @parser.filter_body(tmp, src).object_id
+    assert_equal "", tmp
+  end
+
+  def test_chunk_only_reset_ok
+    tmp = ""
+    assert_equal @parser, @parser.dechunk!
+    src = "1\r\na\r\n0\r\n\r\n"
+    assert_nil @parser.filter_body(tmp, src)
+    assert_equal "a", tmp
+    assert_equal src.object_id, @parser.filter_body(tmp, src).object_id
+
+    assert_equal @parser, @parser.dechunk!
+    src = "0\r\n\r\n"
+    assert_equal src.object_id, @parser.filter_body(tmp, src).object_id
+    assert_equal "", tmp
+    assert_equal src, @parser.filter_body(tmp, src)
   end
 end

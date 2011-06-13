@@ -631,6 +631,34 @@ static VALUE HttpParser_clear(VALUE self)
 
 /**
  * call-seq:
+ *    parser.chunk_ready! => parser
+ *
+ * Resets the parser to a state suitable for dechunking response bodies
+ *
+ */
+static VALUE HttpParser_dechunk_bang(VALUE self)
+{
+  struct http_parser *hp = data_get(self);
+
+  http_parser_init(hp);
+
+  /*
+   * we don't care about trailers in dechunk-only mode,
+   * but if we did we'd set UH_FL_HASTRAILER and clear hp->env
+   */
+  if (0) {
+    rb_funcall(hp->env, id_clear, 0);
+    hp->flags = UH_FL_HASTRAILER;
+  }
+
+  hp->flags |= UH_FL_HASBODY | UH_FL_INBODY | UH_FL_CHUNKED;
+  hp->cs = http_parser_en_ChunkedBody;
+
+  return self;
+}
+
+/**
+ * call-seq:
  *    parser.reset => nil
  *
  * Resets the parser to it's initial state so that you can reuse it
@@ -954,6 +982,7 @@ void Init_unicorn_http(void)
   rb_define_method(cHttpParser, "initialize", HttpParser_init, 0);
   rb_define_method(cHttpParser, "clear", HttpParser_clear, 0);
   rb_define_method(cHttpParser, "reset", HttpParser_reset, 0);
+  rb_define_method(cHttpParser, "dechunk!", HttpParser_dechunk_bang, 0);
   rb_define_method(cHttpParser, "parse", HttpParser_parse, 0);
   rb_define_method(cHttpParser, "add_parse", HttpParser_add_parse, 1);
   rb_define_method(cHttpParser, "headers", HttpParser_headers, 2);
