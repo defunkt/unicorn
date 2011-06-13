@@ -264,8 +264,9 @@ class Unicorn::Configurator
   #
   #   This has no effect on UNIX sockets.
   #
-  #   Default: +false+ (Nagle's algorithm enabled) in \Unicorn,
-  #   +true+ in Rainbows!
+  #   Default: +true+ (Nagle's algorithm disabled) in \Unicorn,
+  #   +true+ in Rainbows!  This defaulted to +false+ in \Unicorn
+  #   3.x
   #
   # [:tcp_nopush => true or false]
   #
@@ -279,7 +280,8 @@ class Unicorn::Configurator
   #
   #   This has no effect on UNIX sockets.
   #
-  #   Default: +true+ in \Unicorn 3.4+, +false+ in Rainbows!
+  #   Default: +false+
+  #   This defaulted to +true+ in \Unicorn 3.4 - 3.7
   #
   # [:ipv6only => true or false]
   #
