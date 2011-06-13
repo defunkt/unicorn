@@ -856,72 +856,72 @@ static VALUE HttpParser_env(VALUE self)
 
 /**
  * call-seq:
- *    parser.filter_body(buf, data) => nil/data
+ *    parser.filter_body(dst, src) => nil/src
  *
- * Takes a String of +data+, will modify data if dechunking is done.
+ * Takes a String of +src+, will modify data if dechunking is done.
  * Returns +nil+ if there is more data left to process.  Returns
- * +data+ if body processing is complete. When returning +data+,
- * it may modify +data+ so the start of the string points to where
+ * +src+ if body processing is complete. When returning +src+,
+ * it may modify +src+ so the start of the string points to where
  * the body ended so that trailer processing can begin.
  *
  * Raises HttpParserError if there are dechunking errors.
- * Basically this is a glorified memcpy(3) that copies +data+
+ * Basically this is a glorified memcpy(3) that copies +src+
  * into +buf+ while filtering it through the dechunker.
  */
-static VALUE HttpParser_filter_body(VALUE self, VALUE buf, VALUE data)
+static VALUE HttpParser_filter_body(VALUE self, VALUE dst, VALUE src)
 {
   struct http_parser *hp = data_get(self);
-  char *dptr;
-  long dlen;
+  char *srcptr;
+  long srclen;
 
-  dptr = RSTRING_PTR(data);
-  dlen = RSTRING_LEN(data);
+  srcptr = RSTRING_PTR(src);
+  srclen = RSTRING_LEN(src);
 
-  StringValue(buf);
-  rb_str_modify(buf);
-  rb_str_resize(buf, dlen); /* we can never copy more than dlen bytes */
-  OBJ_TAINT(buf); /* keep weirdo $SAFE users happy */
+  StringValue(dst);
+  rb_str_modify(dst);
+  rb_str_resize(dst, srclen); /* we can never copy more than srclen bytes */
+  OBJ_TAINT(dst); /* keep weirdo $SAFE users happy */
 
   if (HP_FL_TEST(hp, CHUNKED)) {
     if (!chunked_eof(hp)) {
       hp->s.dest_offset = 0;
-      hp->cont = buf;
-      hp->buf = data;
-      http_parser_execute(hp, dptr, dlen);
+      hp->cont = dst;
+      hp->buf = src;
+      http_parser_execute(hp, srcptr, srclen);
       if (hp->cs == http_parser_error)
         parser_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
 
       assert(hp->s.dest_offset <= hp->offset &&
              "destination buffer overflow");
-      advance_str(data, hp->offset);
-      rb_str_set_len(buf, hp->s.dest_offset);
+      advance_str(src, hp->offset);
+      rb_str_set_len(dst, hp->s.dest_offset);
 
-      if (RSTRING_LEN(buf) == 0 && chunked_eof(hp)) {
+      if (RSTRING_LEN(dst) == 0 && chunked_eof(hp)) {
         assert(hp->len.chunk == 0 && "chunk at EOF but more to parse");
       } else {
-        data = Qnil;
+        src = Qnil;
       }
     }
   } else {
     /* no need to enter the Ragel machine for unchunked transfers */
     assert(hp->len.content >= 0 && "negative Content-Length");
     if (hp->len.content > 0) {
-      long nr = MIN(dlen, hp->len.content);
+      long nr = MIN(srclen, hp->len.content);
 
-      hp->buf = data;
-      memcpy(RSTRING_PTR(buf), dptr, nr);
+      hp->buf = src;
+      memcpy(RSTRING_PTR(dst), srcptr, nr);
       hp->len.content -= nr;
       if (hp->len.content == 0) {
         HP_FL_SET(hp, REQEOF);
         hp->cs = http_parser_first_final;
       }
-      advance_str(data, nr);
-      rb_str_set_len(buf, nr);
-      data = Qnil;
+      advance_str(src, nr);
+      rb_str_set_len(dst, nr);
+      src = Qnil;
     }
   }
   hp->offset = 0; /* for trailer parsing */
-  return data;
+  return src;
 }
 
 #define SET_GLOBAL(var,str) do { \
