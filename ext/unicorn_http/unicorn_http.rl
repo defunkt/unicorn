@@ -631,7 +631,7 @@ static VALUE HttpParser_clear(VALUE self)
 
 /**
  * call-seq:
- *    parser.chunk_ready! => parser
+ *    parser.dechunk! => parser
  *
  * Resets the parser to a state suitable for dechunking response bodies
  *
