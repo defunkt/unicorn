@@ -505,15 +505,16 @@ class Unicorn::HttpServer
       if pid = fork
         WORKERS[pid] = worker
       else
-        begin
-          after_fork_internal
-          worker_loop(worker)
-          exit(0)
-        rescue Object
-          exit!(1)
-        end
+        after_fork_internal
+        worker_loop(worker)
+        exit(0)
       end
     end
+    rescue SystemExit => e
+      exit!(e.status)
+    rescue => e
+      @logger.error(e) rescue nil
+      exit!(1)
   end
 
   def maintain_worker_count
