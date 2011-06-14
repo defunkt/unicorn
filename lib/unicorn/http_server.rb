@@ -281,8 +281,7 @@ class Unicorn::HttpServer
     logger.info "master process ready" # test_exec.rb relies on this message
     if @ready_pipe
       @ready_pipe.syswrite($$.to_s)
-      @ready_pipe.close rescue nil
-      @ready_pipe = nil
+      @ready_pipe = @ready_pipe.close rescue nil
     end
     begin
       reap_all_workers
@@ -488,7 +487,7 @@ class Unicorn::HttpServer
 
   def after_fork_internal
     @ready_pipe.close if @ready_pipe
-    self.ready_pipe = nil # XXX Rainbows! compat, change for Unicorn 4.x
+    @ready_pipe = nil
     srand # http://redmine.ruby-lang.org/issues/4338
 
     # The OpenSSL PRNG is seeded with only the pid, and apps with frequently
