@@ -761,7 +761,7 @@ class HttpParserTest < Test::Unit::TestCase
     get = "GET /#{rand_data(10,120)} HTTP/1.1\r\n"
     get << "X-Test: test\r\n" * (80 * 1024)
     parser.buf << get
-    assert_raises Unicorn::HttpParserError do
+    assert_raises(Unicorn::HttpParserError,Unicorn::RequestURITooLongError) do
       parser.parse
     end
     parser.clear
