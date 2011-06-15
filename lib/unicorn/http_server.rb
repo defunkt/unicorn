@@ -604,7 +604,7 @@ class Unicorn::HttpServer
     init_worker_process(worker)
     nr = 0 # this becomes negative if we need to reopen logs
     alive = worker.tmp # tmp is our lifeline to the master process
-    ready = LISTENERS
+    ready = LISTENERS.dup
 
     # closing anything we IO.select on will raise EBADF
     trap(:USR1) { nr = -65536; SELF_PIPE[0].close rescue nil }
@@ -627,7 +627,7 @@ class Unicorn::HttpServer
       # and before IO.select).
       alive.chmod(m = 0 == m ? 1 : 0)
 
-      ready.each do |sock|
+      while sock = ready.shift
         if client = sock.kgio_tryaccept
           process_client(client)
           nr += 1
@@ -640,7 +640,10 @@ class Unicorn::HttpServer
       # we're probably reasonably busy, so avoid calling select()
       # and do a speculative non-blocking accept() on ready listeners
       # before we sleep again in select().
-      redo unless nr == 0 # (nr < 0) => reopen logs
+      unless nr == 0 # (nr < 0) => reopen logs (unlikely)
+        ready = LISTENERS.dup
+        redo
+      end
 
       ppid == Process.ppid or return
       alive.chmod(m = 0 == m ? 1 : 0)
@@ -648,7 +651,7 @@ class Unicorn::HttpServer
       # timeout used so we can detect parent death:
       ret = IO.select(LISTENERS, nil, SELF_PIPE, timeout) and ready = ret[0]
     rescue Errno::EINTR
-      ready = LISTENERS
+      ready = LISTENERS.dup
     rescue Errno::EBADF
       nr < 0 or return
     rescue => e
