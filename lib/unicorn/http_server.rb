@@ -97,7 +97,7 @@ class Unicorn::HttpServer
     self.reexec_pid = 0
     options = options.dup
     @ready_pipe = options.delete(:ready_pipe)
-    self.init_listeners = options[:listeners] ? options[:listeners].dup : []
+    @init_listeners = options[:listeners] ? options[:listeners].dup : []
     options[:use_defaults] = true
     self.config = Unicorn::Configurator.new(options)
     self.listener_opts = {}
@@ -118,33 +118,7 @@ class Unicorn::HttpServer
 
   # Runs the thing.  Returns self so you can run join on it
   def start
-    # inherit sockets from parents, they need to be plain Socket objects
-    # before they become Kgio::UNIXServer or Kgio::TCPServer
-    inherited = ENV['UNICORN_FD'].to_s.split(/,/).map do |fd|
-      io = Socket.for_fd(fd.to_i)
-      set_server_sockopt(io, listener_opts[sock_name(io)])
-      IO_PURGATORY << io
-      logger.info "inherited addr=#{sock_name(io)} fd=#{fd}"
-      server_cast(io)
-    end
-
-    config_listeners = config[:listeners].dup
-    LISTENERS.replace(inherited)
-
-    # we start out with generic Socket objects that get cast to either
-    # Kgio::TCPServer or Kgio::UNIXServer objects; but since the Socket
-    # objects share the same OS-level file descriptor as the higher-level
-    # *Server objects; we need to prevent Socket objects from being
-    # garbage-collected
-    config_listeners -= listener_names
-    if config_listeners.empty? && LISTENERS.empty?
-      config_listeners << Unicorn::Const::DEFAULT_LISTEN
-      init_listeners << Unicorn::Const::DEFAULT_LISTEN
-      START_CTX[:argv] << "-l#{Unicorn::Const::DEFAULT_LISTEN}"
-    end
-    config_listeners.each { |addr| listen(addr) }
-    raise ArgumentError, "no listeners" if LISTENERS.empty?
-
+    inherit_listeners!
     # this pipe is used to wake us up from select(2) in #join when signals
     # are trapped.  See trap_deferred.
     init_self_pipe!
@@ -692,7 +666,7 @@ class Unicorn::HttpServer
   def load_config!
     loaded_app = app
     logger.info "reloading config_file=#{config.config_file}"
-    config[:listeners].replace(init_listeners)
+    config[:listeners].replace(@init_listeners)
     config.reload
     config.commit!(self)
     kill_each_worker(:QUIT)
@@ -736,5 +710,33 @@ class Unicorn::HttpServer
     SELF_PIPE.replace(Kgio::Pipe.new)
     SELF_PIPE.each { |io| io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
   end
-end
 
+  def inherit_listeners!
+    # inherit sockets from parents, they need to be plain Socket objects
+    # before they become Kgio::UNIXServer or Kgio::TCPServer
+    inherited = ENV['UNICORN_FD'].to_s.split(/,/).map do |fd|
+      io = Socket.for_fd(fd.to_i)
+      set_server_sockopt(io, listener_opts[sock_name(io)])
+      IO_PURGATORY << io
+      logger.info "inherited addr=#{sock_name(io)} fd=#{fd}"
+      server_cast(io)
+    end
+
+    config_listeners = config[:listeners].dup
+    LISTENERS.replace(inherited)
+
+    # we start out with generic Socket objects that get cast to either
+    # Kgio::TCPServer or Kgio::UNIXServer objects; but since the Socket
+    # objects share the same OS-level file descriptor as the higher-level
+    # *Server objects; we need to prevent Socket objects from being
+    # garbage-collected
+    config_listeners -= listener_names
+    if config_listeners.empty? && LISTENERS.empty?
+      config_listeners << Unicorn::Const::DEFAULT_LISTEN
+      @init_listeners << Unicorn::Const::DEFAULT_LISTEN
+      START_CTX[:argv] << "-l#{Unicorn::Const::DEFAULT_LISTEN}"
+    end
+    config_listeners.each { |addr| listen(addr) }
+    raise ArgumentError, "no listeners" if LISTENERS.empty?
+  end
+end
