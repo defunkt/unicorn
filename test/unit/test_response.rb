@@ -15,7 +15,7 @@ class ResponseTest < Test::Unit::TestCase
   include Unicorn::HttpResponse
 
   def test_httpdate
-    before = Time.now.to_i
+    before = Time.now.to_i - 1
     str = httpdate
     assert_kind_of(String, str)
     middle = Time.parse(str).to_i
