@@ -186,6 +186,7 @@ def rails_builder(ru, op, daemonize)
 end
 
 app = rails_builder(ARGV[0], op, rackup_opts[:daemonize])
+op = nil
 
 if $DEBUG
   require 'pp'

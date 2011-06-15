@@ -31,9 +31,9 @@ module Unicorn
   # app (which we defer based on the outcome of "preload_app" in the
   # Unicorn config).  The returned lambda will be called when it is
   # time to build the app.
-  def self.builder(ru, opts)
+  def self.builder(ru, op)
     # allow Configurator to parse cli switches embedded in the ru file
-    Unicorn::Configurator::RACKUP.update(:file => ru, :optparse => opts)
+    op = Unicorn::Configurator::RACKUP.merge!(:file => ru, :optparse => op)
 
     # always called after config file parsing, may be called after forking
     lambda do ||

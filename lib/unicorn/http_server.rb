@@ -458,7 +458,9 @@ class Unicorn::HttpServer
 
   def after_fork_internal
     @ready_pipe.close if @ready_pipe
-    @ready_pipe = nil
+    Unicorn::Configurator::RACKUP.clear
+    @ready_pipe = @init_listeners = @config = @before_exec = @before_fork = nil
+
     srand # http://redmine.ruby-lang.org/issues/4338
 
     # The OpenSSL PRNG is seeded with only the pid, and apps with frequently
