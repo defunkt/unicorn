@@ -118,8 +118,6 @@ class Unicorn::HttpServer
 
   # Runs the thing.  Returns self so you can run join on it
   def start
-    BasicSocket.do_not_reverse_lookup = true
-
     # inherit sockets from parents, they need to be plain Socket objects
     # before they become Kgio::UNIXServer or Kgio::TCPServer
     inherited = ENV['UNICORN_FD'].to_s.split(/,/).map do |fd|
