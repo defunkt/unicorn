@@ -740,7 +740,7 @@ class HttpParserTest < Test::Unit::TestCase
     # then that large header names are caught
     10.times do |c|
       get = "GET /#{rand_data(10,120)} HTTP/1.1\r\nX-#{rand_data(1024, 1024+(c*1024))}: Test\r\n\r\n"
-      assert_raises Unicorn::HttpParserError do
+      assert_raises(Unicorn::HttpParserError,Unicorn::RequestURITooLongError) do
         parser.buf << get
         parser.parse
         parser.clear
@@ -750,7 +750,7 @@ class HttpParserTest < Test::Unit::TestCase
     # then that large mangled field values are caught
     10.times do |c|
       get = "GET /#{rand_data(10,120)} HTTP/1.1\r\nX-Test: #{rand_data(1024, 1024+(c*1024), false)}\r\n\r\n"
-      assert_raises Unicorn::HttpParserError do
+      assert_raises(Unicorn::HttpParserError,Unicorn::RequestURITooLongError) do
         parser.buf << get
         parser.parse
         parser.clear
