@@ -906,11 +906,12 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE dst, VALUE src)
   srclen = RSTRING_LEN(src);
 
   StringValue(dst);
-  rb_str_modify(dst);
-  rb_str_resize(dst, srclen); /* we can never copy more than srclen bytes */
 
   if (HP_FL_TEST(hp, CHUNKED)) {
     if (!chunked_eof(hp)) {
+      rb_str_modify(dst);
+      rb_str_resize(dst, srclen); /* we can never copy more than srclen bytes */
+
       hp->s.dest_offset = 0;
       hp->cont = dst;
       hp->buf = src;
@@ -935,6 +936,8 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE dst, VALUE src)
     if (hp->len.content > 0) {
       long nr = MIN(srclen, hp->len.content);
 
+      rb_str_modify(dst);
+      rb_str_resize(dst, nr);
       /*
        * using rb_str_replace() to avoid memcpy() doesn't help in
        * most cases because a GC-aware programmer will pass an explicit
@@ -950,7 +953,6 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE dst, VALUE src)
         hp->cs = http_parser_first_final;
       }
       advance_str(src, nr);
-      rb_str_set_len(dst, nr);
       src = Qnil;
     }
   }
