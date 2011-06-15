@@ -132,7 +132,7 @@ class Unicorn::HttpServer
 
     self.master_pid = $$
     build_app! if preload_app
-    maintain_worker_count
+    spawn_missing_workers
     self
   end
 
