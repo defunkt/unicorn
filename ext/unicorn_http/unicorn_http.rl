@@ -908,7 +908,6 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE dst, VALUE src)
   StringValue(dst);
   rb_str_modify(dst);
   rb_str_resize(dst, srclen); /* we can never copy more than srclen bytes */
-  OBJ_TAINT(dst); /* keep weirdo $SAFE users happy */
 
   if (HP_FL_TEST(hp, CHUNKED)) {
     if (!chunked_eof(hp)) {
