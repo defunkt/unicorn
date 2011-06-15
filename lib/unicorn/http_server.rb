@@ -332,7 +332,6 @@ class Unicorn::HttpServer
           reexec
         end
       end
-    rescue Errno::EINTR
     rescue => e
       logger.error "Unhandled master loop exception #{e.inspect}."
       logger.error e.backtrace.join("\n")
@@ -650,8 +649,6 @@ class Unicorn::HttpServer
 
       # timeout used so we can detect parent death:
       ret = IO.select(LISTENERS, nil, SELF_PIPE, timeout) and ready = ret[0]
-    rescue Errno::EINTR
-      ready = LISTENERS.dup
     rescue Errno::EBADF
       nr < 0 or return
     rescue => e
