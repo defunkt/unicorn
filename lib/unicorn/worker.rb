@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+require "raindrops"
 
 # This class and its members can be considered a stable interface
 # and will not change in a backwards-incompatible fashion between
@@ -7,12 +8,52 @@
 #
 # Some users may want to access it in the before_fork/after_fork hooks.
 # See the Unicorn::Configurator RDoc for examples.
-class Unicorn::Worker < Struct.new(:nr, :tmp, :switched)
+class Unicorn::Worker
+  # :stopdoc:
+  attr_accessor :nr, :switched
+  attr_writer :tmp
+
+  PER_DROP = Raindrops::PAGE_SIZE / Raindrops::SIZE
+  DROPS = []
+
+  def initialize(nr)
+    drop_index = nr / PER_DROP
+    @raindrop = DROPS[drop_index] ||= Raindrops.new(PER_DROP)
+    @offset = nr % PER_DROP
+    @raindrop[@offset] = 0
+    @nr = nr
+    @tmp = @switched = false
+  end
 
   # worker objects may be compared to just plain Integers
   def ==(other_nr) # :nodoc:
-    nr == other_nr
+    @nr == other_nr
   end
+
+  # called in the worker process
+  def tick=(value) # :nodoc:
+    @raindrop[@offset] = value
+  end
+
+  # called in the master process
+  def tick # :nodoc:
+    @raindrop[@offset]
+  end
+
+  # only exists for compatibility
+  def tmp # :nodoc:
+    @tmp ||= begin
+      tmp = Unicorn::TmpIO.new
+      tmp.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+      tmp
+    end
+  end
+
+  def close # :nodoc:
+    @tmp.close if @tmp
+  end
+
+  # :startdoc:
 
   # In most cases, you should be using the Unicorn::Configurator#user
   # directive instead.  This method should only be used if you need
@@ -36,12 +77,12 @@ class Unicorn::Worker < Struct.new(:nr, :tmp, :switched)
     uid = Etc.getpwnam(user).uid
     gid = Etc.getgrnam(group).gid if group
     Unicorn::Util.chown_logs(uid, gid)
-    tmp.chown(uid, gid)
+    @tmp.chown(uid, gid) if @tmp
     if gid && Process.egid != gid
       Process.initgroups(user, gid)
       Process::GID.change_privilege(gid)
     end
     Process.euid != uid and Process::UID.change_privilege(uid)
-    self.switched = true
+    @switched = true
   end
 end

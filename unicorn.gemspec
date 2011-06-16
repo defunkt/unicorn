@@ -35,6 +35,7 @@ Gem::Specification.new do |s|
   # *strongly* recommended for security reasons.
   s.add_dependency(%q<rack>)
   s.add_dependency(%q<kgio>, '~> 2.4')
+  s.add_dependency(%w<raindrops>, '~> 0.6')
 
   s.add_development_dependency('isolate', '~> 3.1')
   s.add_development_dependency('wrongdoc', '~> 1.5')

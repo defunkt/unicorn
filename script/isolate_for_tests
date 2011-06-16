@@ -17,6 +17,7 @@ opts = {
 pid = fork do
   Isolate.now!(opts) do
     gem 'sqlite3-ruby', '1.2.5'
+    gem 'raindrops', '0.6.1'
     gem 'kgio', '2.3.3'
     gem 'rack', '1.2.2'
   end

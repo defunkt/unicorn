@@ -76,14 +76,6 @@
   Applications that use threads continue to work if Unicorn
   is only serving LAN or localhost clients.
 
-* Timeout implementation is done via fchmod(2) in each worker
-  on a shared file descriptor to update st_ctime on the inode.
-  Master process wakeups for checking on timeouts is throttled
-  one a second to minimize the performance impact and simplify
-  the code path within the worker.  Neither futimes(2) nor
-  pwrite(2)/pread(2) are supported by base MRI, nor are they as
-  portable on UNIX systems as fchmod(2).
-
 * SIGKILL is used to terminate the timed-out workers from misbehaving apps
   as reliably as possible on a UNIX system.  The default timeout is a
   generous 60 seconds (same default as in Mongrel).

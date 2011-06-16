@@ -373,7 +373,7 @@ class Unicorn::HttpServer
         self.pid = pid.chomp('.oldbin') if pid
         proc_name 'master'
       else
-        worker = WORKERS.delete(wpid) and worker.tmp.close rescue nil
+        worker = WORKERS.delete(wpid) and worker.close rescue nil
         m = "reaped #{status.inspect} worker=#{worker.nr rescue 'unknown'}"
         status.success? ? logger.info(m) : logger.error(m)
       end
@@ -430,22 +430,17 @@ class Unicorn::HttpServer
     proc_name 'master (old)'
   end
 
-  # forcibly terminate all workers that haven't checked in in timeout
-  # seconds.  The timeout is implemented using an unlinked File
-  # shared between the parent process and each worker.  The worker
-  # runs File#chmod to modify the ctime of the File.  If the ctime
-  # is stale for >timeout seconds, then we'll kill the corresponding
-  # worker.
+  # forcibly terminate all workers that haven't checked in in timeout seconds.  The timeout is implemented using an unlinked File
   def murder_lazy_workers
     t = @timeout
     next_sleep = 1
+    now = Time.now.to_i
     WORKERS.dup.each_pair do |wpid, worker|
-      stat = worker.tmp.stat
-      # skip workers that disable fchmod or have never fchmod-ed
-      stat.mode == 0100600 and next
-      diff = Time.now - stat.ctime
-      if diff <= t
-        tmp = t - diff
+      tick = worker.tick
+      0 == tick and next # skip workers that are sleeping
+      diff = now - tick
+      tmp = t - diff
+      if tmp >= 0
         next_sleep < tmp and next_sleep = tmp
         next
       end
@@ -472,7 +467,7 @@ class Unicorn::HttpServer
     worker_nr = -1
     until (worker_nr += 1) == @worker_processes
       WORKERS.values.include?(worker_nr) and next
-      worker = Worker.new(worker_nr, Unicorn::TmpIO.new)
+      worker = Worker.new(worker_nr)
       before_fork.call(self, worker)
       if pid = fork
         WORKERS[pid] = worker
@@ -549,10 +544,8 @@ class Unicorn::HttpServer
     proc_name "worker[#{worker.nr}]"
     START_CTX.clear
     init_self_pipe!
-    WORKERS.values.each { |other| other.tmp.close rescue nil }
     WORKERS.clear
     LISTENERS.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
-    worker.tmp.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
     after_fork.call(self, worker) # can drop perms
     worker.user(*user) if user.kind_of?(Array) && ! worker.switched
     self.timeout /= 2.0 # halve it for select()
@@ -576,12 +569,11 @@ class Unicorn::HttpServer
     ppid = master_pid
     init_worker_process(worker)
     nr = 0 # this becomes negative if we need to reopen logs
-    alive = worker.tmp # tmp is our lifeline to the master process
     ready = LISTENERS.dup
 
     # closing anything we IO.select on will raise EBADF
     trap(:USR1) { nr = -65536; SELF_PIPE[0].close rescue nil }
-    trap(:QUIT) { alive = nil; LISTENERS.each { |s| s.close rescue nil }.clear }
+    trap(:QUIT) { worker = nil; LISTENERS.each { |s| s.close rescue nil }.clear }
     [:TERM, :INT].each { |sig| trap(sig) { exit!(0) } } # instant shutdown
     logger.info "worker=#{worker.nr} ready"
     m = 0
@@ -590,21 +582,12 @@ class Unicorn::HttpServer
       nr < 0 and reopen_worker_logs(worker.nr)
       nr = 0
 
-      # we're a goner in timeout seconds anyways if alive.chmod
-      # breaks, so don't trap the exception.  Using fchmod() since
-      # futimes() is not available in base Ruby and I very strongly
-      # prefer temporary files to be unlinked for security,
-      # performance and reliability reasons, so utime is out.  No-op
-      # changes with chmod doesn't update ctime on all filesystems; so
-      # we change our counter each and every time (after process_client
-      # and before IO.select).
-      alive.chmod(m = 0 == m ? 1 : 0)
-
       while sock = ready.shift
         if client = sock.kgio_tryaccept
+          worker.tick = Time.now.to_i
           process_client(client)
+          worker.tick = 0
           nr += 1
-          alive.chmod(m = 0 == m ? 1 : 0)
         end
         break if nr < 0
       end
@@ -619,18 +602,17 @@ class Unicorn::HttpServer
       end
 
       ppid == Process.ppid or return
-      alive.chmod(m = 0 == m ? 1 : 0)
 
       # timeout used so we can detect parent death:
       ret = IO.select(LISTENERS, nil, SELF_PIPE, timeout) and ready = ret[0]
     rescue Errno::EBADF
       nr < 0 or return
     rescue => e
-      if alive
+      if worker
         logger.error "Unhandled listen loop exception #{e.inspect}."
         logger.error e.backtrace.join("\n")
       end
-    end while alive
+    end while worker
   end
 
   # delivers a signal to a worker and fails gracefully if the worker
@@ -638,7 +620,7 @@ class Unicorn::HttpServer
   def kill_worker(signal, wpid)
     Process.kill(signal, wpid)
     rescue Errno::ESRCH
-      worker = WORKERS.delete(wpid) and worker.tmp.close rescue nil
+      worker = WORKERS.delete(wpid) and worker.close rescue nil
   end
 
   # delivers a signal to each worker
