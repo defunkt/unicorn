@@ -39,7 +39,7 @@ class WebServerTest < Test::Unit::TestCase
     redirect_test_io do
       wait_workers_ready("test_stderr.#$$.log", 1)
       File.truncate("test_stderr.#$$.log", 0)
-      @server.stop(true)
+      @server.stop(false)
     end
     reset_sig_handlers
   end

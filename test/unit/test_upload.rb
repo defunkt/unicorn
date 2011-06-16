@@ -53,7 +53,7 @@ class UploadTest < Test::Unit::TestCase
   end
 
   def teardown
-    redirect_test_io { @server.stop(true) } if @server
+    redirect_test_io { @server.stop(false) } if @server
     @random.close
     reset_sig_handlers
   end

@@ -474,14 +474,12 @@ class Unicorn::HttpServer
       else
         after_fork_internal
         worker_loop(worker)
-        exit(0)
+        exit
       end
     end
-    rescue SystemExit => e
-      exit!(e.status)
     rescue => e
       @logger.error(e) rescue nil
-      exit!(1)
+      exit!
   end
 
   def maintain_worker_count
