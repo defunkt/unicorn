@@ -305,8 +305,7 @@ class Unicorn::HttpServer
         end
       end
     rescue => e
-      logger.error "Unhandled master loop exception #{e.inspect}."
-      logger.error e.backtrace.join("\n")
+      Unicorn.log_error(@logger, "master loop error", e)
     end while true
     stop # gracefully shutdown all workers on our way out
     logger.info "master complete"
@@ -505,8 +504,7 @@ class Unicorn::HttpServer
     when Unicorn::HttpParserError # try to tell the client they're bad
       Unicorn::Const::ERROR_400_RESPONSE
     else
-      logger.error "app error: #{e.inspect}"
-      logger.error e.backtrace.join("\n")
+      Unicorn.log_error(@logger, "app error", e)
       Unicorn::Const::ERROR_500_RESPONSE
     end
     client.kgio_trywrite(msg)
@@ -606,10 +604,7 @@ class Unicorn::HttpServer
     rescue Errno::EBADF
       nr < 0 or return
     rescue => e
-      if worker
-        logger.error "Unhandled listen loop exception #{e.inspect}."
-        logger.error e.backtrace.join("\n")
-      end
+      Unicorn.log_error(@logger, "listen loop error", e) if worker
     end while worker
   end
 
@@ -657,8 +652,8 @@ class Unicorn::HttpServer
     build_app! if preload_app
     logger.info "done reloading config_file=#{config.config_file}"
   rescue StandardError, LoadError, SyntaxError => e
-    logger.error "error reloading config_file=#{config.config_file}: " \
-                 "#{e.class} #{e.message} #{e.backtrace}"
+    Unicorn.log_error(@logger,
+        "error reloading config_file=#{config.config_file}", e)
     self.app = loaded_app
   end
 

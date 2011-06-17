@@ -34,6 +34,7 @@ t_begin "reload signal succeeds" && {
 	done
 
 	grep 'error reloading' $r_err >/dev/null
+	> $r_err
 }
 
 t_begin "hit with curl" && {

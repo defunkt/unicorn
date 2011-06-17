@@ -77,6 +77,11 @@ module Unicorn
       Unicorn::SocketHelper.sock_name(io)
     end
   end
+
+  def self.log_error(logger, message, exc)
+    logger.error "#{message}: #{exc.message} (#{exc.class})"
+    exc.backtrace.each { |line| logger.error(line) }
+  end
   # :startdoc:
 end
 # :enddoc:

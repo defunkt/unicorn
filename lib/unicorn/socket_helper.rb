@@ -101,8 +101,7 @@ module Unicorn
       end
       sock.listen(opt[:backlog])
       rescue => e
-        logger.error "error setting socket options: #{e.inspect}"
-        logger.error e.backtrace.join("\n")
+        Unicorn.log_error(logger, message, e)
     end
 
     def log_buffer_sizes(sock, pfx = '')
