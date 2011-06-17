@@ -769,7 +769,7 @@ class HttpParserTest < Test::Unit::TestCase
     # finally just that random garbage gets blocked all the time
     10.times do |c|
       get = "GET #{rand_data(1024, 1024+(c*1024), false)} #{rand_data(1024, 1024+(c*1024), false)}\r\n\r\n"
-      assert_raises Unicorn::HttpParserError do
+      assert_raises(Unicorn::HttpParserError,Unicorn::RequestURITooLongError) do
         parser.buf << get
         parser.parse
         parser.clear
