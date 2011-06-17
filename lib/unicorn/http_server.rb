@@ -505,7 +505,7 @@ class Unicorn::HttpServer
     when Unicorn::HttpParserError # try to tell the client they're bad
       Unicorn::Const::ERROR_400_RESPONSE
     else
-      logger.error "Read error: #{e.inspect}"
+      logger.error "app error: #{e.inspect}"
       logger.error e.backtrace.join("\n")
       Unicorn::Const::ERROR_500_RESPONSE
     end
