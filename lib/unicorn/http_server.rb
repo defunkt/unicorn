@@ -572,7 +572,6 @@ class Unicorn::HttpServer
     trap(:QUIT) { worker = nil; LISTENERS.each { |s| s.close rescue nil }.clear }
     [:TERM, :INT].each { |sig| trap(sig) { exit!(0) } } # instant shutdown
     logger.info "worker=#{worker.nr} ready"
-    m = 0
 
     begin
       nr < 0 and reopen_worker_logs(worker.nr)
