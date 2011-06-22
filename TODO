@@ -2,6 +2,4 @@
 
 * improve test suite
 
-* scalability to >= 1024 worker processes for crazy NUMA systems
-
 * Rack 2.x support (when Rack 2.x exists)
