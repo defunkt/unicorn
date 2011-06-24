@@ -41,7 +41,7 @@ module Unicorn
       when /\.ru$/
         raw = File.read(ru)
         raw.sub!(/^__END__\n.*/, '')
-        eval("Rack::Builder.new {(#{raw}\n)}.to_app", TOPLEVEL_BINDING, ru)
+        eval("Rack::Builder.new {(\n#{raw}\n)}.to_app", TOPLEVEL_BINDING, ru)
       else
         require ru
         Object.const_get(File.basename(ru, '.rb').capitalize)
