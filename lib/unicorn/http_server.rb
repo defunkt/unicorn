@@ -600,7 +600,7 @@ class Unicorn::HttpServer
       ppid == Process.ppid or return
 
       # timeout used so we can detect parent death:
-      worker.tick = 0
+      worker.tick = Time.now.to_i
       ret = IO.select(l, nil, SELF_PIPE, @timeout) and ready = ret[0]
     rescue Errno::EBADF
       nr < 0 or return
