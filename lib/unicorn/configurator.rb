@@ -186,6 +186,8 @@ class Unicorn::Configurator
   #    }
   def timeout(seconds)
     set_int(:timeout, seconds, 3)
+    max = 0x7fffffff
+    set[:timeout] = seconds > max ? max : seconds
   end
 
   # sets the current number of worker_processes to +nr+.  Each worker
