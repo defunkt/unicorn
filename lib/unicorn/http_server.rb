@@ -465,7 +465,7 @@ class Unicorn::HttpServer
   def spawn_missing_workers
     worker_nr = -1
     until (worker_nr += 1) == @worker_processes
-      WORKERS.values.include?(worker_nr) and next
+      WORKERS.value?(worker_nr) and next
       worker = Worker.new(worker_nr)
       before_fork.call(self, worker)
       if pid = fork
