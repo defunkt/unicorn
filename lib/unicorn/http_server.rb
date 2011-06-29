@@ -453,7 +453,7 @@ class Unicorn::HttpServer
   def after_fork_internal
     @ready_pipe.close if @ready_pipe
     Unicorn::Configurator::RACKUP.clear
-    @ready_pipe = @init_listeners = @config = @before_exec = @before_fork = nil
+    @ready_pipe = @init_listeners = @before_exec = @before_fork = nil
 
     srand # http://redmine.ruby-lang.org/issues/4338
 
@@ -545,6 +545,7 @@ class Unicorn::HttpServer
     after_fork.call(self, worker) # can drop perms
     worker.user(*user) if user.kind_of?(Array) && ! worker.switched
     self.timeout /= 2.0 # halve it for select()
+    @config = nil
     build_app! unless preload_app
   end
 

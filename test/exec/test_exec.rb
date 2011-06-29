@@ -516,7 +516,7 @@ EOF
     File.unlink(tmp.path)
     ucfg = Tempfile.new('unicorn_test_config')
     ucfg.syswrite("listen '#@addr:#@port'\n")
-    ucfg.syswrite("before_fork { |s,w|\n")
+    ucfg.syswrite("after_fork { |s,w|\n")
     ucfg.syswrite("  s.listen('#{tmp.path}', :backlog => 5, :sndbuf => 8192)\n")
     ucfg.syswrite("  s.listen('#@addr:#{port2}', :rcvbuf => 8192)\n")
     ucfg.syswrite("\n}\n")
