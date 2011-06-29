@@ -186,7 +186,7 @@ class Unicorn::Configurator
   #    }
   def timeout(seconds)
     set_int(:timeout, seconds, 3)
-    max = 0x7fffffff
+    max = 0x7ffffffe # Rainbows! adds one second to this for safety
     set[:timeout] = seconds > max ? max : seconds
   end
 
