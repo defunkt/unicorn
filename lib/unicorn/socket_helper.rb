@@ -101,7 +101,7 @@ module Unicorn
       end
       sock.listen(opt[:backlog])
       rescue => e
-        Unicorn.log_error(logger, message, e)
+        Unicorn.log_error(logger, "#{sock_name(sock)} #{opt.inspect}", e)
     end
 
     def log_buffer_sizes(sock, pfx = '')
