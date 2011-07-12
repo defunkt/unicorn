@@ -813,6 +813,24 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal "hello\t world", parser.env["HTTP_X_SPACE"]
   end
 
+  def test_null_byte_header
+    parser = HttpParser.new
+    get = "GET / HTTP/1.1\r\nHost: \0\r\n\r\n"
+    assert_raises(HttpParserError) { parser.add_parse(get) }
+  end
+
+  def test_null_byte_in_middle
+    parser = HttpParser.new
+    get = "GET / HTTP/1.1\r\nHost: hello\0world\r\n\r\n"
+    assert_raises(HttpParserError) { parser.add_parse(get) }
+  end
+
+  def test_null_byte_at_end
+    parser = HttpParser.new
+    get = "GET / HTTP/1.1\r\nHost: hello\0\r\n\r\n"
+    assert_raises(HttpParserError) { parser.add_parse(get) }
+  end
+
   def test_empty_header
     parser = HttpParser.new
     get = "GET / HTTP/1.1\r\nHost:  \r\n\r\n"
