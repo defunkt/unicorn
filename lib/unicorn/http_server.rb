@@ -535,12 +535,17 @@ class Unicorn::HttpServer
     handle_error(client, e)
   end
 
+  EXIT_SIGS = [ :QUIT, :TERM, :INT ]
+  WORKER_QUEUE_SIGS = QUEUE_SIGS - EXIT_SIGS
+
   # gets rid of stuff the worker has no business keeping track of
   # to free some resources and drops all sig handlers.
   # traps for USR1, USR2, and HUP may be set in the after_fork Proc
   # by the user.
   def init_worker_process(worker)
-    QUEUE_SIGS.each { |sig| trap(sig, nil) }
+    # we'll re-trap :QUIT later for graceful shutdown iff we accept clients
+    EXIT_SIGS.each { |sig| trap(sig) { exit!(0) } }
+    WORKER_QUEUE_SIGS.each { |sig| trap(sig, nil) }
     trap(:CHLD, 'DEFAULT')
     SIG_QUEUE.clear
     proc_name "worker[#{worker.nr}]"
@@ -578,7 +583,6 @@ class Unicorn::HttpServer
     # closing anything we IO.select on will raise EBADF
     trap(:USR1) { nr = -65536; SELF_PIPE[0].close rescue nil }
     trap(:QUIT) { worker = nil; LISTENERS.each { |s| s.close rescue nil }.clear }
-    [:TERM, :INT].each { |sig| trap(sig) { exit!(0) } } # instant shutdown
     logger.info "worker=#{worker.nr} ready"
 
     begin
