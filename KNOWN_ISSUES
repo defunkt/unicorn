@@ -3,6 +3,9 @@
 Occasionally odd {issues}[link:ISSUES.html] arise without a transparent or
 acceptable solution.  Those issues are documented here.
 
+* Issues with FreeBSD jails can be worked around as documented by Tatsuya Ono:
+  http://mid.gmane.org/CAHBuKRj09FdxAgzsefJWotexw-7JYZGJMtgUp_dhjPz9VbKD6Q@mail.gmail.com
+
 * PRNGs (pseudo-random number generators) loaded before forking
   (e.g. "preload_app true") may need to have their internal state
   reset in the after_fork hook.  Starting with \Unicorn 3.6.1, we
