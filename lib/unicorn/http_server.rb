@@ -408,14 +408,14 @@ class Unicorn::HttpServer
     end
 
     self.reexec_pid = fork do
-      listener_fds = LISTENERS.map do |sock|
+      listener_fds = Hash[LISTENERS.map do |sock|
         # IO#close_on_exec= will be available on any future version of
         # Ruby that sets FD_CLOEXEC by default on new file descriptors
         # ref: http://redmine.ruby-lang.org/issues/5041
         sock.close_on_exec = false if sock.respond_to?(:close_on_exec=)
-        sock.fileno
-      end
-      ENV['UNICORN_FD'] = listener_fds.join(',')
+        [ sock.fileno, sock.fileno ]
+      end]
+      ENV['UNICORN_FD'] = listener_fds.keys.join(',')
       Dir.chdir(START_CTX[:cwd])
       cmd = [ START_CTX[0] ].concat(START_CTX[:argv])
 
@@ -428,6 +428,10 @@ class Unicorn::HttpServer
         IO_PURGATORY << io
         io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       end
+
+      # exec(command, hash) works in at least 1.9.1+, but will only be
+      # required in 1.9.4/2.0.0 at earliest.
+      cmd << listener_fds if RUBY_VERSION >= "1.9.1"
       logger.info "executing #{cmd.inspect} (in #{Dir.pwd})"
       before_exec.call(self)
       exec(*cmd)
