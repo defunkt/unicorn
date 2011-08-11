@@ -179,7 +179,11 @@ class TestSocketHelper < Test::Unit::TestCase
   end if defined?(TCP_DEFER_ACCEPT)
 
   def test_ipv6only
-    port = unused_port "#@test6_addr"
+    port = begin
+      unused_port "#@test6_addr"
+    rescue Errno::EINVAL
+      return
+    end
     sock = bind_listen "[#@test6_addr]:#{port}", :ipv6only => true
     cur = sock.getsockopt(:IPPROTO_IPV6, :IPV6_V6ONLY).unpack('i')[0]
     assert_equal 1, cur
