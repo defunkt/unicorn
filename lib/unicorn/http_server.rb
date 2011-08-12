@@ -413,7 +413,7 @@ class Unicorn::HttpServer
         # Ruby that sets FD_CLOEXEC by default on new file descriptors
         # ref: http://redmine.ruby-lang.org/issues/5041
         sock.close_on_exec = false if sock.respond_to?(:close_on_exec=)
-        [ sock.fileno, sock.fileno ]
+        [ sock.fileno, sock ]
       end]
       ENV['UNICORN_FD'] = listener_fds.keys.join(',')
       Dir.chdir(START_CTX[:cwd])
