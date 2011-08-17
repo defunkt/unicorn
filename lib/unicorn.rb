@@ -78,8 +78,10 @@ module Unicorn
     end
   end
 
-  def self.log_error(logger, message, exc)
-    logger.error "#{message}: #{exc.message} (#{exc.class})"
+  def self.log_error(logger, prefix, exc)
+    message = exc.message
+    message = message.dump if /[[:cntrl:]]/ =~ message
+    logger.error "#{prefix}: #{message} (#{exc.class})"
     exc.backtrace.each { |line| logger.error(line) }
   end
   # :startdoc:
