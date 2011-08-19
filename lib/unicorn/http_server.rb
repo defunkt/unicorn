@@ -549,6 +549,7 @@ class Unicorn::HttpServer
   def init_worker_process(worker)
     # we'll re-trap :QUIT later for graceful shutdown iff we accept clients
     EXIT_SIGS.each { |sig| trap(sig) { exit!(0) } }
+    exit!(0) if (SIG_QUEUE & EXIT_SIGS)[0]
     WORKER_QUEUE_SIGS.each { |sig| trap(sig, nil) }
     trap(:CHLD, 'DEFAULT')
     SIG_QUEUE.clear
