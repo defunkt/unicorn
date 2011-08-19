@@ -38,7 +38,7 @@ Gem::Specification.new do |s|
   s.add_dependency(%q<raindrops>, '~> 0.6')
 
   s.add_development_dependency('isolate', '~> 3.1')
-  s.add_development_dependency('wrongdoc', '~> 1.5')
+  s.add_development_dependency('wrongdoc', '~> 1.6')
 
   # s.licenses = %w(GPLv2 Ruby) # licenses= method is not in older RubyGems
 end
