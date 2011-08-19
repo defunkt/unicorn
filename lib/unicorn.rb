@@ -50,9 +50,14 @@ module Unicorn
       pp({ :inner_app => inner_app }) if $DEBUG
 
       # return value, matches rackup defaults based on env
+      # Unicorn does not support persistent connections, but Rainbows!
+      # and Zbatery both do.  Users accustomed to the Rack::Server default
+      # middlewares will need ContentLength/Chunked middlewares.
       case ENV["RACK_ENV"]
       when "development"
         Rack::Builder.new do
+          use Rack::ContentLength
+          use Rack::Chunked
           use Rack::CommonLogger, $stderr
           use Rack::ShowExceptions
           use Rack::Lint
@@ -60,6 +65,8 @@ module Unicorn
         end.to_app
       when "deployment"
         Rack::Builder.new do
+          use Rack::ContentLength
+          use Rack::Chunked
           use Rack::CommonLogger, $stderr
           run inner_app
         end.to_app
