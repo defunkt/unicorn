@@ -12,7 +12,14 @@ TODO
 NEWS
 ChangeLog
 LATEST
-lib
+lib/unicorn.rb
+lib/unicorn/configurator.rb
+lib/unicorn/http_server.rb
+lib/unicorn/preread_input.rb
+lib/unicorn/stream_input.rb
+lib/unicorn/tee_input.rb
+lib/unicorn/util.rb
+lib/unicorn/worker.rb
 unicorn_1
 unicorn_rails_1
 ISSUES
