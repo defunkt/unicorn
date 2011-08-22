@@ -19,6 +19,7 @@ lib/unicorn/preread_input.rb
 lib/unicorn/stream_input.rb
 lib/unicorn/tee_input.rb
 lib/unicorn/util.rb
+lib/unicorn/oob_gc.rb
 lib/unicorn/worker.rb
 unicorn_1
 unicorn_rails_1
