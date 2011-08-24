@@ -264,8 +264,8 @@ class Unicorn::HttpServer
         if (last_check + @timeout) >= (last_check = Time.now)
           sleep_time = murder_lazy_workers
         else
-          # wait for workers to wakeup on suspend
           sleep_time = @timeout/2.0 + 1
+          @logger.debug("waiting #{sleep_time}s after suspend/hibernation")
         end
         maintain_worker_count if respawn
         master_sleep(sleep_time)
@@ -441,23 +441,23 @@ class Unicorn::HttpServer
 
   # forcibly terminate all workers that haven't checked in in timeout seconds.  The timeout is implemented using an unlinked File
   def murder_lazy_workers
-    t = @timeout
-    next_sleep = 1
+    next_sleep = @timeout - 1
     now = Time.now.to_i
     WORKERS.dup.each_pair do |wpid, worker|
       tick = worker.tick
       0 == tick and next # skip workers that are sleeping
       diff = now - tick
-      tmp = t - diff
+      tmp = @timeout - diff
       if tmp >= 0
-        next_sleep < tmp and next_sleep = tmp
+        next_sleep > tmp and next_sleep = tmp
         next
       end
+      next_sleep = 0
       logger.error "worker=#{worker.nr} PID:#{wpid} timeout " \
-                   "(#{diff}s > #{t}s), killing"
+                   "(#{diff}s > #{@timeout}s), killing"
       kill_worker(:KILL, wpid) # take no prisoners for timeout violations
     end
-    next_sleep
+    next_sleep <= 0 ? 1 : next_sleep
   end
 
   def after_fork_internal
