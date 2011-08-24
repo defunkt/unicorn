@@ -17,11 +17,6 @@ ENV['NO_PROXY'] ||= ENV['UNICORN_TEST_ADDR'] || '127.0.0.1'
 DEFAULT_TRIES = 1000
 DEFAULT_RES = 0.2
 
-HERE = File.dirname(__FILE__) unless defined?(HERE)
-%w(lib ext).each do |dir|
-  $LOAD_PATH.unshift "#{HERE}/../#{dir}"
-end
-
 require 'test/unit'
 require 'net/http'
 require 'digest/sha1'
