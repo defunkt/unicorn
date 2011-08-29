@@ -62,9 +62,9 @@ both the the request and response in between \Unicorn and slow clients.
 \Unicorn is copyright 2009 by all contributors (see logs in git).
 It is based on Mongrel 1.1.5 and carries the same license.
 
-Mongrel is copyright 2007 Zed A. Shaw and contributors. It is licensed
-under the Ruby (1.8) license and the GPL2. See the included LICENSE file
-for details.
+Mongrel is copyright 2007 Zed A. Shaw and contributors. It is
+tri-licensed under (your choice) of the GPLv3, GPLv2 or Ruby-specific
+terms.  See the included LICENSE file for details.
 
 \Unicorn is 100% Free Software.
 

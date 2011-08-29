@@ -1,7 +1,8 @@
 # -*- encoding: binary -*-
 
 # Copyright (c) 2005 Zed A. Shaw 
-# You can redistribute it and/or modify it under the same terms as Ruby.
+# You can redistribute it and/or modify it under the same terms as Ruby 1.8 or
+# the GPLv3
 #
 # Additional work donated by contributors.  See http://mongrel.rubyforge.org/attributions.html 
 # for more information.

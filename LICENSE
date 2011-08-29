@@ -1,8 +1,17 @@
 Unicorn is copyrighted free software by all contributors, see logs in
-revision control for names and email addresses of all of them.  You can
-redistribute it and/or modify it under either the terms of the
-{GPL2}[http://www.gnu.org/licenses/gpl-2.0.txt] (see link:COPYING) or
-the conditions below:
+revision control for names and email addresses of all of them.
+
+You can redistribute it and/or modify it under either the terms of the
+GNU General Public License (GPL) as published by the Free Software
+Foundation (FSF), version {3.0}[http://www.gnu.org/licenses/gpl-3.0.txt]
+or version {2.0}[http://www.gnu.org/licenses/gpl-2.0.txt]
+or the Ruby-specific license terms (see below).
+
+The unicorn project leader (Eric Wong) reserves the right to add future
+versions of the GPL (and no other licenses) as published by the FSF to
+the licensing terms.
+
+=== Ruby-specific terms (if you're not using the GPLv2 or GPLv3)
 
   1. You may make and give away verbatim copies of the source form of the
      software without restriction, provided that you duplicate all of the
