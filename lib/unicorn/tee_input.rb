@@ -109,6 +109,11 @@ class Unicorn::TeeInput < Unicorn::StreamInput
     @tmp.rewind # Rack does not specify what the return value is here
   end
 
+	# Data source passed to AWS::S3::Object#write must respond to #read and #eof?
+  def eof?
+    super
+  end
+
 private
 
   # consumes the stream of the socket
