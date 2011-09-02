@@ -563,6 +563,7 @@ class Unicorn::HttpServer
     self.timeout /= 2.0 # halve it for select()
     @config = nil
     build_app! unless preload_app
+    @after_fork = @listener_opts = @orig_app = nil
   end
 
   def reopen_worker_logs(worker_nr)
