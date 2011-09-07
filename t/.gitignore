@@ -1,2 +1,4 @@
 /random_blob
 /.dep+*
+/*.crt
+/*.key

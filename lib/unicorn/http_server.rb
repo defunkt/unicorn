@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+require "unicorn/ssl_server"
 
 # This is the process manager of Unicorn. This manages worker
 # processes which in turn handle the I/O and application process.
@@ -19,6 +20,7 @@ class Unicorn::HttpServer
   attr_reader :pid, :logger
   include Unicorn::SocketHelper
   include Unicorn::HttpResponse
+  include Unicorn::SSLServer
 
   # backwards compatibility with 1.x
   Worker = Unicorn::Worker
@@ -563,6 +565,7 @@ class Unicorn::HttpServer
     self.timeout /= 2.0 # halve it for select()
     @config = nil
     build_app! unless preload_app
+    ssl_enable!
     @after_fork = @listener_opts = @orig_app = nil
   end
 

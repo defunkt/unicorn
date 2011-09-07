@@ -1,5 +1,6 @@
 # -*- encoding: binary -*-
 require 'logger'
+require 'unicorn/ssl_configurator'
 
 # Implements a simple DSL for configuring a \Unicorn server.
 #
@@ -12,6 +13,7 @@ require 'logger'
 # See the link:/TUNING.html document for more information on tuning unicorn.
 class Unicorn::Configurator
   include Unicorn
+  include Unicorn::SSLConfigurator
 
   # :stopdoc:
   attr_accessor :set, :config_file, :after_reload
@@ -563,13 +565,16 @@ private
     end
   end
 
-  def set_bool(var, bool) #:nodoc:
+  def check_bool(var, bool) # :nodoc:
     case bool
     when true, false
-      set[var] = bool
-    else
-      raise ArgumentError, "#{var}=#{bool.inspect} not a boolean"
+      return bool
     end
+    raise ArgumentError, "#{var}=#{bool.inspect} not a boolean"
+  end
+
+  def set_bool(var, bool) #:nodoc:
+    set[var] = check_bool(var, bool)
   end
 
   def set_hook(var, my_proc, req_arity = 2) #:nodoc:
