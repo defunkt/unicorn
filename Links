@@ -26,6 +26,9 @@ or services behind them.
 * {raindrops}[http://raindrops.bogomips.org/] - real-time stats for
   preforking Rack servers
 
+* {UnXF}[http://bogomips.org/unxf/]  Un-X-Forward* the Rack environment,
+  useful since unicorn is designed to be deployed behind a reverse proxy.
+
 === \Unicorn is written to work with
 
 * {Rack}[http://rack.rubyforge.org/] - a minimal interface between webservers
