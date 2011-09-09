@@ -445,7 +445,7 @@ class Unicorn::HttpServer
     now = Time.now.to_i
     WORKERS.dup.each_pair do |wpid, worker|
       tick = worker.tick
-      0 == tick and next # skip workers that are sleeping
+      0 == tick and next # skip workers that haven't processed any clients
       diff = now - tick
       tmp = @timeout - diff
       if tmp >= 0
