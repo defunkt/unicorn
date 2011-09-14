@@ -282,7 +282,7 @@ class Unicorn::HttpServer
       when :USR2 # exec binary, stay alive in case something went wrong
         reexec
       when :WINCH
-        if Process.ppid == 1 || Process.getpgrp != $$
+        if Unicorn::Configurator::RACKUP[:daemonized]
           respawn = false
           logger.info "gracefully stopping all workers"
           kill_each_worker(:QUIT)
