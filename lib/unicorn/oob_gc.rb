@@ -61,7 +61,9 @@ module Unicorn::OobGC
     if OOBGC_PATH =~ OOBGC_ENV[PATH_INFO] && ((@@nr -= 1) <= 0)
       @@nr = OOBGC_INTERVAL
       OOBGC_ENV.clear
+      disabled = GC.enable
       GC.start
+      GC.disable if disabled
     end
   end
 
