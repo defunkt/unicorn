@@ -100,11 +100,5 @@ unicorn_wait_start () {
 }
 
 rsha1 () {
-	_cmd="$(which sha1sum 2>/dev/null || :)"
-	test -n "$_cmd" || _cmd="$(which openssl 2>/dev/null || :) sha1"
-	test "$_cmd" != " sha1" || _cmd="$(which gsha1sum 2>/dev/null || :)"
-
-	# last resort, see comments in sha1sum.rb for reasoning
-	test -n "$_cmd" || _cmd=sha1sum.rb
-	expr "$($_cmd)" : '\([a-f0-9]\{40\}\)'
+	sha1sum.rb
 }
