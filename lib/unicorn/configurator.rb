@@ -188,7 +188,8 @@ class Unicorn::Configurator
   #    }
   def timeout(seconds)
     set_int(:timeout, seconds, 3)
-    max = 0x7ffffffe # Rainbows! adds one second to this for safety
+    # POSIX says 31 days is the smallest allowed maximum timeout for select()
+    max = 30 * 60 * 60 * 24
     set[:timeout] = seconds > max ? max : seconds
   end
 
