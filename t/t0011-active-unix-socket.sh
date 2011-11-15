@@ -7,7 +7,7 @@ read_pid_unix () {
 	    socat - UNIX:$unix_socket | \
 	    tail -1)
 	test -n "$x"
-	y="$(expr "$x" : '\([0-9]\+\)')"
+	y="$(expr "$x" : '\([0-9][0-9]*\)')"
 	test x"$x" = x"$y"
 	test -n "$y"
 	echo "$y"
