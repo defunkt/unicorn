@@ -1,6 +1,14 @@
 #!/bin/sh
 set -e
-set -x
+
+lock=$0.lock
+while ! mkdir $lock 2>/dev/null
+do
+	echo >&2 "PID=$$ waiting for $lock"
+	sleep 1
+done
+pid=$$
+trap 'if test $$ -eq $pid; then rmdir $lock; fi' EXIT
 
 certinfo() {
 	echo US
