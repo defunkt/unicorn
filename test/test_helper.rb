@@ -73,6 +73,7 @@ def hit(uris)
     res = nil
 
     if u.kind_of? String
+      u = 'http://127.0.0.1:8080/' if u == 'http://0.0.0.0:8080/'
       res = Net::HTTP.get(URI.parse(u))
     else
       url = URI.parse(u[0])
