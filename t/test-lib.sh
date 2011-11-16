@@ -38,20 +38,29 @@ rtmpfiles () {
 	for id in "$@"
 	do
 		name=$id
-		_tmp=$t_pfx.$id
-		eval "$id=$_tmp"
 
 		case $name in
 		*fifo)
+			_tmp=$t_pfx.$id
+			eval "$id=$_tmp"
 			rm -f $_tmp
 			mkfifo $_tmp
 			T_RM_LIST="$T_RM_LIST $_tmp"
 			;;
 		*socket)
+			_tmp="$(mktemp -t $id.$$.XXXXXXXX)"
+			if test $(printf "$_tmp" |wc -c) -gt 108
+			then
+				echo >&2 "$_tmp too long, tests may fail"
+				echo >&2 "Try to set TMPDIR to a shorter path"
+			fi
+			eval "$id=$_tmp"
 			rm -f $_tmp
 			T_RM_LIST="$T_RM_LIST $_tmp"
 			;;
 		*)
+			_tmp=$t_pfx.$id
+			eval "$id=$_tmp"
 			> $_tmp
 			T_OK_RM_LIST="$T_OK_RM_LIST $_tmp"
 			;;
