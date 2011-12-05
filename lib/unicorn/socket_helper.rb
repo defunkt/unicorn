@@ -51,7 +51,7 @@ module Unicorn
     end
 
     def set_tcp_sockopt(sock, opt)
-      # just in case, even LANs can break sometimes.  Linux sysadmins are
+      # just in case, even LANs can break sometimes.  Linux sysadmins
       # can lower net.ipv4.tcp_keepalive_* sysctl knobs to very low values.
       sock.setsockopt(SOL_SOCKET, SO_KEEPALIVE, 1) if defined?(SO_KEEPALIVE)
 
