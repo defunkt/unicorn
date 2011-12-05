@@ -51,7 +51,6 @@ module Unicorn
     end
 
     def set_tcp_sockopt(sock, opt)
-      # highly portable, but off by default because we don't do keepalive
       if defined?(TCP_NODELAY)
         val = opt[:tcp_nodelay]
         val = DEFAULTS[:tcp_nodelay] if nil == val
