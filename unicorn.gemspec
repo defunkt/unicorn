@@ -34,11 +34,11 @@ Gem::Specification.new do |s|
   # commented out.  Nevertheless, upgrading to Rails 2.3.4 or later is
   # *strongly* recommended for security reasons.
   s.add_dependency(%q<rack>)
-  s.add_dependency(%q<kgio>, '~> 2.4')
-  s.add_dependency(%q<raindrops>, '~> 0.6')
+  s.add_dependency(%q<kgio>, '~> 2.6')
+  s.add_dependency(%q<raindrops>, '~> 0.7')
 
-  s.add_development_dependency('isolate', '~> 3.1')
-  s.add_development_dependency('wrongdoc', '~> 1.6')
+  s.add_development_dependency('isolate', '~> 3.2')
+  s.add_development_dependency('wrongdoc', '~> 1.6.1')
 
   # s.licenses = %w(GPLv2 Ruby) # licenses= method is not in older RubyGems
 end
