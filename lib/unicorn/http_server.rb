@@ -622,10 +622,8 @@ class Unicorn::HttpServer
       # timeout used so we can detect parent death:
       worker.tick = Time.now.to_i
       ret = IO.select(l, nil, SELF_PIPE, @timeout) and ready = ret[0]
-    rescue Errno::EBADF
-      nr < 0 or return
     rescue => e
-      redo if nr < 0 && IOError === e
+      redo if nr < 0 && (Errno::EBADF === e || IOError === e) # reopen logs
       Unicorn.log_error(@logger, "listen loop error", e) if worker
     end while worker
   end
