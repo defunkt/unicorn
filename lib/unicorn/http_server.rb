@@ -625,6 +625,7 @@ class Unicorn::HttpServer
     rescue Errno::EBADF
       nr < 0 or return
     rescue => e
+      redo if nr < 0 && IOError === e
       Unicorn.log_error(@logger, "listen loop error", e) if worker
     end while worker
   end
