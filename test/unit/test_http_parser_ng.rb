@@ -31,6 +31,14 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_raises(TypeError) { HttpParser.keepalive_requests = [] }
   end
 
+  def test_connection_TE
+    @parser.buf << "GET / HTTP/1.1\r\nHost: example.com\r\nConnection: TE\r\n"
+    @parser.buf << "TE: trailers\r\n\r\n"
+    assert_nothing_raised { @parser.parse }
+    assert @parser.keepalive?
+    assert @parser.next?
+  end
+
   def test_keepalive_requests_with_next?
     req = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n".freeze
     expect = {
