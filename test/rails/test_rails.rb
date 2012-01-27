@@ -45,7 +45,10 @@ end
 
 ROR_V = UNICORN_RAILS_TEST_VERSION.split(/\./).map { |x| x.to_i }
 RB_V = RUBY_VERSION.split(/\./).map { |x| x.to_i }
-if RB_V[0] >= 1 && RB_V[1] >= 9
+if RB_V[0] >= 2
+  warn "skipping Ruby 2.0+ test with Rails <3"
+  do_test = false
+elsif RB_V[0] >= 1 && RB_V[1] >= 9
   if RB_V[2] >= 2
     warn "Ruby 1.9.2+ is not compatible with Rails 2.x"
     do_test = false
