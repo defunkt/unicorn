@@ -19,7 +19,7 @@ pid = fork do
     gem 'sqlite3-ruby', '1.2.5'
     gem 'raindrops', '0.8.0'
     gem 'kgio-monkey', '0.3.0'
-    gem 'kgio', '2.6.0'
+    gem 'kgio', '2.7.2'
     gem 'rack', '1.4.1'
   end
 end
