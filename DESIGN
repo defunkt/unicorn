@@ -31,9 +31,9 @@
 * One master process spawns and reaps worker processes.  The
   Rack application itself is called only within the worker process (but
   can be loaded within the master).  A copy-on-write friendly garbage
-  collector like Ruby Enterprise Edition can be used to minimize memory
-  usage along with the "preload_app true" directive (see
-  Unicorn::Configurator).
+  collector like the one found in Ruby 2.0.0dev or Ruby Enterprise Edition
+  can be used to minimize memory usage along with the "preload_app true"
+  directive (see Unicorn::Configurator).
 
 * The number of worker processes should be scaled to the number of
   CPUs, memory or even spindles you have.  If you have an existing
