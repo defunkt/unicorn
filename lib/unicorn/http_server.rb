@@ -656,7 +656,10 @@ class Unicorn::HttpServer
     wpid <= 0 and return
     Process.kill(0, wpid)
     wpid
-    rescue Errno::ESRCH, Errno::ENOENT, Errno::EPERM
+    rescue Errno::EPERM
+      logger.info "pid=#{path} possibly stale, got EPERM signalling PID:#{wpid}"
+      nil
+    rescue Errno::ESRCH, Errno::ENOENT
       # don't unlink stale pid files, racy without non-portable locking...
   end
 
