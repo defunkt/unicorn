@@ -3,6 +3,11 @@
 Occasionally odd {issues}[link:ISSUES.html] arise without a transparent or
 acceptable solution.  Those issues are documented here.
 
+* Some libraries/applications may install signal handlers which conflict
+  with signal handlers unicorn uses.  Leaving "preload_app false"
+  (the default) will allow unicorn to always override existing signal
+  handlers.
+
 * Issues with FreeBSD jails can be worked around as documented by Tatsuya Ono:
   http://mid.gmane.org/CAHBuKRj09FdxAgzsefJWotexw-7JYZGJMtgUp_dhjPz9VbKD6Q@mail.gmail.com
 
