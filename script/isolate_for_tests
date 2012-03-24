@@ -21,7 +21,7 @@ pid = fork do
     end
     gem 'raindrops', '0.8.0'
     gem 'kgio-monkey', '0.3.0'
-    gem 'kgio', '2.7.2'
+    gem 'kgio', '2.7.4'
     gem 'rack', '1.4.1'
   end
 end
