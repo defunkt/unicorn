@@ -64,7 +64,7 @@ from the effects of slow I/O.
 By acting as a buffer to shield unicorn from slow I/O, a reverse proxy
 will inevitably incur overhead in the form of extra data copies.
 However, as I/O within a local network is fast (and faster still
-with local sockets), this overhead is neglible for the vast majority
+with local sockets), this overhead is negligible for the vast majority
 of HTTP requests and responses.
 
 The ideal reverse proxy complements the weaknesses of unicorn.
@@ -86,7 +86,7 @@ A reverse proxy for unicorn should meet the following requirements:
    In many (most?) cases, network devices and their interrupts are
    only be handled by one CPU at a time.  It should avoid contention
    within the system by serializing all network I/O into one (or few)
-   userspace procceses.  Network I/O is not a CPU-intensive task and
+   userspace processes.  Network I/O is not a CPU-intensive task and
    it is not helpful to use multiple CPU cores (at least not for GigE).
 
 4. It should efficiently manage persistent connections (and

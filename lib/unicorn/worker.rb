@@ -63,13 +63,13 @@ class Unicorn::Worker
   # Changes the worker process to the specified +user+ and +group+
   # This is only intended to be called from within the worker
   # process from the +after_fork+ hook.  This should be called in
-  # the +after_fork+ hook after any priviledged functions need to be
+  # the +after_fork+ hook after any privileged functions need to be
   # run (e.g. to set per-worker CPU affinity, niceness, etc)
   #
   # Any and all errors raised within this method will be propagated
   # directly back to the caller (usually the +after_fork+ hook.
   # These errors commonly include ArgumentError for specifying an
-  # invalid user/group and Errno::EPERM for insufficient priviledges
+  # invalid user/group and Errno::EPERM for insufficient privileges
   def user(user, group = nil)
     # we do not protect the caller, checking Process.euid == 0 is
     # insufficient because modern systems have fine-grained
