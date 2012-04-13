@@ -36,13 +36,13 @@ ca_certinfo () {
 	echo unicorn@bogomips.org
 }
 
-openssl genrsa -out ca.key 512
+openssl genrsa -out ca.key 1024
 ca_certinfo | openssl req -new -x509 -days 666 -key ca.key -out ca.crt
 
-openssl genrsa -out bad-ca.key 512
+openssl genrsa -out bad-ca.key 1024
 ca_certinfo | openssl req -new -x509 -days 666 -key bad-ca.key -out bad-ca.crt
 
-openssl genrsa -out server.key 512
+openssl genrsa -out server.key 1024
 certinfo2 | openssl req -new -key server.key -out server.csr
 
 openssl x509 -req -days 666 \
@@ -50,7 +50,7 @@ openssl x509 -req -days 666 \
 n=2
 mk_client_cert () {
 	CLIENT=$1
-	openssl genrsa -out $CLIENT.key 512
+	openssl genrsa -out $CLIENT.key 1024
 	certinfo2 | openssl req -new -key $CLIENT.key -out $CLIENT.csr
 
 	openssl x509 -req -days 666 \
