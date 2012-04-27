@@ -139,7 +139,11 @@ private
     # we do support clients that shutdown(SHUT_WR) after the
     # _entire_ request has been sent, and those will not have
     # raised EOFError on us.
-    @socket.close if @socket
+    if @socket
+      @socket.shutdown
+      @socket.close
+    end
+  ensure
     raise Unicorn::ClientShutdown, "bytes_read=#{@bytes_read}", []
   end
 end
