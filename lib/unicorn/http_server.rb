@@ -507,7 +507,8 @@ class Unicorn::HttpServer
   # the socket is closed at the end of this function
   def handle_error(client, e)
     msg = case e
-    when EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF
+    when EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF,
+         Errno::ENOTCONN
       Unicorn::Const::ERROR_500_RESPONSE
     when Unicorn::RequestURITooLongError
       Unicorn::Const::ERROR_414_RESPONSE
