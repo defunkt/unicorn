@@ -82,7 +82,7 @@ module Unicorn
   def self.listener_names
     Unicorn::HttpServer::LISTENERS.map do |io|
       Unicorn::SocketHelper.sock_name(io)
-    end
+    end + Unicorn::HttpServer::NEW_LISTENERS
   end
 
   def self.log_error(logger, prefix, exc)

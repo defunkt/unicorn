@@ -28,6 +28,9 @@ class Unicorn::HttpServer
   # all bound listener sockets
   LISTENERS = []
 
+  # listeners we have yet to bind
+  NEW_LISTENERS = []
+
   # This hash maps PIDs to Workers
   WORKERS = {}
 
@@ -134,6 +137,7 @@ class Unicorn::HttpServer
 
     self.master_pid = $$
     build_app! if preload_app
+    bind_new_listeners!
     spawn_missing_workers
     self
   end
@@ -738,7 +742,14 @@ class Unicorn::HttpServer
       @init_listeners << Unicorn::Const::DEFAULT_LISTEN
       START_CTX[:argv] << "-l#{Unicorn::Const::DEFAULT_LISTEN}"
     end
-    config_listeners.each { |addr| listen(addr) }
+    NEW_LISTENERS.replace(config_listeners)
+  end
+
+  # call only after calling inherit_listeners!
+  # This binds any listeners we did NOT inherit from the parent
+  def bind_new_listeners!
+    NEW_LISTENERS.each { |addr| listen(addr) }
     raise ArgumentError, "no listeners" if LISTENERS.empty?
+    NEW_LISTENERS.clear
   end
 end
