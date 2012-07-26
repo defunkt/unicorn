@@ -32,16 +32,13 @@ MYLIBS = $(RUBYLIB):$(ISOLATE_LIBS)
 # dunno how to implement this as concisely in Ruby, and hell, I love awk
 awk_slow := awk '/def test_/{print FILENAME"--"$$2".n"}' 2>/dev/null
 
-rails_vers := $(subst test/rails/app-,,$(wildcard test/rails/app-*))
 slow_tests := test/unit/test_server.rb test/exec/test_exec.rb \
   test/unit/test_signals.rb test/unit/test_upload.rb
 log_suffix = .$(RUBY_ENGINE).$(RUBY_VERSION).log
-T_r := $(wildcard test/rails/test*.rb)
-T := $(filter-out $(slow_tests) $(T_r), $(wildcard test/*/test*.rb))
+T := $(filter-out $(slow_tests), $(wildcard test/*/test*.rb))
 T_n := $(shell $(awk_slow) $(slow_tests))
 T_log := $(subst .rb,$(log_suffix),$(T))
 T_n_log := $(subst .n,$(log_suffix),$(T_n))
-T_r_log := $(subst .r,$(log_suffix),$(T_r))
 test_prefix = $(CURDIR)/test/$(RUBY_ENGINE)-$(RUBY_VERSION)
 
 ext := ext/unicorn_http
@@ -93,7 +90,7 @@ $(slow_tests): $(test_prefix)/.stamp
 test-integration: $(test_prefix)/.stamp
 	$(MAKE) -C t
 
-test-all: test test-rails test-integration
+test-all: test test-integration
 
 TEST_OPTS = -v
 check_test = grep '0 failures, 0 errors' $(t) >/dev/null
@@ -198,30 +195,6 @@ doc_gz: docs = $(shell find doc -type f ! -regex '^.*\.\(gif\|jpg\|png\|gz\)$$')
 doc_gz:
 	for i in $(docs); do \
 	  gzip --rsyncable -9 < $$i > $$i.gz; touch -r $$i $$i.gz; done
-
-rails_git_url = git://github.com/rails/rails.git
-rails_git := vendor/rails.git
-$(rails_git)/info/cloned-stamp:
-	git clone --mirror -q $(rails_git_url) $(rails_git)
-	> $@
-
-$(rails_git)/info/v2.2.3-stamp: $(rails_git)/info/cloned-stamp
-	cd $(rails_git) && git fetch
-	cd $(rails_git) && git rev-parse --verify refs/tags/v2.2.3
-	> $@
-
-rails_tests := $(addsuffix .r,$(addprefix $(T_r).,$(rails_vers)))
-test-rails: $(rails_tests)
-$(T_r).%.r: t = $(addsuffix $(log_suffix),$@)
-$(T_r).%.r: rv = $(subst .r,,$(subst $(T_r).,,$@))
-$(T_r).%.r: extra = ' 'v$(rv)
-$(T_r).%.r: arg = $(T_r)
-$(T_r).%.r: export PATH := $(test_prefix)/bin:$(PATH)
-$(T_r).%.r: export RUBYLIB := $(test_prefix):$(test_prefix)/lib:$(MYLIBS)
-$(T_r).%.r: export UNICORN_RAILS_TEST_VERSION = $(rv)
-$(T_r).%.r: export RAILS_GIT_REPO = $(CURDIR)/$(rails_git)
-$(T_r).%.r: $(test_prefix)/.stamp $(rails_git)/info/v2.2.3-stamp
-	$(run_test)
 
 ifneq ($(VERSION),)
 rfproject := mongrel

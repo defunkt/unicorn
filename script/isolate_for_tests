@@ -16,9 +16,6 @@ opts = {
 
 pid = fork do
   Isolate.now!(opts) do
-    if RUBY_VERSION.to_f < 2.0
-      gem 'sqlite3-ruby', '1.2.5'
-    end
     gem 'raindrops', '0.8.0'
     gem 'kgio-monkey', '0.4.0'
     gem 'kgio', '2.7.4'
@@ -33,18 +30,3 @@ File.open("#{dst}.#$$", "w") do |fp|
   fp.puts "ISOLATE_LIBS=#{lib_paths.join(':')}"
 end
 File.rename("#{dst}.#$$", dst)
-
-# pure Ruby gems can be shared across all Rubies
-%w(3.0.0).each do |rails_ver|
-  opts[:path] = "tmp/isolate/rails-#{rails_ver}"
-  pid = fork do
-    Isolate.now!(opts) do
-      gem 'rake', '0.8.7'
-      gem 'rails', rails_ver
-    end
-  end
-  _, status = Process.waitpid2(pid)
-  status.success? or abort status.inspect
-  more = Dir["#{opts[:path]}/gems/*-*/lib"].map { |x| File.expand_path(x) }
-  lib_paths.concat(more)
-end
