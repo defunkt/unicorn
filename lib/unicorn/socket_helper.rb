@@ -28,7 +28,7 @@ module Unicorn
       :backlog => 1024,
 
       # favor latency over bandwidth savings
-      :tcp_nopush => false,
+      :tcp_nopush => nil,
       :tcp_nodelay => true,
     }
     #:startdoc:
@@ -62,12 +62,12 @@ module Unicorn
       end
 
       val = opt[:tcp_nopush]
-      val = DEFAULTS[:tcp_nopush] if nil == val
-      val = val ? 1 : 0
-      if defined?(TCP_CORK) # Linux
-        sock.setsockopt(IPPROTO_TCP, TCP_CORK, val)
-      elsif defined?(TCP_NOPUSH) # TCP_NOPUSH is untested (FreeBSD)
-        sock.setsockopt(IPPROTO_TCP, TCP_NOPUSH, val)
+      unless val.nil?
+        if defined?(TCP_CORK) # Linux
+          sock.setsockopt(IPPROTO_TCP, TCP_CORK, val)
+        elsif defined?(TCP_NOPUSH) # TCP_NOPUSH is lightly tested (FreeBSD)
+          sock.setsockopt(IPPROTO_TCP, TCP_NOPUSH, val)
+        end
       end
 
       # No good reason to ever have deferred accepts off
