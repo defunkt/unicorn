@@ -18,8 +18,8 @@ class TestUtil < Test::Unit::TestCase
     assert_equal ext, (fp.external_encoding rescue nil)
     assert_equal int, (fp.internal_encoding rescue nil)
     assert_equal(EXPECT_FLAGS, EXPECT_FLAGS & fp.fcntl(Fcntl::F_GETFL))
-    assert_nothing_raised { tmp.close! }
-    assert_nothing_raised { fp.close }
+    tmp.close!
+    fp.close
   end
 
   def test_reopen_logs_renamed
@@ -43,9 +43,9 @@ class TestUtil < Test::Unit::TestCase
     assert_equal int, (fp.internal_encoding rescue nil)
     assert_equal(EXPECT_FLAGS, EXPECT_FLAGS & fp.fcntl(Fcntl::F_GETFL))
     assert fp.sync
-    assert_nothing_raised { tmp.close! }
-    assert_nothing_raised { to.close! }
-    assert_nothing_raised { fp.close }
+    tmp.close!
+    to.close!
+    fp.close
   end
 
   def test_reopen_logs_renamed_with_encoding
@@ -68,7 +68,7 @@ class TestUtil < Test::Unit::TestCase
         assert fp.sync
       }
     }
-    assert_nothing_raised { tmp.close! }
+    tmp.close!
   end if STDIN.respond_to?(:external_encoding)
 
   def test_reopen_logs_renamed_with_internal_encoding
@@ -94,7 +94,6 @@ class TestUtil < Test::Unit::TestCase
         }
       }
     }
-    assert_nothing_raised { tmp.close! }
+    tmp.close!
   end if STDIN.respond_to?(:external_encoding)
-
 end

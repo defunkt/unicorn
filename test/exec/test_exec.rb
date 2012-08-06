@@ -229,11 +229,10 @@ EOF
       pid = xfork { redirect_test_io { exec($unicorn_bin, "-l#@addr:#@port") } }
       wait_master_ready("test_stderr.#{pid}.log")
       wait_workers_ready("test_stderr.#{pid}.log", 1)
-      status = nil
-      assert_nothing_raised do
-        Process.kill(sig, pid)
-        pid, status = Process.waitpid2(pid)
-      end
+
+      Process.kill(sig, pid)
+      pid, status = Process.waitpid2(pid)
+
       reaped = File.readlines("test_stderr.#{pid}.log").grep(/reaped/)
       assert_equal 1, reaped.size
       assert status.exited?
@@ -296,13 +295,13 @@ EOF
     log = "test_stderr.#{pid}.log"
     wait_master_ready(log)
     [ 2, 3].each { |i|
-      assert_nothing_raised { Process.kill(:TTIN, pid) }
+      Process.kill(:TTIN, pid)
       wait_workers_ready(log, i)
     }
     File.truncate(log, 0)
     reaped = nil
     [ 2, 1, 0].each { |i|
-      assert_nothing_raised { Process.kill(:TTOU, pid) }
+      Process.kill(:TTOU, pid)
       DEFAULT_TRIES.times {
         sleep DEFAULT_RES
         reaped = File.readlines(log).grep(/reaped.*\s*worker=#{i}$/)
@@ -381,7 +380,7 @@ EOF
     ucfg.syswrite("listen %(#@addr:#@port)\n")
     ucfg.syswrite("listen %(#@addr:#{port2})\n")
     ucfg.syswrite("pid %(#{pid_file})\n")
-    assert_nothing_raised { Process.kill(:USR2, current_pid) }
+    Process.kill(:USR2, current_pid)
 
     wait_for_file(old_file)
     wait_for_file(pid_file)
@@ -393,10 +392,8 @@ EOF
     assert_equal String, results[0].class
     assert_equal String, results[1].class
 
-    assert_nothing_raised do
-      Process.kill(:QUIT, current_pid)
-      Process.kill(:QUIT, new_pid)
-    end
+    Process.kill(:QUIT, current_pid)
+    Process.kill(:QUIT, new_pid)
   end
 
   def test_broken_reexec_ru
@@ -446,7 +443,7 @@ EOF
 
     # fix the bug
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
-    assert_nothing_raised { Process.kill(:USR2, current_pid) }
+    Process.kill(:USR2, current_pid)
     wait_for_file(old_file)
     wait_for_file(pid_file)
     new_pid = File.read(pid_file).to_i
@@ -455,10 +452,8 @@ EOF
     results = retry_hit(["http://#{@addr}:#{@port}/"])
     assert_equal String, results[0].class
 
-    assert_nothing_raised do
-      Process.kill(:QUIT, current_pid)
-      Process.kill(:QUIT, new_pid)
-    end
+    Process.kill(:QUIT, current_pid)
+    Process.kill(:QUIT, new_pid)
   end
 
   def test_unicorn_config_listener_swap
@@ -486,10 +481,8 @@ EOF
     assert_equal String, results[0].class
     results = retry_hit(["http://#@addr:#{port_cli}/"])
     assert_equal String, results[0].class
-    assert_nothing_raised do
-      reuse = TCPServer.new(@addr, @port)
-      reuse.close
-    end
+    reuse = TCPServer.new(@addr, @port)
+    reuse.close
     assert_shutdown(pid)
   end
 
@@ -531,7 +524,7 @@ EOF
     s.syswrite("GET / HTTP/1.0\r\n\r\n")
     results = ''
     loop { results << s.sysread(4096) } rescue nil
-    assert_nothing_raised { s.close }
+    s.close
     assert_equal worker_pid, results.split(/\r\n/).last.to_i
     results = hit(["http://#@addr:#{port2}/"])
     assert_equal String, results[0].class
@@ -574,10 +567,10 @@ EOF
     bf = File.readlines(COMMON_TMP.path).grep(/\bbefore_fork: worker=/)
     assert_equal 4, bf.size
     rotate = Tempfile.new('unicorn_rotate')
-    assert_nothing_raised do
-      File.rename(COMMON_TMP.path, rotate.path)
-      Process.kill(:USR1, pid)
-    end
+
+    File.rename(COMMON_TMP.path, rotate.path)
+    Process.kill(:USR1, pid)
+
     wait_for_file(COMMON_TMP.path)
     assert File.exist?(COMMON_TMP.path), "#{COMMON_TMP.path} exists"
     # USR1 should've been passed to all workers
@@ -599,9 +592,10 @@ EOF
     end
     assert_equal 5, log.grep(/done reopening logs/).size
     assert_equal 0, log.grep(/reopening logs\.\.\./).size
-    assert_nothing_raised { Process.kill(:QUIT, pid) }
-    status = nil
-    assert_nothing_raised { pid, status = Process.waitpid2(pid) }
+
+    Process.kill(:QUIT, pid)
+    pid, status = Process.waitpid2(pid)
+
     assert status.success?, "exited successfully"
   end
 
@@ -682,23 +676,21 @@ EOF
     pid = xfork { redirect_test_io { exec($unicorn_bin, "-c#{ucfg.path}") } }
     wait_for_file(sock_path)
     assert File.socket?(sock_path)
-    assert_nothing_raised do
-      sock = UNIXSocket.new(sock_path)
-      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
-      results = sock.sysread(4096)
-    end
+
+    sock = UNIXSocket.new(sock_path)
+    sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+    results = sock.sysread(4096)
+
     assert_equal String, results.class
-    assert_nothing_raised do
-      File.unlink(sock_path)
-      Process.kill(:HUP, pid)
-    end
+    File.unlink(sock_path)
+    Process.kill(:HUP, pid)
     wait_for_file(sock_path)
     assert File.socket?(sock_path)
-    assert_nothing_raised do
-      sock = UNIXSocket.new(sock_path)
-      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
-      results = sock.sysread(4096)
-    end
+
+    sock = UNIXSocket.new(sock_path)
+    sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+    results = sock.sysread(4096)
+
     assert_equal String, results.class
   end
 
@@ -729,11 +721,11 @@ EOF
     assert File.exist?(pid_file), "pid_file created"
     assert_equal pid, File.read(pid_file).to_i
     assert File.socket?(sock_path), "socket created"
-    assert_nothing_raised do
-      sock = UNIXSocket.new(sock_path)
-      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
-      results = sock.sysread(4096)
-    end
+
+    sock = UNIXSocket.new(sock_path)
+    sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+    results = sock.sysread(4096)
+
     assert_equal String, results.class
 
     # try reloading the config
@@ -745,24 +737,20 @@ EOF
     new_log.sync = true
     assert_equal 0, new_log.size
 
-    assert_nothing_raised do
-      ucfg = File.open(ucfg.path, "wb")
-      ucfg.syswrite("listen \"#{sock_path}\"\n")
-      ucfg.syswrite("listen \"#{new_sock_path}\"\n")
-      ucfg.syswrite("pid \"#{pid_file}\"\n")
-      ucfg.syswrite("logger Logger.new('#{new_log.path}')\n")
-      ucfg.close
-      Process.kill(:HUP, pid)
-    end
+    ucfg = File.open(ucfg.path, "wb")
+    ucfg.syswrite("listen \"#{sock_path}\"\n")
+    ucfg.syswrite("listen \"#{new_sock_path}\"\n")
+    ucfg.syswrite("pid \"#{pid_file}\"\n")
+    ucfg.syswrite("logger Logger.new('#{new_log.path}')\n")
+    ucfg.close
+    Process.kill(:HUP, pid)
 
     wait_for_file(new_sock_path)
     assert File.socket?(new_sock_path), "socket exists"
     @sockets.each do |path|
-      assert_nothing_raised do
-        sock = UNIXSocket.new(path)
-        sock.syswrite("GET / HTTP/1.0\r\n\r\n")
-        results = sock.sysread(4096)
-      end
+      sock = UNIXSocket.new(path)
+      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+      results = sock.sysread(4096)
       assert_equal String, results.class
     end
 
@@ -791,7 +779,7 @@ EOF
     assert_not_equal pid, new_pid
     pid, status = Process.waitpid2(pid)
     assert status.success?, "original process exited successfully"
-    assert_nothing_raised { Process.kill(0, new_pid) }
+    Process.kill(0, new_pid)
     reexec_usr2_quit_test(new_pid, pid_file)
   end
 
@@ -845,11 +833,10 @@ EOF
     assert $?.success?
     expect_size = orig_fds.size
 
-    assert_nothing_raised do
-      Process.kill(:USR2, pid)
-      wait_for_file("#{pid_file}.oldbin")
-      Process.kill(:QUIT, pid)
-    end
+    Process.kill(:USR2, pid)
+    wait_for_file("#{pid_file}.oldbin")
+    Process.kill(:QUIT, pid)
+
     wait_for_death(pid)
 
     wait_master_ready(log.path)
@@ -865,11 +852,10 @@ EOF
     assert expect_size >= curr_fds.size, curr_fds.inspect
     expect_size = curr_fds.size
 
-    assert_nothing_raised do
-      Process.kill(:USR2, pid)
-      wait_for_file("#{pid_file}.oldbin")
-      Process.kill(:QUIT, pid)
-    end
+    Process.kill(:USR2, pid)
+    wait_for_file("#{pid_file}.oldbin")
+    Process.kill(:QUIT, pid)
+
     wait_for_death(pid)
 
     wait_master_ready(log.path)
@@ -930,7 +916,7 @@ EOF
     assert daemon_pid > 0
     Process.kill(:HUP, daemon_pid)
     assert_equal '2', r.read(1)
-    assert_nothing_raised { Process.kill(:TERM, hitter) }
+    Process.kill(:TERM, hitter)
     _, hitter_status = Process.waitpid2(hitter)
     assert(hitter_status.success?,
            "invalid: #{hitter_status.inspect} #{File.read(pids.path)}" \
@@ -944,7 +930,7 @@ EOF
       assert x > 0
       assert pids[x] > 0
     }
-    assert_nothing_raised { Process.kill(:QUIT, daemon_pid) }
+    Process.kill(:QUIT, daemon_pid)
     wait_for_death(daemon_pid)
   end
 
@@ -960,12 +946,12 @@ EOF
     default_listen_lock do
       res, pid_path = default_listen_setup
       daemon_pid = File.read(pid_path).to_i
-      assert_nothing_raised { Process.kill(:HUP, daemon_pid) }
+      Process.kill(:HUP, daemon_pid)
       wait_workers_ready("test_stderr.#$$.log", 1)
       res2 = hit(["http://#{Unicorn::Const::DEFAULT_LISTEN}/"])
       assert_match %r{\d+}, res2.first
       assert res2.first != res.first
-      assert_nothing_raised { Process.kill(:QUIT, daemon_pid) }
+      Process.kill(:QUIT, daemon_pid)
       wait_for_death(daemon_pid)
     end
   end
@@ -974,13 +960,13 @@ EOF
     default_listen_lock do
       res, pid_path = default_listen_setup
       daemon_pid = File.read(pid_path).to_i
-      assert_nothing_raised {
-        Process.kill(:USR2, daemon_pid)
-        wait_for_file("#{pid_path}.oldbin")
-        wait_for_file(pid_path)
-        Process.kill(:QUIT, daemon_pid)
-        wait_for_death(daemon_pid)
-      }
+
+      Process.kill(:USR2, daemon_pid)
+      wait_for_file("#{pid_path}.oldbin")
+      wait_for_file(pid_path)
+      Process.kill(:QUIT, daemon_pid)
+      wait_for_death(daemon_pid)
+
       daemon_pid = File.read(pid_path).to_i
       wait_workers_ready("test_stderr.#$$.log", 1)
       File.truncate("test_stderr.#$$.log", 0)
@@ -989,13 +975,13 @@ EOF
       assert_match %r{\d+}, res2.first
       assert res2.first != res.first
 
-      assert_nothing_raised { Process.kill(:HUP, daemon_pid) }
+      Process.kill(:HUP, daemon_pid)
       wait_workers_ready("test_stderr.#$$.log", 1)
       File.truncate("test_stderr.#$$.log", 0)
       res3 = hit(["http://#{Unicorn::Const::DEFAULT_LISTEN}/"])
       assert res2.first != res3.first
 
-      assert_nothing_raised { Process.kill(:QUIT, daemon_pid) }
+      Process.kill(:QUIT, daemon_pid)
       wait_for_death(daemon_pid)
     end
   end
