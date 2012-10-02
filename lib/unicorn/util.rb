@@ -7,6 +7,7 @@ module Unicorn::Util
     append_flags = File::WRONLY | File::APPEND
 
     ! fp.closed? &&
+      fp.stat.file? &&
       fp.sync &&
       (fp.fcntl(Fcntl::F_GETFL) & append_flags) == append_flags
     rescue IOError, Errno::EBADF
