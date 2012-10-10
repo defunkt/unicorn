@@ -8,7 +8,7 @@
 # improve things much compared to constants.
 module Unicorn::Const
 
-  UNICORN_VERSION = "4.3.1"
+  UNICORN_VERSION = "4.4.0"
 
   # default TCP listen host address (0.0.0.0, all interfaces)
   DEFAULT_HOST = "0.0.0.0"
