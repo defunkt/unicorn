@@ -49,7 +49,7 @@ task :fm_update do
   require 'net/netrc'
   require 'json'
   version = ENV['VERSION'] or abort "VERSION= needed"
-  uri = URI.parse('http://freecode.com/projects/unicorn/releases.json')
+  uri = URI.parse('https://freecode.com/projects/unicorn/releases.json')
   rc = Net::Netrc.locate('unicorn-fm') or abort "~/.netrc not found"
   api_token = rc.password
   _, subject, body = `git cat-file tag v#{version}`.split(/\n\n/, 3)
@@ -71,7 +71,7 @@ task :fm_update do
   }.to_json
 
   if ! changelog.strip.empty? && version =~ %r{\A[\d\.]+\d+\z}
-    Net::HTTP.start(uri.host, uri.port) do |http|
+    Net::HTTP.start(uri.host, uri.port, :use_ssl => true) do |http|
       p http.post(uri.path, req, {'Content-Type'=>'application/json'})
     end
   else
