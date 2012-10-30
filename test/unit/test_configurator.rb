@@ -132,6 +132,30 @@ class TestConfigurator < Test::Unit::TestCase
     Unicorn::Configurator.new(:config_file => tmp.path)
   end
 
+  def test_check_client_connection
+    tmp = Tempfile.new('unicorn_config')
+    test_struct = TestStruct.new
+    tmp.syswrite("check_client_connection true\n")
+
+    assert_nothing_raised do
+      Unicorn::Configurator.new(:config_file => tmp.path).commit!(test_struct)
+    end
+
+    assert test_struct.check_client_connection
+  end
+
+  def test_check_client_connection_with_tcp_bad
+    tmp = Tempfile.new('unicorn_config')
+    test_struct = TestStruct.new
+    listener = "127.0.0.1:12345"
+    tmp.syswrite("check_client_connection true\n")
+    tmp.syswrite("listen '#{listener}', :tcp_nopush => true\n")
+
+    assert_raises(ArgumentError) do
+      Unicorn::Configurator.new(:config_file => tmp.path).commit!(test_struct)
+    end
+  end
+
   def test_after_fork_proc
     test_struct = TestStruct.new
     [ proc { |a,b| }, Proc.new { |a,b| }, lambda { |a,b| } ].each do |my_proc|

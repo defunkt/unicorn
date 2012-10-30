@@ -871,13 +871,14 @@ EOF
     wait_for_death(pid)
   end
 
-  def hup_test_common(preload)
+  def hup_test_common(preload, check_client=false)
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI.gsub("HI", '#$$')) }
     pid_file = Tempfile.new('pid')
     ucfg = Tempfile.new('unicorn_test_config')
     ucfg.syswrite("listen '#@addr:#@port'\n")
     ucfg.syswrite("pid '#{pid_file.path}'\n")
     ucfg.syswrite("preload_app true\n") if preload
+    ucfg.syswrite("check_client_connection true\n") if check_client
     ucfg.syswrite("stderr_path 'test_stderr.#$$.log'\n")
     ucfg.syswrite("stdout_path 'test_stdout.#$$.log'\n")
     pid = xfork {
@@ -940,6 +941,10 @@ EOF
 
   def test_hup
     hup_test_common(false)
+  end
+
+  def test_check_client_hup
+    hup_test_common(false, true)
   end
 
   def test_default_listen_hup_holds_listener

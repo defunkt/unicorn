@@ -29,12 +29,16 @@ module Unicorn::Const
 
   # :stopdoc:
   # common errors we'll send back
-  ERROR_400_RESPONSE = "HTTP/1.1 400 Bad Request\r\n\r\n"
-  ERROR_414_RESPONSE = "HTTP/1.1 414 Request-URI Too Long\r\n\r\n"
-  ERROR_413_RESPONSE = "HTTP/1.1 413 Request Entity Too Large\r\n\r\n"
-  ERROR_500_RESPONSE = "HTTP/1.1 500 Internal Server Error\r\n\r\n"
-  EXPECT_100_RESPONSE = "HTTP/1.1 100 Continue\r\n\r\n"
+  ERROR_400_RESPONSE = "400 Bad Request\r\n\r\n"
+  ERROR_414_RESPONSE = "414 Request-URI Too Long\r\n\r\n"
+  ERROR_413_RESPONSE = "413 Request Entity Too Large\r\n\r\n"
+  ERROR_500_RESPONSE = "500 Internal Server Error\r\n\r\n"
 
+  EXPECT_100_RESPONSE = "HTTP/1.1 100 Continue\r\n\r\n"
+  EXPECT_100_RESPONSE_SUFFIXED = "100 Continue\r\n\r\nHTTP/1.1 "
+
+  HTTP_RESPONSE_START = ['HTTP', '/1.1 ']
   HTTP_EXPECT = "HTTP_EXPECT"
+
   # :startdoc:
 end

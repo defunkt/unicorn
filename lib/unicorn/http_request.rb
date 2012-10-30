@@ -22,11 +22,14 @@ class Unicorn::HttpParser
 
   NULL_IO = StringIO.new("")
 
+  attr_accessor :response_start_sent
+
   # :stopdoc:
   # A frozen format for this is about 15% faster
   REMOTE_ADDR = 'REMOTE_ADDR'.freeze
   RACK_INPUT = 'rack.input'.freeze
   @@input_class = Unicorn::TeeInput
+  @@check_client_connection = false
 
   def self.input_class
     @@input_class
@@ -35,6 +38,15 @@ class Unicorn::HttpParser
   def self.input_class=(klass)
     @@input_class = klass
   end
+
+  def self.check_client_connection
+    @@check_client_connection
+  end
+
+  def self.check_client_connection=(bool)
+    @@check_client_connection = bool
+  end
+
   # :startdoc:
 
   # Does the majority of the IO processing.  It has been written in
@@ -70,6 +82,13 @@ class Unicorn::HttpParser
       # an Exception thrown from the parser will throw us out of the loop
       false until add_parse(socket.kgio_read!(16384))
     end
+
+    # detect if the socket is valid by writing a partial response:
+    if @@check_client_connection && headers?
+      @response_start_sent = true
+      Unicorn::Const::HTTP_RESPONSE_START.each { |c| socket.write(c) }
+    end
+
     e[RACK_INPUT] = 0 == content_length ?
                     NULL_IO : @@input_class.new(socket, self)
     e.merge!(DEFAULTS)

@@ -45,6 +45,7 @@ class Unicorn::Configurator
       },
     :pid => nil,
     :preload_app => false,
+    :check_client_connection => false,
     :rewindable_input => true, # for Rack 2.x: (Rack::VERSION[0] <= 1),
     :client_body_buffer_size => Unicorn::Const::MAX_BODY,
     :trust_x_forwarded => true,
@@ -95,6 +96,18 @@ class Unicorn::Configurator
     skip = options[:skip] || []
     if ready_pipe = RACKUP.delete(:ready_pipe)
       server.ready_pipe = ready_pipe
+    end
+    if set[:check_client_connection]
+      set[:listeners].each do |address|
+        if set[:listener_opts][address][:tcp_nopush] == true
+          raise ArgumentError,
+            "check_client_connection is incompatible with tcp_nopush:true"
+        end
+        if set[:listener_opts][address][:tcp_nodelay] == true
+          raise ArgumentError,
+            "check_client_connection is incompatible with tcp_nodelay:true"
+        end
+      end
     end
     set.each do |key, value|
       value == :unset and next
@@ -452,6 +465,18 @@ class Unicorn::Configurator
   # +false+.
   def client_body_buffer_size(bytes)
     set_int(:client_body_buffer_size, bytes, 0)
+  end
+
+  # When enabled, unicorn will check the client connection by writing
+  # the beginning of the HTTP headers before calling the application.
+  #
+  # This will prevent calling the application for clients who have
+  # disconnected while their connection was queued.
+  #
+  # This option cannot be used in conjunction with tcp_nodelay or
+  # tcp_nopush.
+  def check_client_connection(bool)
+    set_bool(:check_client_connection, bool)
   end
 
   # Allow redirecting $stderr to a given path.  Unlike doing this from

@@ -17,6 +17,7 @@ class Unicorn::HttpServer
                 :listener_opts, :preload_app,
                 :reexec_pid, :orig_app, :init_listeners,
                 :master_pid, :config, :ready_pipe, :user
+
   attr_reader :pid, :logger
   include Unicorn::SocketHelper
   include Unicorn::HttpResponse
@@ -355,6 +356,14 @@ class Unicorn::HttpServer
     Unicorn::HttpParser.trust_x_forwarded = bool
   end
 
+  def check_client_connection
+    Unicorn::HttpRequest.check_client_connection
+  end
+
+  def check_client_connection=(bool)
+    Unicorn::HttpRequest.check_client_connection = bool
+  end
+
   private
 
   # wait for a signal hander to wake us up and then consume the pipe
@@ -524,9 +533,18 @@ class Unicorn::HttpServer
       Unicorn.log_error(@logger, "app error", e)
       Unicorn::Const::ERROR_500_RESPONSE
     end
+    msg = "HTTP/1.1 #{msg}" unless @request.response_start_sent
     client.kgio_trywrite(msg)
     client.close
     rescue
+  end
+
+  def expect_100_response
+    if @request.response_start_sent
+      Unicorn::Const::EXPECT_100_RESPONSE_SUFFIXED
+    else
+      Unicorn::Const::EXPECT_100_RESPONSE
+    end
   end
 
   # once a client is accepted, it is processed in its entirety here
@@ -535,12 +553,13 @@ class Unicorn::HttpServer
     status, headers, body = @app.call(env = @request.read(client))
 
     if 100 == status.to_i
-      client.write(Unicorn::Const::EXPECT_100_RESPONSE)
+      client.write(expect_100_response)
       env.delete(Unicorn::Const::HTTP_EXPECT)
       status, headers, body = @app.call(env)
     end
     @request.headers? or headers = nil
-    http_response_write(client, status, headers, body)
+    http_response_write(client, status, headers, body,
+                        @request.response_start_sent)
     client.shutdown # in case of fork() in Rack app
     client.close # flush and uncork socket immediately, no keepalive
   rescue => e

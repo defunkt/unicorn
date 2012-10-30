@@ -115,7 +115,7 @@ struct http_parser {
   } len;
 };
 
-static ID id_clear, id_set_backtrace;
+static ID id_clear, id_set_backtrace, id_response_start_sent;
 
 static void finalize_header(struct http_parser *hp);
 
@@ -626,6 +626,7 @@ static VALUE HttpParser_clear(VALUE self)
 
   http_parser_init(hp);
   rb_funcall(hp->env, id_clear, 0);
+  rb_ivar_set(self, id_response_start_sent, Qfalse);
 
   return self;
 }
@@ -1031,6 +1032,7 @@ void Init_unicorn_http(void)
   SET_GLOBAL(g_http_connection, "CONNECTION");
   id_clear = rb_intern("clear");
   id_set_backtrace = rb_intern("set_backtrace");
+  id_response_start_sent = rb_intern("@response_start_sent");
   init_unicorn_httpdate();
 }
 #undef SET_GLOBAL
