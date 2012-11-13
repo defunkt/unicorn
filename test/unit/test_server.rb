@@ -92,14 +92,10 @@ class WebServerTest < Test::Unit::TestCase
       @server = HttpServer.new(app, :listeners => [ "127.0.0.1:#@port"] )
       @server.start
     end
-    sock = nil
-    assert_nothing_raised do
-      sock = TCPSocket.new('127.0.0.1', @port)
-      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
-    end
-
+    sock = TCPSocket.new('127.0.0.1', @port)
+    sock.syswrite("GET / HTTP/1.0\r\n\r\n")
     assert_match %r{\AHTTP/1.[01] 500\b}, sock.sysread(4096)
-    assert_nothing_raised { sock.close }
+    assert_nil sock.close
   end
 
   def test_simple_server
@@ -108,56 +104,48 @@ class WebServerTest < Test::Unit::TestCase
   end
 
   def test_client_shutdown_writes
-    sock = nil
-    buf = nil
     bs = 15609315 * rand
-    assert_nothing_raised do
-      sock = TCPSocket.new('127.0.0.1', @port)
-      sock.syswrite("PUT /hello HTTP/1.1\r\n")
-      sock.syswrite("Host: example.com\r\n")
-      sock.syswrite("Transfer-Encoding: chunked\r\n")
-      sock.syswrite("Trailer: X-Foo\r\n")
-      sock.syswrite("\r\n")
-      sock.syswrite("%x\r\n" % [ bs ])
-      sock.syswrite("F" * bs)
-      sock.syswrite("\r\n0\r\nX-")
-      "Foo: bar\r\n\r\n".each_byte do |x|
-        sock.syswrite x.chr
-        sleep 0.05
-      end
-      # we wrote the entire request before shutting down, server should
-      # continue to process our request and never hit EOFError on our sock
-      sock.shutdown(Socket::SHUT_WR)
-      buf = sock.read
+    sock = TCPSocket.new('127.0.0.1', @port)
+    sock.syswrite("PUT /hello HTTP/1.1\r\n")
+    sock.syswrite("Host: example.com\r\n")
+    sock.syswrite("Transfer-Encoding: chunked\r\n")
+    sock.syswrite("Trailer: X-Foo\r\n")
+    sock.syswrite("\r\n")
+    sock.syswrite("%x\r\n" % [ bs ])
+    sock.syswrite("F" * bs)
+    sock.syswrite("\r\n0\r\nX-")
+    "Foo: bar\r\n\r\n".each_byte do |x|
+      sock.syswrite x.chr
+      sleep 0.05
     end
+    # we wrote the entire request before shutting down, server should
+    # continue to process our request and never hit EOFError on our sock
+    sock.shutdown(Socket::SHUT_WR)
+    buf = sock.read
     assert_equal 'hello!\n', buf.split(/\r\n\r\n/).last
     next_client = Net::HTTP.get(URI.parse("http://127.0.0.1:#@port/"))
     assert_equal 'hello!\n', next_client
     lines = File.readlines("test_stderr.#$$.log")
     assert lines.grep(/^Unicorn::ClientShutdown: /).empty?
-    assert_nothing_raised { sock.close }
+    assert_nil sock.close
   end
 
   def test_client_shutdown_write_truncates
-    sock = nil
-    buf = nil
     bs = 15609315 * rand
-    assert_nothing_raised do
-      sock = TCPSocket.new('127.0.0.1', @port)
-      sock.syswrite("PUT /hello HTTP/1.1\r\n")
-      sock.syswrite("Host: example.com\r\n")
-      sock.syswrite("Transfer-Encoding: chunked\r\n")
-      sock.syswrite("Trailer: X-Foo\r\n")
-      sock.syswrite("\r\n")
-      sock.syswrite("%x\r\n" % [ bs ])
-      sock.syswrite("F" * (bs / 2.0))
+    sock = TCPSocket.new('127.0.0.1', @port)
+    sock.syswrite("PUT /hello HTTP/1.1\r\n")
+    sock.syswrite("Host: example.com\r\n")
+    sock.syswrite("Transfer-Encoding: chunked\r\n")
+    sock.syswrite("Trailer: X-Foo\r\n")
+    sock.syswrite("\r\n")
+    sock.syswrite("%x\r\n" % [ bs ])
+    sock.syswrite("F" * (bs / 2.0))
 
-      # shutdown prematurely, this will force the server to abort
-      # processing on us even during app dispatch
-      sock.shutdown(Socket::SHUT_WR)
-      IO.select([sock], nil, nil, 60) or raise "Timed out"
-      buf = sock.read
-    end
+    # shutdown prematurely, this will force the server to abort
+    # processing on us even during app dispatch
+    sock.shutdown(Socket::SHUT_WR)
+    IO.select([sock], nil, nil, 60) or raise "Timed out"
+    buf = sock.read
     assert_equal "", buf
     next_client = Net::HTTP.get(URI.parse("http://127.0.0.1:#@port/"))
     assert_equal 'hello!\n', next_client
@@ -165,27 +153,24 @@ class WebServerTest < Test::Unit::TestCase
     lines = lines.grep(/^Unicorn::ClientShutdown: bytes_read=\d+/)
     assert_equal 1, lines.size
     assert_match %r{\AUnicorn::ClientShutdown: bytes_read=\d+ true$}, lines[0]
-    assert_nothing_raised { sock.close }
+    assert_nil sock.close
   end
 
   def test_client_malformed_body
-    sock = nil
     bs = 15653984
-    assert_nothing_raised do
-      sock = TCPSocket.new('127.0.0.1', @port)
-      sock.syswrite("PUT /hello HTTP/1.1\r\n")
-      sock.syswrite("Host: example.com\r\n")
-      sock.syswrite("Transfer-Encoding: chunked\r\n")
-      sock.syswrite("Trailer: X-Foo\r\n")
-      sock.syswrite("\r\n")
-      sock.syswrite("%x\r\n" % [ bs ])
-      sock.syswrite("F" * bs)
-    end
+    sock = TCPSocket.new('127.0.0.1', @port)
+    sock.syswrite("PUT /hello HTTP/1.1\r\n")
+    sock.syswrite("Host: example.com\r\n")
+    sock.syswrite("Transfer-Encoding: chunked\r\n")
+    sock.syswrite("Trailer: X-Foo\r\n")
+    sock.syswrite("\r\n")
+    sock.syswrite("%x\r\n" % [ bs ])
+    sock.syswrite("F" * bs)
     begin
       File.open("/dev/urandom", "rb") { |fp| sock.syswrite(fp.sysread(16384)) }
     rescue
     end
-    assert_nothing_raised { sock.close }
+    assert_nil sock.close
     next_client = Net::HTTP.get(URI.parse("http://127.0.0.1:#@port/"))
     assert_equal 'hello!\n', next_client
     lines = File.readlines("test_stderr.#$$.log")
@@ -240,23 +225,17 @@ class WebServerTest < Test::Unit::TestCase
   end
 
   def test_bad_client_400
-    sock = nil
-    assert_nothing_raised do
-      sock = TCPSocket.new('127.0.0.1', @port)
-      sock.syswrite("GET / HTTP/1.0\r\nHost: foo\rbar\r\n\r\n")
-    end
+    sock = TCPSocket.new('127.0.0.1', @port)
+    sock.syswrite("GET / HTTP/1.0\r\nHost: foo\rbar\r\n\r\n")
     assert_match %r{\AHTTP/1.[01] 400\b}, sock.sysread(4096)
-    assert_nothing_raised { sock.close }
+    assert_nil sock.close
   end
 
   def test_http_0_9
-    sock = nil
-    assert_nothing_raised do
-      sock = TCPSocket.new('127.0.0.1', @port)
-      sock.syswrite("GET /hello\r\n")
-    end
+    sock = TCPSocket.new('127.0.0.1', @port)
+    sock.syswrite("GET /hello\r\n")
     assert_match 'hello!\n', sock.sysread(4096)
-    assert_nothing_raised { sock.close }
+    assert_nil sock.close
   end
 
   def test_header_is_too_long

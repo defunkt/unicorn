@@ -155,9 +155,8 @@ end
 
 def assert_shutdown(pid)
   wait_master_ready("test_stderr.#{pid}.log")
-  assert_nothing_raised { Process.kill(:QUIT, pid) }
-  status = nil
-  assert_nothing_raised { pid, status = Process.waitpid2(pid) }
+  Process.kill(:QUIT, pid)
+  pid, status = Process.waitpid2(pid)
   assert status.success?, "exited successfully"
 end
 
@@ -191,8 +190,8 @@ end
 def reexec_usr2_quit_test(pid, pid_file)
   assert File.exist?(pid_file), "pid file OK"
   assert ! File.exist?("#{pid_file}.oldbin"), "oldbin pid file"
-  assert_nothing_raised { Process.kill(:USR2, pid) }
-  assert_nothing_raised { retry_hit(["http://#{@addr}:#{@port}/"]) }
+  Process.kill(:USR2, pid)
+  retry_hit(["http://#{@addr}:#{@port}/"])
   wait_for_file("#{pid_file}.oldbin")
   wait_for_file(pid_file)
 
@@ -202,35 +201,33 @@ def reexec_usr2_quit_test(pid, pid_file)
   # kill old master process
   assert_not_equal pid, new_pid
   assert_equal pid, old_pid
-  assert_nothing_raised { Process.kill(:QUIT, old_pid) }
-  assert_nothing_raised { retry_hit(["http://#{@addr}:#{@port}/"]) }
+  Process.kill(:QUIT, old_pid)
+  retry_hit(["http://#{@addr}:#{@port}/"])
   wait_for_death(old_pid)
   assert_equal new_pid, File.read(pid_file).to_i
-  assert_nothing_raised { retry_hit(["http://#{@addr}:#{@port}/"]) }
-  assert_nothing_raised { Process.kill(:QUIT, new_pid) }
+  retry_hit(["http://#{@addr}:#{@port}/"])
+  Process.kill(:QUIT, new_pid)
 end
 
 def reexec_basic_test(pid, pid_file)
   results = retry_hit(["http://#{@addr}:#{@port}/"])
   assert_equal String, results[0].class
-  assert_nothing_raised { Process.kill(0, pid) }
+  Process.kill(0, pid)
   master_log = "#{@tmpdir}/test_stderr.#{pid}.log"
   wait_master_ready(master_log)
   File.truncate(master_log, 0)
   nr = 50
   kill_point = 2
-  assert_nothing_raised do
-    nr.times do |i|
-      hit(["http://#{@addr}:#{@port}/#{i}"])
-      i == kill_point and Process.kill(:HUP, pid)
-    end
+  nr.times do |i|
+    hit(["http://#{@addr}:#{@port}/#{i}"])
+    i == kill_point and Process.kill(:HUP, pid)
   end
   wait_master_ready(master_log)
   assert File.exist?(pid_file), "pid=#{pid_file} exists"
   new_pid = File.read(pid_file).to_i
   assert_not_equal pid, new_pid
-  assert_nothing_raised { Process.kill(0, new_pid) }
-  assert_nothing_raised { Process.kill(:QUIT, new_pid) }
+  Process.kill(0, new_pid)
+  Process.kill(:QUIT, new_pid)
 end
 
 def wait_for_file(path)

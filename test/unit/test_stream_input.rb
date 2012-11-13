@@ -85,8 +85,7 @@ class TestStreamInput < Test::Unit::TestCase
       assert_equal '....', si.read(4), "nr=#{x}"
     }
     assert_nil si.read(1)
-    status = nil
-    assert_nothing_raised { pid, status = Process.waitpid2(pid) }
+    pid, status = Process.waitpid2(pid)
     assert status.success?
   end
 
@@ -101,13 +100,13 @@ class TestStreamInput < Test::Unit::TestCase
       @wr.close
     }
     @wr.close
-    assert_nothing_raised { line = si.gets }
+    line = si.gets
     assert_equal(4096 * 4 * 3 + 5 + $/.size, line.size)
     assert_equal("hello" << ("ffff" * 4096 * 3) << "#$/", line)
-    assert_nothing_raised { line = si.gets }
+    line = si.gets
     assert_equal "foo#$/", line
     assert_nil si.gets
-    assert_nothing_raised { pid, status = Process.waitpid2(pid) }
+    pid, status = Process.waitpid2(pid)
     assert status.success?
   end
 

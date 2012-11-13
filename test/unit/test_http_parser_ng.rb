@@ -34,7 +34,7 @@ class HttpParserNgTest < Test::Unit::TestCase
   def test_connection_TE
     @parser.buf << "GET / HTTP/1.1\r\nHost: example.com\r\nConnection: TE\r\n"
     @parser.buf << "TE: trailers\r\n\r\n"
-    assert_nothing_raised { @parser.parse }
+    @parser.parse
     assert @parser.keepalive?
     assert @parser.next?
   end
@@ -94,10 +94,8 @@ class HttpParserNgTest < Test::Unit::TestCase
   def test_default_keepalive_is_off
     assert ! @parser.keepalive?
     assert ! @parser.next?
-    assert_nothing_raised do
-      @parser.buf << "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
-      @parser.parse
-    end
+    @parser.buf << "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
+    @parser.parse
     assert @parser.keepalive?
     @parser.clear
     assert ! @parser.keepalive?
@@ -419,7 +417,7 @@ class HttpParserNgTest < Test::Unit::TestCase
     req = @parser.env
     assert_equal req, @parser.parse
     assert_nil @parser.content_length
-    assert_nothing_raised { @parser.filter_body('', str) }
+    @parser.filter_body('', str)
     assert ! @parser.keepalive?
   end
 
@@ -427,7 +425,7 @@ class HttpParserNgTest < Test::Unit::TestCase
     n = HttpParser::LENGTH_MAX
     @parser.buf << "PUT / HTTP/1.1\r\nContent-Length: #{n}\r\n\r\n"
     req = @parser.env
-    assert_nothing_raised { @parser.headers(req, @parser.buf) }
+    @parser.headers(req, @parser.buf)
     assert_equal n, req['CONTENT_LENGTH'].to_i
     assert ! @parser.keepalive?
   end

@@ -163,7 +163,7 @@ class UploadTest < Test::Unit::TestCase
     assert_raise(Errno::ECONNRESET, Errno::EPIPE) do
       ::Unicorn::Const::CHUNK_SIZE.times { sock.syswrite(buf) }
     end
-    assert_nothing_raised { sock.gets }
+    sock.gets
     tmp.rewind
     assert_equal length, tmp.read.to_i
   end

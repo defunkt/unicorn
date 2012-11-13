@@ -51,22 +51,19 @@ class SignalsTest < Test::Unit::TestCase
       opts = @server_opts.merge(:timeout => 3)
       redirect_test_io { HttpServer.new(app, opts).start.join }
     }
-    child = sock = buf = t0 = nil
-    assert_nothing_raised do
-      wait_workers_ready("test_stderr.#{pid}.log", 1)
-      sock = TCPSocket.new('127.0.0.1', @port)
-      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
-      buf = sock.readpartial(4096)
-      sock.close
-      buf =~ /\bX-Pid: (\d+)\b/ or raise Exception
-      child = $1.to_i
-      wait_master_ready("test_stderr.#{pid}.log")
-      wait_workers_ready("test_stderr.#{pid}.log", 1)
-      Process.kill(:KILL, pid)
-      Process.waitpid(pid)
-      File.unlink("test_stderr.#{pid}.log", "test_stdout.#{pid}.log")
-      t0 = Time.now
-    end
+    wait_workers_ready("test_stderr.#{pid}.log", 1)
+    sock = TCPSocket.new('127.0.0.1', @port)
+    sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+    buf = sock.readpartial(4096)
+    assert_nil sock.close
+    buf =~ /\bX-Pid: (\d+)\b/ or raise Exception
+    child = $1.to_i
+    wait_master_ready("test_stderr.#{pid}.log")
+    wait_workers_ready("test_stderr.#{pid}.log", 1)
+    Process.kill(:KILL, pid)
+    Process.waitpid(pid)
+    File.unlink("test_stderr.#{pid}.log", "test_stdout.#{pid}.log")
+    t0 = Time.now
     assert child
     assert t0
     assert_raises(Errno::ESRCH) { loop { Process.kill(0, child); sleep 0.2 } }
@@ -80,17 +77,14 @@ class SignalsTest < Test::Unit::TestCase
       app = lambda { |env| wr.syswrite('.'); sleep; [ 200, {}, [] ] }
       redirect_test_io { HttpServer.new(app, @server_opts).start.join }
     }
-    sock = buf = nil
     wr.close
-    assert_nothing_raised do
-      wait_workers_ready("test_stderr.#{pid}.log", 1)
-      sock = TCPSocket.new('127.0.0.1', @port)
-      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
-      buf = rd.readpartial(1)
-      wait_master_ready("test_stderr.#{pid}.log")
-      Process.kill(:INT, pid)
-      Process.waitpid(pid)
-    end
+    wait_workers_ready("test_stderr.#{pid}.log", 1)
+    sock = TCPSocket.new('127.0.0.1', @port)
+    sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+    buf = rd.readpartial(1)
+    wait_master_ready("test_stderr.#{pid}.log")
+    Process.kill(:INT, pid)
+    Process.waitpid(pid)
     assert_equal '.', buf
     buf = nil
     assert_raises(EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,
@@ -98,7 +92,6 @@ class SignalsTest < Test::Unit::TestCase
       buf = sock.sysread(4096)
     end
     assert_nil buf
-    ensure
   end
 
   def test_timeout_slow_response
@@ -108,12 +101,9 @@ class SignalsTest < Test::Unit::TestCase
       redirect_test_io { HttpServer.new(app, opts).start.join }
     }
     t0 = Time.now
-    sock = nil
-    assert_nothing_raised do
-      wait_workers_ready("test_stderr.#{pid}.log", 1)
-      sock = TCPSocket.new('127.0.0.1', @port)
-      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
-    end
+    wait_workers_ready("test_stderr.#{pid}.log", 1)
+    sock = TCPSocket.new('127.0.0.1', @port)
+    sock.syswrite("GET / HTTP/1.0\r\n\r\n")
 
     buf = nil
     assert_raises(EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,
@@ -134,19 +124,14 @@ class SignalsTest < Test::Unit::TestCase
         Dd.new(@bs, @count) ]
     }
     redirect_test_io { @server = HttpServer.new(app, @server_opts).start }
-    sock = nil
-    assert_nothing_raised do
-      wait_workers_ready("test_stderr.#{$$}.log", 1)
-      sock = TCPSocket.new('127.0.0.1', @port)
-      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
-    end
+    wait_workers_ready("test_stderr.#{$$}.log", 1)
+    sock = TCPSocket.new('127.0.0.1', @port)
+    sock.syswrite("GET / HTTP/1.0\r\n\r\n")
     buf = ''
     header_len = pid = nil
-    assert_nothing_raised do
-      buf = sock.sysread(16384, buf)
-      pid = buf[/\r\nX-Pid: (\d+)\r\n/, 1].to_i
-      header_len = buf[/\A(.+?\r\n\r\n)/m, 1].size
-    end
+    buf = sock.sysread(16384, buf)
+    pid = buf[/\r\nX-Pid: (\d+)\r\n/, 1].to_i
+    header_len = buf[/\A(.+?\r\n\r\n)/m, 1].size
     assert pid > 0, "pid not positive: #{pid.inspect}"
     read = buf.size
     size_before = @tmp.stat.size
@@ -166,7 +151,7 @@ class SignalsTest < Test::Unit::TestCase
     got = read - header_len
     expect = @bs * @count
     assert_equal(expect, got, "expect=#{expect} got=#{got}")
-    assert_nothing_raised { sock.close }
+    assert_nil sock.close
   end
 
   def test_request_read
@@ -176,15 +161,12 @@ class SignalsTest < Test::Unit::TestCase
       [ 200, {'Content-Type'=>'text/plain', 'X-Pid'=>Process.pid.to_s}, [] ]
     }
     redirect_test_io { @server = HttpServer.new(app, @server_opts).start }
-    pid = nil
 
-    assert_nothing_raised do
-      wait_workers_ready("test_stderr.#{$$}.log", 1)
-      sock = TCPSocket.new('127.0.0.1', @port)
-      sock.syswrite("GET / HTTP/1.0\r\n\r\n")
-      pid = sock.sysread(4096)[/\r\nX-Pid: (\d+)\r\n/, 1].to_i
-      sock.close
-    end
+    wait_workers_ready("test_stderr.#{$$}.log", 1)
+    sock = TCPSocket.new('127.0.0.1', @port)
+    sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+    pid = sock.sysread(4096)[/\r\nX-Pid: (\d+)\r\n/, 1].to_i
+    assert_nil sock.close
 
     assert pid > 0, "pid not positive: #{pid.inspect}"
     sock = TCPSocket.new('127.0.0.1', @port)
@@ -201,7 +183,6 @@ class SignalsTest < Test::Unit::TestCase
     # can't check for == since pending signals get merged
     assert size_before < @tmp.stat.size
     assert_equal pid, sock.sysread(4096)[/\r\nX-Pid: (\d+)\r\n/, 1].to_i
-    sock.close
+    assert_nil sock.close
   end
-
 end

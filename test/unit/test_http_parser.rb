@@ -689,10 +689,7 @@ class HttpParserTest < Test::Unit::TestCase
       parser = HttpParser.new
       req = parser.env
       s = "#{m} /forums/1/topics/2375?page=1#posts-17408 HTTP/1.1\r\n\r\n"
-      ok = false
-      assert_nothing_raised do
-        ok = parser.headers(req, s)
-      end
+      ok = parser.headers(req, s)
       assert ok
       assert_equal '/forums/1/topics/2375?page=1', req['REQUEST_URI']
       assert_equal 'posts-17408', req['FRAGMENT']
@@ -708,10 +705,7 @@ class HttpParserTest < Test::Unit::TestCase
     req = parser.env
     get = "GET /forums/1/topics/2375?page=1#posts-17408 HTTP/1.1\r\n\r\n"
     parser.buf << get
-    ok = false
-    assert_nothing_raised do
-      ok = parser.parse
-    end
+    ok = parser.parse
     assert ok
     assert_equal '/forums/1/topics/2375?page=1', req['REQUEST_URI']
     assert_equal 'posts-17408', req['FRAGMENT']

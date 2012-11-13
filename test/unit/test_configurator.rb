@@ -9,7 +9,7 @@ TestStruct = Struct.new(
 class TestConfigurator < Test::Unit::TestCase
 
   def test_config_init
-    assert_nothing_raised { Unicorn::Configurator.new {} }
+    Unicorn::Configurator.new {}
   end
 
   def test_expand_addr
@@ -66,7 +66,7 @@ class TestConfigurator < Test::Unit::TestCase
   def test_config_defaults
     cfg = Unicorn::Configurator.new(:use_defaults => true)
     test_struct = TestStruct.new
-    assert_nothing_raised { cfg.commit!(test_struct) }
+    cfg.commit!(test_struct)
     Unicorn::Configurator::DEFAULTS.each do |key,value|
       assert_equal value, test_struct.__send__(key)
     end
@@ -76,7 +76,7 @@ class TestConfigurator < Test::Unit::TestCase
     cfg = Unicorn::Configurator.new(:use_defaults => true)
     skip = [ :logger ]
     test_struct = TestStruct.new
-    assert_nothing_raised { cfg.commit!(test_struct, :skip => skip) }
+    cfg.commit!(test_struct, :skip => skip)
     Unicorn::Configurator::DEFAULTS.each do |key,value|
       next if skip.include?(key)
       assert_equal value, test_struct.__send__(key)
@@ -89,12 +89,9 @@ class TestConfigurator < Test::Unit::TestCase
     expect = { :sndbuf => 1, :rcvbuf => 2, :backlog => 10 }.freeze
     listener = "127.0.0.1:12345"
     tmp.syswrite("listen '#{listener}', #{expect.inspect}\n")
-    cfg = nil
-    assert_nothing_raised do
-      cfg = Unicorn::Configurator.new(:config_file => tmp.path)
-    end
+    cfg = Unicorn::Configurator.new(:config_file => tmp.path)
     test_struct = TestStruct.new
-    assert_nothing_raised { cfg.commit!(test_struct) }
+    cfg.commit!(test_struct)
     assert(listener_opts = test_struct.listener_opts)
     assert_equal expect, listener_opts[listener]
   end
@@ -124,9 +121,7 @@ class TestConfigurator < Test::Unit::TestCase
     expect = { :delay => 0.5 }
     listener = "127.0.0.1:12345"
     tmp.syswrite("listen '#{listener}', #{expect.inspect}\n")
-    assert_nothing_raised do
-      Unicorn::Configurator.new(:config_file => tmp.path)
-    end
+    Unicorn::Configurator.new(:config_file => tmp.path)
   end
 
   def test_listen_option_int_delay
@@ -134,9 +129,7 @@ class TestConfigurator < Test::Unit::TestCase
     expect = { :delay => 5 }
     listener = "127.0.0.1:12345"
     tmp.syswrite("listen '#{listener}', #{expect.inspect}\n")
-    assert_nothing_raised do
-      Unicorn::Configurator.new(:config_file => tmp.path)
-    end
+    Unicorn::Configurator.new(:config_file => tmp.path)
   end
 
   def test_after_fork_proc

@@ -37,16 +37,13 @@ class TestSocketHelper < Test::Unit::TestCase
     [ { :backlog => 5 }, { :sndbuf => 4096 }, { :rcvbuf => 4096 },
       { :backlog => 16, :rcvbuf => 4096, :sndbuf => 4096 }
     ].each do |opts|
-      assert_nothing_raised do
-        tcp_listener = bind_listen(tcp_listener_name, opts)
-        assert TCPServer === tcp_listener
-        tcp_listener.close
-        unix_listener = bind_listen(unix_listener_name, opts)
-        assert UNIXServer === unix_listener
-        unix_listener.close
-      end
+      tcp_listener = bind_listen(tcp_listener_name, opts)
+      assert TCPServer === tcp_listener
+      tcp_listener.close
+      unix_listener = bind_listen(unix_listener_name, opts)
+      assert UNIXServer === unix_listener
+      unix_listener.close
     end
-    #system('cat', @log_tmp.path)
   end
 
   def test_bind_listen_unix
@@ -106,10 +103,10 @@ class TestSocketHelper < Test::Unit::TestCase
     assert_raises(Errno::EADDRINUSE) do
       new_listener = bind_listen(@unix_listener_path)
     end
-    assert_nothing_raised do
-      File.unlink(@unix_listener_path)
-      new_listener = bind_listen(@unix_listener_path)
-    end
+
+    File.unlink(@unix_listener_path)
+    new_listener = bind_listen(@unix_listener_path)
+
     assert UNIXServer === new_listener
     assert new_listener.fileno != @unix_listener.fileno
     assert_equal sock_name(new_listener), sock_name(@unix_listener)
@@ -127,10 +124,8 @@ class TestSocketHelper < Test::Unit::TestCase
   end
 
   def test_server_cast
-    assert_nothing_raised do
-      test_bind_listen_unix
-      test_bind_listen_tcp
-    end
+    test_bind_listen_unix
+    test_bind_listen_tcp
     unix_listener_socket = Socket.for_fd(@unix_listener.fileno)
     assert Socket === unix_listener_socket
     @unix_server = server_cast(unix_listener_socket)

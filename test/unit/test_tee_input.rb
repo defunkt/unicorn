@@ -40,13 +40,13 @@ class TestTeeInput < Test::Unit::TestCase
       @wr.close
     }
     @wr.close
-    assert_nothing_raised { line = ti.gets }
+    line = ti.gets
     assert_equal(4096 * 4 * 3 + 5 + $/.size, line.size)
     assert_equal("hello" << ("ffff" * 4096 * 3) << "#$/", line)
-    assert_nothing_raised { line = ti.gets }
+    line = ti.gets
     assert_equal "foo#$/", line
     assert_nil ti.gets
-    assert_nothing_raised { pid, status = Process.waitpid2(pid) }
+    pid, status = Process.waitpid2(pid)
     assert status.success?
   end
 
@@ -60,12 +60,12 @@ class TestTeeInput < Test::Unit::TestCase
       @wr.close
     }
     @wr.close
-    assert_nothing_raised { line = ti.gets }
+    line = ti.gets
     assert_equal("hello#$/", line)
-    assert_nothing_raised { line = ti.gets }
+    line = ti.gets
     assert_equal "foo", line
     assert_nil ti.gets
-    assert_nothing_raised { pid, status = Process.waitpid2(pid) }
+    pid, status = Process.waitpid2(pid)
     assert status.success?
   end
 
@@ -146,8 +146,7 @@ class TestTeeInput < Test::Unit::TestCase
       assert_equal Unicorn::Const::MAX_BODY + 1, ti.size
     }
     assert_nil ti.read(1)
-    status = nil
-    assert_nothing_raised { pid, status = Process.waitpid2(pid) }
+    pid, status = Process.waitpid2(pid)
     assert status.success?
   end
 
@@ -174,15 +173,15 @@ class TestTeeInput < Test::Unit::TestCase
     assert @parser.body_eof?
     assert_equal 25, ti.len
     assert_equal 0, ti.tmp.pos
-    assert_nothing_raised { ti.rewind }
+    ti.rewind
     assert_equal 0, ti.tmp.pos
     assert_equal 'abcdeabcdeabcdeabcde', ti.read(20)
     assert_equal 20, ti.tmp.pos
-    assert_nothing_raised { ti.rewind }
+    ti.rewind
     assert_equal 0, ti.tmp.pos
     assert_kind_of File, ti.tmp
     status = nil
-    assert_nothing_raised { pid, status = Process.waitpid2(pid) }
+    pid, status = Process.waitpid2(pid)
     assert status.success?
   end
 
@@ -241,8 +240,7 @@ class TestTeeInput < Test::Unit::TestCase
     assert ! @parser.body_eof?
     assert_equal 25, ti.size
     assert_equal "World", @parser.env['HTTP_HELLO']
-    status = nil
-    assert_nothing_raised { pid, status = Process.waitpid2(pid) }
+    pid, status = Process.waitpid2(pid)
     assert status.success?
   end
 
