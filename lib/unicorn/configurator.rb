@@ -103,10 +103,6 @@ class Unicorn::Configurator
           raise ArgumentError,
             "check_client_connection is incompatible with tcp_nopush:true"
         end
-        if set[:listener_opts][address][:tcp_nodelay] == true
-          raise ArgumentError,
-            "check_client_connection is incompatible with tcp_nodelay:true"
-        end
       end
     end
     set.each do |key, value|
@@ -473,8 +469,11 @@ class Unicorn::Configurator
   # This will prevent calling the application for clients who have
   # disconnected while their connection was queued.
   #
-  # This option cannot be used in conjunction with tcp_nodelay or
-  # tcp_nopush.
+  # This only affects clients connecting over Unix domain sockets
+  # and TCP via loopback (127.*.*.*).  It is unlikely to detect
+  # disconnects if the client is on a remote host (even on a fast LAN).
+  #
+  # This option cannot be used in conjunction with :tcp_nopush.
   def check_client_connection(bool)
     set_bool(:check_client_connection, bool)
   end

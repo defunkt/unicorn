@@ -49,7 +49,9 @@ GC.respond_to?(:copy_on_write_friendly=) and
 # Enable this flag to have unicorn test client connections by writing the
 # beginning of the HTTP headers before calling the application.  This
 # prevents calling the application for connections that have disconnected
-# while queued.
+# while queued.  This is only guaranteed to detect clients on the same
+# host unicorn runs on, and unlikely to detect disconnects even on a
+# fast LAN.
 check_client_connection false
 
 before_fork do |server, worker|
