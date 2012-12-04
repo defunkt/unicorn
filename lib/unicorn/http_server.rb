@@ -519,22 +519,21 @@ class Unicorn::HttpServer
   # if the socket is already closed or broken.  We'll always ensure
   # the socket is closed at the end of this function
   def handle_error(client, e)
-    msg = case e
+    code = case e
     when EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF,
          Errno::ENOTCONN
-      Unicorn::Const::ERROR_500_RESPONSE
+      500
     when Unicorn::RequestURITooLongError
-      Unicorn::Const::ERROR_414_RESPONSE
+      414
     when Unicorn::RequestEntityTooLargeError
-      Unicorn::Const::ERROR_413_RESPONSE
+      413
     when Unicorn::HttpParserError # try to tell the client they're bad
-      Unicorn::Const::ERROR_400_RESPONSE
+      400
     else
       Unicorn.log_error(@logger, "app error", e)
-      Unicorn::Const::ERROR_500_RESPONSE
+      500
     end
-    msg = "HTTP/1.1 #{msg}" unless @request.response_start_sent
-    client.kgio_trywrite(msg)
+    client.kgio_trywrite(err_response(code, @request.response_start_sent))
     client.close
     rescue
   end

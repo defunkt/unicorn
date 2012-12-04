@@ -17,6 +17,10 @@ module Unicorn::HttpResponse
   }
   CRLF = "\r\n"
 
+  def err_response(code, response_start_sent)
+    "#{response_start_sent ? '' : 'HTTP/1.1 '}#{CODES[code]}\r\n\r\n"
+  end
+
   # writes the rack_response to socket as an HTTP response
   def http_response_write(socket, status, headers, body,
                           response_start_sent=false)
