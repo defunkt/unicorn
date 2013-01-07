@@ -19,7 +19,7 @@ pid = fork do
     gem 'raindrops', '0.8.0'
     gem 'kgio-monkey', '0.4.0'
     gem 'kgio', '2.7.4'
-    gem 'rack', '1.4.1'
+    gem 'rack', '1.4.3'
   end
 end
 _, status = Process.waitpid2(pid)
