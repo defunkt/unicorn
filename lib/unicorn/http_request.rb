@@ -106,12 +106,20 @@ class Unicorn::HttpParser
     RACK_HIJACK = "rack.hijack".freeze
     RACK_HIJACK_IO = "rack.hijack_io".freeze
 
+    def hijacked?
+      env.include?(RACK_HIJACK_IO)
+    end
+
     def hijack_setup(e, socket)
       e[RACK_HIJACK] = proc { e[RACK_HIJACK_IO] ||= socket }
     end
   else
     # old Rack, do nothing.
     def hijack_setup(e, _)
+    end
+
+    def hijacked?
+      false
     end
   end
 end

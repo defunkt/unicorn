@@ -17,7 +17,12 @@ run lambda { |env|
       io = env["rack.hijack"].call
       if io.respond_to?(:read_nonblock) &&
          env["rack.hijack_io"].respond_to?(:read_nonblock)
-        return [ 200, {}, [ "hijack.OK\n" ] ]
+
+        # exercise both, since we Rack::Lint may use different objects
+        env["rack.hijack_io"].write("HTTP/1.0 200 OK\r\n\r\n")
+        io.write("request.hijacked")
+        io.close
+        return [ 500, {}, DieIfUsed.new ]
       end
     end
     [ 500, {}, [ "hijack BAD\n" ] ]

@@ -550,11 +550,13 @@ class Unicorn::HttpServer
   # in 3 easy steps: read request, call app, write app response
   def process_client(client)
     status, headers, body = @app.call(env = @request.read(client))
+    return if @request.hijacked?
 
     if 100 == status.to_i
       client.write(expect_100_response)
       env.delete(Unicorn::Const::HTTP_EXPECT)
       status, headers, body = @app.call(env)
+      return if @request.hijacked?
     end
     @request.headers? or headers = nil
     http_response_write(client, status, headers, body,

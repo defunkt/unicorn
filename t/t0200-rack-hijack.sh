@@ -9,7 +9,7 @@ t_begin "setup and start" && {
 }
 
 t_begin "check request hijack" && {
-	test "xhijack.OK" = x"$(curl -sSfv http://$listen/hijack_req)"
+	test "xrequest.hijacked" = x"$(curl -sSfv http://$listen/hijack_req)"
 }
 
 t_begin "check response hijack" && {
