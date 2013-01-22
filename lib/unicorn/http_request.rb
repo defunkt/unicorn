@@ -91,6 +91,27 @@ class Unicorn::HttpParser
 
     e[RACK_INPUT] = 0 == content_length ?
                     NULL_IO : @@input_class.new(socket, self)
+    hijack_setup(e, socket)
     e.merge!(DEFAULTS)
+  end
+
+  # Rack 1.5.0 (protocol version 1.2) adds hijack request support
+  if ((Rack::VERSION[0] << 8) | Rack::VERSION[1]) >= 0x0102
+    DEFAULTS["rack.hijack?"] = true
+
+    # FIXME: asking for clarification about this in
+    # http://mid.gmane.org/20130122100802.GA28585@dcvr.yhbt.net
+    DEFAULTS["rack.version"] = [1, 2]
+
+    RACK_HIJACK = "rack.hijack".freeze
+    RACK_HIJACK_IO = "rack.hijack_io".freeze
+
+    def hijack_setup(e, socket)
+      e[RACK_HIJACK] = proc { e[RACK_HIJACK_IO] ||= socket }
+    end
+  else
+    # old Rack, do nothing.
+    def hijack_setup(e, _)
+    end
   end
 end

@@ -25,6 +25,7 @@ module Unicorn::HttpResponse
   def http_response_write(socket, status, headers, body,
                           response_start_sent=false)
     status = CODES[status.to_i] || status
+    hijack = nil
 
     http_response_start = response_start_sent ? '' : 'HTTP/1.1 '
     if headers
@@ -33,19 +34,42 @@ module Unicorn::HttpResponse
             "Status: #{status}\r\n" \
             "Connection: close\r\n"
       headers.each do |key, value|
-        next if %r{\A(?:Date\z|Connection\z)}i =~ key
-        if value =~ /\n/
-          # avoiding blank, key-only cookies with /\n+/
-          buf << value.split(/\n+/).map! { |v| "#{key}: #{v}\r\n" }.join
+        case key
+        when %r{\A(?:Date\z|Connection\z)}i
+          next
+        when "rack.hijack"
+          # this was an illegal key in Rack < 1.5, so it should be
+          # OK to silently discard it for those older versions
+          hijack = hijack_prepare(value)
         else
-          buf << "#{key}: #{value}\r\n"
+          if value =~ /\n/
+            # avoiding blank, key-only cookies with /\n+/
+            buf << value.split(/\n+/).map! { |v| "#{key}: #{v}\r\n" }.join
+          else
+            buf << "#{key}: #{value}\r\n"
+          end
         end
       end
       socket.write(buf << CRLF)
     end
 
-    body.each { |chunk| socket.write(chunk) }
-    ensure
-      body.respond_to?(:close) and body.close
+    if hijack
+      body = nil # ensure we do not close body
+      hijack.call(socket)
+    else
+      body.each { |chunk| socket.write(chunk) }
+    end
+  ensure
+    body.respond_to?(:close) and body.close
+  end
+
+  # Rack 1.5.0 (protocol version 1.2) adds response hijacking support
+  if ((Rack::VERSION[0] << 8) | Rack::VERSION[1]) >= 0x0102
+    def hijack_prepare(value)
+      value
+    end
+  else
+    def hijack_prepare(_)
+    end
   end
 end

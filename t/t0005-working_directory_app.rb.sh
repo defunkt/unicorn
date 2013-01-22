@@ -11,7 +11,10 @@ t_begin "setup and start" && {
 	cat > $t_pfx.app/fooapp.rb <<\EOF
 class Fooapp
   def self.call(env)
-    [ 200, [%w(Content-Type text/plain), %w(Content-Length 2)], %w(HI) ]
+    # Rack::Lint in 1.5.0 requires headers to be a hash
+    h = [%w(Content-Type text/plain), %w(Content-Length 2)]
+    h = Rack::Utils::HeaderHash.new(h)
+    [ 200, h, %w(HI) ]
   end
 end
 EOF

@@ -559,8 +559,10 @@ class Unicorn::HttpServer
     @request.headers? or headers = nil
     http_response_write(client, status, headers, body,
                         @request.response_start_sent)
-    client.shutdown # in case of fork() in Rack app
-    client.close # flush and uncork socket immediately, no keepalive
+    unless client.closed? # rack.hijack may've close this for us
+      client.shutdown # in case of fork() in Rack app
+      client.close # flush and uncork socket immediately, no keepalive
+    end
   rescue => e
     handle_error(client, e)
   end
