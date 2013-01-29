@@ -58,6 +58,11 @@ op = OptionParser.new("", 24, '  ') do |opts|
     ENV["RACK_ENV"] = e
   end
 
+  opts.on("-N", "--no-default-middleware",
+          "do not load middleware implied by RACK_ENV") do |e|
+    rackup_opts[:no_default_middleware] = true
+  end
+
   opts.on("-D", "--daemonize", "run daemonized in the background") do |d|
     rackup_opts[:daemonize] = !!d
   end

@@ -49,6 +49,8 @@ module Unicorn
 
       pp({ :inner_app => inner_app }) if $DEBUG
 
+      return inner_app if op[:no_default_middleware]
+
       # return value, matches rackup defaults based on env
       # Unicorn does not support persistent connections, but Rainbows!
       # and Zbatery both do.  Users accustomed to the Rack::Server default
