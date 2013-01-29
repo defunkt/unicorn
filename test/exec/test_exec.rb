@@ -323,6 +323,7 @@ EOF
     # mobile phone or netbook on a slow connection :)
     assert lines.size <= 24, "help height fits in an ANSI terminal window"
     lines.each do |line|
+      line.chomp!
       assert line.size <= 80, "help width fits in an ANSI terminal window"
     end
   end
