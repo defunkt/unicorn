@@ -61,6 +61,10 @@ with rackup(1) but strongly discouraged.
     For production deployments, specifying the "listen" directive in
     CONFIG_FILE is recommended as it allows fine-tuning of socket
     options.
+-N, \--no-default-middleware
+:   Disables loading middleware implied by RACK_ENV.  This bypasses the
+    configuration documented in the RACK ENVIRONMENT section, but still
+    allows RACK_ENV to be used for application/framework-specific purposes.
 
 # RACKUP COMPATIBILITY OPTIONS
 -o, \--host HOST
@@ -144,10 +148,10 @@ As of Unicorn 0.94.0, RACK_ENV is exported as a process-wide environment
 variable as well.  While not current a part of the Rack specification as
 of Rack 1.0.1, this has become a de facto standard in the Rack world.
 
-Note that the Rack::ContentLength and Rack::Chunked middlewares
-are never loaded by default.  If needed, they should be
-individually specified in the RACKUP_FILE, some frameworks do
-not require them.
+Note the Rack::ContentLength and Rack::Chunked middlewares are also
+loaded by "deployment" and "development", but no other values of
+RACK_ENV.  If needed, they must be individually specified in the
+RACKUP_FILE, some frameworks do not require them.
 
 # ENVIRONMENT VARIABLES
 
