@@ -62,11 +62,11 @@ t_begin "rotated stderr is clean" && {
 }
 
 t_begin "server is now writing logs to new stderr" && {
-	before_rot=$(wc -c < $r_rot)
-	before_err=$(wc -c < $r_err)
+	before_rot=$(count_bytes < $r_rot)
+	before_err=$(count_bytes < $r_err)
 	test xtrue = x$(curl -sSf http://$listen/ 2> $curl_err)
-	after_rot=$(wc -c < $r_rot)
-	after_err=$(wc -c < $r_err)
+	after_rot=$(count_bytes < $r_rot)
+	after_err=$(count_bytes < $r_err)
 	test $after_rot -eq $before_rot
 	test $after_err -gt $before_err
 }

@@ -5,7 +5,7 @@ t_plan 5 "max_header_len setting (only intended for Rainbows!)"
 t_begin "setup and start" && {
 	unicorn_setup
 	req='GET / HTTP/1.0\r\n\r\n'
-	len=$(printf "$req" | wc -c)
+	len=$(printf "$req" | count_bytes)
 	echo Unicorn::HttpParser.max_header_len = $len >> $unicorn_config
 	unicorn -D -c $unicorn_config env.ru
 	unicorn_wait_start

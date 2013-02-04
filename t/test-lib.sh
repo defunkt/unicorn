@@ -37,6 +37,11 @@ unix_time () {
 	$RUBY -e 'puts Time.now.to_i'
 }
 
+# "wc -c" outputs leading whitespace on *BSDs, filter it out for portability
+count_bytes () {
+	wc -c | tr -d '[:space:]'
+}
+
 # given a list of variable names, create temporary files and assign
 # the pathnames to those variables
 rtmpfiles () {
@@ -54,7 +59,7 @@ rtmpfiles () {
 			;;
 		*socket)
 			_tmp="$(mktemp -t $id.$$.XXXXXXXX)"
-			if test $(printf "$_tmp" |wc -c) -gt 108
+			if test $(printf "$_tmp" |count_bytes) -gt 108
 			then
 				echo >&2 "$_tmp too long, tests may fail"
 				echo >&2 "Try to set TMPDIR to a shorter path"
