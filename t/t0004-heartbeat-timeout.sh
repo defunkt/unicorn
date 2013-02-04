@@ -23,9 +23,9 @@ t_begin "sleep for a bit, ensure worker PID does not change" && {
 
 t_begin "block the worker process to force it to die" && {
 	rm $ok
-	t0=$(date +%s)
+	t0=$(unix_time)
 	err="$(curl -sSf http://$listen/block-forever 2>&1 || > $ok)"
-	t1=$(date +%s)
+	t1=$(unix_time)
 	elapsed=$(($t1 - $t0))
 	t_info "elapsed=$elapsed err=$err"
 	test x"$err" != x"Should never get here"

@@ -32,6 +32,11 @@ wait_for_pid () {
 	done
 }
 
+# "unix_time" is not in POSIX, but in GNU, and FreeBSD 9.0 (possibly earlier)
+unix_time () {
+	$RUBY -e 'puts Time.now.to_i'
+}
+
 # given a list of variable names, create temporary files and assign
 # the pathnames to those variables
 rtmpfiles () {
