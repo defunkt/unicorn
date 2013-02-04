@@ -34,7 +34,7 @@ t_begin "block the worker process to force it to die" && {
 
 t_begin "ensure worker was killed" && {
 	test -e $ok
-	test 1 -eq $(grep timeout $r_err | grep killing | wc -l)
+	test 1 -eq $(grep timeout $r_err | grep killing | count_lines)
 }
 
 t_begin "ensure timeout took at least 3 seconds" && {

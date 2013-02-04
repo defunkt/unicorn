@@ -24,7 +24,7 @@ t_begin "corked identity request" && {
 		wait
 		echo ok > $ok
 	) | ( sleep 1 && socat - TCP4:$listen > $fifo )
-	test 1 -eq $(grep $blob_sha1 $tmp |wc -l)
+	test 1 -eq $(grep $blob_sha1 $tmp |count_lines)
 	test x"$(cat $ok)" = xok
 }
 
@@ -36,7 +36,7 @@ t_begin "corked chunked request" && {
 		wait
 		echo ok > $ok
 	) | ( sleep 1 && socat - TCP4:$listen > $fifo )
-	test 1 -eq $(grep $blob_sha1 $tmp |wc -l)
+	test 1 -eq $(grep $blob_sha1 $tmp |count_lines)
 	test x"$(cat $ok)" = xok
 }
 
@@ -50,7 +50,7 @@ t_begin "corked identity request (input#size first)" && {
 		wait
 		echo ok > $ok
 	) | ( sleep 1 && socat - TCP4:$listen > $fifo )
-	test 1 -eq $(grep $blob_sha1 $tmp |wc -l)
+	test 1 -eq $(grep $blob_sha1 $tmp |count_lines)
 	test x"$(cat $ok)" = xok
 }
 
@@ -64,7 +64,7 @@ t_begin "corked identity request (input#rewind first)" && {
 		wait
 		echo ok > $ok
 	) | ( sleep 1 && socat - TCP4:$listen > $fifo )
-	test 1 -eq $(grep $blob_sha1 $tmp |wc -l)
+	test 1 -eq $(grep $blob_sha1 $tmp |count_lines)
 	test x"$(cat $ok)" = xok
 }
 
@@ -81,8 +81,8 @@ t_begin "corked chunked request (input#size first)" && {
 		wait
 		echo ok > $ok
 	) | ( sleep 1 && socat - TCP4:$listen > $fifo )
-	test 1 -eq $(grep $blob_sha1 $tmp |wc -l)
-	test 1 -eq $(grep $blob_sha1 $tmp |wc -l)
+	test 1 -eq $(grep $blob_sha1 $tmp |count_lines)
+	test 1 -eq $(grep $blob_sha1 $tmp |count_lines)
 	test x"$(cat $ok)" = xok
 }
 
@@ -99,7 +99,7 @@ t_begin "corked chunked request (input#rewind first)" && {
 		wait
 		echo ok > $ok
 	) | ( sleep 1 && socat - TCP4:$listen > $fifo )
-	test 1 -eq $(grep $blob_sha1 $tmp |wc -l)
+	test 1 -eq $(grep $blob_sha1 $tmp |count_lines)
 	test x"$(cat $ok)" = xok
 }
 

@@ -26,7 +26,7 @@ t_begin "HTTP/0.9 request should not return headers" && {
 }
 
 t_begin "env.inspect should've put everything on one line" && {
-	test 1 -eq $(wc -l < $tmp)
+	test 1 -eq $(count_lines < $tmp)
 }
 
 t_begin "no headers in output" && {

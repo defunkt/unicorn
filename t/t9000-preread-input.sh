@@ -26,7 +26,7 @@ t_begin "sha1 matches" && {
 }
 
 t_begin "app only dispatched twice" && {
-	test 2 -eq "$(grep 'app dispatch:' < $r_err | wc -l )"
+	test 2 -eq "$(grep 'app dispatch:' < $r_err | count_lines )"
 }
 
 t_begin "aborted chunked request" && {
@@ -38,7 +38,7 @@ t_begin "aborted chunked request" && {
 }
 
 t_begin "app only dispatched twice" && {
-	test 2 -eq "$(grep 'app dispatch:' < $r_err | wc -l )"
+	test 2 -eq "$(grep 'app dispatch:' < $r_err | count_lines )"
 }
 
 t_begin "killing succeeds" && {
