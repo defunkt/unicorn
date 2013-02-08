@@ -155,7 +155,7 @@ clean:
 man html:
 	$(MAKE) -C Documentation install-$@
 
-pkg_extra := GIT-VERSION-FILE ChangeLog LATEST NEWS \
+pkg_extra := GIT-VERSION-FILE lib/unicorn/version.rb ChangeLog LATEST NEWS \
              $(ext)/unicorn_http.c $(man1_paths)
 
 ChangeLog: GIT-VERSION-FILE .wrongdoc.yml
