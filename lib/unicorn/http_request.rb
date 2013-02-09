@@ -108,7 +108,7 @@ class Unicorn::HttpParser
     end
 
     def hijack_setup(e, socket)
-      e[RACK_HIJACK] = proc { e[RACK_HIJACK_IO] ||= socket }
+      e[RACK_HIJACK] = proc { e[RACK_HIJACK_IO] = socket }
     end
   else
     # old Rack, do nothing.
