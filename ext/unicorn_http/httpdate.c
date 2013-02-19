@@ -5,13 +5,9 @@
 static const size_t buf_capa = sizeof("Thu, 01 Jan 1970 00:00:00 GMT");
 static VALUE buf;
 static char *buf_ptr;
-static const char *const week[] = {
-	"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
-};
-static const char *const months[] = {
-	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-};
+static const char week[] = "Sun\0Mon\0Tue\0Wed\0Thu\0Fri\0Sat";
+static const char months[] = "Jan\0Feb\0Mar\0Apr\0May\0Jun\0"
+                             "Jul\0Aug\0Sep\0Oct\0Nov\0Dec";
 
 /* for people on wonky systems only */
 #ifndef HAVE_GMTIME_R
@@ -57,9 +53,9 @@ static VALUE httpdate(VALUE self)
 	/* we can make this thread-safe later if our Ruby loses the GVL */
 	snprintf(buf_ptr, buf_capa,
 	         "%s, %02d %s %4d %02d:%02d:%02d GMT",
-	         week[tm.tm_wday],
+	         week + (tm.tm_wday * 4),
 	         tm.tm_mday,
-	         months[tm.tm_mon],
+	         months + (tm.tm_mon * 4),
 	         tm.tm_year + 1900,
 	         tm.tm_hour,
 	         tm.tm_min,
