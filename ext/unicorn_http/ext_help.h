@@ -52,10 +52,6 @@ static void rb_18_str_set_len(VALUE str, long len)
 #  endif
 #endif /* ! defined(NUM2SIZET) */
 
-#ifndef HAVE_RB_STR_MODIFY
-#  define rb_str_modify(x) do {} while (0)
-#endif /* ! defined(HAVE_RB_STR_MODIFY) */
-
 static inline int str_cstr_eq(VALUE val, const char *ptr, long len)
 {
   return (RSTRING_LEN(val) == len && !memcmp(ptr, RSTRING_PTR(val), len));
