@@ -188,7 +188,7 @@ class Unicorn::Configurator
   #    # on nginx upstream configuration:
   #    upstream unicorn_backend {
   #      # for UNIX domain socket setups:
-  #      server unix:/path/to/unicorn.sock fail_timeout=0;
+  #      server unix:/path/to/.unicorn.sock fail_timeout=0;
   #
   #      # for TCP setups
   #      server 192.168.0.7:8080 fail_timeout=0;
@@ -229,8 +229,14 @@ class Unicorn::Configurator
   #
   #   listen 3000 # listen to port 3000 on all TCP interfaces
   #   listen "127.0.0.1:3000"  # listen to port 3000 on the loopback interface
-  #   listen "/tmp/.unicorn.sock" # listen on the given Unix domain socket
+  #   listen "/path/to/.unicorn.sock" # listen on the given Unix domain socket
   #   listen "[::1]:3000" # listen to port 3000 on the IPv6 loopback interface
+  #
+  # When using Unix domain sockets, be sure:
+  # 1) the path matches the one used by nginx
+  # 2) uses the same filesystem namespace as the nginx process
+  # For systemd users using PrivateTmp=true (for either nginx or unicorn),
+  # this means Unix domain sockets must not be placed in /tmp
   #
   # The following options may be specified (but are generally not needed):
   #
