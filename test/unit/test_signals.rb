@@ -174,7 +174,7 @@ class SignalsTest < Test::Unit::TestCase
     sock.syswrite("Content-Length: #{@bs * @count}\r\n\r\n")
     1000.times { Process.kill(:HUP, pid) }
     size_before = @tmp.stat.size
-    killer = fork { loop { Process.kill(:HUP, pid); sleep(0.0001) } }
+    killer = fork { loop { Process.kill(:HUP, pid); sleep(0.01) } }
     buf = ' ' * @bs
     @count.times { sock.syswrite(buf) }
     Process.kill(:KILL, killer)
