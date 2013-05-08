@@ -732,10 +732,8 @@ static VALUE HttpParser_parse(VALUE self)
   struct http_parser *hp = data_get(self);
   VALUE data = hp->buf;
 
-  if (HP_FL_TEST(hp, TO_CLEAR)) {
-    http_parser_init(hp);
-    rb_funcall(hp->env, id_clear, 0);
-  }
+  if (HP_FL_TEST(hp, TO_CLEAR))
+    HttpParser_clear(self);
 
   http_parser_execute(hp, RSTRING_PTR(data), RSTRING_LEN(data));
   if (hp->offset > MAX_HEADER_LEN)

@@ -12,6 +12,23 @@ class HttpParserNgTest < Test::Unit::TestCase
     @parser = HttpParser.new
   end
 
+  def test_next_clear
+    r = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
+    @parser.buf << r
+    @parser.parse
+    @parser.response_start_sent = true
+    assert @parser.keepalive?
+    assert @parser.next?
+    assert @parser.response_start_sent
+
+    # persistent client makes another request:
+    @parser.buf << r
+    @parser.parse
+    assert @parser.keepalive?
+    assert @parser.next?
+    assert_equal false, @parser.response_start_sent
+  end
+
   def test_keepalive_requests_default_constant
     assert_kind_of Integer, HttpParser::KEEPALIVE_REQUESTS_DEFAULT
     assert HttpParser::KEEPALIVE_REQUESTS_DEFAULT >= 0
