@@ -35,6 +35,10 @@ module Unicorn
     # allow Configurator to parse cli switches embedded in the ru file
     op = Unicorn::Configurator::RACKUP.merge!(:file => ru, :optparse => op)
 
+    # Op is going to get cleared before the returned lambda is called, so
+    # save this value so that it's still there when we need it:
+    no_default_middleware = op[:no_default_middleware]
+
     # always called after config file parsing, may be called after forking
     lambda do ||
       inner_app = case ru
@@ -49,7 +53,7 @@ module Unicorn
 
       pp({ :inner_app => inner_app }) if $DEBUG
 
-      return inner_app if op[:no_default_middleware]
+      return inner_app if no_default_middleware
 
       # return value, matches rackup defaults based on env
       # Unicorn does not support persistent connections, but Rainbows!
