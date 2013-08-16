@@ -80,7 +80,11 @@ class TestUtil < Test::Unit::TestCase
         File.open(tmp_path, "a:#{ext.to_s}:#{int.to_s}") { |fp|
           fp.sync = true
           assert_equal ext, fp.external_encoding
-          assert_equal int, fp.internal_encoding
+
+          if ext != Encoding::BINARY
+            assert_equal int, fp.internal_encoding
+          end
+
           File.unlink(tmp_path)
           assert ! File.exist?(tmp_path)
           Unicorn::Util.reopen_logs
@@ -88,7 +92,9 @@ class TestUtil < Test::Unit::TestCase
           assert File.exist?(tmp_path)
           assert_equal fp.stat.inspect, File.stat(tmp_path).inspect
           assert_equal ext, fp.external_encoding
-          assert_equal int, fp.internal_encoding
+          if ext != Encoding::BINARY
+            assert_equal int, fp.internal_encoding
+          end
           assert_equal(EXPECT_FLAGS, EXPECT_FLAGS & fp.fcntl(Fcntl::F_GETFL))
           assert fp.sync
         }
