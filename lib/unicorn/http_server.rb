@@ -520,9 +520,8 @@ class Unicorn::HttpServer
   # the socket is closed at the end of this function
   def handle_error(client, e)
     code = case e
-    when EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::EINVAL,Errno::EBADF,
-         Errno::ENOTCONN
-      500
+    when EOFError,Errno::ECONNRESET,Errno::EPIPE,Errno::ENOTCONN
+      # client disconnected on us and there's nothing we can do
     when Unicorn::RequestURITooLongError
       414
     when Unicorn::RequestEntityTooLargeError
@@ -533,7 +532,9 @@ class Unicorn::HttpServer
       Unicorn.log_error(@logger, "app error", e)
       500
     end
-    client.kgio_trywrite(err_response(code, @request.response_start_sent))
+    if code
+      client.kgio_trywrite(err_response(code, @request.response_start_sent))
+    end
     client.close
     rescue
   end
