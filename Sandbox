@@ -60,6 +60,13 @@ If you're using an older Bundler version (0.9.x), you may need to set or
 reset GEM_HOME, GEM_PATH and PATH environment variables in the
 before_exec hook as illustrated by http://gist.github.com/534668
 
+=== Ruby 2.0.0 close-on-exec and SIGUSR2 incompatibility
+
+Ruby 2.0.0 enforces FD_CLOEXEC on file descriptors by default.  unicorn
+has been prepared for this behavior since unicorn 4.1.0, but we forgot
+to remind the Bundler developers.  This issue is being tracked here:
+https://github.com/bundler/bundler/issues/2628
+
 == Isolate
 
 === Running
