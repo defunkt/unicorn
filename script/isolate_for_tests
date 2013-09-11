@@ -16,10 +16,10 @@ opts = {
 
 pid = fork do
   Isolate.now!(opts) do
-    gem 'raindrops', '0.10.0'
+    gem 'raindrops', '0.12.0'
     gem 'kgio-monkey', '0.4.0'
-    gem 'kgio', '2.8.0'
-    gem 'rack', '1.5.1'
+    gem 'kgio', '2.8.1'
+    gem 'rack', '1.5.2'
   end
 end
 _, status = Process.waitpid2(pid)
