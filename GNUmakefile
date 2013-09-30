@@ -256,7 +256,6 @@ release: verify package $(release_notes) $(release_changes)
 	# in case of gem downloads from RubyForge releases page
 	-rubyforge add_file \
 	  $(rfproject) $(rfpackage) $(VERSION) $(pkggem)
-	$(RAKE) raa_update VERSION=$(VERSION)
 	$(RAKE) fm_update VERSION=$(VERSION)
 else
 gem install-gem: GIT-VERSION-FILE
