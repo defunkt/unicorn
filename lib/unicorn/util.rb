@@ -39,7 +39,7 @@ module Unicorn::Util
     to_reopen.each do |fp|
       orig_st = begin
         fp.stat
-      rescue IOError, Errno::EBADF
+      rescue IOError, Errno::EBADF # race
         next
       end
 
@@ -50,8 +50,28 @@ module Unicorn::Util
       end
 
       begin
-        File.open(fp.path, 'a') { |tmpfp| fp.reopen(tmpfp) }
+        # stdin, stdout, stderr are special.  The following dance should
+        # guarantee there is no window where `fp' is unwritable in MRI
+        # (or any correct Ruby implementation).
+        #
+        # Fwiw, GVL has zero bearing here.  This is tricky because of
+        # the unavoidable existence of stdio FILE * pointers for
+        # std{in,out,err} in all programs which may use the standard C library
+        if fp.fileno <= 2
+          # We do not want to hit fclose(3)->dup(2) window for std{in,out,err}
+          # MRI will use freopen(3) here internally on std{in,out,err}
+          fp.reopen(fp.path, "a")
+        else
+          # We should not need this workaround, Ruby can be fixed:
+          #    http://bugs.ruby-lang.org/issues/9036
+          # MRI will not call call fclose(3) or freopen(3) here
+          # since there's no associated std{in,out,err} FILE * pointer
+          # This should atomically use dup3(2) (or dup2(2)) syscall
+          File.open(fp.path, "a") { |tmpfp| fp.reopen(tmpfp) }
+        end
+
         fp.sync = true
+        fp.flush # IO#sync=true may not implicitly flush
         new_st = fp.stat
 
         # this should only happen in the master:
