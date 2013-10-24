@@ -134,11 +134,22 @@ class Unicorn::HttpServer
     # Note that signals don't actually get handled until the #join method
     QUEUE_SIGS.each { |sig| trap(sig) { SIG_QUEUE << sig; awaken_master } }
     trap(:CHLD) { awaken_master }
-    self.pid = config[:pid]
+
+    # write pid early for Mongrel compatibility if we're not inheriting sockets
+    # This was needed for compatibility with some health checker a long time
+    # ago.  This unfortunately has the side effect of clobbering valid PID
+    # files.
+    self.pid = config[:pid] unless ENV["UNICORN_FD"]
 
     self.master_pid = $$
     build_app! if preload_app
     bind_new_listeners!
+
+    # Assuming preload_app==false, we drop the pid file after the app is ready
+    # to process requests.  If binding or build_app! fails with
+    # preload_app==true, we'll never get here and the parent will recover
+    self.pid = config[:pid] if ENV["UNICORN_FD"]
+
     spawn_missing_workers
     self
   end
@@ -180,6 +191,21 @@ class Unicorn::HttpServer
     Unicorn::HttpRequest::DEFAULTS["rack.logger"] = @logger = obj
   end
 
+  def clobber_pid(path)
+    unlink_pid_safe(@pid) if @pid
+    if path
+      fp = begin
+        tmp = "#{File.dirname(path)}/#{rand}.#$$"
+        File.open(tmp, File::RDWR|File::CREAT|File::EXCL, 0644)
+      rescue Errno::EEXIST
+        retry
+      end
+      fp.syswrite("#$$\n")
+      File.rename(fp.path, path)
+      fp.close
+    end
+  end
+
   # sets the path for the PID file of the master process
   def pid=(path)
     if path
@@ -194,18 +220,18 @@ class Unicorn::HttpServer
                              "(or pid=#{path} is stale)"
       end
     end
-    unlink_pid_safe(pid) if pid
 
-    if path
-      fp = begin
-        tmp = "#{File.dirname(path)}/#{rand}.#$$"
-        File.open(tmp, File::RDWR|File::CREAT|File::EXCL, 0644)
-      rescue Errno::EEXIST
-        retry
+    # rename the old pid if posible
+    if @pid && path
+      begin
+        File.rename(@pid, path)
+      rescue Errno::ENOENT, Errno::EXDEV
+        # a user may have accidentally removed the original.
+        # Obviously cross-FS renames
+        clobber_pid(path)
       end
-      fp.syswrite("#$$\n")
-      File.rename(fp.path, path)
-      fp.close
+    else
+      clobber_pid(path)
     end
     @pid = path
   end
