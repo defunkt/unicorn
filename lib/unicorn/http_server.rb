@@ -254,7 +254,7 @@ class Unicorn::HttpServer
     begin
       io = bind_listen(address, opt)
       unless Kgio::TCPServer === io || Kgio::UNIXServer === io
-        IO_PURGATORY << io
+        prevent_autoclose(io)
         io = server_cast(io)
       end
       logger.info "listening on addr=#{sock_name(io)} fd=#{io.fileno}"
@@ -466,7 +466,7 @@ class Unicorn::HttpServer
       (3..1024).each do |io|
         next if listener_fds.include?(io)
         io = IO.for_fd(io) rescue next
-        IO_PURGATORY << io
+        prevent_autoclose(io)
         io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       end
 
@@ -772,7 +772,7 @@ class Unicorn::HttpServer
     inherited = ENV['UNICORN_FD'].to_s.split(/,/).map do |fd|
       io = Socket.for_fd(fd.to_i)
       set_server_sockopt(io, listener_opts[sock_name(io)])
-      IO_PURGATORY << io
+      prevent_autoclose(io)
       logger.info "inherited addr=#{sock_name(io)} fd=#{fd}"
       server_cast(io)
     end

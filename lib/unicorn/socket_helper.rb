@@ -8,6 +8,7 @@ module Unicorn
     include Socket::Constants
 
     # prevents IO objects in here from being GC-ed
+    # kill this when we drop 1.8 support
     IO_PURGATORY = []
 
     # internal interface, only used by Rainbows!/Zbatery
@@ -57,6 +58,14 @@ module Unicorn
       def accf_arg(af_name)
         [ af_name, nil ].pack('a16a240')
       end if defined?(SO_ACCEPTFILTER)
+    end
+
+    def prevent_autoclose(io)
+      if io.respond_to?(:autoclose=)
+        io.autoclose = false
+      else
+        IO_PURGATORY << io
+      end
     end
 
     def set_tcp_sockopt(sock, opt)
@@ -174,7 +183,7 @@ module Unicorn
         sock.setsockopt(SOL_SOCKET, SO_REUSEPORT, 1)
       end
       sock.bind(Socket.pack_sockaddr_in(port, addr))
-      IO_PURGATORY << sock
+      prevent_autoclose(sock)
       Kgio::TCPServer.for_fd(sock.fileno)
     end
 
