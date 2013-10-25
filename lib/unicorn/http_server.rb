@@ -221,13 +221,13 @@ class Unicorn::HttpServer
       end
     end
 
-    # rename the old pid if posible
+    # rename the old pid if possible
     if @pid && path
       begin
         File.rename(@pid, path)
       rescue Errno::ENOENT, Errno::EXDEV
-        # a user may have accidentally removed the original.
-        # Obviously cross-FS renames
+        # a user may have accidentally removed the original,
+        # obviously cross-FS renames don't work, either.
         clobber_pid(path)
       end
     else
