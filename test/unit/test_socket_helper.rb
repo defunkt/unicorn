@@ -184,4 +184,12 @@ class TestSocketHelper < Test::Unit::TestCase
     assert_equal 1, cur
     rescue Errno::EAFNOSUPPORT
   end if RUBY_VERSION >= "1.9.2"
+
+  def test_reuseport
+    port = unused_port @test_addr
+    name = "#@test_addr:#{port}"
+    sock = bind_listen(name, :reuseport => true)
+    cur = sock.getsockopt(Socket::SOL_SOCKET, SO_REUSEPORT).unpack('i')[0]
+    assert_equal 1, cur
+  end if defined?(SO_REUSEPORT)
 end

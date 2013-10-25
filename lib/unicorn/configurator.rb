@@ -319,6 +319,25 @@ class Unicorn::Configurator
   #
   #   Default: Operating-system dependent
   #
+  # [:reuseport => true or false]
+  #
+  #   This enables multiple, independently-started unicorn instances to
+  #   bind to the same port (as long as all the processes enable this).
+  #
+  #   This option must be used when unicorn first binds the listen socket.
+  #   It cannot be enabled when a socket is inherited via SIGUSR2
+  #   (but it will remain on if inherited), and it cannot be enabled
+  #   directly via SIGHUP.
+  #
+  #   Note: there is a chance of connections being dropped if
+  #   one of the unicorn instances is stopped while using this.
+  #
+  #   This is supported on *BSD systems and Linux 3.9 or later.
+  #
+  #   ref: https://lwn.net/Articles/542629/
+  #
+  #   Default: false (unset)
+  #
   # [:tries => Integer]
   #
   #   Times to retry binding a socket if it is already in use
