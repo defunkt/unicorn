@@ -40,5 +40,5 @@ Gem::Specification.new do |s|
   s.add_development_dependency('isolate', '~> 3.2')
   s.add_development_dependency('wrongdoc', '~> 1.6.1')
 
-  s.licenses = ["GPLv2", "GPLv3", "Ruby 1.8"]
+  s.licenses = ["GPLv2+", "Ruby 1.8"]
 end

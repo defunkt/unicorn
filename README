@@ -63,8 +63,9 @@ both the the request and response in between \Unicorn and slow clients.
 It is based on Mongrel 1.1.5.
 Mongrel is copyright 2007 Zed A. Shaw and contributors.
 
-\Unicorn is tri-licensed under (your choice) of the GPLv3, GPLv2 or
-Ruby (1.8)-specific terms.  See the included LICENSE file for details.
+\Unicorn is licensed under (your choice) of the GPLv2 or later
+(GPLv3+ preferred), or Ruby (1.8)-specific terms.
+See the included LICENSE file for details.
 
 \Unicorn is 100% Free Software.
 

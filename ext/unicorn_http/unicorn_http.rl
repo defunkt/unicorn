@@ -2,7 +2,7 @@
  * Copyright (c) 2009 Eric Wong (all bugs are Eric's fault)
  * Copyright (c) 2005 Zed A. Shaw
  * You can redistribute it and/or modify it under the same terms as Ruby 1.8 or
- * the GPLv3
+ * the GPLv2+ (GPLv3+ preferred)
  */
 #include "ruby.h"
 #include "ext_help.h"

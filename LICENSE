@@ -3,15 +3,18 @@ revision control for names and email addresses of all of them.
 
 You can redistribute it and/or modify it under either the terms of the
 GNU General Public License (GPL) as published by the Free Software
-Foundation (FSF), version {3.0}[http://www.gnu.org/licenses/gpl-3.0.txt]
-or version {2.0}[http://www.gnu.org/licenses/gpl-2.0.txt]
-or the Ruby-specific license terms (see below).
+Foundation (FSF), either version 2 of the License, or (at your option)
+any later version.  We currently prefer the GPLv3 or later for
+derivative works, but the GPLv2 is fine.
 
-The unicorn project leader (Eric Wong) reserves the right to add future
-versions of the GPL (and no other licenses) as published by the FSF to
-the licensing terms.
+The complete texts of the GPLv2 and GPLv3 are below:
+GPLv2 - http://www.gnu.org/licenses/gpl-2.0.txt
+GPLv3 - http://www.gnu.org/licenses/gpl-3.0.txt
 
-=== Ruby-specific terms (if you're not using the GPLv2 or GPLv3)
+You may (against our _preference_) also use the Ruby 1.8 license terms
+which we inherited from the original Mongrel project when we forked it:
+
+=== Ruby 1.8-specific terms (if you're not using the GPL)
 
   1. You may make and give away verbatim copies of the source form of the
      software without restriction, provided that you duplicate all of the
