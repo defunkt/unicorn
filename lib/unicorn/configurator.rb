@@ -415,7 +415,7 @@ class Unicorn::Configurator
         Integer === value or
           raise ArgumentError, "not an integer: #{key}=#{value.inspect}"
       end
-      [ :tcp_nodelay, :tcp_nopush, :ipv6only ].each do |key|
+      [ :tcp_nodelay, :tcp_nopush, :ipv6only, :reuseport ].each do |key|
         (value = options[key]).nil? and next
         TrueClass === value || FalseClass === value or
           raise ArgumentError, "not boolean: #{key}=#{value.inspect}"
