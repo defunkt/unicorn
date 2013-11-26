@@ -7,6 +7,9 @@ signal handling matches the behavior of {nginx}[http://nginx.net/] so it
 should be possible to easily share process management scripts between
 Unicorn and nginx.
 
+One example init script is distributed with unicorn:
+http://unicorn.bogomips.org/examples/init.sh
+
 === Master Process
 
 * HUP - reloads config file and gracefully restart all workers.
@@ -101,8 +104,8 @@ The procedure is exactly like that of nginx:
 
 3. You can now send WINCH to the old master process so only the new workers
    serve requests.  If your unicorn process is bound to an interactive
-   terminal, you can skip this step.  Step 5 will be more difficult but
-   you can also skip it if your process is not daemonized.
+   terminal (not daemonized), you can skip this step.  Step 5 will be more
+   difficult but you can also skip it if your process is not daemonized.
 
 4. You should now ensure that everything is running correctly with the
    new workers as the old workers die off.
