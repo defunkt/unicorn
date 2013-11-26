@@ -136,19 +136,14 @@ class Unicorn::HttpServer
     trap(:CHLD) { awaken_master }
 
     # write pid early for Mongrel compatibility if we're not inheriting sockets
-    # This was needed for compatibility with some health checker a long time
-    # ago.  This unfortunately has the side effect of clobbering valid PID
-    # files.
-    self.pid = config[:pid] unless ENV["UNICORN_FD"]
+    # This is needed for compatibility some Monit setups at least.
+    # This unfortunately has the side effect of clobbering valid PID if
+    # we upgrade and the upgrade breaks during preload_app==true && build_app!
+    self.pid = config[:pid]
 
     self.master_pid = $$
     build_app! if preload_app
     bind_new_listeners!
-
-    # Assuming preload_app==false, we drop the pid file after the app is ready
-    # to process requests.  If binding or build_app! fails with
-    # preload_app==true, we'll never get here and the parent will recover
-    self.pid = config[:pid] if ENV["UNICORN_FD"]
 
     spawn_missing_workers
     self
