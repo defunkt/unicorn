@@ -97,6 +97,11 @@ module Unicorn
     logger.error "#{prefix}: #{message} (#{exc.class})"
     exc.backtrace.each { |line| logger.error(line) }
   end
+
+  # remove this when we only support Ruby >= 2.0
+  def self.pipe # :nodoc:
+    Kgio::Pipe.new.each { |io| io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
+  end
   # :startdoc:
 end
 # :enddoc:

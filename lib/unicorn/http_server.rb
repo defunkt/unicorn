@@ -42,16 +42,8 @@ class Unicorn::HttpServer
   # it to wake up the master from IO.select in exactly the same manner
   # djb describes in http://cr.yp.to/docs/selfpipe.html
   #
-  # * The workers immediately close the pipe they inherit from the
-  # master and replace it with a new pipe after forking.  This new
-  # pipe is also used to wakeup from IO.select from inside (worker)
-  # signal handlers.  However, workers *close* the pipe descriptors in
-  # the signal handlers to raise EBADF in IO.select instead of writing
-  # like we do in the master.  We cannot easily use the reader set for
-  # IO.select because LISTENERS is already that set, and it's extra
-  # work (and cycles) to distinguish the pipe FD from the reader set
-  # once IO.select returns.  So we're lazy and just close the pipe when
-  # a (rare) signal arrives in the worker and reinitialize the pipe later.
+  # * The workers immediately close the pipe they inherit.  See the
+  # Unicorn::Worker class for the pipe workers use.
   SELF_PIPE = []
 
   # signal queue used for self-piping
@@ -127,7 +119,7 @@ class Unicorn::HttpServer
     inherit_listeners!
     # this pipe is used to wake us up from select(2) in #join when signals
     # are trapped.  See trap_deferred.
-    init_self_pipe!
+    SELF_PIPE.replace(Unicorn.pipe)
 
     # setup signal handlers before writing pid file in case people get
     # trigger happy and send signals as soon as the pid file exists.
@@ -306,14 +298,14 @@ class Unicorn::HttpServer
         logger.info "master reopening logs..."
         Unicorn::Util.reopen_logs
         logger.info "master done reopening logs"
-        kill_each_worker(:USR1)
+        soft_kill_each_worker(:USR1)
       when :USR2 # exec binary, stay alive in case something went wrong
         reexec
       when :WINCH
         if Unicorn::Configurator::RACKUP[:daemonized]
           respawn = false
           logger.info "gracefully stopping all workers"
-          kill_each_worker(:QUIT)
+          soft_kill_each_worker(:QUIT)
           self.worker_processes = 0
         else
           logger.info "SIGWINCH ignored because we're not daemonized"
@@ -345,7 +337,11 @@ class Unicorn::HttpServer
     self.listeners = []
     limit = Time.now + timeout
     until WORKERS.empty? || Time.now > limit
-      kill_each_worker(graceful ? :QUIT : :TERM)
+      if graceful
+        soft_kill_each_worker(:QUIT)
+      else
+        kill_each_worker(:TERM)
+      end
       sleep(0.1)
       reap_all_workers
     end
@@ -498,6 +494,7 @@ class Unicorn::HttpServer
   end
 
   def after_fork_internal
+    SELF_PIPE.each { |io| io.close }.clear # this is master-only, now
     @ready_pipe.close if @ready_pipe
     Unicorn::Configurator::RACKUP.clear
     @ready_pipe = @init_listeners = @before_exec = @before_fork = nil
@@ -517,6 +514,7 @@ class Unicorn::HttpServer
       before_fork.call(self, worker)
       if pid = fork
         WORKERS[pid] = worker
+        worker.atfork_parent
       else
         after_fork_internal
         worker_loop(worker)
@@ -531,9 +529,7 @@ class Unicorn::HttpServer
   def maintain_worker_count
     (off = WORKERS.size - worker_processes) == 0 and return
     off < 0 and return spawn_missing_workers
-    WORKERS.dup.each_pair { |wpid,w|
-      w.nr >= worker_processes and kill_worker(:QUIT, wpid) rescue nil
-    }
+    WORKERS.each_value { |w| w.nr >= worker_processes and w.soft_kill(:QUIT) }
   end
 
   # if we get any error, try to write something back to the client
@@ -600,6 +596,7 @@ class Unicorn::HttpServer
   # traps for USR1, USR2, and HUP may be set in the after_fork Proc
   # by the user.
   def init_worker_process(worker)
+    worker.atfork_child
     # we'll re-trap :QUIT later for graceful shutdown iff we accept clients
     EXIT_SIGS.each { |sig| trap(sig) { exit!(0) } }
     exit!(0) if (SIG_QUEUE & EXIT_SIGS)[0]
@@ -608,23 +605,27 @@ class Unicorn::HttpServer
     SIG_QUEUE.clear
     proc_name "worker[#{worker.nr}]"
     START_CTX.clear
-    init_self_pipe!
     WORKERS.clear
+
+    after_fork.call(self, worker) # can drop perms and create listeners
     LISTENERS.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
-    after_fork.call(self, worker) # can drop perms
+
     worker.user(*user) if user.kind_of?(Array) && ! worker.switched
     self.timeout /= 2.0 # halve it for select()
     @config = nil
     build_app! unless preload_app
     ssl_enable!
     @after_fork = @listener_opts = @orig_app = nil
+    readers = LISTENERS.dup
+    readers << worker
+    trap(:QUIT) { readers.each { |io| io.close }.replace([false]) }
+    readers
   end
 
   def reopen_worker_logs(worker_nr)
     logger.info "worker=#{worker_nr} reopening logs..."
     Unicorn::Util.reopen_logs
     logger.info "worker=#{worker_nr} done reopening logs"
-    init_self_pipe!
     rescue => e
       logger.error(e) rescue nil
       exit!(77) # EX_NOPERM in sysexits.h
@@ -635,22 +636,24 @@ class Unicorn::HttpServer
   # given a INT, QUIT, or TERM signal)
   def worker_loop(worker)
     ppid = master_pid
-    init_worker_process(worker)
+    readers = init_worker_process(worker)
     nr = 0 # this becomes negative if we need to reopen logs
-    l = LISTENERS.dup
-    ready = l.dup
 
-    # closing anything we IO.select on will raise EBADF
-    trap(:USR1) { nr = -65536; SELF_PIPE[0].close rescue nil }
-    trap(:QUIT) { worker = nil; LISTENERS.each { |s| s.close rescue nil }.clear }
-    logger.info "worker=#{worker.nr} ready"
+    # this only works immediately if the master sent us the signal
+    # (which is the normal case)
+    trap(:USR1) { nr = -65536 }
+
+    ready = readers.dup
+    @logger.info "worker=#{worker.nr} ready"
 
     begin
       nr < 0 and reopen_worker_logs(worker.nr)
       nr = 0
-
       worker.tick = Time.now.to_i
-      while sock = ready.shift
+      tmp = ready.dup
+      while sock = tmp.shift
+        # Unicorn::Worker#kgio_tryaccept is not like accept(2) at all,
+        # but that will return false
         if client = sock.kgio_tryaccept
           process_client(client)
           nr += 1
@@ -663,8 +666,8 @@ class Unicorn::HttpServer
       # we're probably reasonably busy, so avoid calling select()
       # and do a speculative non-blocking accept() on ready listeners
       # before we sleep again in select().
-      unless nr == 0 # (nr < 0) => reopen logs (unlikely)
-        ready = l.dup
+      unless nr == 0
+        tmp = ready.dup
         redo
       end
 
@@ -672,11 +675,11 @@ class Unicorn::HttpServer
 
       # timeout used so we can detect parent death:
       worker.tick = Time.now.to_i
-      ret = IO.select(l, nil, SELF_PIPE, @timeout) and ready = ret[0]
+      ret = IO.select(readers, nil, nil, @timeout) and ready = ret[0]
     rescue => e
-      redo if nr < 0 && (Errno::EBADF === e || IOError === e) # reopen logs
-      Unicorn.log_error(@logger, "listen loop error", e) if worker
-    end while worker
+      redo if nr < 0
+      Unicorn.log_error(@logger, "listen loop error", e) if readers[0]
+    end while readers[0]
   end
 
   # delivers a signal to a worker and fails gracefully if the worker
@@ -690,6 +693,10 @@ class Unicorn::HttpServer
   # delivers a signal to each worker
   def kill_each_worker(signal)
     WORKERS.keys.each { |wpid| kill_worker(signal, wpid) }
+  end
+
+  def soft_kill_each_worker(signal)
+    WORKERS.each_value { |worker| worker.soft_kill(signal) }
   end
 
   # unlinks a PID file at given +path+ if it contains the current PID
@@ -720,7 +727,7 @@ class Unicorn::HttpServer
     config[:listeners].replace(@init_listeners)
     config.reload
     config.commit!(self)
-    kill_each_worker(:QUIT)
+    soft_kill_each_worker(:QUIT)
     Unicorn::Util.reopen_logs
     self.app = orig_app
     build_app! if preload_app
@@ -754,12 +761,6 @@ class Unicorn::HttpServer
   def redirect_io(io, path)
     File.open(path, 'ab') { |fp| io.reopen(fp) } if path
     io.sync = true
-  end
-
-  def init_self_pipe!
-    SELF_PIPE.each { |io| io.close rescue nil }
-    SELF_PIPE.replace(Kgio::Pipe.new)
-    SELF_PIPE.each { |io| io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
   end
 
   def inherit_listeners!
