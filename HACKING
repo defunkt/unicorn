@@ -28,7 +28,7 @@ file is provided for reference.
 
 Running the entire test suite with 4 tests in parallel:
 
-  gmake -j4 test
+  gmake -j4 check
 
 Running just one unit test:
 

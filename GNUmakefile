@@ -90,7 +90,8 @@ $(slow_tests): $(test_prefix)/.stamp
 test-integration: $(test_prefix)/.stamp
 	$(MAKE) -C t
 
-test-all: test test-integration
+check: test test-integration
+test-all: check
 
 TEST_OPTS = -v
 check_test = grep '0 failures, 0 errors' $(t) >/dev/null
