@@ -591,6 +591,13 @@ class Unicorn::HttpServer
   EXIT_SIGS = [ :QUIT, :TERM, :INT ]
   WORKER_QUEUE_SIGS = QUEUE_SIGS - EXIT_SIGS
 
+  def nuke_listeners!(readers)
+    # only called from the worker, ordering is important here
+    tmp = readers.dup
+    readers.replace([false]) # ensure worker does not continue ASAP
+    tmp.each { |io| io.close rescue nil } # break out of IO.select
+  end
+
   # gets rid of stuff the worker has no business keeping track of
   # to free some resources and drops all sig handlers.
   # traps for USR1, USR2, and HUP may be set in the after_fork Proc
@@ -618,7 +625,7 @@ class Unicorn::HttpServer
     @after_fork = @listener_opts = @orig_app = nil
     readers = LISTENERS.dup
     readers << worker
-    trap(:QUIT) { readers.each { |io| io.close }.replace([false]) }
+    trap(:QUIT) { nuke_listeners!(readers) }
     readers
   end
 
@@ -677,7 +684,7 @@ class Unicorn::HttpServer
       worker.tick = Time.now.to_i
       ret = IO.select(readers, nil, nil, @timeout) and ready = ret[0]
     rescue => e
-      redo if nr < 0
+      redo if nr < 0 && readers[0]
       Unicorn.log_error(@logger, "listen loop error", e) if readers[0]
     end while readers[0]
   end
