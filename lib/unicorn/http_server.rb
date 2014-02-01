@@ -120,6 +120,7 @@ class Unicorn::HttpServer
     # this pipe is used to wake us up from select(2) in #join when signals
     # are trapped.  See trap_deferred.
     SELF_PIPE.replace(Unicorn.pipe)
+    @master_pid = $$
 
     # setup signal handlers before writing pid file in case people get
     # trigger happy and send signals as soon as the pid file exists.
@@ -133,7 +134,6 @@ class Unicorn::HttpServer
     # we upgrade and the upgrade breaks during preload_app==true && build_app!
     self.pid = config[:pid]
 
-    self.master_pid = $$
     build_app! if preload_app
     bind_new_listeners!
 
@@ -390,6 +390,7 @@ class Unicorn::HttpServer
   end
 
   def awaken_master
+    return if $$ != @master_pid
     SELF_PIPE[1].kgio_trywrite('.') # wakeup master process from select
   end
 
