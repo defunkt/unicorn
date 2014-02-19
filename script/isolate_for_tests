@@ -16,8 +16,8 @@ opts = {
 
 pid = fork do
   Isolate.now!(opts) do
-    gem 'raindrops', '0.12.0'
-    gem 'kgio', '2.8.1'
+    gem 'raindrops', '0.13.0'
+    gem 'kgio', '2.9.2'
     gem 'rack', '1.5.2'
   end
 end
