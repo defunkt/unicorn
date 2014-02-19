@@ -2,4 +2,3 @@
 /.dep+*
 /*.crt
 /*.key
-/ssl-stamp

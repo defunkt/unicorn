@@ -45,11 +45,7 @@ random_blob:
 	dd if=/dev/urandom bs=1M count=30 of=$@.$(pid)
 	mv $@.$(pid) $@
 
-ssl-stamp:
-	./sslgen.sh
-	> $@
-
-$(T): random_blob ssl-stamp
+$(T): random_blob
 
 dependencies := socat curl
 deps := $(addprefix .dep+,$(dependencies))
