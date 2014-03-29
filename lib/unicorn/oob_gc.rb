@@ -1,5 +1,11 @@
 # -*- encoding: binary -*-
 
+# Strongly consider https://github.com/tmm1/gctools if using Ruby 2.1+
+# It is built on new APIs in Ruby 2.1, so it is more intelligent than
+# this historical implementation.
+#
+# The following information is only for historical versions of Ruby.
+#
 # Runs GC after requests, after closing the client socket and
 # before attempting to accept more connections.
 #
