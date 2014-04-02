@@ -4,6 +4,10 @@
 # It is built on new APIs in Ruby 2.1, so it is more intelligent than
 # this historical implementation.
 #
+# Users on Ruby 2.0 (not 2.1+) may also want to check out
+# lib/middleware/unicorn_oobgc.rb from the Discourse project
+# (https://github.com/discourse/discourse)
+#
 # The following information is only for historical versions of Ruby.
 #
 # Runs GC after requests, after closing the client socket and
