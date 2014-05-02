@@ -272,7 +272,11 @@ class Unicorn::HttpServer
     proc_name 'master'
     logger.info "master process ready" # test_exec.rb relies on this message
     if @ready_pipe
-      @ready_pipe.syswrite($$.to_s)
+      begin
+        @ready_pipe.syswrite($$.to_s)
+      rescue => e
+        logger.warn("grandparent died too soon?: #{e.message} (#{e.class})")
+      end
       @ready_pipe = @ready_pipe.close rescue nil
     end
     begin
