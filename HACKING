@@ -66,8 +66,9 @@ Please wrap documentation at 72 characters-per-line or less (long URLs
 are exempt) so it is comfortably readable from terminals.
 
 When referencing mailing list posts, use
-"http://mid.gmane.org/$MESSAGE_ID" if possible since the Message-ID
-remains searchable even if Gmane becomes unavailable.
+"http://bogomips.org/unicorn-public/m/$MESSAGE_ID.html" if possible
+since the Message-ID remains searchable even if a particular site
+becomes unavailable.
 
 === Ruby/C Compatibility
 
@@ -103,7 +104,9 @@ preferred because they allow code review and comments in the reply to
 the patch.
 
 We will adhere to mostly the same conventions for patch submissions as
-git itself.  See the Documentation/SubmittingPatches document
+git itself.  See the
+{SubmittingPatches}[https://git.kernel.org/cgit/git/git.git/tree/Documentation/SubmittingPatches]
+document
 distributed with git on on patch submission guidelines to follow.  Just
 don't email the git mailing list or maintainer with Unicorn patches :)
 

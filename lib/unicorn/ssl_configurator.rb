@@ -62,7 +62,7 @@ module Unicorn::SSLConfigurator
 
   # Allows specifying an engine for OpenSSL to use.  We have not been
   # able to successfully test this feature due to a lack of hardware,
-  # Reports of success or patches to mongrel-unicorn@rubyforge.org is
+  # Reports of success or patches to unicorn-public@bogomips.org is
   # greatly appreciated.
   def ssl_engine(engine)
     ssl_warn_global(:ssl_engine)

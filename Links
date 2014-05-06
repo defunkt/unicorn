@@ -2,7 +2,7 @@
 
 If you're interested in \Unicorn, you may be interested in some of the projects
 listed below.  If you have any links to add/change/remove, please tell us at
-mailto:mongrel-unicorn@rubyforge.org!
+mailto:unicorn-public@bogomips.org!
 
 == Disclaimer
 
@@ -31,10 +31,10 @@ or services behind them.
 
 === \Unicorn is written to work with
 
-* {Rack}[http://rack.rubyforge.org/] - a minimal interface between webservers
+* {Rack}[http://rack.github.io/] - a minimal interface between webservers
   supporting Ruby and Ruby frameworks
 
-* {Ruby}[http://ruby-lang.org/] - the programming language of Rack and \Unicorn
+* {Ruby}[http://www.ruby-lang.org/] - the programming language of Rack and \Unicorn
 
 * {nginx}[http://nginx.org/] - the reverse proxy for use with \Unicorn
 
@@ -44,13 +44,13 @@ or services behind them.
 
 * {Green Unicorn}[http://gunicorn.org/] - a Python version of \Unicorn
 
-* {Rainbows!}[http://rainbows.rubyforge.org/] - \Unicorn for sleepy
+* {Rainbows!}[http://rainbows.bogomips.org/] - \Unicorn for sleepy
   apps and slow clients.
 
 === Prior Work
 
-* {Mongrel}[http://mongrel.rubyforge.org/] - the awesome webserver \Unicorn is
-  based on
+* {Mongrel}[http://rubygems.org/gems/mongrel] - the awesome webserver
+  unicorn is based on
 
 * {david}[http://bogomips.org/david.git] - a tool to explain why you need
   nginx in front of \Unicorn

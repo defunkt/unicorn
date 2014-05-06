@@ -1,5 +1,5 @@
 % UNICORN_RAILS(1) Unicorn User Manual
-% The Unicorn Community <mongrel-unicorn@rubyforge.org>
+% The Unicorn Community <unicorn-public@bogomips.org>
 % September 17, 2009
 
 # NAME
@@ -170,6 +170,6 @@ used by Unicorn.
 * [Rackup HowTo][3]
 
 [1]: http://unicorn.bogomips.org/
-[2]: http://rack.rubyforge.org/doc/
+[2]: http://rdoc.info/gems/r#/gems/rack/frames
 [3]: http://wiki.github.com/rack/rack/tutorial-rackup-howto
 [4]: http://unicorn.bogomips.org/SIGNALS.html

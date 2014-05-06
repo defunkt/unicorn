@@ -19,7 +19,7 @@ Gem::Specification.new do |s|
   s.summary = summary
   s.date = Time.now.utc.strftime('%Y-%m-%d')
   s.description = readme_description
-  s.email = %q{mongrel-unicorn@rubyforge.org}
+  s.email = %q{unicorn-public@bogomips.org}
   s.executables = %w(unicorn unicorn_rails)
   s.extensions = %w(ext/unicorn_http/extconf.rb)
   s.extra_rdoc_files = extra_rdoc_files(manifest)
@@ -38,7 +38,7 @@ Gem::Specification.new do |s|
   s.add_dependency(%q<raindrops>, '~> 0.7')
 
   s.add_development_dependency('isolate', '~> 3.2')
-  s.add_development_dependency('wrongdoc', '~> 1.6.1')
+  s.add_development_dependency('wrongdoc', '~> 1.8')
 
   s.licenses = ["GPLv2+", "Ruby 1.8"]
 end

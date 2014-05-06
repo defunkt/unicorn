@@ -10,9 +10,9 @@ both the the request and response in between \Unicorn and slow clients.
 
 * Designed for Rack, Unix, fast clients, and ease-of-debugging.  We
   cut out everything that is better supported by the operating system,
-  {nginx}[http://nginx.net/] or {Rack}[http://rack.rubyforge.org/].
+  {nginx}[http://nginx.net/] or {Rack}[http://rack.github.io/].
 
-* Compatible with both Ruby 1.8 and 1.9.  Rubinius support is in-progress.
+* Compatible with Ruby 1.8 and later.  Rubinius support is in-progress.
 
 * Process management: \Unicorn will reap and restart workers that
   die from broken apps.  There is no need to manage multiple processes
@@ -74,12 +74,7 @@ See the included LICENSE file for details.
 The library consists of a C extension so you'll need a C compiler
 and Ruby development libraries/headers.
 
-You may download the tarball from the Mongrel project page on Rubyforge
-and run setup.rb after unpacking it:
-
-http://rubyforge.org/frs/?group_id=1306
-
-You may also install it via RubyGems on RubyGems.org:
+You may install it via RubyGems on RubyGems.org:
 
   gem install unicorn
 
@@ -143,7 +138,7 @@ regarding this.
 
 All feedback (bug reports, user/development dicussion, patches, pull
 requests) go to the mailing list/newsgroup.  See the ISSUES document for
-information on the {mailing list}[mailto:mongrel-unicorn@rubyforge.org].
+information on the {mailing list}[mailto:unicorn-public@bogomips.org].
 
 For the latest on \Unicorn releases, you may also finger us at
 unicorn@bogomips.org or check our NEWS page (and subscribe to our Atom

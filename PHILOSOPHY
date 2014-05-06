@@ -138,7 +138,7 @@ where the HTTP connection spends a large amount of time idle.
 Nevertheless, the ease of troubleshooting, debugging, and management of
 unicorn may still outweigh the drawbacks for these applications.
 
-The {Rainbows!}[http://rainbows.rubyforge.org/] aims to fill the gap for
+The {Rainbows!}[http://rainbows.bogomips.org/] aims to fill the gap for
 odd corner cases where the nginx + unicorn combination is not enough.
 While Rainbows! management/administration is largely identical to
 unicorn, Rainbows! is far more ambitious and has seen little real-world
