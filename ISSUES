@@ -6,7 +6,7 @@ submit patches and/or obtain support after you have searched the
 {documentation}[http://unicorn.bogomips.org/].
 
 * No subscription will ever be required to email the public inbox.
-* Please Cc: all participants in a thread, as there are no subscribers
+* Please Cc: all participants in a thread, as subscription is optional
 * Do not {top post}[http://catb.org/jargon/html/T/top-post.html] in replies
 * Quote as little as possible of the message you're replying to
 * Do not send HTML mail, it will likely be flagged as spam
@@ -29,8 +29,14 @@ document distributed with git) on guidelines for patch submission.
 * public: mailto:unicorn-public@bogomips.org
 * private: mailto:unicorn@bogomips.org
 
-We operate a {public-inbox}[http://public-inbox.org/].
-You may subscribe using {ssoma}[http://ssoma.public-inbox.org/]:
+We operate a {public-inbox}[http://public-inbox.org/] which
+feeds the mailing list.  You may subscribe either using
+{ssoma}[http://ssoma.public-inbox.org/] or by sending a mail
+to mailto:unicorn-public+subscribe@bogomips.org
+
+ssoma is a mail archiver/fetcher using git.  It operates in a similar
+fashion to tools such as slrnpull, fetchmail, or getmail.  ssoma
+subscription instructions:
 
 	URL=git://bogomips.org/unicorn-public
 	LISTNAME=unicorn
