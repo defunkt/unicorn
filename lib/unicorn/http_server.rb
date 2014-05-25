@@ -369,14 +369,6 @@ class Unicorn::HttpServer
     Unicorn::TeeInput.client_body_buffer_size = bytes
   end
 
-  def trust_x_forwarded
-    Unicorn::HttpParser.trust_x_forwarded?
-  end
-
-  def trust_x_forwarded=(bool)
-    Unicorn::HttpParser.trust_x_forwarded = bool
-  end
-
   def check_client_connection
     Unicorn::HttpRequest.check_client_connection
   end

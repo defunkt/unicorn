@@ -29,12 +29,6 @@ void init_unicorn_httpdate(void);
 /* all of these flags need to be set for keepalive to be supported */
 #define UH_FL_KEEPALIVE (UH_FL_KAVERSION | UH_FL_REQEOF | UH_FL_HASHEADER)
 
-/*
- * whether or not to trust X-Forwarded-Proto and X-Forwarded-SSL when
- * setting rack.url_scheme
- */
-static VALUE trust_x_forward = Qtrue;
-
 static unsigned long keepalive_requests = 100; /* same as nginx */
 
 /*
@@ -56,31 +50,6 @@ static VALUE set_ka_req(VALUE self, VALUE val)
   keepalive_requests = NIL_P(val) ? ULONG_MAX : NUM2ULONG(val);
 
   return ka_req(self);
-}
-
-/*
- * Sets whether or not the parser will trust X-Forwarded-Proto and
- * X-Forwarded-SSL headers and set "rack.url_scheme" to "https" accordingly.
- * Rainbows!/Zbatery installations facing untrusted clients directly
- * should set this to +false+
- */
-static VALUE set_xftrust(VALUE self, VALUE val)
-{
-  if (Qtrue == val || Qfalse == val)
-    trust_x_forward = val;
-  else
-    rb_raise(rb_eTypeError, "must be true or false");
-
-  return val;
-}
-
-/*
- * returns whether or not the parser will trust X-Forwarded-Proto and
- * X-Forwarded-SSL headers and set "rack.url_scheme" to "https" accordingly
- */
-static VALUE xftrust(VALUE self)
-{
-  return trust_x_forward;
 }
 
 static size_t MAX_HEADER_LEN = 1024 * (80 + 32); /* same as Mongrel */
@@ -491,26 +460,29 @@ static void set_url_scheme(VALUE env, VALUE *server_port)
   VALUE scheme = rb_hash_aref(env, g_rack_url_scheme);
 
   if (NIL_P(scheme)) {
-    if (trust_x_forward == Qfalse) {
-      scheme = g_http;
+    /*
+     * would anybody be horribly opposed to removing the X-Forwarded-SSL
+     * and X-Forwarded-Proto handling from this parser?  We've had it
+     * forever and nobody has said anything against it, either.
+     * Anyways, please send comments to our public mailing list:
+     * unicorn-public@bogomips.org (no HTML mail, no subscription necessary)
+     */
+    scheme = rb_hash_aref(env, g_http_x_forwarded_ssl);
+    if (!NIL_P(scheme) && STR_CSTR_EQ(scheme, "on")) {
+      *server_port = g_port_443;
+      scheme = g_https;
     } else {
-      scheme = rb_hash_aref(env, g_http_x_forwarded_ssl);
-      if (!NIL_P(scheme) && STR_CSTR_EQ(scheme, "on")) {
-        *server_port = g_port_443;
-        scheme = g_https;
+      scheme = rb_hash_aref(env, g_http_x_forwarded_proto);
+      if (NIL_P(scheme)) {
+        scheme = g_http;
       } else {
-        scheme = rb_hash_aref(env, g_http_x_forwarded_proto);
-        if (NIL_P(scheme)) {
-          scheme = g_http;
+        long len = RSTRING_LEN(scheme);
+        if (len >= 5 && !memcmp(RSTRING_PTR(scheme), "https", 5)) {
+          if (len != 5)
+            scheme = g_https;
+          *server_port = g_port_443;
         } else {
-          long len = RSTRING_LEN(scheme);
-          if (len >= 5 && !memcmp(RSTRING_PTR(scheme), "https", 5)) {
-            if (len != 5)
-              scheme = g_https;
-            *server_port = g_port_443;
-          } else {
-            scheme = g_http;
-          }
+          scheme = g_http;
         }
       }
     }
@@ -1018,8 +990,6 @@ void Init_unicorn_http(void)
 
   rb_define_singleton_method(cHttpParser, "keepalive_requests", ka_req, 0);
   rb_define_singleton_method(cHttpParser, "keepalive_requests=", set_ka_req, 1);
-  rb_define_singleton_method(cHttpParser, "trust_x_forwarded=", set_xftrust, 1);
-  rb_define_singleton_method(cHttpParser, "trust_x_forwarded?", xftrust, 0);
   rb_define_singleton_method(cHttpParser, "max_header_len=", set_maxhdrlen, 1);
 
   init_common_fields();

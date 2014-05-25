@@ -48,7 +48,6 @@ class Unicorn::Configurator
     :check_client_connection => false,
     :rewindable_input => true, # for Rack 2.x: (Rack::VERSION[0] <= 1),
     :client_body_buffer_size => Unicorn::Const::MAX_BODY,
-    :trust_x_forwarded => true,
   }
   #:startdoc:
 
@@ -556,18 +555,6 @@ class Unicorn::Configurator
     Etc.getpwnam(user)
     Etc.getgrnam(group) if group
     set[:user] = [ user, group ]
-  end
-
-  # Sets whether or not the parser will trust X-Forwarded-Proto and
-  # X-Forwarded-SSL headers and set "rack.url_scheme" to "https" accordingly.
-  # Rainbows!/Zbatery installations facing untrusted clients directly
-  # should set this to +false+.  This is +true+ by default as Unicorn
-  # is designed to only sit behind trusted nginx proxies.
-  #
-  # This has never been publically documented and is subject to removal
-  # in future releases.
-  def trust_x_forwarded(bool) # :nodoc:
-    set_bool(:trust_x_forwarded, bool)
   end
 
   # expands "unix:path/to/foo" to a socket relative to the current path
