@@ -38,7 +38,6 @@ class ResponseTest < Test::Unit::TestCase
     http_response_write(out,'200', {}, [])
     assert ! out.closed?
     assert out.length > 0, "output didn't have data"
-    assert_equal 1, out.string.split(/\r\n/).grep(/^Status: 200 OK/).size
   end
 
   def test_response_200
@@ -71,7 +70,6 @@ class ResponseTest < Test::Unit::TestCase
     out = StringIO.new
     http_response_write(out,200, {"X-Whatever" => "stuff"}, [])
     assert ! out.closed?
-    assert_equal 1, out.string.split(/\r\n/).grep(/^Status: 200 OK/i).size
   end
 
   def test_body_closed
@@ -91,9 +89,5 @@ class ResponseTest < Test::Unit::TestCase
     assert ! out.closed?
     headers = out.string.split(/\r\n\r\n/).first.split(/\r\n/)
     assert %r{\AHTTP/\d\.\d 666 I AM THE BEAST\z}.match(headers[0])
-    status = headers.grep(/\AStatus:/i).first
-    assert status
-    assert_equal "Status: 666 I AM THE BEAST", status
   end
-
 end

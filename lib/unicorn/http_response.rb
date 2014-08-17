@@ -24,14 +24,12 @@ module Unicorn::HttpResponse
   # writes the rack_response to socket as an HTTP response
   def http_response_write(socket, status, headers, body,
                           response_start_sent=false)
-    status = CODES[status.to_i] || status
     hijack = nil
 
     http_response_start = response_start_sent ? '' : 'HTTP/1.1 '
     if headers
-      buf = "#{http_response_start}#{status}\r\n" \
+      buf = "#{http_response_start}#{CODES[status.to_i] || status}\r\n" \
             "Date: #{httpdate}\r\n" \
-            "Status: #{status}\r\n" \
             "Connection: close\r\n"
       headers.each do |key, value|
         case key
