@@ -17,11 +17,7 @@ endif
 RUBY_ENGINE := $(shell $(RUBY) -e 'puts((RUBY_ENGINE rescue "ruby"))')
 export RUBY_ENGINE
 
-isolate_libs := ../tmp/isolate/$(RUBY_ENGINE)-$(RUBY_VERSION).mk
-$(isolate_libs): ../script/isolate_for_tests
-	@cd .. && $(RUBY) script/isolate_for_tests
--include $(isolate_libs)
-MYLIBS := $(RUBYLIB):$(ISOLATE_LIBS)
+MYLIBS := $(RUBYLIB)
 
 T = $(wildcard t[0-9][0-9][0-9][0-9]-*.sh)
 
