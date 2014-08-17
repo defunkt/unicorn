@@ -245,15 +245,8 @@ $(pkgtgz): .manifest fix-perms
 package: $(pkgtgz) $(pkggem)
 
 release: verify package $(release_notes) $(release_changes)
-	# make tgz release on RubyForge
-	rubyforge add_release -f -n $(release_notes) -a $(release_changes) \
-	  $(rfproject) $(rfpackage) $(VERSION) $(pkgtgz)
 	# push gem to Gemcutter
 	gem push $(pkggem)
-	# in case of gem downloads from RubyForge releases page
-	-rubyforge add_file \
-	  $(rfproject) $(rfpackage) $(VERSION) $(pkggem)
-	$(RAKE) fm_update VERSION=$(VERSION)
 else
 gem install-gem: GIT-VERSION-FILE
 	$(MAKE) $@ VERSION=$(GIT_VERSION)

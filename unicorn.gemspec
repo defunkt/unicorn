@@ -26,7 +26,6 @@ Gem::Specification.new do |s|
   s.files = manifest
   s.homepage = Wrongdoc.config[:rdoc_url]
   s.rdoc_options = rdoc_options
-  s.rubyforge_project = %q{mongrel}
   s.test_files = test_files
 
   # for people that are absolutely stuck on Rails 2.3.2 and can't
