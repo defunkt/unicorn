@@ -37,7 +37,6 @@ Gem::Specification.new do |s|
   s.add_dependency(%q<kgio>, '~> 2.6')
   s.add_dependency(%q<raindrops>, '~> 0.7')
 
-  s.add_development_dependency('isolate', '~> 3.2')
   s.add_development_dependency('wrongdoc', '~> 1.8')
 
   s.licenses = ["GPLv2+", "Ruby 1.8"]
