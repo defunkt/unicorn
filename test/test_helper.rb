@@ -1,10 +1,10 @@
 # -*- encoding: binary -*-
 
-# Copyright (c) 2005 Zed A. Shaw 
+# Copyright (c) 2005 Zed A. Shaw
 # You can redistribute it and/or modify it under the same terms as Ruby 1.8 or
 # the GPLv2+ (GPLv3+ preferred)
 #
-# Additional work donated by contributors.  See http://mongrel.rubyforge.org/attributions.html 
+# Additional work donated by contributors.  See git history
 # for more information.
 
 STDIN.sync = STDOUT.sync = STDERR.sync = true # buffering makes debugging hard
