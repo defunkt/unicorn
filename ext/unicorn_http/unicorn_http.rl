@@ -29,29 +29,6 @@ void init_unicorn_httpdate(void);
 /* all of these flags need to be set for keepalive to be supported */
 #define UH_FL_KEEPALIVE (UH_FL_KAVERSION | UH_FL_REQEOF | UH_FL_HASHEADER)
 
-static unsigned long keepalive_requests = 100; /* same as nginx */
-
-/*
- * Returns the maximum number of keepalive requests a client may make
- * before the parser refuses to continue.
- */
-static VALUE ka_req(VALUE self)
-{
-  return ULONG2NUM(keepalive_requests);
-}
-
-/*
- * Sets the maximum number of keepalive requests a client may make.
- * A special value of +nil+ causes this to be the maximum value
- * possible (this is architecture-dependent).
- */
-static VALUE set_ka_req(VALUE self, VALUE val)
-{
-  keepalive_requests = NIL_P(val) ? ULONG_MAX : NUM2ULONG(val);
-
-  return ka_req(self);
-}
-
 static size_t MAX_HEADER_LEN = 1024 * (80 + 32); /* same as Mongrel */
 
 /* this is only intended for use with Rainbows! */
@@ -64,7 +41,6 @@ static VALUE set_maxhdrlen(VALUE self, VALUE len)
 struct http_parser {
   int cs; /* Ragel internal state */
   unsigned int flags;
-  unsigned long nr_requests;
   size_t mark;
   size_t offset;
   union { /* these 2 fields don't nest */
@@ -580,7 +556,6 @@ static VALUE HttpParser_init(VALUE self)
   http_parser_init(hp);
   hp->buf = rb_str_new(NULL, 0);
   hp->env = rb_hash_new();
-  hp->nr_requests = keepalive_requests;
 
   return self;
 }
@@ -814,15 +789,13 @@ static VALUE HttpParser_keepalive(VALUE self)
  *    parser.next? => true or false
  *
  * Exactly like HttpParser#keepalive?, except it will reset the internal
- * parser state on next parse if it returns true.  It will also respect
- * the maximum *keepalive_requests* value and return false if that is
- * reached.
+ * parser state on next parse if it returns true.
  */
 static VALUE HttpParser_next(VALUE self)
 {
   struct http_parser *hp = data_get(self);
 
-  if ((HP_FL_ALL(hp, KEEPALIVE)) && (hp->nr_requests-- != 0)) {
+  if (HP_FL_ALL(hp, KEEPALIVE)) {
     HP_FL_SET(hp, TO_CLEAR);
     return Qtrue;
   }
@@ -984,12 +957,6 @@ void Init_unicorn_http(void)
    */
   rb_define_const(cHttpParser, "LENGTH_MAX", OFFT2NUM(UH_OFF_T_MAX));
 
-  /* default value for keepalive_requests */
-  rb_define_const(cHttpParser, "KEEPALIVE_REQUESTS_DEFAULT",
-                  ULONG2NUM(keepalive_requests));
-
-  rb_define_singleton_method(cHttpParser, "keepalive_requests", ka_req, 0);
-  rb_define_singleton_method(cHttpParser, "keepalive_requests=", set_ka_req, 1);
   rb_define_singleton_method(cHttpParser, "max_header_len=", set_maxhdrlen, 1);
 
   init_common_fields();
