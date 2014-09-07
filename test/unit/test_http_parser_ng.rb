@@ -11,6 +11,12 @@ class HttpParserNgTest < Test::Unit::TestCase
     @parser = HttpParser.new
   end
 
+  def test_parser_max_len
+    assert_raises(RangeError) do
+      HttpParser.max_header_len = 0xffffffff + 1
+    end
+  end
+
   def test_next_clear
     r = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
     @parser.buf << r

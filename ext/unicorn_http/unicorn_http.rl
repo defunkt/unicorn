@@ -29,27 +29,27 @@ void init_unicorn_httpdate(void);
 /* all of these flags need to be set for keepalive to be supported */
 #define UH_FL_KEEPALIVE (UH_FL_KAVERSION | UH_FL_REQEOF | UH_FL_HASHEADER)
 
-static size_t MAX_HEADER_LEN = 1024 * (80 + 32); /* same as Mongrel */
+static unsigned int MAX_HEADER_LEN = 1024 * (80 + 32); /* same as Mongrel */
 
 /* this is only intended for use with Rainbows! */
 static VALUE set_maxhdrlen(VALUE self, VALUE len)
 {
-  return SIZET2NUM(MAX_HEADER_LEN = NUM2SIZET(len));
+  return UINT2NUM(MAX_HEADER_LEN = NUM2UINT(len));
 }
 
 /* keep this small for Rainbows! since every client has one */
 struct http_parser {
   int cs; /* Ragel internal state */
   unsigned int flags;
-  size_t mark;
-  size_t offset;
+  unsigned int mark;
+  unsigned int offset;
   union { /* these 2 fields don't nest */
-    size_t field;
-    size_t query;
+    unsigned int field;
+    unsigned int query;
   } start;
   union {
-    size_t field_len; /* only used during header processing */
-    size_t dest_offset; /* only used during body processing */
+    unsigned int field_len; /* only used during header processing */
+    unsigned int dest_offset; /* only used during body processing */
   } s;
   VALUE buf;
   VALUE env;
@@ -74,7 +74,7 @@ static void parser_raise(VALUE klass, const char *msg)
 }
 
 #define REMAINING (unsigned long)(pe - p)
-#define LEN(AT, FPC) (FPC - buffer - hp->AT)
+#define LEN(AT, FPC) (FPC - buffer - (unsigned long)hp->AT)
 #define MARK(M,FPC) (hp->M = (FPC) - buffer)
 #define PTR_TO(F) (buffer + hp->F)
 #define STR_NEW(M,FPC) rb_str_new(PTR_TO(M), LEN(M, FPC))
