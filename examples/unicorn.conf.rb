@@ -54,11 +54,22 @@ GC.respond_to?(:copy_on_write_friendly=) and
 # fast LAN.
 check_client_connection false
 
+# local variable to guard against running a hook multiple times
+run_once = true
+
 before_fork do |server, worker|
   # the following is highly recomended for Rails + "preload_app true"
   # as there's no need for the master process to hold a connection
   defined?(ActiveRecord::Base) and
     ActiveRecord::Base.connection.disconnect!
+
+  # Occasionally, it may be necessary to run non-idempotent code in the
+  # master before forking.  Keep in mind the above disconnect! example
+  # is idempotent and does not need a guard.
+  if run_once
+    # do_something_once_here ...
+    run_once = false # prevent from firing again
+  end
 
   # The following is only recommended for memory/DB-constrained
   # installations.  It is not needed if your system can house
