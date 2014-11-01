@@ -11,7 +11,6 @@ require "raindrops"
 class Unicorn::Worker
   # :stopdoc:
   attr_accessor :nr, :switched
-  attr_writer :tmp
   attr_reader :to_io # IO.select-compatible
 
   PER_DROP = Raindrops::PAGE_SIZE / Raindrops::SIZE
@@ -23,7 +22,7 @@ class Unicorn::Worker
     @offset = nr % PER_DROP
     @raindrop[@offset] = 0
     @nr = nr
-    @tmp = @switched = false
+    @switched = false
     @to_io, @master = Unicorn.pipe
   end
 
@@ -101,18 +100,8 @@ class Unicorn::Worker
     @raindrop[@offset]
   end
 
-  # only exists for compatibility
-  def tmp # :nodoc:
-    @tmp ||= begin
-      tmp = Unicorn::TmpIO.new
-      tmp.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
-      tmp
-    end
-  end
-
   # called in both the master (reaping worker) and worker (SIGQUIT handler)
   def close # :nodoc:
-    @tmp.close if @tmp
     @master.close if @master
     @to_io.close if @to_io
   end
@@ -141,7 +130,6 @@ class Unicorn::Worker
     uid = Etc.getpwnam(user).uid
     gid = Etc.getgrnam(group).gid if group
     Unicorn::Util.chown_logs(uid, gid)
-    @tmp.chown(uid, gid) if @tmp
     if gid && Process.egid != gid
       Process.initgroups(user, gid)
       Process::GID.change_privilege(gid)
