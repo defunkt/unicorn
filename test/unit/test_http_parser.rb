@@ -851,4 +851,18 @@ class HttpParserTest < Test::Unit::TestCase
          File.readable?(LINUX_PROC_PID_STATUS) &&
          !defined?(RUBY_ENGINE)
 
+  def test_memsize
+    require 'objspace'
+    if ObjectSpace.respond_to?(:memsize_of)
+      n = ObjectSpace.memsize_of(Unicorn::HttpParser.new)
+      assert_kind_of Integer, n
+      # need to update this when 128-bit machines come out
+      # n.b. actual struct size on 64-bit is 56 bytes + 40 bytes for RVALUE
+      # Ruby <= 2.2 objspace did not count the 40-byte RVALUE, 2.3 does.
+      assert_operator n, :<=, 96
+      assert_operator n, :>, 0
+    end
+  rescue LoadError
+    # not all Ruby implementations have objspace
+  end
 end

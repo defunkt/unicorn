@@ -442,11 +442,31 @@ post_exec: /* "_out:" also goes here */
   assert(hp->offset <= len && "offset longer than length");
 }
 
+static void hp_mark(void *ptr)
+{
+  struct http_parser *hp = ptr;
+
+  rb_gc_mark(hp->buf);
+  rb_gc_mark(hp->env);
+  rb_gc_mark(hp->cont);
+}
+
+static size_t hp_memsize(const void *ptr)
+{
+  return sizeof(struct http_parser);
+}
+
+static const rb_data_type_t hp_type = {
+  "unicorn_http",
+  { hp_mark, RUBY_TYPED_DEFAULT_FREE, hp_memsize, /* reserved */ },
+  /* parent, data, [ flags ] */
+};
+
 static struct http_parser *data_get(VALUE self)
 {
   struct http_parser *hp;
 
-  Data_Get_Struct(self, struct http_parser, hp);
+  TypedData_Get_Struct(self, struct http_parser, &hp_type, hp);
   assert(hp && "failed to extract http_parser struct");
   return hp;
 }
@@ -552,21 +572,12 @@ static void finalize_header(struct http_parser *hp)
     rb_hash_aset(hp->env, g_query_string, rb_str_new(NULL, 0));
 }
 
-static void hp_mark(void *ptr)
-{
-  struct http_parser *hp = ptr;
-
-  rb_gc_mark(hp->buf);
-  rb_gc_mark(hp->env);
-  rb_gc_mark(hp->cont);
-}
-
 static VALUE HttpParser_alloc(VALUE klass)
 {
   struct http_parser *hp;
-  return Data_Make_Struct(klass, struct http_parser, hp_mark, -1, hp);
-}
 
+  return TypedData_Make_Struct(klass, struct http_parser, &hp_type, hp);
+}
 
 /**
  * call-seq:
