@@ -770,7 +770,7 @@ class Unicorn::HttpServer
   def inherit_listeners!
     # inherit sockets from parents, they need to be plain Socket objects
     # before they become Kgio::UNIXServer or Kgio::TCPServer
-    inherited = ENV['UNICORN_FD'].to_s.split(/,/).map do |fd|
+    inherited = ENV['UNICORN_FD'].to_s.split(',').map do |fd|
       io = Socket.for_fd(fd.to_i)
       set_server_sockopt(io, listener_opts[sock_name(io)])
       prevent_autoclose(io)
