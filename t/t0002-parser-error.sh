@@ -42,7 +42,7 @@ t_begin "send a huge Request URI (REQUEST_PATH > (12 * 1024))" && {
 }
 
 t_begin "response should be a 414 (REQUEST_PATH)" && {
-	grep -F 'HTTP/1.1 414 Request-URI Too Long' $tmp
+	grep -F 'HTTP/1.1 414 ' $tmp
 }
 
 t_begin "send a huge Request URI (QUERY_STRING > (10 * 1024))" && {
@@ -63,7 +63,7 @@ t_begin "send a huge Request URI (QUERY_STRING > (10 * 1024))" && {
 }
 
 t_begin "response should be a 414 (QUERY_STRING)" && {
-	grep -F 'HTTP/1.1 414 Request-URI Too Long' $tmp
+	grep -F 'HTTP/1.1 414 ' $tmp
 }
 
 t_begin "send a huge Request URI (FRAGMENT > 1024)" && {
@@ -84,7 +84,7 @@ t_begin "send a huge Request URI (FRAGMENT > 1024)" && {
 }
 
 t_begin "response should be a 414 (FRAGMENT)" && {
-	grep -F 'HTTP/1.1 414 Request-URI Too Long' $tmp
+	grep -F 'HTTP/1.1 414 ' $tmp
 }
 
 t_begin "server stderr should be clean" && check_stderr
