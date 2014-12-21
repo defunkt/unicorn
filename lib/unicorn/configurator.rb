@@ -1,6 +1,5 @@
 # -*- encoding: binary -*-
 require 'logger'
-require 'unicorn/ssl_configurator'
 
 # Implements a simple DSL for configuring a \Unicorn server.
 #
@@ -13,7 +12,6 @@ require 'unicorn/ssl_configurator'
 # See the link:/TUNING.html document for more information on tuning unicorn.
 class Unicorn::Configurator
   include Unicorn
-  include Unicorn::SSLConfigurator
 
   # :stopdoc:
   attr_accessor :set, :config_file, :after_reload
