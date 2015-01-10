@@ -10,7 +10,6 @@ SIGNALS
 KNOWN_ISSUES
 TODO
 NEWS
-ChangeLog
 LATEST
 lib/unicorn.rb
 lib/unicorn/configurator.rb

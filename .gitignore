@@ -15,11 +15,11 @@ ext/unicorn_http/unicorn_http.c
 log/
 pkg/
 /vendor
-/NEWS
-/ChangeLog
+/NEWS*
 /.manifest
 /GIT-VERSION-FILE
 /man
 /tmp
 /LATEST
 /lib/unicorn/version.rb
+/*_1
