@@ -8,6 +8,8 @@ RUBY = ruby
 RAKE = rake
 RAGEL = ragel
 RSYNC = rsync
+OLDDOC = olddoc
+RDOC = rdoc
 
 GIT-VERSION-FILE: .FORCE-GIT-VERSION-FILE
 	@./GIT-VERSION-GEN
@@ -152,35 +154,31 @@ clean:
 man html:
 	$(MAKE) -C Documentation install-$@
 
-pkg_extra := GIT-VERSION-FILE lib/unicorn/version.rb ChangeLog LATEST NEWS \
+pkg_extra := GIT-VERSION-FILE lib/unicorn/version.rb LATEST NEWS \
              $(ext)/unicorn_http.c $(man1_paths)
 
-ChangeLog: GIT-VERSION-FILE .wrongdoc.yml
-	wrongdoc prepare
-
-.manifest: ChangeLog $(ext)/unicorn_http.c man
+.manifest: $(ext)/unicorn_http.c man
 	(git ls-files && for i in $@ $(pkg_extra); do echo $$i; done) | \
 	  LC_ALL=C sort > $@+
 	cmp $@+ $@ || mv $@+ $@
 	$(RM) $@+
 
-doc: .document $(ext)/unicorn_http.c man html .wrongdoc.yml
-	for i in $(man1_rdoc); do echo > $$i; done
+PLACEHOLDERS = $(man1_rdoc)
+doc: .document $(ext)/unicorn_http.c man html .olddoc.yml $(PLACEHOLDERS)
 	find bin lib -type f -name '*.rbc' -exec rm -f '{}' ';'
 	$(RM) -r doc
-	wrongdoc all
+	$(OLDDOC) prepare
+	$(RDOC) -f oldweb
+	$(OLDDOC) merge
 	install -m644 COPYING doc/COPYING
 	install -m644 $(shell LC_ALL=C grep '^[A-Z]' .document) doc/
 	install -m644 $(man1_paths) doc/
 	tar cf - $$(git ls-files examples/) | (cd doc && tar xf -)
-	$(RM) $(man1_rdoc)
 
 # publishes docs to http://unicorn.bogomips.org
 publish_doc:
 	-git set-file-times
 	$(MAKE) doc
-	find doc/images -type f | \
-		TZ=UTC xargs touch -d '1970-01-01 00:00:02' doc/rdoc.css
 	$(MAKE) doc_gz
 	chmod 644 $$(find doc -type f)
 	$(RSYNC) -av doc/ unicorn.bogomips.org:/srv/unicorn/
@@ -188,27 +186,15 @@ publish_doc:
 
 # Create gzip variants of the same timestamp as the original so nginx
 # "gzip_static on" can serve the gzipped versions directly.
-doc_gz: docs = $(shell find doc -type f ! -regex '^.*\.\(gif\|jpg\|png\|gz\)$$')
+doc_gz: docs = $(shell find doc -type f ! -regex '^.*\.gz$$')
 doc_gz:
 	for i in $(docs); do \
 	  gzip --rsyncable -9 < $$i > $$i.gz; touch -r $$i $$i.gz; done
 
 ifneq ($(VERSION),)
-rfproject := mongrel
 rfpackage := unicorn
 pkggem := pkg/$(rfpackage)-$(VERSION).gem
 pkgtgz := pkg/$(rfpackage)-$(VERSION).tgz
-release_notes := release_notes-$(VERSION)
-release_changes := release_changes-$(VERSION)
-
-release-notes: $(release_notes)
-release-changes: $(release_changes)
-$(release_changes):
-	wrongdoc release_changes > $@+
-	$(VISUAL) $@+ && test -s $@+ && mv $@+ $@
-$(release_notes):
-	wrongdoc release_notes > $@+
-	$(VISUAL) $@+ && test -s $@+ && mv $@+ $@
 
 # ensures we're actually on the tagged $(VERSION), only used for release
 verify:
@@ -244,13 +230,16 @@ $(pkgtgz): .manifest fix-perms
 
 package: $(pkgtgz) $(pkggem)
 
-release: verify package $(release_notes) $(release_changes)
+release: verify package
 	# push gem to Gemcutter
 	gem push $(pkggem)
 else
 gem install-gem: GIT-VERSION-FILE
 	$(MAKE) $@ VERSION=$(GIT_VERSION)
 endif
+
+$(PLACEHOLDERS):
+	echo olddoc_placeholder > $@
 
 .PHONY: .FORCE-GIT-VERSION-FILE doc $(T) $(slow_tests) man
 .PHONY: test-install
