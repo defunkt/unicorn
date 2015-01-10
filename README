@@ -95,13 +95,13 @@ from git.
 
 == Usage
 
-=== non-Rails Rack applications
+=== Rack (including Rails 3+) applications
 
 In APP_ROOT, run:
 
   unicorn
 
-=== for Rails applications (should work for all 1.2 or later versions)
+=== Ancient Rails 1.2 - 2.x versions
 
 In RAILS_ROOT, run:
 
@@ -122,8 +122,7 @@ The default settings are designed for maximum out-of-the-box
 compatibility with existing applications.
 
 Most command-line options for other Rack applications (above) are also
-supported.  Run `unicorn -h` or `unicorn_rails -h` to see command-line
-options.
+supported.  Run `unicorn -h` to see command-line options.
 
 == Disclaimer
 
