@@ -17,7 +17,6 @@ Gem::Specification.new do |s|
   s.version = ENV["VERSION"].dup
   s.authors = ["#{name} hackers"]
   s.summary = summary
-  s.date = Time.now.utc.strftime('%Y-%m-%d')
   s.description = readme_description
   s.email = %q{unicorn-public@bogomips.org}
   s.executables = %w(unicorn unicorn_rails)
@@ -25,7 +24,6 @@ Gem::Specification.new do |s|
   s.extra_rdoc_files = extra_rdoc_files(manifest)
   s.files = manifest
   s.homepage = Olddoc.config['rdoc_url']
-  s.rdoc_options = rdoc_options
   s.test_files = test_files
 
   # for people that are absolutely stuck on Rails 2.3.2 and can't
