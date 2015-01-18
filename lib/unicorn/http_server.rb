@@ -265,7 +265,7 @@ class Unicorn::HttpServer
   # is signalling us too often.
   def join
     respawn = true
-    last_check = Time.now
+    last_check = time_now
 
     proc_name 'master'
     logger.info "master process ready" # test_exec.rb relies on this message
@@ -283,7 +283,7 @@ class Unicorn::HttpServer
       when nil
         # avoid murdering workers after our master process (or the
         # machine) comes out of suspend/hibernation
-        if (last_check + @timeout) >= (last_check = Time.now)
+        if (last_check + @timeout) >= (last_check = time_now)
           sleep_time = murder_lazy_workers
         else
           sleep_time = @timeout/2.0 + 1
@@ -337,8 +337,8 @@ class Unicorn::HttpServer
   # Terminates all workers, but does not exit master process
   def stop(graceful = true)
     self.listeners = []
-    limit = Time.now + timeout
-    until WORKERS.empty? || Time.now > limit
+    limit = time_now + timeout
+    until WORKERS.empty? || time_now > limit
       if graceful
         soft_kill_each_worker(:QUIT)
       else
@@ -470,7 +470,7 @@ class Unicorn::HttpServer
   # forcibly terminate all workers that haven't checked in in timeout seconds.  The timeout is implemented using an unlinked File
   def murder_lazy_workers
     next_sleep = @timeout - 1
-    now = Time.now.to_i
+    now = time_now.to_i
     WORKERS.dup.each_pair do |wpid, worker|
       tick = worker.tick
       0 == tick and next # skip workers that haven't processed any clients
@@ -650,7 +650,7 @@ class Unicorn::HttpServer
     begin
       nr < 0 and reopen_worker_logs(worker.nr)
       nr = 0
-      worker.tick = Time.now.to_i
+      worker.tick = time_now.to_i
       tmp = ready.dup
       while sock = tmp.shift
         # Unicorn::Worker#kgio_tryaccept is not like accept(2) at all,
@@ -658,7 +658,7 @@ class Unicorn::HttpServer
         if client = sock.kgio_tryaccept
           process_client(client)
           nr += 1
-          worker.tick = Time.now.to_i
+          worker.tick = time_now.to_i
         end
         break if nr < 0
       end
@@ -675,7 +675,7 @@ class Unicorn::HttpServer
       ppid == Process.ppid or return
 
       # timeout used so we can detect parent death:
-      worker.tick = Time.now.to_i
+      worker.tick = time_now.to_i
       ret = IO.select(readers, nil, nil, @timeout) and ready = ret[0]
     rescue => e
       redo if nr < 0 && readers[0]
@@ -798,5 +798,18 @@ class Unicorn::HttpServer
     NEW_LISTENERS.each { |addr| listen(addr) }
     raise ArgumentError, "no listeners" if LISTENERS.empty?
     NEW_LISTENERS.clear
+  end
+
+  # try to use the monotonic clock in Ruby >= 2.1, it is immune to clock
+  # offset adjustments and generates less garbage (Float vs Time object)
+  begin
+    Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    def time_now
+      Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    end
+  rescue NameError, NoMethodError
+    def time_now # Ruby <= 2.0
+      Time.now
+    end
   end
 end
