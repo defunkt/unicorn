@@ -69,13 +69,25 @@ static void parser_raise(VALUE klass, const char *msg)
   VALUE exc = rb_exc_new2(klass, msg);
   VALUE bt = rb_ary_new();
 
-	rb_funcall(exc, id_set_backtrace, 1, bt);
-	rb_exc_raise(exc);
+  rb_funcall(exc, id_set_backtrace, 1, bt);
+  rb_exc_raise(exc);
+}
+
+static inline unsigned int ulong2uint(unsigned long n)
+{
+  unsigned int i = (unsigned int)n;
+
+  if (sizeof(unsigned int) != sizeof(unsigned long)) {
+    if ((unsigned long)i != n) {
+      rb_raise(rb_eRangeError, "too large to be 32-bit uint: %lu", n);
+    }
+  }
+  return i;
 }
 
 #define REMAINING (unsigned long)(pe - p)
-#define LEN(AT, FPC) (FPC - buffer - (unsigned long)hp->AT)
-#define MARK(M,FPC) (hp->M = (FPC) - buffer)
+#define LEN(AT, FPC) (ulong2uint(FPC - buffer) - hp->AT)
+#define MARK(M,FPC) (hp->M = ulong2uint((FPC) - buffer))
 #define PTR_TO(F) (buffer + hp->F)
 #define STR_NEW(M,FPC) rb_str_new(PTR_TO(M), LEN(M, FPC))
 #define STRIPPED_STR_NEW(M,FPC) stripped_str_new(PTR_TO(M), LEN(M, FPC))
@@ -411,7 +423,7 @@ http_parser_execute(struct http_parser *hp, char *buffer, size_t len)
 post_exec: /* "_out:" also goes here */
   if (hp->cs != http_parser_error)
     hp->cs = cs;
-  hp->offset = p - buffer;
+  hp->offset = ulong2uint(p - buffer);
 
   assert(p <= pe && "buffer overflow after parsing execute");
   assert(hp->offset <= len && "offset longer than length");
