@@ -85,10 +85,13 @@ test-unit: $(wildcard test/unit/test_*.rb)
 $(slow_tests): $(test_prefix)/.stamp
 	@$(MAKE) $(shell $(awk_slow) $@)
 
+test-require: $(ext)/unicorn_http.$(DLEXT)
+	$(RUBY) --disable-gems -I$(ext) -runicorn_http -e Unicorn
+
 test-integration: $(test_prefix)/.stamp
 	$(MAKE) -C t
 
-check: test test-integration
+check: test-require test test-integration
 test-all: check
 
 TEST_OPTS = -v

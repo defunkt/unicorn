@@ -66,7 +66,7 @@ static VALUE httpdate(VALUE self)
 
 void init_unicorn_httpdate(void)
 {
-	VALUE mod = rb_const_get(rb_cObject, rb_intern("Unicorn"));
+	VALUE mod = rb_define_module("Unicorn");
 	mod = rb_define_module_under(mod, "HttpResponse");
 
 	buf = rb_str_new(0, buf_capa - 1);
