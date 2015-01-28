@@ -57,10 +57,7 @@ $(ext)/Makefile: $(ext)/extconf.rb $(c_files)
 	cd $(@D) && $(RUBY) extconf.rb
 $(ext)/unicorn_http.$(DLEXT): $(ext)/Makefile
 	$(MAKE) -C $(@D)
-lib/unicorn_http.$(DLEXT): $(ext)/unicorn_http.$(DLEXT)
-	@mkdir -p lib
-	install -m644 $< $@
-http: lib/unicorn_http.$(DLEXT)
+http: $(ext)/unicorn_http.$(DLEXT)
 
 test-install: $(test_prefix)/.stamp
 $(test_prefix)/.stamp: $(inst_deps)
@@ -131,7 +128,6 @@ $(T): $(test_prefix)/.stamp
 
 install: $(bins) $(ext)/unicorn_http.c
 	$(prep_setup_rb)
-	$(RM) lib/unicorn_http.$(DLEXT)
 	$(RM) -r .install-tmp
 	mkdir .install-tmp
 	cp -p bin/* .install-tmp
@@ -147,7 +143,7 @@ prep_setup_rb := @-$(RM) $(setup_rb_files);$(MAKE) -C $(ext) clean
 clean:
 	-$(MAKE) -C $(ext) clean
 	-$(MAKE) -C Documentation clean
-	$(RM) $(ext)/Makefile lib/unicorn_http.$(DLEXT)
+	$(RM) $(ext)/Makefile
 	$(RM) $(setup_rb_files) $(t_log)
 	$(RM) -r $(test_prefix) man
 
@@ -157,7 +153,10 @@ man html:
 pkg_extra := GIT-VERSION-FILE lib/unicorn/version.rb LATEST NEWS \
              $(ext)/unicorn_http.c $(man1_paths)
 
-.manifest: $(ext)/unicorn_http.c man
+NEWS:
+	$(OLDDOC) prepare
+
+.manifest: $(ext)/unicorn_http.c man NEWS
 	(git ls-files && for i in $@ $(pkg_extra); do echo $$i; done) | \
 	  LC_ALL=C sort > $@+
 	cmp $@+ $@ || mv $@+ $@
