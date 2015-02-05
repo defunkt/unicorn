@@ -104,14 +104,8 @@ module Unicorn
   # :startdoc:
 end
 # :enddoc:
-require 'unicorn/const'
-require 'unicorn/socket_helper'
-require 'unicorn/stream_input'
-require 'unicorn/tee_input'
-require 'unicorn/http_request'
-require 'unicorn/configurator'
-require 'unicorn/tmpio'
-require 'unicorn/util'
-require 'unicorn/http_response'
-require 'unicorn/worker'
-require 'unicorn/http_server'
+
+%w(const socket_helper stream_input tee_input http_request configurator
+   tmpio util http_response worker http_server).each do |s|
+  require_relative "unicorn/#{s}"
+end

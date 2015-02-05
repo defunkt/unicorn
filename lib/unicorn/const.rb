@@ -41,4 +41,4 @@ module Unicorn::Const
 
   # :startdoc:
 end
-require 'unicorn/version'
+require_relative 'version'
