@@ -1,5 +1,6 @@
 # -*- encoding: binary -*-
 
+require 'fcntl'
 module Unicorn::Util
 
 # :stopdoc:

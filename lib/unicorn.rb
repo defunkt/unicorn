@@ -1,5 +1,4 @@
 # -*- encoding: binary -*-
-require 'fcntl'
 require 'etc'
 require 'stringio'
 require 'rack'
@@ -100,7 +99,7 @@ module Unicorn
 
   # remove this when we only support Ruby >= 2.0
   def self.pipe # :nodoc:
-    Kgio::Pipe.new.each { |io| io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
+    Kgio::Pipe.new.each { |io| io.close_on_exec = true }
   end
   # :startdoc:
 end

@@ -434,10 +434,7 @@ class Unicorn::HttpServer
     self.reexec_pid = fork do
       listener_fds = {}
       LISTENERS.each do |sock|
-        # IO#close_on_exec= will be available on any future version of
-        # Ruby that sets FD_CLOEXEC by default on new file descriptors
-        # ref: http://redmine.ruby-lang.org/issues/5041
-        sock.close_on_exec = false if sock.respond_to?(:close_on_exec=)
+        sock.close_on_exec = false
         listener_fds[sock.fileno] = sock
       end
       ENV['UNICORN_FD'] = listener_fds.keys.join(',')
@@ -451,7 +448,7 @@ class Unicorn::HttpServer
         next if listener_fds.include?(io)
         io = IO.for_fd(io) rescue next
         io.autoclose = false
-        io.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+        io.close_on_exec = true
       end
 
       # exec(command, hash) works in at least 1.9.1+, but will only be
@@ -607,7 +604,7 @@ class Unicorn::HttpServer
     WORKERS.clear
 
     after_fork.call(self, worker) # can drop perms and create listeners
-    LISTENERS.each { |sock| sock.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) }
+    LISTENERS.each { |sock| sock.close_on_exec = true }
 
     worker.user(*user) if user.kind_of?(Array) && ! worker.switched
     self.timeout /= 2.0 # halve it for select()
