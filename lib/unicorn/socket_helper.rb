@@ -4,8 +4,6 @@ require 'socket'
 
 module Unicorn
   module SocketHelper
-    # :stopdoc:
-    include Socket::Constants
 
     # prevents IO objects in here from being GC-ed
     # kill this when we drop 1.8 support
@@ -32,33 +30,11 @@ module Unicorn
       :tcp_nopush => nil,
       :tcp_nodelay => true,
     }
-    #:startdoc:
 
     # configure platform-specific options (only tested on Linux 2.6 so far)
-    case RUBY_PLATFORM
-    when /linux/
-      # from /usr/include/linux/tcp.h
-      TCP_DEFER_ACCEPT = 9 unless defined?(TCP_DEFER_ACCEPT)
-
-      # do not send out partial frames (Linux)
-      TCP_CORK = 3 unless defined?(TCP_CORK)
-
-      # Linux got SO_REUSEPORT in 3.9, BSDs have had it for ages
-      unless defined?(SO_REUSEPORT)
-        if RUBY_PLATFORM =~ /(?:alpha|mips|parisc|sparc)/
-          SO_REUSEPORT = 0x0200 # untested
-        else
-          SO_REUSEPORT = 15 # only tested on x86_64 and i686
-        end
-      end
-    when /freebsd/
-      # do not send out partial frames (FreeBSD)
-      TCP_NOPUSH = 4 unless defined?(TCP_NOPUSH)
-
-      def accf_arg(af_name)
-        [ af_name, nil ].pack('a16a240')
-      end if defined?(SO_ACCEPTFILTER)
-    end
+    def accf_arg(af_name)
+      [ af_name, nil ].pack('a16a240')
+    end if RUBY_PLATFORM =~ /freebsd/ && Socket.const_defined?(:SO_ACCEPTFILTER)
 
     def prevent_autoclose(io)
       if io.respond_to?(:autoclose=)
@@ -71,37 +47,38 @@ module Unicorn
     def set_tcp_sockopt(sock, opt)
       # just in case, even LANs can break sometimes.  Linux sysadmins
       # can lower net.ipv4.tcp_keepalive_* sysctl knobs to very low values.
-      sock.setsockopt(SOL_SOCKET, SO_KEEPALIVE, 1) if defined?(SO_KEEPALIVE)
+      Socket.const_defined?(:SO_KEEPALIVE) and
+        sock.setsockopt(:SOL_SOCKET, :SO_KEEPALIVE, 1)
 
-      if defined?(TCP_NODELAY)
+      if Socket.const_defined?(:TCP_NODELAY)
         val = opt[:tcp_nodelay]
-        val = DEFAULTS[:tcp_nodelay] if nil == val
-        sock.setsockopt(IPPROTO_TCP, TCP_NODELAY, val ? 1 : 0)
+        val = DEFAULTS[:tcp_nodelay] if val.nil?
+        sock.setsockopt(:IPPROTO_TCP, :TCP_NODELAY, val ? 1 : 0)
       end
 
       val = opt[:tcp_nopush]
       unless val.nil?
-        if defined?(TCP_CORK) # Linux
-          sock.setsockopt(IPPROTO_TCP, TCP_CORK, val)
-        elsif defined?(TCP_NOPUSH) # TCP_NOPUSH is lightly tested (FreeBSD)
-          sock.setsockopt(IPPROTO_TCP, TCP_NOPUSH, val)
+        if Socket.const_defined?(:TCP_CORK) # Linux
+          sock.setsockopt(:IPPROTO_TCP, :TCP_CORK, val)
+        elsif Socket.const_defined?(:TCP_NOPUSH) # FreeBSD
+          sock.setsockopt(:IPPROTO_TCP, :TCP_NOPUSH, val)
         end
       end
 
       # No good reason to ever have deferred accepts off
       # (except maybe benchmarking)
-      if defined?(TCP_DEFER_ACCEPT)
+      if Socket.const_defined?(:TCP_DEFER_ACCEPT)
         # this differs from nginx, since nginx doesn't allow us to
         # configure the the timeout...
         seconds = opt[:tcp_defer_accept]
         seconds = DEFAULTS[:tcp_defer_accept] if [true,nil].include?(seconds)
         seconds = 0 unless seconds # nil/false means disable this
-        sock.setsockopt(SOL_TCP, TCP_DEFER_ACCEPT, seconds)
+        sock.setsockopt(:IPPROTO_TCP, :TCP_DEFER_ACCEPT, seconds)
       elsif respond_to?(:accf_arg)
         name = opt[:accept_filter]
-        name = DEFAULTS[:accept_filter] if nil == name
+        name = DEFAULTS[:accept_filter] if name.nil?
         begin
-          sock.setsockopt(SOL_SOCKET, SO_ACCEPTFILTER, accf_arg(name))
+          sock.setsockopt(:SOL_SOCKET, :SO_ACCEPTFILTER, accf_arg(name))
         rescue => e
           logger.error("#{sock_name(sock)} " \
                        "failed to set accept_filter=#{name} (#{e.inspect})")
@@ -114,10 +91,11 @@ module Unicorn
 
       TCPSocket === sock and set_tcp_sockopt(sock, opt)
 
-      if opt[:rcvbuf] || opt[:sndbuf]
+      rcvbuf, sndbuf = opt.values_at(:rcvbuf, :sndbuf)
+      if rcvbuf || sndbuf
         log_buffer_sizes(sock, "before: ")
-        sock.setsockopt(SOL_SOCKET, SO_RCVBUF, opt[:rcvbuf]) if opt[:rcvbuf]
-        sock.setsockopt(SOL_SOCKET, SO_SNDBUF, opt[:sndbuf]) if opt[:sndbuf]
+        sock.setsockopt(:SOL_SOCKET, :SO_RCVBUF, rcvbuf) if rcvbuf
+        sock.setsockopt(:SOL_SOCKET, :SO_SNDBUF, sndbuf) if sndbuf
         log_buffer_sizes(sock, " after: ")
       end
       sock.listen(opt[:backlog])
@@ -126,8 +104,8 @@ module Unicorn
     end
 
     def log_buffer_sizes(sock, pfx = '')
-      rcvbuf = sock.getsockopt(SOL_SOCKET, SO_RCVBUF).unpack('i')
-      sndbuf = sock.getsockopt(SOL_SOCKET, SO_SNDBUF).unpack('i')
+      rcvbuf = sock.getsockopt(:SOL_SOCKET, :SO_RCVBUF).int
+      sndbuf = sock.getsockopt(:SOL_SOCKET, :SO_SNDBUF).int
       logger.info "#{pfx}#{sock_name(sock)} rcvbuf=#{rcvbuf} sndbuf=#{sndbuf}"
     end
 
@@ -172,15 +150,15 @@ module Unicorn
 
     def new_tcp_server(addr, port, opt)
       # n.b. we set FD_CLOEXEC in the workers
-      sock = Socket.new(opt[:ipv6] ? AF_INET6 : AF_INET, SOCK_STREAM, 0)
+      sock = Socket.new(opt[:ipv6] ? :AF_INET6 : :AF_INET, :SOCK_STREAM)
       if opt.key?(:ipv6only)
-        defined?(IPV6_V6ONLY) or
+        Socket.const_defined?(:IPV6_V6ONLY) or
           abort "Socket::IPV6_V6ONLY not defined, upgrade Ruby and/or your OS"
-        sock.setsockopt(IPPROTO_IPV6, IPV6_V6ONLY, opt[:ipv6only] ? 1 : 0)
+        sock.setsockopt(:IPPROTO_IPV6, :IPV6_V6ONLY, opt[:ipv6only] ? 1 : 0)
       end
-      sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-      if defined?(SO_REUSEPORT) && opt[:reuseport]
-        sock.setsockopt(SOL_SOCKET, SO_REUSEPORT, 1)
+      sock.setsockopt(:SOL_SOCKET, :SO_REUSEADDR, 1)
+      if Socket.const_defined?(:SO_REUSEPORT) && opt[:reuseport]
+        sock.setsockopt(:SOL_SOCKET, :SO_REUSEPORT, 1)
       end
       sock.bind(Socket.pack_sockaddr_in(port, addr))
       prevent_autoclose(sock)

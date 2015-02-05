@@ -189,7 +189,7 @@ class TestSocketHelper < Test::Unit::TestCase
     port = unused_port @test_addr
     name = "#@test_addr:#{port}"
     sock = bind_listen(name, :reuseport => true)
-    cur = sock.getsockopt(Socket::SOL_SOCKET, SO_REUSEPORT).unpack('i')[0]
+    cur = sock.getsockopt(:SOL_SOCKET, :SO_REUSEPORT).int
     assert_operator cur, :>, 0
   rescue Errno::ENOPROTOOPT
     # kernel does not support SO_REUSEPORT (older Linux)
