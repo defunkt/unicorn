@@ -5,10 +5,6 @@ require 'socket'
 module Unicorn
   module SocketHelper
 
-    # prevents IO objects in here from being GC-ed
-    # kill this when we drop 1.8 support
-    IO_PURGATORY = []
-
     # internal interface, only used by Rainbows!/Zbatery
     DEFAULTS = {
       # The semantics for TCP_DEFER_ACCEPT changed in Linux 2.6.32+
@@ -35,14 +31,6 @@ module Unicorn
     def accf_arg(af_name)
       [ af_name, nil ].pack('a16a240')
     end if RUBY_PLATFORM =~ /freebsd/ && Socket.const_defined?(:SO_ACCEPTFILTER)
-
-    def prevent_autoclose(io)
-      if io.respond_to?(:autoclose=)
-        io.autoclose = false
-      else
-        IO_PURGATORY << io
-      end
-    end
 
     def set_tcp_sockopt(sock, opt)
       # just in case, even LANs can break sometimes.  Linux sysadmins
@@ -161,7 +149,7 @@ module Unicorn
         sock.setsockopt(:SOL_SOCKET, :SO_REUSEPORT, 1)
       end
       sock.bind(Socket.pack_sockaddr_in(port, addr))
-      prevent_autoclose(sock)
+      sock.autoclose = false
       Kgio::TCPServer.for_fd(sock.fileno)
     end
 
