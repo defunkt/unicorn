@@ -1,6 +1,6 @@
 # -*- encoding: binary -*-
 
-require 'test/test_helper'
+require './test/test_helper'
 require 'digest/md5'
 
 include Unicorn

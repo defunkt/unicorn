@@ -7,7 +7,7 @@
 # Additional work donated by contributors.  See git history
 # for more information.
 
-require 'test/test_helper'
+require './test/test_helper'
 require 'time'
 
 include Unicorn

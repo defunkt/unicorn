@@ -1,7 +1,7 @@
 # -*- encoding: binary -*-
 
 # Copyright (c) 2009 Eric Wong
-require 'test/test_helper'
+require './test/test_helper'
 require 'digest/md5'
 
 include Unicorn

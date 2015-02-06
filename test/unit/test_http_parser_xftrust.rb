@@ -1,5 +1,5 @@
 # -*- encoding: binary -*-
-require 'test/test_helper'
+require './test/test_helper'
 
 include Unicorn
 
