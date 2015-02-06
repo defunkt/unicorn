@@ -306,8 +306,6 @@ class Unicorn::Configurator
   #   to receive IPv4 queries on dual-stack systems.  A separate IPv4-only
   #   listener is required if this is true.
   #
-  #   This option is only available for Ruby 1.9.2 and later.
-  #
   #   Enabling this option for the IPv6-only listener and having a
   #   separate IPv4 listener is recommended if you wish to support IPv6
   #   on the same TCP port.  Otherwise, the value of \env[\"REMOTE_ADDR\"]
