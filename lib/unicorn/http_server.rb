@@ -69,7 +69,7 @@ class Unicorn::HttpServer
   #
   #   Unicorn::HttpServer::START_CTX[0] = "/home/bofh/2.2.0/bin/unicorn"
   START_CTX = {
-    :argv => ARGV.map { |arg| arg.dup },
+    :argv => ARGV.map(&:dup),
     0 => $0.dup,
   }
   # We favor ENV['PWD'] since it is (usually) symlink aware for Capistrano
@@ -483,7 +483,7 @@ class Unicorn::HttpServer
   end
 
   def after_fork_internal
-    SELF_PIPE.each { |io| io.close }.clear # this is master-only, now
+    SELF_PIPE.each(&:close).clear # this is master-only, now
     @ready_pipe.close if @ready_pipe
     Unicorn::Configurator::RACKUP.clear
     @ready_pipe = @init_listeners = @before_exec = @before_fork = nil
