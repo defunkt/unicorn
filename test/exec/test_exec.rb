@@ -2,7 +2,7 @@
 
 # Copyright (c) 2009 Eric Wong
 FLOCK_PATH = File.expand_path(__FILE__)
-require 'test/test_helper'
+require './test/test_helper'
 
 do_test = true
 $unicorn_bin = ENV['UNICORN_TEST_BIN'] || "unicorn"

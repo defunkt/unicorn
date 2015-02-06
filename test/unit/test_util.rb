@@ -1,6 +1,6 @@
 # -*- encoding: binary -*-
 
-require 'test/test_helper'
+require './test/test_helper'
 require 'tempfile'
 
 class TestUtil < Test::Unit::TestCase

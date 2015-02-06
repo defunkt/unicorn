@@ -59,13 +59,17 @@ $(ext)/unicorn_http.$(DLEXT): $(ext)/Makefile
 	$(MAKE) -C $(@D)
 http: $(ext)/unicorn_http.$(DLEXT)
 
+# only used for tests
+http-install: $(ext)/unicorn_http.$(DLEXT)
+	install -m644 $< lib/
+
 test-install: $(test_prefix)/.stamp
 $(test_prefix)/.stamp: $(inst_deps)
 	mkdir -p $(test_prefix)/.ccache
 	tar cf - $(inst_deps) GIT-VERSION-GEN | \
 	  (cd $(test_prefix) && tar xf -)
 	$(MAKE) -C $(test_prefix) clean
-	$(MAKE) -C $(test_prefix) http shebang RUBY="$(RUBY)"
+	$(MAKE) -C $(test_prefix) http-install shebang RUBY="$(RUBY)"
 	> $@
 
 # this is only intended to be run within $(test_prefix)
@@ -119,14 +123,14 @@ run_test = $(quiet_pre) \
 %.n: arg = $(subst .n,,$(subst --, -n ,$@))
 %.n: t = $(subst .n,$(log_suffix),$@)
 %.n: export PATH := $(test_prefix)/bin:$(PATH)
-%.n: export RUBYLIB := $(test_prefix):$(test_prefix)/lib:$(MYLIBS)
+%.n: export RUBYLIB := $(test_prefix)/lib:$(MYLIBS)
 %.n: $(test_prefix)/.stamp
 	$(run_test)
 
 $(T): arg = $@
 $(T): t = $(subst .rb,$(log_suffix),$@)
 $(T): export PATH := $(test_prefix)/bin:$(PATH)
-$(T): export RUBYLIB := $(test_prefix):$(test_prefix)/lib:$(MYLIBS)
+$(T): export RUBYLIB := $(test_prefix)/lib:$(MYLIBS)
 $(T): $(test_prefix)/.stamp
 	$(run_test)
 

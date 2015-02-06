@@ -6,7 +6,7 @@
 #
 # Ensure we stay sane in the face of signals being sent to us
 
-require 'test/test_helper'
+require './test/test_helper'
 
 include Unicorn
 

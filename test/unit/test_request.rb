@@ -4,7 +4,7 @@
 # You can redistribute it and/or modify it under the same terms as Ruby 1.8 or
 # the GPLv2+ (GPLv3+ preferred)
 
-require 'test/test_helper'
+require './test/test_helper'
 
 include Unicorn
 
