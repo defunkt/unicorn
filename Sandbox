@@ -86,7 +86,7 @@ For now workarounds include doing one of the following:
 
 3. Explicitly setting RUBYLIB or $LOAD_PATH to include any gem path
    where the unicorn gem is installed
-   (e.g. /usr/lib/ruby/gems/1.9.1/gems/unicorn-VERSION/lib)
+   (e.g. /usr/lib/ruby/gems/1.9.3/gems/unicorn-VERSION/lib)
 
 === RUBYOPT pollution from SIGUSR2 upgrades
 

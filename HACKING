@@ -19,13 +19,6 @@ RubyGems.
 Users of GNU-based systems (such as GNU/Linux) usually have GNU make
 installed as "make" instead of "gmake".
 
-Since we don't load RubyGems by default, loading Rack properly requires
-setting up RUBYLIB to point to where Rack is located.  Not loading
-RubyGems drastically lowers the time to run the full test suite.  You
-may setup a "local.mk" file in the top-level working directory to setup
-your RUBYLIB and any other environment variables.  A "local.mk.sample"
-file is provided for reference.
-
 Running the entire test suite with 4 tests in parallel:
 
   gmake -j4 check
@@ -70,10 +63,9 @@ becomes unavailable.
 
 === Ruby/C Compatibility
 
-We target Ruby 1.8.6+, 1.9 and will target Rubinius as it becomes
-production-ready.  We need the Ruby implementation to support fork,
-exec, pipe, UNIX signals, access to integer file descriptors and
-ability to use unlinked files.
+We target mainline Ruby 1.9.3 and later.  We need the Ruby
+implementation to support fork, exec, pipe, UNIX signals, access to
+integer file descriptors and ability to use unlinked files.
 
 All of our C code is OS-independent and should run on compilers
 supported by the versions of Ruby we target.
@@ -123,13 +115,6 @@ You can build the Unicorn gem with the following command:
 
 It is easy to install the contents of your git working directory:
 
-Via RubyGems (RubyGems 1.3.5+ recommended for prerelease versions):
+Via RubyGems
 
   gmake install-gem
-
-Without RubyGems (via setup.rb):
-
-  gmake install
-
-It is not at all recommended to mix a RubyGems installation with an
-installation done without RubyGems, however.

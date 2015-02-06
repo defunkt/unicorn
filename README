@@ -12,7 +12,8 @@ both the the request and response in between \Unicorn and slow clients.
   cut out everything that is better supported by the operating system,
   {nginx}[http://nginx.net/] or {Rack}[http://rack.github.io/].
 
-* Compatible with Ruby 1.8 and later.  Rubinius support is in-progress.
+* Compatible with Ruby 1.9.3 and later.
+  unicorn 4.8.x will remain supported for Ruby 1.8 users.
 
 * Process management: \Unicorn will reap and restart workers that
   die from broken apps.  There is no need to manage multiple processes

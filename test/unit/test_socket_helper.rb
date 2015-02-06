@@ -182,8 +182,8 @@ class TestSocketHelper < Test::Unit::TestCase
     sock = bind_listen "[#@test6_addr]:#{port}", :ipv6only => true
     cur = sock.getsockopt(:IPPROTO_IPV6, :IPV6_V6ONLY).unpack('i')[0]
     assert_equal 1, cur
-    rescue Errno::EAFNOSUPPORT
-  end if RUBY_VERSION >= "1.9.2"
+  rescue Errno::EAFNOSUPPORT
+  end
 
   def test_reuseport
     port = unused_port @test_addr

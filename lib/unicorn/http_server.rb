@@ -69,7 +69,7 @@ class Unicorn::HttpServer
   # you can set the following in your Unicorn config file, HUP and then
   # continue with the traditional USR2 + QUIT upgrade steps:
   #
-  #   Unicorn::HttpServer::START_CTX[0] = "/home/bofh/1.9.2/bin/unicorn"
+  #   Unicorn::HttpServer::START_CTX[0] = "/home/bofh/2.2.0/bin/unicorn"
   START_CTX = {
     :argv => ARGV.map { |arg| arg.dup },
     0 => $0.dup,

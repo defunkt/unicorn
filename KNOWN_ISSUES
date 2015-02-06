@@ -17,16 +17,6 @@ acceptable solution.  Those issues are documented here.
   have builtin workarounds for Kernel#rand and OpenSSL::Random users,
   but applications may use other PRNGs.
 
-* Under some versions of Ruby 1.8, it is necessary to call +srand+ in an
-  after_fork hook to get correct random number generation.  We have a builtin
-  workaround for this starting with \Unicorn 3.6.1
-
-  See http://redmine.ruby-lang.org/issues/show/4338
-
-* On Ruby 1.8 prior to Ruby 1.8.7-p248, *BSD platforms have a broken
-  stdio that causes failure for file uploads larger than 112K.  Upgrade
-  your version of Ruby or continue using Unicorn 1.x/3.4.x.
-
 * For notes on sandboxing tools such as Bundler or Isolate,
   see the {Sandbox}[link:Sandbox.html] page.
 
@@ -43,6 +33,16 @@ acceptable solution.  Those issues are documented here.
   which can be disabled with a {monkey patch}[link:examples/logger_mp_safe.rb]
 
 == Known Issues (Old)
+
+* Under some versions of Ruby 1.8, it is necessary to call +srand+ in an
+  after_fork hook to get correct random number generation.  We have a builtin
+  workaround for this starting with \Unicorn 3.6.1
+
+  See http://redmine.ruby-lang.org/issues/show/4338
+
+* On Ruby 1.8 prior to Ruby 1.8.7-p248, *BSD platforms have a broken
+  stdio that causes failure for file uploads larger than 112K.  Upgrade
+  your version of Ruby or continue using Unicorn 1.x/3.4.x.
 
 * Under Ruby 1.9.1, methods like Array#shuffle and Array#sample will
   segfault if called after forking.  Upgrade to Ruby 1.9.2 or call
