@@ -193,5 +193,5 @@ class TestSocketHelper < Test::Unit::TestCase
     assert_operator cur, :>, 0
   rescue Errno::ENOPROTOOPT
     # kernel does not support SO_REUSEPORT (older Linux)
-  end
+  end if defined?(Socket::SO_REUSEPORT)
 end
