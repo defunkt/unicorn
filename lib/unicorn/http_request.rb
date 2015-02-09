@@ -26,8 +26,11 @@ class Unicorn::HttpParser
 
   # :stopdoc:
   # A frozen format for this is about 15% faster
+  # Drop these frozen strings when Ruby 2.2 becomes more prevalent,
+  # 2.2+ optimizes hash assignments when used with literal string keys
   REMOTE_ADDR = 'REMOTE_ADDR'.freeze
   RACK_INPUT = 'rack.input'.freeze
+  HTTP_RESPONSE_START = [ 'HTTP', '/1.1 ']
   @@input_class = Unicorn::TeeInput
   @@check_client_connection = false
 
@@ -86,7 +89,7 @@ class Unicorn::HttpParser
     # detect if the socket is valid by writing a partial response:
     if @@check_client_connection && headers?
       @response_start_sent = true
-      Unicorn::Const::HTTP_RESPONSE_START.each { |c| socket.write(c) }
+      HTTP_RESPONSE_START.each { |c| socket.write(c) }
     end
 
     e[RACK_INPUT] = 0 == content_length ?

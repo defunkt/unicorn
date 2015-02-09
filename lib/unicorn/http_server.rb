@@ -543,12 +543,15 @@ class Unicorn::HttpServer
     rescue
   end
 
-  def expect_100_response
-    if @request.response_start_sent
-      Unicorn::Const::EXPECT_100_RESPONSE_SUFFIXED
-    else
-      Unicorn::Const::EXPECT_100_RESPONSE
-    end
+  def e100_response_write(client, env)
+    # We use String#freeze to avoid allocations under Ruby 2.1+
+    # Not many users hit this code path, so it's better to reduce the
+    # constant table sizes even for 1.9.3-2.0 users who'll hit extra
+    # allocations here.
+    client.write(@request.response_start_sent ?
+                 "100 Continue\r\n\r\nHTTP/1.1 ".freeze :
+                 "HTTP/1.1 100 Continue\r\n\r\n".freeze)
+    env.delete('HTTP_EXPECT'.freeze)
   end
 
   # once a client is accepted, it is processed in its entirety here
@@ -558,8 +561,7 @@ class Unicorn::HttpServer
     return if @request.hijacked?
 
     if 100 == status.to_i
-      client.write(expect_100_response)
-      env.delete(Unicorn::Const::HTTP_EXPECT)
+      e100_response_write(client, env)
       status, headers, body = @app.call(env)
       return if @request.hijacked?
     end
