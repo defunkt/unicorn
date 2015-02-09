@@ -25,14 +25,6 @@ module Unicorn::Const
   MAX_BODY = 1024 * 112
 
   # :stopdoc:
-  # common errors we'll send back
-  # (N.B. these are not used by unicorn, but we won't drop them until
-  #  unicorn 5.x to avoid breaking Rainbows!).
-  ERROR_400_RESPONSE = "HTTP/1.1 400 Bad Request\r\n\r\n"
-  ERROR_414_RESPONSE = "HTTP/1.1 414 Request-URI Too Long\r\n\r\n"
-  ERROR_413_RESPONSE = "HTTP/1.1 413 Request Entity Too Large\r\n\r\n"
-  ERROR_500_RESPONSE = "HTTP/1.1 500 Internal Server Error\r\n\r\n"
-
   EXPECT_100_RESPONSE = "HTTP/1.1 100 Continue\r\n\r\n"
   EXPECT_100_RESPONSE_SUFFIXED = "100 Continue\r\n\r\nHTTP/1.1 "
 
