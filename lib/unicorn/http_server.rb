@@ -21,31 +21,11 @@ class Unicorn::HttpServer
   include Unicorn::SocketHelper
   include Unicorn::HttpResponse
 
-  # backwards compatibility with 1.x
-  Worker = Unicorn::Worker
-
   # all bound listener sockets
   LISTENERS = []
 
   # listeners we have yet to bind
   NEW_LISTENERS = []
-
-  # This hash maps PIDs to Workers
-  WORKERS = {}
-
-  # We use SELF_PIPE differently in the master and worker processes:
-  #
-  # * The master process never closes or reinitializes this once
-  # initialized.  Signal handlers in the master process will write to
-  # it to wake up the master from IO.select in exactly the same manner
-  # djb describes in http://cr.yp.to/docs/selfpipe.html
-  #
-  # * The workers immediately close the pipe they inherit.  See the
-  # Unicorn::Worker class for the pipe workers use.
-  SELF_PIPE = []
-
-  # signal queue used for self-piping
-  SIG_QUEUE = []
 
   # list of signals we care about and trap in master.
   QUEUE_SIGS = [ :WINCH, :QUIT, :INT, :TERM, :USR1, :USR2, :HUP, :TTIN, :TTOU ]
@@ -98,6 +78,19 @@ class Unicorn::HttpServer
     self.config = Unicorn::Configurator.new(options)
     self.listener_opts = {}
 
+    # We use @self_pipe differently in the master and worker processes:
+    #
+    # * The master process never closes or reinitializes this once
+    # initialized.  Signal handlers in the master process will write to
+    # it to wake up the master from IO.select in exactly the same manner
+    # djb describes in http://cr.yp.to/docs/selfpipe.html
+    #
+    # * The workers immediately close the pipe they inherit.  See the
+    # Unicorn::Worker class for the pipe workers use.
+    @self_pipe = []
+    @workers = {} # hash maps PIDs to Workers
+    @sig_queue = [] # signal queue used for self-piping
+
     # we try inheriting listeners first, so we bind them later.
     # we don't write the pid file until we've bound listeners in case
     # unicorn was started twice by mistake.  Even though our #pid= method
@@ -117,13 +110,13 @@ class Unicorn::HttpServer
     inherit_listeners!
     # this pipe is used to wake us up from select(2) in #join when signals
     # are trapped.  See trap_deferred.
-    SELF_PIPE.replace(Unicorn.pipe)
+    @self_pipe.replace(Unicorn.pipe)
     @master_pid = $$
 
     # setup signal handlers before writing pid file in case people get
     # trigger happy and send signals as soon as the pid file exists.
     # Note that signals don't actually get handled until the #join method
-    QUEUE_SIGS.each { |sig| trap(sig) { SIG_QUEUE << sig; awaken_master } }
+    QUEUE_SIGS.each { |sig| trap(sig) { @sig_queue << sig; awaken_master } }
     trap(:CHLD) { awaken_master }
 
     # write pid early for Mongrel compatibility if we're not inheriting sockets
@@ -276,7 +269,7 @@ class Unicorn::HttpServer
     end
     begin
       reap_all_workers
-      case SIG_QUEUE.shift
+      case @sig_queue.shift
       when nil
         # avoid murdering workers after our master process (or the
         # machine) comes out of suspend/hibernation
@@ -335,7 +328,7 @@ class Unicorn::HttpServer
   def stop(graceful = true)
     self.listeners = []
     limit = time_now + timeout
-    until WORKERS.empty? || time_now > limit
+    until @workers.empty? || time_now > limit
       if graceful
         soft_kill_each_worker(:QUIT)
       else
@@ -376,13 +369,13 @@ class Unicorn::HttpServer
 
   # wait for a signal hander to wake us up and then consume the pipe
   def master_sleep(sec)
-    IO.select([ SELF_PIPE[0] ], nil, nil, sec) or return
-    SELF_PIPE[0].kgio_tryread(11)
+    IO.select([ @self_pipe[0] ], nil, nil, sec) or return
+    @self_pipe[0].kgio_tryread(11)
   end
 
   def awaken_master
     return if $$ != @master_pid
-    SELF_PIPE[1].kgio_trywrite('.') # wakeup master process from select
+    @self_pipe[1].kgio_trywrite('.') # wakeup master process from select
   end
 
   # reaps all unreaped workers
@@ -396,7 +389,7 @@ class Unicorn::HttpServer
         self.pid = pid.chomp('.oldbin') if pid
         proc_name 'master'
       else
-        worker = WORKERS.delete(wpid) and worker.close rescue nil
+        worker = @workers.delete(wpid) and worker.close rescue nil
         m = "reaped #{status.inspect} worker=#{worker.nr rescue 'unknown'}"
         status.success? ? logger.info(m) : logger.error(m)
       end
@@ -465,7 +458,7 @@ class Unicorn::HttpServer
   def murder_lazy_workers
     next_sleep = @timeout - 1
     now = time_now.to_i
-    WORKERS.dup.each_pair do |wpid, worker|
+    @workers.dup.each_pair do |wpid, worker|
       tick = worker.tick
       0 == tick and next # skip workers that haven't processed any clients
       diff = now - tick
@@ -483,7 +476,7 @@ class Unicorn::HttpServer
   end
 
   def after_fork_internal
-    SELF_PIPE.each(&:close).clear # this is master-only, now
+    @self_pipe.each(&:close).clear # this is master-only, now
     @ready_pipe.close if @ready_pipe
     Unicorn::Configurator::RACKUP.clear
     @ready_pipe = @init_listeners = @before_exec = @before_fork = nil
@@ -498,11 +491,11 @@ class Unicorn::HttpServer
   def spawn_missing_workers
     worker_nr = -1
     until (worker_nr += 1) == @worker_processes
-      WORKERS.value?(worker_nr) and next
-      worker = Worker.new(worker_nr)
+      @workers.value?(worker_nr) and next
+      worker = Unicorn::Worker.new(worker_nr)
       before_fork.call(self, worker)
       if pid = fork
-        WORKERS[pid] = worker
+        @workers[pid] = worker
         worker.atfork_parent
       else
         after_fork_internal
@@ -516,9 +509,9 @@ class Unicorn::HttpServer
   end
 
   def maintain_worker_count
-    (off = WORKERS.size - worker_processes) == 0 and return
+    (off = @workers.size - worker_processes) == 0 and return
     off < 0 and return spawn_missing_workers
-    WORKERS.each_value { |w| w.nr >= worker_processes and w.soft_kill(:QUIT) }
+    @workers.each_value { |w| w.nr >= worker_processes and w.soft_kill(:QUIT) }
   end
 
   # if we get any error, try to write something back to the client
@@ -595,13 +588,13 @@ class Unicorn::HttpServer
     worker.atfork_child
     # we'll re-trap :QUIT later for graceful shutdown iff we accept clients
     EXIT_SIGS.each { |sig| trap(sig) { exit!(0) } }
-    exit!(0) if (SIG_QUEUE & EXIT_SIGS)[0]
+    exit!(0) if (@sig_queue & EXIT_SIGS)[0]
     WORKER_QUEUE_SIGS.each { |sig| trap(sig, nil) }
     trap(:CHLD, 'DEFAULT')
-    SIG_QUEUE.clear
+    @sig_queue.clear
     proc_name "worker[#{worker.nr}]"
     START_CTX.clear
-    WORKERS.clear
+    @workers.clear
 
     after_fork.call(self, worker) # can drop perms and create listeners
     LISTENERS.each { |sock| sock.close_on_exec = true }
@@ -681,17 +674,17 @@ class Unicorn::HttpServer
   # is no longer running.
   def kill_worker(signal, wpid)
     Process.kill(signal, wpid)
-    rescue Errno::ESRCH
-      worker = WORKERS.delete(wpid) and worker.close rescue nil
+  rescue Errno::ESRCH
+    worker = @workers.delete(wpid) and worker.close rescue nil
   end
 
   # delivers a signal to each worker
   def kill_each_worker(signal)
-    WORKERS.keys.each { |wpid| kill_worker(signal, wpid) }
+    @workers.keys.each { |wpid| kill_worker(signal, wpid) }
   end
 
   def soft_kill_each_worker(signal)
-    WORKERS.each_value { |worker| worker.soft_kill(signal) }
+    @workers.each_value { |worker| worker.soft_kill(signal) }
   end
 
   # unlinks a PID file at given +path+ if it contains the current PID
