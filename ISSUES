@@ -6,7 +6,7 @@ submit patches and/or obtain support after you have searched the
 {documentation}[http://unicorn.bogomips.org/].
 
 * No subscription will ever be required to email the public inbox.
-* Please Cc: all participants in a thread, as subscription is optional
+* Cc: all participants in a thread or commit, as subscription is optional
 * Do not {top post}[http://catb.org/jargon/html/T/top-post.html] in replies
 * Quote as little as possible of the message you're replying to
 * Do not send HTML mail, it will likely be flagged as spam
@@ -17,6 +17,40 @@ instead and your issue will be handled discreetly.
 
 If you don't get a response within a few days, we may have forgotten
 about it so feel free to ask again.
+
+== Bugs in related projects
+
+unicorn is sometimes affected by bugs in its dependencies.  Bugs
+triggered by unicorn in mainline Ruby, rack, GNU C library (glibc),
+or the Linux kernel will be reported upstream and fixed.
+
+For bugs in Ruby itself, we may forward bugs to
+https://bugs.ruby-lang.org/ and discuss+fix them on the ruby-core
+list at mailto:ruby-core@ruby-lang.org
+Subscription to post is required to ruby-core, unfortunately:
+mailto:ruby-core-request@ruby-lang.org?subject=subscribe
+
+For uncommon bugs in Rack, we may forward bugs to
+mailto:rack-devel@googlegroups.com and discuss there.
+Subscription (without any web UI or Google account) is possible via:
+mailto:rack-devel+subscribe@googlegroups.com
+Note: not everyone can use the proprietary bug tracker used by Rack,
+but their mailing list remains operational.
+
+Uncommon bugs we encounter in the Linux kernel should be Cc:-ed to the
+Linux kernel mailing list (LKML) at mailto:linux-kernel@vger.kernel.org
+and subsystem maintainers such as mailto:netdev@vger.kernel.org
+(for networking issues).  It is expected practice to Cc: anybody
+involved with any problematic commits (including those in the
+Signed-off-by: and other trailer lines).  No subscription is necessary,
+and the our mailing list follows the same conventions as LKML for
+interopability.  There is a kernel.org Bugzilla instance, but it is
+ignored by most developers.
+
+Likewise for any rare glibc bugs we might encounter, we should Cc:
+mailto:libc-alpha@sourceware.org
+Keep in mind glibc upstream does use Bugzilla for tracking bugs:
+https://sourceware.org/bugzilla/
 
 == Submitting Patches
 
