@@ -45,7 +45,10 @@ or services behind them.
 * {Green Unicorn}[http://gunicorn.org/] - a Python version of \Unicorn
 
 * {Rainbows!}[http://rainbows.bogomips.org/] - \Unicorn for sleepy
-  apps and slow clients.
+  apps and slow clients (historical).
+
+* {yahns}[http://yahns.yhbt.net/] - like Rainbows!, but with fewer options
+  and designed for energy efficiency on idle sites.
 
 === Prior Work
 
