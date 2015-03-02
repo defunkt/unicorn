@@ -16,7 +16,7 @@ module Unicorn
       :tcp_defer_accept => 1,
 
       # FreeBSD, we need to override this to 'dataready' if we
-      # eventually get HTTPS support
+      # eventually support non-HTTP/1.x
       :accept_filter => 'httpready',
 
       # same default value as Mongrel
@@ -53,8 +53,8 @@ module Unicorn
         end
       end
 
-      # No good reason to ever have deferred accepts off
-      # (except maybe benchmarking)
+      # No good reason to ever have deferred accepts off in single-threaded
+      # servers (except maybe benchmarking)
       if Socket.const_defined?(:TCP_DEFER_ACCEPT)
         # this differs from nginx, since nginx doesn't allow us to
         # configure the the timeout...
