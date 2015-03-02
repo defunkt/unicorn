@@ -619,47 +619,4 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal expect, env2
     assert_equal "", @parser.buf
   end
-
-  def test_chunk_only
-    tmp = ""
-    assert_equal @parser, @parser.dechunk!
-    assert_nil @parser.filter_body(tmp, "6\r\n")
-    assert_equal "", tmp
-    assert_nil @parser.filter_body(tmp, "abcdef")
-    assert_equal "abcdef", tmp
-    assert_nil @parser.filter_body(tmp, "\r\n")
-    assert_equal "", tmp
-    src = "0\r\n\r\n"
-    assert_equal src.object_id, @parser.filter_body(tmp, src).object_id
-    assert_equal "", tmp
-  end
-
-  def test_chunk_only_bad_align
-    tmp = ""
-    assert_equal @parser, @parser.dechunk!
-    assert_nil @parser.filter_body(tmp, "6\r\na")
-    assert_equal "a", tmp
-    assert_nil @parser.filter_body(tmp, "bcde")
-    assert_equal "bcde", tmp
-    assert_nil @parser.filter_body(tmp, "f\r")
-    assert_equal "f", tmp
-    src = "\n0\r\n\r\n"
-    assert_equal src.object_id, @parser.filter_body(tmp, src).object_id
-    assert_equal "", tmp
-  end
-
-  def test_chunk_only_reset_ok
-    tmp = ""
-    assert_equal @parser, @parser.dechunk!
-    src = "1\r\na\r\n0\r\n\r\n"
-    assert_nil @parser.filter_body(tmp, src)
-    assert_equal "a", tmp
-    assert_equal src.object_id, @parser.filter_body(tmp, src).object_id
-
-    assert_equal @parser, @parser.dechunk!
-    src = "0\r\n\r\n"
-    assert_equal src.object_id, @parser.filter_body(tmp, src).object_id
-    assert_equal "", tmp
-    assert_equal src, @parser.filter_body(tmp, src)
-  end
 end
