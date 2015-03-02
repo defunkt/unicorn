@@ -21,8 +21,7 @@ module Unicorn
   # since there is nothing in the application stack that is responsible
   # for client shutdowns/disconnects.  This exception is visible to Rack
   # applications unless PrereadInput middleware is loaded.
-  class ClientShutdown < EOFError
-  end
+  ClientShutdown = Class.new(EOFError)
 
   # :stopdoc:
 
