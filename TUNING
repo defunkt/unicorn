@@ -17,9 +17,12 @@ See Unicorn::Configurator for details on the config file format.
   \Unicorn is NOT for serving slow clients, that is the job of nginx.
 
 * worker_processes should be *at* *least* the number of CPU cores on
-  a dedicated server.  If your application has occasionally slow
-  responses that are /not/ CPU-intensive, you may increase this to
-  workaround those inefficiencies.
+  a dedicated server (unless you do not have enough memory).
+  If your application has occasionally slow responses that are /not/
+  CPU-intensive, you may increase this to workaround those inefficiencies.
+
+* Under Ruby 2.2 or later, Etc.nprocessors may be used to determine
+  the number of CPU cores present.
 
 * worker_processes may be increased for Unicorn::OobGC users to provide
   more consistent response times.
