@@ -586,7 +586,7 @@ private
   def canonicalize_tcp(addr, port)
     packed = Socket.pack_sockaddr_in(port, addr)
     port, addr = Socket.unpack_sockaddr_in(packed)
-    /:/ =~ addr ? "[#{addr}]:#{port}" : "#{addr}:#{port}"
+    addr.include?(':') ? "[#{addr}]:#{port}" : "#{addr}:#{port}"
   end
 
   def set_path(var, path) #:nodoc:
@@ -642,7 +642,7 @@ private
       raise ArgumentError, "rackup file (#{ru}) not readable"
 
     # it could be a .rb file, too, we don't parse those manually
-    ru =~ /\.ru\z/ or return
+    ru.end_with?('.ru') or return
 
     /^#\\(.*)/ =~ File.read(ru) or return
     RACKUP[:optparse].parse!($1.split(/\s+/))

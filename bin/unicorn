@@ -29,7 +29,7 @@ op = OptionParser.new("", 24, '  ') do |opts|
 
   opts.on("-I", "--include PATH",
           "specify $LOAD_PATH (may be used more than once)") do |path|
-    $LOAD_PATH.unshift(*path.split(/:/))
+    $LOAD_PATH.unshift(*path.split(':'))
   end
 
   opts.on("-r", "--require LIBRARY",

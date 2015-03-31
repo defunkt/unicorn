@@ -156,7 +156,7 @@ module Unicorn
     # returns rfc2732-style (e.g. "[::1]:666") addresses for IPv6
     def tcp_name(sock)
       port, addr = Socket.unpack_sockaddr_in(sock.getsockname)
-      /:/ =~ addr ? "[#{addr}]:#{port}" : "#{addr}:#{port}"
+      addr.include?(':') ? "[#{addr}]:#{port}" : "#{addr}:#{port}"
     end
     module_function :tcp_name
 

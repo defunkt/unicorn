@@ -186,7 +186,7 @@ class Unicorn::HttpServer
     if path
       if x = valid_pid?(path)
         return path if pid && path == pid && x == $$
-        if x == reexec_pid && pid =~ /\.oldbin\z/
+        if x == reexec_pid && pid.end_with?('.oldbin')
           logger.warn("will not set pid=#{path} while reexec-ed "\
                       "child is running PID:#{x}")
           return
