@@ -29,6 +29,13 @@ class TestTeeInput < Test::Unit::TestCase
     end while true
   end
 
+  def check_tempfiles
+    tmp = @parser.env["rack.tempfiles"]
+    assert_instance_of Array, tmp
+    assert_operator tmp.size, :>=, 1
+    assert_instance_of Unicorn::TmpIO, tmp[0]
+  end
+
   def test_gets_long
     r = init_request("hello", 5 + (4096 * 4 * 3) + "#$/foo#$/".size)
     ti = TeeInput.new(@rd, r)
@@ -106,6 +113,7 @@ class TestTeeInput < Test::Unit::TestCase
     assert_kind_of File, ti.tmp
     assert_equal 0, ti.tmp.pos
     assert_equal Unicorn::Const::MAX_BODY + 1, ti.size
+    check_tempfiles
   end
 
   def test_read_in_full_if_content_length
@@ -148,6 +156,7 @@ class TestTeeInput < Test::Unit::TestCase
     assert_nil ti.read(1)
     pid, status = Process.waitpid2(pid)
     assert status.success?
+    check_tempfiles
   end
 
   def test_chunked
@@ -183,6 +192,7 @@ class TestTeeInput < Test::Unit::TestCase
     status = nil
     pid, status = Process.waitpid2(pid)
     assert status.success?
+    check_tempfiles
   end
 
   def test_chunked_ping_pong

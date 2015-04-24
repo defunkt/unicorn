@@ -26,4 +26,7 @@ class Unicorn::TmpIO < File
   def size
     stat.size
   end unless File.method_defined?(:size)
+
+  # pretend we're Tempfile for Rack::TempfileReaper
+  alias close! close
 end

@@ -28,13 +28,20 @@ class Unicorn::TeeInput < Unicorn::StreamInput
     @@client_body_buffer_size
   end
 
+  # for Rack::TempfileReaper in rack 1.6+
+  def new_tmpio # :nodoc:
+    tmpio = Unicorn::TmpIO.new
+    (@parser.env['rack.tempfiles'] ||= []) << tmpio
+    tmpio
+  end
+
   # Initializes a new TeeInput object.  You normally do not have to call
   # this unless you are writing an HTTP server.
   def initialize(socket, request)
     @len = request.content_length
     super
     @tmp = @len && @len <= @@client_body_buffer_size ?
-           StringIO.new("") : Unicorn::TmpIO.new
+           StringIO.new("") : new_tmpio
   end
 
   # :call-seq:
