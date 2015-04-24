@@ -21,4 +21,7 @@ class Unicorn::TmpIO < File
     fp.sync = true
     fp
   end
+
+  # pretend we're Tempfile for Rack::TempfileReaper
+  alias close! close
 end
