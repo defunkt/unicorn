@@ -65,6 +65,7 @@ module Unicorn
           use Rack::CommonLogger, $stderr
           use Rack::ShowExceptions
           use Rack::Lint
+          use Rack::TempfileReaper if Rack.const_defined?(:TempfileReaper)
           run inner_app
         end.to_app
       when "deployment"
@@ -72,6 +73,7 @@ module Unicorn
           use Rack::ContentLength
           use Rack::Chunked
           use Rack::CommonLogger, $stderr
+          use Rack::TempfileReaper if Rack.const_defined?(:TempfileReaper)
           run inner_app
         end.to_app
       else
