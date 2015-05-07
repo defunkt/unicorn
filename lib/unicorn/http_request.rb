@@ -13,13 +13,16 @@ class Unicorn::HttpParser
     "rack.multiprocess" => true,
     "rack.multithread" => false,
     "rack.run_once" => false,
-    "rack.version" => [1, 1],
+    "rack.version" => [1, 2],
+    "rack.hijack?" => true,
     "SCRIPT_NAME" => "",
 
     # this is not in the Rack spec, but some apps may rely on it
     "SERVER_SOFTWARE" => "Unicorn #{Unicorn::Const::UNICORN_VERSION}"
   }
 
+  RACK_HIJACK = "rack.hijack".freeze
+  RACK_HIJACK_IO = "rack.hijack_io".freeze
   NULL_IO = StringIO.new("")
 
   attr_accessor :response_start_sent
@@ -98,28 +101,11 @@ class Unicorn::HttpParser
     e.merge!(DEFAULTS)
   end
 
-  # Rack 1.5.0 (protocol version 1.2) adds hijack request support
-  if ((Rack::VERSION[0] << 8) | Rack::VERSION[1]) >= 0x0102
-    DEFAULTS["rack.hijack?"] = true
-    DEFAULTS["rack.version"] = [1, 2]
+  def hijacked?
+    env.include?(RACK_HIJACK_IO)
+  end
 
-    RACK_HIJACK = "rack.hijack".freeze
-    RACK_HIJACK_IO = "rack.hijack_io".freeze
-
-    def hijacked?
-      env.include?(RACK_HIJACK_IO)
-    end
-
-    def hijack_setup(e, socket)
-      e[RACK_HIJACK] = proc { e[RACK_HIJACK_IO] = socket }
-    end
-  else
-    # old Rack, do nothing.
-    def hijack_setup(e, _)
-    end
-
-    def hijacked?
-      false
-    end
+  def hijack_setup(e, socket)
+    e[RACK_HIJACK] = proc { e[RACK_HIJACK_IO] = socket }
   end
 end
