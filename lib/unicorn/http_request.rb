@@ -97,15 +97,21 @@ class Unicorn::HttpParser
 
     e[RACK_INPUT] = 0 == content_length ?
                     NULL_IO : @@input_class.new(socket, self)
-    hijack_setup(e, socket)
+
+    # for Rack hijacking in Rack 1.5 and later
+    @socket = socket
+    e[RACK_HIJACK] = self
+
     e.merge!(DEFAULTS)
+  end
+
+  # for rack.hijack, we respond to this method so no extra allocation
+  # of a proc object
+  def call
+    env[RACK_HIJACK_IO] = @socket
   end
 
   def hijacked?
     env.include?(RACK_HIJACK_IO)
-  end
-
-  def hijack_setup(e, socket)
-    e[RACK_HIJACK] = proc { e[RACK_HIJACK_IO] = socket }
   end
 end
