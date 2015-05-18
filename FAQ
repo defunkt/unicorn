@@ -1,5 +1,14 @@
 = Frequently Asked Questions about Unicorn
 
+=== Why is nginx getting ECONNRESET as a reverse proxy?
+
+Request body data (commonly from POST and PUT requests) may not be
+drained entirely by the application.  This may happen when request
+bodies are gzipped, as unicorn reads request body data lazily to avoid
+overhead from bad requests.
+
+Ref: http://mid.gmane.org/FC91211E-FD32-432C-92FC-0318714C2170@zendesk.com
+
 === Why aren't my Rails log files rotated when I use SIGUSR1?
 
 The Rails autoflush_log option must remain disabled with multiprocess
