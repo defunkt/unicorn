@@ -36,9 +36,9 @@ module Unicorn::HttpResponse
         when %r{\A(?:Date\z|Connection\z)}i
           next
         when "rack.hijack"
-          # this was an illegal key in Rack < 1.5, so it should be
-          # OK to silently discard it for those older versions
-          hijack = hijack_prepare(value)
+          # This should only be hit under Rack >= 1.5, as this was an illegal
+          # key in Rack < 1.5
+          hijack = value
         else
           if value =~ /\n/
             # avoiding blank, key-only cookies with /\n+/
@@ -59,15 +59,5 @@ module Unicorn::HttpResponse
     end
   ensure
     body.respond_to?(:close) and body.close
-  end
-
-  # Rack 1.5.0 (protocol version 1.2) adds response hijacking support
-  if ((Rack::VERSION[0] << 8) | Rack::VERSION[1]) >= 0x0102
-    def hijack_prepare(value)
-      value
-    end
-  else
-    def hijack_prepare(_)
-    end
   end
 end
