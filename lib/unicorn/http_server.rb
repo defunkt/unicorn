@@ -294,13 +294,13 @@ class Unicorn::HttpServer
       when :USR2 # exec binary, stay alive in case something went wrong
         reexec
       when :WINCH
-        if Unicorn::Configurator::RACKUP[:daemonized]
+        if $stdin.tty?
+          logger.info "SIGWINCH ignored because we're not daemonized"
+        else
           respawn = false
           logger.info "gracefully stopping all workers"
           soft_kill_each_worker(:QUIT)
           self.worker_processes = 0
-        else
-          logger.info "SIGWINCH ignored because we're not daemonized"
         end
       when :TTIN
         respawn = true
