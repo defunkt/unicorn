@@ -60,7 +60,19 @@ struct http_parser {
   } len;
 };
 
-static ID id_clear, id_set_backtrace, id_response_start_sent;
+static ID id_set_backtrace, id_response_start_sent;
+
+#ifdef HAVE_RB_HASH_CLEAR /* Ruby >= 2.0 */
+#  define my_hash_clear(h) (void)rb_hash_clear(h)
+#else /* !HAVE_RB_HASH_CLEAR - Ruby <= 1.9.3 */
+
+static ID id_clear;
+
+static void my_hash_clear(VALUE h)
+{
+  rb_funcall(h, id_clear, 0);
+}
+#endif /* HAVE_RB_HASH_CLEAR */
 
 static void finalize_header(struct http_parser *hp);
 
@@ -584,7 +596,7 @@ static VALUE HttpParser_clear(VALUE self)
   struct http_parser *hp = data_get(self);
 
   http_parser_init(hp);
-  rb_funcall(hp->env, id_clear, 0);
+  my_hash_clear(hp->env);
   rb_ivar_set(self, id_response_start_sent, Qfalse);
 
   return self;
@@ -926,9 +938,12 @@ void Init_unicorn_http(void)
   SET_GLOBAL(g_http_transfer_encoding, "TRANSFER_ENCODING");
   SET_GLOBAL(g_content_length, "CONTENT_LENGTH");
   SET_GLOBAL(g_http_connection, "CONNECTION");
-  id_clear = rb_intern("clear");
   id_set_backtrace = rb_intern("set_backtrace");
   id_response_start_sent = rb_intern("@response_start_sent");
   init_unicorn_httpdate();
+
+#ifndef HAVE_RB_HASH_CLEAR
+  id_clear = rb_intern("clear");
+#endif
 }
 #undef SET_GLOBAL
