@@ -178,6 +178,7 @@ doc: .document $(ext)/unicorn_http.c man html .olddoc.yml $(PLACEHOLDERS)
 	$(RDOC) -f oldweb
 	$(OLDDOC) merge
 	install -m644 COPYING doc/COPYING
+	install -m644 NEWS.atom.xml doc/NEWS.atom.xml
 	install -m644 $(shell LC_ALL=C grep '^[A-Z]' .document) doc/
 	install -m644 $(man1_paths) doc/
 	tar cf - $$(git ls-files examples/) | (cd doc && tar xf -)
