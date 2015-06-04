@@ -292,6 +292,7 @@ def chunked_spawn(stdout, *cmd)
 end
 
 def reset_sig_handlers
-  sigs = %w(CHLD).concat(Unicorn::HttpServer::QUEUE_SIGS)
-  sigs.each { |sig| trap(sig, "DEFAULT") }
+  %w(WINCH QUIT INT TERM USR1 USR2 HUP TTIN TTOU CHLD).each do |sig|
+    trap(sig, "DEFAULT")
+  end
 end

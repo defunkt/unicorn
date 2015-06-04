@@ -11,24 +11,22 @@
 # See Unicorn::Configurator for information on how to configure \Unicorn.
 class Unicorn::HttpServer
   # :stopdoc:
-  attr_accessor :app, :request, :timeout, :worker_processes,
+  attr_accessor :app, :timeout, :worker_processes,
                 :before_fork, :after_fork, :before_exec,
                 :listener_opts, :preload_app,
-                :reexec_pid, :orig_app, :init_listeners,
-                :master_pid, :config, :ready_pipe, :user
+                :orig_app, :config, :ready_pipe, :user
 
   attr_reader :pid, :logger
   include Unicorn::SocketHelper
   include Unicorn::HttpResponse
 
   # all bound listener sockets
+  # note: this is public used by raindrops, but not recommended for use
+  # in new projects
   LISTENERS = []
 
   # listeners we have yet to bind
   NEW_LISTENERS = []
-
-  # list of signals we care about and trap in master.
-  QUEUE_SIGS = [ :WINCH, :QUIT, :INT, :TERM, :USR1, :USR2, :HUP, :TTIN, :TTOU ]
 
   # :startdoc:
   # We populate this at startup so we can figure out how to reexecute
@@ -70,7 +68,7 @@ class Unicorn::HttpServer
   def initialize(app, options = {})
     @app = app
     @request = Unicorn::HttpRequest.new
-    self.reexec_pid = 0
+    @reexec_pid = 0
     options = options.dup
     @ready_pipe = options.delete(:ready_pipe)
     @init_listeners = options[:listeners] ? options[:listeners].dup : []
@@ -102,7 +100,10 @@ class Unicorn::HttpServer
     # monitoring tools may also rely on pid files existing before we
     # attempt to connect to the listener(s)
     config.commit!(self, :skip => [:listeners, :pid])
-    self.orig_app = app
+    @orig_app = app
+    # list of signals we care about and trap in master.
+    @queue_sigs = [
+      :WINCH, :QUIT, :INT, :TERM, :USR1, :USR2, :HUP, :TTIN, :TTOU ]
   end
 
   # Runs the thing.  Returns self so you can run join on it
@@ -116,7 +117,7 @@ class Unicorn::HttpServer
     # setup signal handlers before writing pid file in case people get
     # trigger happy and send signals as soon as the pid file exists.
     # Note that signals don't actually get handled until the #join method
-    QUEUE_SIGS.each { |sig| trap(sig) { @sig_queue << sig; awaken_master } }
+    @queue_sigs.each { |sig| trap(sig) { @sig_queue << sig; awaken_master } }
     trap(:CHLD) { awaken_master }
 
     # write pid early for Mongrel compatibility if we're not inheriting sockets
@@ -186,7 +187,7 @@ class Unicorn::HttpServer
     if path
       if x = valid_pid?(path)
         return path if pid && path == pid && x == $$
-        if x == reexec_pid && pid.end_with?('.oldbin')
+        if x == @reexec_pid && pid.end_with?('.oldbin')
           logger.warn("will not set pid=#{path} while reexec-ed "\
                       "child is running PID:#{x}")
           return
@@ -387,9 +388,9 @@ class Unicorn::HttpServer
     begin
       wpid, status = Process.waitpid2(-1, Process::WNOHANG)
       wpid or return
-      if reexec_pid == wpid
+      if @reexec_pid == wpid
         logger.error "reaped #{status.inspect} exec()-ed"
-        self.reexec_pid = 0
+        @reexec_pid = 0
         self.pid = pid.chomp('.oldbin') if pid
         proc_name 'master'
       else
@@ -404,13 +405,13 @@ class Unicorn::HttpServer
 
   # reexecutes the START_CTX with a new binary
   def reexec
-    if reexec_pid > 0
+    if @reexec_pid > 0
       begin
-        Process.kill(0, reexec_pid)
-        logger.error "reexec-ed child already running PID:#{reexec_pid}"
+        Process.kill(0, @reexec_pid)
+        logger.error "reexec-ed child already running PID:#@reexec_pid"
         return
       rescue Errno::ESRCH
-        self.reexec_pid = 0
+        @reexec_pid = 0
       end
     end
 
@@ -428,7 +429,7 @@ class Unicorn::HttpServer
       end
     end
 
-    self.reexec_pid = fork do
+    @reexec_pid = fork do
       listener_fds = {}
       LISTENERS.each do |sock|
         sock.close_on_exec = false
@@ -576,9 +577,6 @@ class Unicorn::HttpServer
     handle_error(client, e)
   end
 
-  EXIT_SIGS = [ :QUIT, :TERM, :INT ]
-  WORKER_QUEUE_SIGS = QUEUE_SIGS - EXIT_SIGS
-
   def nuke_listeners!(readers)
     # only called from the worker, ordering is important here
     tmp = readers.dup
@@ -593,9 +591,10 @@ class Unicorn::HttpServer
   def init_worker_process(worker)
     worker.atfork_child
     # we'll re-trap :QUIT later for graceful shutdown iff we accept clients
-    EXIT_SIGS.each { |sig| trap(sig) { exit!(0) } }
-    exit!(0) if (@sig_queue & EXIT_SIGS)[0]
-    WORKER_QUEUE_SIGS.each { |sig| trap(sig, nil) }
+    exit_sigs = [ :QUIT, :TERM, :INT ]
+    exit_sigs.each { |sig| trap(sig) { exit!(0) } }
+    exit!(0) if (@sig_queue & exit_sigs)[0]
+    (@queue_sigs - exit_sigs).each { |sig| trap(sig, nil) }
     trap(:CHLD, 'DEFAULT')
     @sig_queue.clear
     proc_name "worker[#{worker.nr}]"
@@ -629,7 +628,7 @@ class Unicorn::HttpServer
   # for connections and doesn't die until the parent dies (or is
   # given a INT, QUIT, or TERM signal)
   def worker_loop(worker)
-    ppid = master_pid
+    ppid = @master_pid
     readers = init_worker_process(worker)
     nr = 0 # this becomes negative if we need to reopen logs
 
@@ -723,7 +722,7 @@ class Unicorn::HttpServer
     config.commit!(self)
     soft_kill_each_worker(:QUIT)
     Unicorn::Util.reopen_logs
-    self.app = orig_app
+    self.app = @orig_app
     build_app! if preload_app
     logger.info "done reloading config_file=#{config.config_file}"
   rescue StandardError, LoadError, SyntaxError => e
@@ -788,9 +787,8 @@ class Unicorn::HttpServer
   # call only after calling inherit_listeners!
   # This binds any listeners we did NOT inherit from the parent
   def bind_new_listeners!
-    NEW_LISTENERS.each { |addr| listen(addr) }
+    NEW_LISTENERS.each { |addr| listen(addr) }.clear
     raise ArgumentError, "no listeners" if LISTENERS.empty?
-    NEW_LISTENERS.clear
   end
 
   # try to use the monotonic clock in Ruby >= 2.1, it is immune to clock
