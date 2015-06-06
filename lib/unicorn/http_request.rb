@@ -33,6 +33,7 @@ class Unicorn::HttpParser
   # 2.2+ optimizes hash assignments when used with literal string keys
   REMOTE_ADDR = 'REMOTE_ADDR'.freeze
   RACK_INPUT = 'rack.input'.freeze
+  UNICORN_SOCKET = 'unicorn.socket'.freeze
   HTTP_RESPONSE_START = [ 'HTTP', '/1.1 ']
   @@input_class = Unicorn::TeeInput
   @@check_client_connection = false
@@ -99,7 +100,7 @@ class Unicorn::HttpParser
                     NULL_IO : @@input_class.new(socket, self)
 
     # for Rack hijacking in Rack 1.5 and later
-    @socket = socket
+    e[UNICORN_SOCKET] = socket
     e[RACK_HIJACK] = self
 
     e.merge!(DEFAULTS)
@@ -108,7 +109,7 @@ class Unicorn::HttpParser
   # for rack.hijack, we respond to this method so no extra allocation
   # of a proc object
   def call
-    env[RACK_HIJACK_IO] = @socket
+    env[RACK_HIJACK_IO] = env[UNICORN_SOCKET]
   end
 
   def hijacked?
