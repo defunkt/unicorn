@@ -25,8 +25,6 @@ class Unicorn::HttpParser
   RACK_HIJACK_IO = "rack.hijack_io".freeze
   NULL_IO = StringIO.new("")
 
-  attr_accessor :response_start_sent
-
   # :stopdoc:
   # A frozen format for this is about 15% faster
   # Drop these frozen strings when Ruby 2.2 becomes more prevalent,
@@ -92,7 +90,7 @@ class Unicorn::HttpParser
 
     # detect if the socket is valid by writing a partial response:
     if @@check_client_connection && headers?
-      @response_start_sent = true
+      self.response_start_sent = true
       HTTP_RESPONSE_START.each { |c| socket.write(c) }
     end
 

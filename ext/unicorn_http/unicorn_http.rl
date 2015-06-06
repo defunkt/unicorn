@@ -25,6 +25,7 @@ void init_unicorn_httpdate(void);
 #define UH_FL_KAVERSION 0x80
 #define UH_FL_HASHEADER 0x100
 #define UH_FL_TO_CLEAR 0x200
+#define UH_FL_RESSTART 0x400 /* for check_client_connection */
 
 /* all of these flags need to be set for keepalive to be supported */
 #define UH_FL_KEEPALIVE (UH_FL_KAVERSION | UH_FL_REQEOF | UH_FL_HASHEADER)
@@ -60,7 +61,7 @@ struct http_parser {
   } len;
 };
 
-static ID id_set_backtrace, id_response_start_sent;
+static ID id_set_backtrace;
 
 #ifdef HAVE_RB_HASH_CLEAR /* Ruby >= 2.0 */
 #  define my_hash_clear(h) (void)rb_hash_clear(h)
@@ -597,7 +598,6 @@ static VALUE HttpParser_clear(VALUE self)
 
   http_parser_init(hp);
   my_hash_clear(hp->env);
-  rb_ivar_set(self, id_response_start_sent, Qfalse);
 
   return self;
 }
@@ -880,6 +880,25 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE dst, VALUE src)
   return src;
 }
 
+static VALUE HttpParser_rssset(VALUE self, VALUE boolean)
+{
+  struct http_parser *hp = data_get(self);
+
+  if (RTEST(boolean))
+    HP_FL_SET(hp, RESSTART);
+  else
+    HP_FL_UNSET(hp, RESSTART);
+
+  return boolean; /* ignored by Ruby anyways */
+}
+
+static VALUE HttpParser_rssget(VALUE self)
+{
+  struct http_parser *hp = data_get(self);
+
+  return HP_FL_TEST(hp, RESSTART) ? Qtrue : Qfalse;
+}
+
 #define SET_GLOBAL(var,str) do { \
   var = find_common_field(str, sizeof(str) - 1); \
   assert(!NIL_P(var) && "missed global field"); \
@@ -914,6 +933,8 @@ void Init_unicorn_http(void)
   rb_define_method(cHttpParser, "next?", HttpParser_next, 0);
   rb_define_method(cHttpParser, "buf", HttpParser_buf, 0);
   rb_define_method(cHttpParser, "env", HttpParser_env, 0);
+  rb_define_method(cHttpParser, "response_start_sent=", HttpParser_rssset, 1);
+  rb_define_method(cHttpParser, "response_start_sent", HttpParser_rssget, 0);
 
   /*
    * The maximum size a single chunk when using chunked transfer encoding.
@@ -939,7 +960,6 @@ void Init_unicorn_http(void)
   SET_GLOBAL(g_content_length, "CONTENT_LENGTH");
   SET_GLOBAL(g_http_connection, "CONNECTION");
   id_set_backtrace = rb_intern("set_backtrace");
-  id_response_start_sent = rb_intern("@response_start_sent");
   init_unicorn_httpdate();
 
 #ifndef HAVE_RB_HASH_CLEAR

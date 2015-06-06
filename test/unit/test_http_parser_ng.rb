@@ -34,6 +34,17 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_equal false, @parser.response_start_sent
   end
 
+  def test_response_start_sent
+    assert_equal false, @parser.response_start_sent, "default is false"
+    @parser.response_start_sent = true
+    assert_equal true, @parser.response_start_sent
+    @parser.response_start_sent = false
+    assert_equal false, @parser.response_start_sent
+    @parser.response_start_sent = true
+    @parser.clear
+    assert_equal false, @parser.response_start_sent
+  end
+
   def test_connection_TE
     @parser.buf << "GET / HTTP/1.1\r\nHost: example.com\r\nConnection: TE\r\n"
     @parser.buf << "TE: trailers\r\n\r\n"
