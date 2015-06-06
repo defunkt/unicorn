@@ -17,14 +17,6 @@ partially written and lead to corruption in the presence of multiple
 processes.  With reasonable amounts of logging, the performance impact
 of autoflush_log should be negligible on Linux and other modern kernels.
 
-=== I've installed Rack 1.1.x, why can't Unicorn load Rails (2.3.5)?
-
-Rails 2.3.5 is not compatible with Rack 1.1.x.  Unicorn is compatible
-with both Rack 1.1.x and Rack 1.0.x, and RubyGems will load the latest
-version of Rack installed on the system.  Uninstalling the Rack 1.1.x
-gem should solve gem loading issues with Rails 2.3.5.  Rails 2.3.6
-and later correctly support Rack 1.1.x.
-
 === Why are my redirects going to "http" URLs when my site uses https?
 
 If your site is entirely behind https, then Rack applications that use
@@ -68,3 +60,11 @@ queue makes failover to a different machine more difficult.
 
 See the TUNING and Unicorn::Configurator documents for more information
 on :backlog-related topics.
+
+=== I've installed Rack 1.1.x, why can't Unicorn load Rails (2.3.5)?
+
+Rails 2.3.5 is not compatible with Rack 1.1.x.  Unicorn is compatible
+with both Rack 1.1.x and Rack 1.0.x, and RubyGems will load the latest
+version of Rack installed on the system.  Uninstalling the Rack 1.1.x
+gem should solve gem loading issues with Rails 2.3.5.  Rails 2.3.6
+and later correctly support Rack 1.1.x.
