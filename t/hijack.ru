@@ -2,12 +2,13 @@ use Rack::Lint
 use Rack::ContentLength
 use Rack::ContentType, "text/plain"
 class DieIfUsed
+  @@n = 0
   def each
     abort "body.each called after response hijack\n"
   end
 
   def close
-    abort "body.close called after response hijack\n"
+    warn "closed DieIfUsed #{@@n += 1}\n"
   end
 end
 run lambda { |env|

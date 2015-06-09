@@ -559,16 +559,22 @@ class Unicorn::HttpServer
   # in 3 easy steps: read request, call app, write app response
   def process_client(client)
     status, headers, body = @app.call(env = @request.read(client))
-    return if @request.hijacked?
 
-    if 100 == status.to_i
-      e100_response_write(client, env)
-      status, headers, body = @app.call(env)
+    begin
       return if @request.hijacked?
+
+      if 100 == status.to_i
+        e100_response_write(client, env)
+        status, headers, body = @app.call(env)
+        return if @request.hijacked?
+      end
+      @request.headers? or headers = nil
+      http_response_write(client, status, headers, body,
+                          @request.response_start_sent)
+    ensure
+      body.respond_to?(:close) and body.close
     end
-    @request.headers? or headers = nil
-    http_response_write(client, status, headers, body,
-                        @request.response_start_sent)
+
     unless client.closed? # rack.hijack may've close this for us
       client.shutdown # in case of fork() in Rack app
       client.close # flush and uncork socket immediately, no keepalive

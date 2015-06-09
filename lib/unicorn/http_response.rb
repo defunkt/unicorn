@@ -52,12 +52,9 @@ module Unicorn::HttpResponse
     end
 
     if hijack
-      body = nil # ensure we do not close body
       hijack.call(socket)
     else
       body.each { |chunk| socket.write(chunk) }
     end
-  ensure
-    body.respond_to?(:close) and body.close
   end
 end

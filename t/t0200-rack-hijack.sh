@@ -16,12 +16,15 @@ t_begin "check response hijack" && {
 	test "xresponse.hijacked" = x"$(curl -sSfv http://$listen/hijack_res)"
 }
 
-t_begin "killing succeeds" && {
+t_begin "killing succeeds after hijack" && {
 	kill $unicorn_pid
 }
 
-t_begin "check stderr" && {
+t_begin "check stderr for hijacked body close" && {
 	check_stderr
+	grep 'closed DieIfUsed 1\>' $r_err
+	grep 'closed DieIfUsed 2\>' $r_err
+	! grep 'closed DieIfUsed 3\>' $r_err
 }
 
 t_done
