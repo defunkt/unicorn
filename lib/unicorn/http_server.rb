@@ -486,7 +486,8 @@ class Unicorn::HttpServer
     Unicorn::Configurator::RACKUP.clear
     @ready_pipe = @init_listeners = @before_exec = @before_fork = nil
 
-    srand # http://redmine.ruby-lang.org/issues/4338
+    # http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-core/36450
+    srand # remove in unicorn 6
 
     # The OpenSSL PRNG is seeded with only the pid, and apps with frequently
     # dying workers can recycle pids

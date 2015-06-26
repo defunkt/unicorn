@@ -34,7 +34,8 @@ or services behind them.
 * {Rack}[http://rack.github.io/] - a minimal interface between webservers
   supporting Ruby and Ruby frameworks
 
-* {Ruby}[http://www.ruby-lang.org/] - the programming language of Rack and \Unicorn
+* {Ruby}[https://www.ruby-lang.org/en/] - the programming language of
+  Rack and \Unicorn
 
 * {nginx}[http://nginx.org/] - the reverse proxy for use with \Unicorn
 

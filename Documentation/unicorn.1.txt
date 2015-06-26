@@ -180,6 +180,6 @@ startup, otherwise the socket will be closed.
 * [Rackup HowTo][3]
 
 [1]: http://unicorn.bogomips.org/
-[2]: http://rdoc.info/gems/r#/gems/rack/frames
-[3]: http://wiki.github.com/rack/rack/tutorial-rackup-howto
+[2]: http://www.rubydoc.info/github/rack/rack/
+[3]: https://github.com/rack/rack/wiki/tutorial-rackup-howto
 [4]: http://unicorn.bogomips.org/SIGNALS.html

@@ -10,7 +10,7 @@ both the the request and response in between \Unicorn and slow clients.
 
 * Designed for Rack, Unix, fast clients, and ease-of-debugging.  We
   cut out everything that is better supported by the operating system,
-  {nginx}[http://nginx.net/] or {Rack}[http://rack.github.io/].
+  {nginx}[http://nginx.org/] or {Rack}[http://rack.github.io/].
 
 * Compatible with Ruby 1.9.3 and later.
   unicorn 4.8.x will remain supported for Ruby 1.8 users.

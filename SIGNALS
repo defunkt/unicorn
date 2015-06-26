@@ -3,7 +3,7 @@
 In general, signals need only be sent to the master process.  However,
 the signals Unicorn uses internally to communicate with the worker
 processes are documented here as well.  With the exception of TTIN/TTOU,
-signal handling matches the behavior of {nginx}[http://nginx.net/] so it
+signal handling matches the behavior of {nginx}[http://nginx.org/] so it
 should be possible to easily share process management scripts between
 Unicorn and nginx.
 

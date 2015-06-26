@@ -3,8 +3,8 @@
 Since unicorn includes executables and is usually used to start a Ruby
 process, there are certain caveats to using it with tools that sandbox
 RubyGems installations such as
-{Bundler}[http://gembundler.com/] or
-{Isolate}[http://github.com/jbarnette/isolate].
+{Bundler}[http://bundler.io/] or
+{Isolate}[https://github.com/jbarnette/isolate].
 
 == General deployment
 
@@ -58,7 +58,7 @@ the before_exec hook:
 
 If you're using an older Bundler version (0.9.x), you may need to set or
 reset GEM_HOME, GEM_PATH and PATH environment variables in the
-before_exec hook as illustrated by http://gist.github.com/534668
+before_exec hook as illustrated by https://gist.github.com/534668
 
 === Ruby 2.0.0 close-on-exec and SIGUSR2 incompatibility
 

@@ -38,7 +38,7 @@ acceptable solution.  Those issues are documented here.
   after_fork hook to get correct random number generation.  We have a builtin
   workaround for this starting with \Unicorn 3.6.1
 
-  See http://redmine.ruby-lang.org/issues/show/4338
+  See http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-core/36450
 
 * On Ruby 1.8 prior to Ruby 1.8.7-p248, *BSD platforms have a broken
   stdio that causes failure for file uploads larger than 112K.  Upgrade
@@ -49,7 +49,7 @@ acceptable solution.  Those issues are documented here.
   "Kernel.rand" in your after_fork hook to reinitialize the random
   number generator.
 
-  See http://redmine.ruby-lang.org/issues/show/2962 for more details
+  See http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-core/28655
 
 * Rails 2.3.2 bundles its own version of Rack.  This may cause subtle
   bugs when simultaneously loaded with the system-wide Rack Rubygem
