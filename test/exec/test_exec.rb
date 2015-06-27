@@ -96,6 +96,30 @@ run lambda { |env|
     end
   end
 
+  def test_sd_listen_fds_emulation
+    File.open("config.ru", "wb") { |fp| fp.write(HI) }
+    sock = TCPServer.new(@addr, @port)
+    sock.setsockopt(:SOL_SOCKET, :SO_KEEPALIVE, 0)
+
+    pid = xfork do
+      redirect_test_io do
+        # pretend to be systemd
+        ENV['LISTEN_PID'] = "#$$"
+        ENV['LISTEN_FDS'] = '1'
+
+        # 3 = SD_LISTEN_FDS_START
+        exec($unicorn_bin, "-l", "#@addr:#@port", 3 => sock)
+      end
+    end
+    res = hit(["http://#{@addr}:#{@port}/"])
+    assert_equal [ "HI\n"], res
+    assert_shutdown(pid)
+    assert_equal 1, sock.getsockopt(:SOL_SOCKET, :SO_KEEPALIVE).int,
+                 "unicorn should always set SO_KEEPALIVE on inherited sockets"
+  ensure
+    sock.close if sock
+  end
+
   def test_working_directory_rel_path_config_file
     other = Tempfile.new('unicorn.wd')
     File.unlink(other.path)

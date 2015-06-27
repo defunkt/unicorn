@@ -766,12 +766,22 @@ class Unicorn::HttpServer
   def inherit_listeners!
     # inherit sockets from parents, they need to be plain Socket objects
     # before they become Kgio::UNIXServer or Kgio::TCPServer
-    inherited = ENV['UNICORN_FD'].to_s.split(',').map do |fd|
-      io = Socket.for_fd(fd.to_i)
+    inherited = ENV['UNICORN_FD'].to_s.split(',')
+
+    # emulate sd_listen_fds() for systemd
+    sd_pid, sd_fds = ENV.values_at('LISTEN_PID', 'LISTEN_FDS')
+    if sd_pid && sd_pid.to_i == $$
+      # 3 = SD_LISTEN_FDS_START
+      inherited.concat((3...(3 + sd_fds.to_i)).map { |fd| Socket.for_fd(fd) })
+    end
+    # to ease debugging, we will not unset LISTEN_PID and LISTEN_FDS
+
+    inherited.map! do |fd|
+      io = String === fd ? Socket.for_fd(fd.to_i) : fd
       io.autoclose = false
       io = server_cast(io)
       set_server_sockopt(io, listener_opts[sock_name(io)])
-      logger.info "inherited addr=#{sock_name(io)} fd=#{fd}"
+      logger.info "inherited addr=#{sock_name(io)} fd=#{io.fileno}"
       io
     end
 
