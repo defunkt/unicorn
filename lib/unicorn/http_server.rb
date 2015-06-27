@@ -768,10 +768,11 @@ class Unicorn::HttpServer
     # before they become Kgio::UNIXServer or Kgio::TCPServer
     inherited = ENV['UNICORN_FD'].to_s.split(',').map do |fd|
       io = Socket.for_fd(fd.to_i)
-      set_server_sockopt(io, listener_opts[sock_name(io)])
       io.autoclose = false
+      io = server_cast(io)
+      set_server_sockopt(io, listener_opts[sock_name(io)])
       logger.info "inherited addr=#{sock_name(io)} fd=#{fd}"
-      server_cast(io)
+      io
     end
 
     config_listeners = config[:listeners].dup
