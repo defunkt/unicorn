@@ -79,4 +79,24 @@ class ResponseTest < Test::Unit::TestCase
     headers = out.string.split(/\r\n\r\n/).first.split(/\r\n/)
     assert %r{\AHTTP/\d\.\d 666 I AM THE BEAST\z}.match(headers[0])
   end
+
+  def test_modified_rack_http_status_codes_late
+    r, w = IO.pipe
+    pid = fork do
+      r.close
+      # Users may want to globally override the status text associated
+      # with an HTTP status code in their app.
+      Rack::Utils::HTTP_STATUS_CODES[200] = "HI"
+      http_response_write(w, 200, {}, [])
+      w.close
+    end
+    w.close
+    assert_equal "HTTP/1.1 200 HI\r\n", r.gets
+    r.read # just drain the pipe
+    pid, status = Process.waitpid2(pid)
+    assert_predicate status, :success?
+  ensure
+    r.close
+    w.close unless w.closed?
+  end
 end
