@@ -21,17 +21,12 @@ class Unicorn::HttpParser
     "SERVER_SOFTWARE" => "Unicorn #{Unicorn::Const::UNICORN_VERSION}"
   }
 
-  RACK_HIJACK = "rack.hijack".freeze
-  RACK_HIJACK_IO = "rack.hijack_io".freeze
   NULL_IO = StringIO.new("")
 
   # :stopdoc:
   # A frozen format for this is about 15% faster
   # Drop these frozen strings when Ruby 2.2 becomes more prevalent,
   # 2.2+ optimizes hash assignments when used with literal string keys
-  REMOTE_ADDR = 'REMOTE_ADDR'.freeze
-  RACK_INPUT = 'rack.input'.freeze
-  UNICORN_SOCKET = 'unicorn.socket'.freeze
   HTTP_RESPONSE_START = [ 'HTTP', '/1.1 ']
   @@input_class = Unicorn::TeeInput
   @@check_client_connection = false
@@ -78,7 +73,7 @@ class Unicorn::HttpParser
     #  identify the client for the immediate request to the server;
     #  that client may be a proxy, gateway, or other intermediary
     #  acting on behalf of the actual source client."
-    e[REMOTE_ADDR] = socket.kgio_addr
+    e['REMOTE_ADDR'] = socket.kgio_addr
 
     # short circuit the common case with small GET requests first
     socket.kgio_read!(16384, buf)
@@ -94,12 +89,12 @@ class Unicorn::HttpParser
       HTTP_RESPONSE_START.each { |c| socket.write(c) }
     end
 
-    e[RACK_INPUT] = 0 == content_length ?
-                    NULL_IO : @@input_class.new(socket, self)
+    e['rack.input'] = 0 == content_length ?
+                      NULL_IO : @@input_class.new(socket, self)
 
     # for Rack hijacking in Rack 1.5 and later
-    e[UNICORN_SOCKET] = socket
-    e[RACK_HIJACK] = self
+    e['unicorn.socket'] = socket
+    e['rack.hijack'] = self
 
     e.merge!(DEFAULTS)
   end
@@ -107,10 +102,10 @@ class Unicorn::HttpParser
   # for rack.hijack, we respond to this method so no extra allocation
   # of a proc object
   def call
-    env[RACK_HIJACK_IO] = env[UNICORN_SOCKET]
+    env['rack.hijack_io'] = env['unicorn.socket']
   end
 
   def hijacked?
-    env.include?(RACK_HIJACK_IO)
+    env.include?('rack.hijack_io'.freeze)
   end
 end

@@ -10,8 +10,6 @@
 # is the job of Rack, with the exception of the "Date" and "Status" header.
 module Unicorn::HttpResponse
 
-  CRLF = "\r\n"
-
   # internal API, code will always be common-enough-for-even-old-Rack
   def err_response(code, response_start_sent)
     "#{response_start_sent ? '' : 'HTTP/1.1 '}" \
@@ -39,7 +37,7 @@ module Unicorn::HttpResponse
           # key in Rack < 1.5
           hijack = value
         else
-          if value =~ /\n/
+          if value.include?("\n".freeze)
             # avoiding blank, key-only cookies with /\n+/
             buf << value.split(/\n+/).map! { |v| "#{key}: #{v}\r\n" }.join
           else
@@ -47,7 +45,7 @@ module Unicorn::HttpResponse
           end
         end
       end
-      socket.write(buf << CRLF)
+      socket.write(buf << "\r\n".freeze)
     end
 
     if hijack
