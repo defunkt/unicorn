@@ -39,7 +39,7 @@ module Unicorn::HttpResponse
         else
           if value.include?("\n".freeze)
             # avoiding blank, key-only cookies with /\n+/
-            buf << value.split(/\n+/).map! { |v| "#{key}: #{v}\r\n" }.join
+            value.split(/\n+/).each { |v| buf << "#{key}: #{v}\r\n" }
           else
             buf << "#{key}: #{value}\r\n"
           end
