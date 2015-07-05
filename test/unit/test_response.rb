@@ -94,7 +94,7 @@ class ResponseTest < Test::Unit::TestCase
     assert_equal "HTTP/1.1 200 HI\r\n", r.gets
     r.read # just drain the pipe
     pid, status = Process.waitpid2(pid)
-    assert_predicate status, :success?
+    assert status.success?, status.inspect
   ensure
     r.close
     w.close unless w.closed?
