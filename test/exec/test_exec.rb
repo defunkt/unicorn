@@ -96,7 +96,9 @@ run lambda { |env|
     end
   end
 
-  def test_sd_listen_fds_emulation
+  # FIXME https://bugs.ruby-lang.org/issues/11336
+  # [ruby-core:69895] [Bug #11336]
+  def disabled_test_sd_listen_fds_emulation
     File.open("config.ru", "wb") { |fp| fp.write(HI) }
     sock = TCPServer.new(@addr, @port)
     sock.setsockopt(:SOL_SOCKET, :SO_KEEPALIVE, 0)
