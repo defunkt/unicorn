@@ -254,6 +254,11 @@ class Unicorn::Configurator
   #
   #   Default: 1024
   #
+  #   Note: with the Linux kernel, the net.core.somaxconn sysctl defaults
+  #   to 128, capping this value to 128.  Raising the sysctl allows a
+  #   larger backlog (which may not be desirable with multiple,
+  #   load-balanced machines).
+  #
   # [:rcvbuf => bytes, :sndbuf => bytes]
   #
   #   Maximum receive and send buffer sizes (in bytes) of sockets.
