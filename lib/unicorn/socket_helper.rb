@@ -5,14 +5,12 @@ require 'socket'
 module Unicorn
   module SocketHelper
 
-    # internal interface, only used by Rainbows!/Zbatery
+    # internal interface
     DEFAULTS = {
       # The semantics for TCP_DEFER_ACCEPT changed in Linux 2.6.32+
       # with commit d1b99ba41d6c5aa1ed2fc634323449dd656899e9
-      # This change shouldn't affect Unicorn users behind nginx (a
-      # value of 1 remains an optimization), but Rainbows! users may
-      # want to use a higher value on Linux 2.6.32+ to protect against
-      # denial-of-service attacks
+      # This change shouldn't affect unicorn users behind nginx (a
+      # value of 1 remains an optimization).
       :tcp_defer_accept => 1,
 
       # FreeBSD, we need to override this to 'dataready' if we

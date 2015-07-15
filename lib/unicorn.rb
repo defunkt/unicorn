@@ -10,10 +10,10 @@ require 'kgio'
 # enough functionality to service web application requests fast as possible.
 # :startdoc:
 
-# \Unicorn exposes very little of an user-visible API and most of its
-# internals are subject to change.  \Unicorn is designed to host Rack
+# unicorn exposes very little of an user-visible API and most of its
+# internals are subject to change.  unicorn is designed to host Rack
 # applications, so applications should be written against the Rack SPEC
-# and not \Unicorn internals.
+# and not unicorn internals.
 module Unicorn
 
   # Raised inside TeeInput when a client closes the socket inside the

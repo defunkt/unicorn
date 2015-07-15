@@ -1,10 +1,10 @@
-= Unicorn: Rack HTTP server for fast clients and Unix
+= unicorn: Rack HTTP server for fast clients and Unix
 
-\Unicorn is an HTTP server for Rack applications designed to only serve
+unicorn is an HTTP server for Rack applications designed to only serve
 fast clients on low-latency, high-bandwidth connections and take
 advantage of features in Unix/Unix-like kernels.  Slow clients should
 only be served by placing a reverse proxy capable of fully buffering
-both the the request and response in between \Unicorn and slow clients.
+both the the request and response in between unicorn and slow clients.
 
 == Features
 
@@ -15,9 +15,9 @@ both the the request and response in between \Unicorn and slow clients.
 * Compatible with Ruby 1.9.3 and later.
   unicorn 4.8.x will remain supported for Ruby 1.8 users.
 
-* Process management: \Unicorn will reap and restart workers that
+* Process management: unicorn will reap and restart workers that
   die from broken apps.  There is no need to manage multiple processes
-  or ports yourself.  \Unicorn can spawn and manage any number of
+  or ports yourself.  unicorn can spawn and manage any number of
   worker processes you choose to scale to your backend.
 
 * Load balancing is done entirely by the operating system kernel.
@@ -33,11 +33,11 @@ both the the request and response in between \Unicorn and slow clients.
 * Builtin reopening of all log files in your application via
   USR1 signal.  This allows logrotate to rotate files atomically and
   quickly via rename instead of the racy and slow copytruncate method.
-  \Unicorn also takes steps to ensure multi-line log entries from one
+  unicorn also takes steps to ensure multi-line log entries from one
   request all stay within the same file.
 
 * nginx-style binary upgrades without losing connections.
-  You can upgrade \Unicorn, your entire application, libraries
+  You can upgrade unicorn, your entire application, libraries
   and even your Ruby interpreter without dropping clients.
 
 * before_fork and after_fork hooks in case your application
@@ -60,15 +60,15 @@ both the the request and response in between \Unicorn and slow clients.
 
 == License
 
-\Unicorn is copyright 2009 by all contributors (see logs in git).
+unicorn is copyright 2009 by all contributors (see logs in git).
 It is based on Mongrel 1.1.5.
 Mongrel is copyright 2007 Zed A. Shaw and contributors.
 
-\Unicorn is licensed under (your choice) of the GPLv2 or later
+unicorn is licensed under (your choice) of the GPLv2 or later
 (GPLv3+ preferred), or Ruby (1.8)-specific terms.
 See the included LICENSE file for details.
 
-\Unicorn is 100% Free Software.
+unicorn is 100% Free Software.
 
 == Install
 
@@ -108,17 +108,17 @@ In RAILS_ROOT, run:
 
   unicorn_rails
 
-\Unicorn will bind to all interfaces on TCP port 8080 by default.
+unicorn will bind to all interfaces on TCP port 8080 by default.
 You may use the +--listen/-l+ switch to bind to a different
 address:port or a UNIX socket.
 
 === Configuration File(s)
 
-\Unicorn will look for the config.ru file used by rackup in APP_ROOT.
+unicorn will look for the config.ru file used by rackup in APP_ROOT.
 
-For deployments, it can use a config file for \Unicorn-specific options
+For deployments, it can use a config file for unicorn-specific options
 specified by the +--config-file/-c+ command-line switch.  See
-Unicorn::Configurator for the syntax of the \Unicorn-specific options.
+Unicorn::Configurator for the syntax of the unicorn-specific options.
 The default settings are designed for maximum out-of-the-box
 compatibility with existing applications.
 
@@ -130,7 +130,7 @@ supported.  Run `unicorn -h` to see command-line options.
 There is NO WARRANTY whatsoever if anything goes wrong, but
 {let us know}[link:ISSUES.html] and we'll try our best to fix it.
 
-\Unicorn is designed to only serve fast clients either on the local host
+unicorn is designed to only serve fast clients either on the local host
 or a fast LAN.  See the PHILOSOPHY and DESIGN documents for more details
 regarding this.
 
@@ -140,6 +140,6 @@ All feedback (bug reports, user/development dicussion, patches, pull
 requests) go to the mailing list/newsgroup.  See the ISSUES document for
 information on the {mailing list}[mailto:unicorn-public@bogomips.org].
 
-For the latest on \Unicorn releases, you may also finger us at
+For the latest on unicorn releases, you may also finger us at
 unicorn@bogomips.org or check our NEWS page (and subscribe to our Atom
 feed).

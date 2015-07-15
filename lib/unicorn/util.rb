@@ -1,7 +1,7 @@
 # -*- encoding: binary -*-
 
 require 'fcntl'
-module Unicorn::Util
+module Unicorn::Util # :nodoc:
 
 # :stopdoc:
   def self.is_log?(fp)

@@ -7,8 +7,8 @@
 #
 # Users do not need to know the internals of this class, but reading the
 # {source}[http://bogomips.org/unicorn.git/tree/lib/unicorn/http_server.rb]
-# is education for programmers wishing to learn how \Unicorn works.
-# See Unicorn::Configurator for information on how to configure \Unicorn.
+# is education for programmers wishing to learn how unicorn works.
+# See Unicorn::Configurator for information on how to configure unicorn.
 class Unicorn::HttpServer
   # :stopdoc:
   attr_accessor :app, :timeout, :worker_processes,

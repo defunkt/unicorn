@@ -38,7 +38,7 @@ static VALUE set_maxhdrlen(VALUE self, VALUE len)
   return UINT2NUM(MAX_HEADER_LEN = NUM2UINT(len));
 }
 
-/* keep this small for Rainbows! since every client has one */
+/* keep this small for other servers (e.g. yahns) since every client has one */
 struct http_parser {
   int cs; /* Ragel internal state */
   unsigned int flags;

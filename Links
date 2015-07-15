@@ -1,13 +1,13 @@
 = Related Projects
 
-If you're interested in \Unicorn, you may be interested in some of the projects
+If you're interested in unicorn, you may be interested in some of the projects
 listed below.  If you have any links to add/change/remove, please tell us at
 mailto:unicorn-public@bogomips.org!
 
 == Disclaimer
 
-The \Unicorn project is not responsible for the content in these links.
-Furthermore, the \Unicorn project has never, does not and will never endorse:
+The unicorn project is not responsible for the content in these links.
+Furthermore, the unicorn project has never, does not and will never endorse:
 
 * any for-profit entities or services
 * any non-{Free Software}[http://www.gnu.org/philosophy/free-sw.html]
@@ -15,13 +15,13 @@ Furthermore, the \Unicorn project has never, does not and will never endorse:
 The existence of these links does not imply endorsement of any entities
 or services behind them.
 
-=== For use with \Unicorn
+=== For use with unicorn
 
 * {Bluepill}[https://github.com/arya/bluepill] -
   a simple process monitoring tool written in Ruby
 
 * {golden_brindle}[https://github.com/simonoff/golden_brindle] - tool to
-  manage multiple \Unicorn instances/applications on a single server
+  manage multiple unicorn instances/applications on a single server
 
 * {raindrops}[http://raindrops.bogomips.org/] - real-time stats for
   preforking Rack servers
@@ -29,27 +29,25 @@ or services behind them.
 * {UnXF}[http://bogomips.org/unxf/]  Un-X-Forward* the Rack environment,
   useful since unicorn is designed to be deployed behind a reverse proxy.
 
-=== \Unicorn is written to work with
+=== unicorn is written to work with
 
 * {Rack}[http://rack.github.io/] - a minimal interface between webservers
   supporting Ruby and Ruby frameworks
 
 * {Ruby}[https://www.ruby-lang.org/en/] - the programming language of
-  Rack and \Unicorn
+  Rack and unicorn
 
-* {nginx}[http://nginx.org/] - the reverse proxy for use with \Unicorn
+* {nginx}[http://nginx.org/] - the reverse proxy for use with unicorn
 
-* {kgio}[http://bogomips.org/kgio/] - the I/O library written for \Unicorn
+* {kgio}[http://bogomips.org/kgio/] - the I/O library written for unicorn
+  (deprecated and functionality being mainlined into Ruby)
 
 === Derivatives
 
-* {Green Unicorn}[http://gunicorn.org/] - a Python version of \Unicorn
+* {Green Unicorn}[http://gunicorn.org/] - a Python version of unicorn
 
-* {Rainbows!}[http://rainbows.bogomips.org/] - \Unicorn for sleepy
-  apps and slow clients (historical).
-
-* {yahns}[http://yahns.yhbt.net/] - like Rainbows!, but with fewer options
-  and designed for energy efficiency on idle sites.
+* {yahns}[http://yahns.yhbt.net/] - the complete opposite of unicorn in
+  every imaginable way.  Designed for energy efficiency on idle sites.
 
 === Prior Work
 
@@ -57,4 +55,4 @@ or services behind them.
   unicorn is based on
 
 * {david}[http://bogomips.org/david.git] - a tool to explain why you need
-  nginx in front of \Unicorn
+  nginx in front of unicorn

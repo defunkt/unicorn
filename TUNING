@@ -1,10 +1,10 @@
-= Tuning \Unicorn
+= Tuning unicorn
 
-\Unicorn performance is generally as good as a (mostly) Ruby web server
+unicorn performance is generally as good as a (mostly) Ruby web server
 can provide.  Most often the performance bottleneck is in the web
 application running on Unicorn rather than Unicorn itself.
 
-== \Unicorn Configuration
+== unicorn Configuration
 
 See Unicorn::Configurator for details on the config file format.
 +worker_processes+ is the most-commonly needed tuning parameter.
@@ -14,7 +14,7 @@ See Unicorn::Configurator for details on the config file format.
 * worker_processes should be scaled to the number of processes your
   backend system(s) can support.  DO NOT scale it to the number of
   external network clients your application expects to be serving.
-  \Unicorn is NOT for serving slow clients, that is the job of nginx.
+  unicorn is NOT for serving slow clients, that is the job of nginx.
 
 * worker_processes should be *at* *least* the number of CPU cores on
   a dedicated server (unless you do not have enough memory).
@@ -58,7 +58,7 @@ See Unicorn::Configurator for details on the config file format.
 * UNIX domain sockets are slightly faster than TCP sockets, but only
   work if nginx is on the same machine.
 
-== Other \Unicorn settings
+== Other unicorn settings
 
 * Setting "preload_app true" can allow copy-on-write-friendly GC to
   be used to save memory.  It will probably not work out of the box with

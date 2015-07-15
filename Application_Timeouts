@@ -4,10 +4,10 @@ This article focuses on _application_ setup for Rack applications, but
 can be expanded to all applications that connect to external resources
 and expect short response times.
 
-This article is not specific to \Unicorn, but exists to discourage
+This article is not specific to unicorn, but exists to discourage
 the overuse of the built-in
 {timeout}[link:Unicorn/Configurator.html#method-i-timeout] directive
-in \Unicorn.
+in unicorn.
 
 == ALL External Resources Are Considered Unreliable
 
@@ -71,7 +71,7 @@ handle network/server failures.
 == The Last Line Of Defense
 
 The {timeout}[link:Unicorn/Configurator.html#method-i-timeout] mechanism
-in \Unicorn is an extreme solution that should be avoided whenever
+in unicorn is an extreme solution that should be avoided whenever
 possible.  It will help catch bugs in your application where and when
 your application forgets to use timeouts, but it is expensive as it
 kills and respawns a worker process.

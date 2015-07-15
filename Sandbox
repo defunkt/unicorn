@@ -1,4 +1,4 @@
-= Tips for using \Unicorn with Sandbox installation tools
+= Tips for using unicorn with Sandbox installation tools
 
 Since unicorn includes executables and is usually used to start a Ruby
 process, there are certain caveats to using it with tools that sandbox

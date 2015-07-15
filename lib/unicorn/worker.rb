@@ -3,8 +3,8 @@ require "raindrops"
 
 # This class and its members can be considered a stable interface
 # and will not change in a backwards-incompatible fashion between
-# releases of \Unicorn.  Knowledge of this class is generally not
-# not needed for most users of \Unicorn.
+# releases of unicorn.  Knowledge of this class is generally not
+# not needed for most users of unicorn.
 #
 # Some users may want to access it in the before_fork/after_fork hooks.
 # See the Unicorn::Configurator RDoc for examples.

@@ -1,7 +1,7 @@
 # -*- encoding: binary -*-
 require 'logger'
 
-# Implements a simple DSL for configuring a \Unicorn server.
+# Implements a simple DSL for configuring a unicorn server.
 #
 # See http://unicorn.bogomips.org/examples/unicorn.conf.rb and
 # http://unicorn.bogomips.org/examples/unicorn.conf.minimal.rb
@@ -282,20 +282,19 @@ class Unicorn::Configurator
   #   Setting this to +true+ can make streaming responses in Rails 3.1
   #   appear more quickly at the cost of slightly higher bandwidth usage.
   #   The effect of this option is most visible if nginx is not used,
-  #   but nginx remains highly recommended with \Unicorn.
+  #   but nginx remains highly recommended with unicorn.
   #
   #   This has no effect on UNIX sockets.
   #
-  #   Default: +true+ (Nagle's algorithm disabled) in \Unicorn,
-  #   +true+ in Rainbows!  This defaulted to +false+ in \Unicorn
-  #   3.x
+  #   Default: +true+ (Nagle's algorithm disabled) in unicorn
+  #   This defaulted to +false+ in unicorn 3.x
   #
   # [:tcp_nopush => true or false]
   #
   #   Enables/disables TCP_CORK in Linux or TCP_NOPUSH in FreeBSD
   #
   #   This prevents partial TCP frames from being sent out and reduces
-  #   wakeups in nginx if it is on a different machine.  Since \Unicorn
+  #   wakeups in nginx if it is on a different machine.  Since unicorn
   #   is only designed for applications that send the response body
   #   quickly without keepalive, sockets will always be flushed on close
   #   to prevent delays.
@@ -303,7 +302,7 @@ class Unicorn::Configurator
   #   This has no effect on UNIX sockets.
   #
   #   Default: +false+
-  #   This defaulted to +true+ in \Unicorn 3.4 - 3.7
+  #   This defaulted to +true+ in unicorn 3.4 - 3.7
   #
   # [:ipv6only => true or false]
   #
@@ -387,12 +386,10 @@ class Unicorn::Configurator
   #   and +false+ or +nil+ is synonymous for a value of zero.
   #
   #   A value of +1+ is a good optimization for local networks
-  #   and trusted clients.  For Rainbows! and Zbatery users, a higher
-  #   value (e.g. +60+) provides more protection against some
-  #   denial-of-service attacks.  There is no good reason to ever
-  #   disable this with a +zero+ value when serving HTTP.
+  #   and trusted clients.  There is no good reason to ever
+  #   disable this with a +zero+ value with unicorn.
   #
-  #   Default: 1 retransmit for \Unicorn, 60 for Rainbows! 0.95.0\+
+  #   Default: 1
   #
   # [:accept_filter => String]
   #
@@ -401,8 +398,7 @@ class Unicorn::Configurator
   #   This enables either the "dataready" or (default) "httpready"
   #   accept() filter under FreeBSD.  This is intended as an
   #   optimization to reduce context switches with common GET/HEAD
-  #   requests.  For Rainbows! and Zbatery users, this provides
-  #   some protection against certain denial-of-service attacks, too.
+  #   requests.
   #
   #   There is no good reason to change from the default.
   #
