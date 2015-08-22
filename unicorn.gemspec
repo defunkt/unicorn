@@ -25,6 +25,7 @@ Gem::Specification.new do |s|
   s.files = manifest
   s.homepage = Olddoc.config['rdoc_url']
   s.test_files = test_files
+  s.required_ruby_version = [ '>= 1.9.3', '< 3.0' ]
 
   # for people that are absolutely stuck on Rails 2.3.2 and can't
   # up/downgrade to any other version, the Rack dependency may be
