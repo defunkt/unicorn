@@ -53,7 +53,7 @@ class Unicorn::StreamInput
           rv << @rbuf
           to_read -= @rbuf.size
         end
-        @rbuf.replace('')
+        @rbuf.clear
       end
       rv = nil if rv.empty? && length != 0
     else
@@ -130,8 +130,8 @@ private
       filter_body(@rbuf, @buf)
       dst << @rbuf
     end
-    ensure
-      @rbuf.replace('')
+  ensure
+    @rbuf.clear
   end
 
   def eof!
