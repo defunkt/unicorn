@@ -11,6 +11,8 @@ submit patches and/or obtain support after you have searched the
 * Quote as little as possible of the message you're replying to
 * Do not send HTML mail, it will be flagged as spam
 * Anonymous and pseudonymous messages will always be welcome.
+* The email submission port (587) is enabled on the bogomips.org MX:
+  http://bogomips.org/unicorn-public/20141004232241.GA23908@dcvr.yhbt.net/t/
 
 If your issue is of a sensitive nature or you're just shy in public,
 then feel free to email us privately at mailto:unicorn@bogomips.org
@@ -63,39 +65,28 @@ document distributed with git) on guidelines for patch submission.
 
 * public: mailto:unicorn-public@bogomips.org
 * private: mailto:unicorn@bogomips.org
+* nntp://news.gmane.org/gmane.comp.lang.ruby.unicorn.general
+* nntp://news.public-inbox.org/inbox.comp.lang.ruby.unicorn
+* http://bogomips.org/unicorn-public/
 
 We operate a {public-inbox}[http://public-inbox.org/] which
-feeds the mailing list.  You may subscribe either using
-{ssoma}[http://ssoma.public-inbox.org/] or by sending a mail
-to mailto:unicorn-public+subscribe@bogomips.org
+feeds the mailing list.  Subscription is optional, so Cc:
+all participants.
 
-ssoma is a mail archiver/fetcher using git.  It operates in a similar
-fashion to tools such as slrnpull, fetchmail, or getmail.  ssoma
-subscription instructions:
+You can follow along via NNTP:
 
-	URL=git://bogomips.org/unicorn-public
-	LISTNAME=unicorn
+	nntp://news.public-inbox.org/inbox.comp.lang.ruby.unicorn
+	nntp://news.gmane.org/gmane.comp.lang.ruby.unicorn.general
 
-	# to initialize a maildir (this may be a new or existing maildir,
-	# ssoma will not touch existing messages)
-	# If you prefer mbox, use mbox:/path/to/mbox as the last argument
-	# You may also use imap://$MAILSERVER/INBOX for an IMAP account
-	# or imaps:// for an IMAPS account, as well.
-	ssoma add $LISTNAME $URL maildir:/path/to/maildir
+Or Atom feeds:
 
-	# read with your favorite MUA (only using mutt as an example)
-	mutt -f /path/to/maildir # (or /path/to/mbox)
+	http://bogomips.org/unicorn-public/new.atom
 
-	# to keep your mbox or maildir up-to-date, periodically run the following:
-	ssoma sync $LISTNAME
+	The HTML archives at http://bogomips.org/unicorn-public/
+	also has links to per-thread Atom feeds and downloadable
+	mboxes.
 
-	# your MUA may modify and delete messages from the maildir or mbox,
-	# this does not affect ssoma functionality at all
+You may also subscribe via plain-text email:
 
-	# to sync all your ssoma subscriptions
-	ssoma sync
-
-	# You may wish to sync in your cronjob
-	ssoma sync --cron
-
-HTML archives are available here: http://bogomips.org/unicorn-public/
+	mailto:unicorn-public+subscribe@bogomips.org
+	(and confirming the auto-reply)

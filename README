@@ -140,6 +140,11 @@ All feedback (bug reports, user/development dicussion, patches, pull
 requests) go to the mailing list/newsgroup.  See the ISSUES document for
 information on the {mailing list}[mailto:unicorn-public@bogomips.org].
 
+The mailing list is archived at http://bogomips.org/unicorn-public/
+Read-only NNTP access is available at:
+nntp://news.public-inbox.org/inbox.comp.lang.ruby.unicorn and
+nntp://news.gmane.org/gmane.comp.lang.ruby.unicorn.general
+
 For the latest on unicorn releases, you may also finger us at
 unicorn@bogomips.org or check our NEWS page (and subscribe to our Atom
 feed).
