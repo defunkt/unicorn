@@ -40,11 +40,8 @@ pid "/path/to/app/shared/pids/unicorn.pid"
 stderr_path "/path/to/app/shared/log/unicorn.stderr.log"
 stdout_path "/path/to/app/shared/log/unicorn.stdout.log"
 
-# combine Ruby 2.0.0dev or REE with "preload_app true" for memory savings
-# http://rubyenterpriseedition.com/faq.html#adapt_apps_for_cow
+# combine Ruby 2.0.0+ with "preload_app true" for memory savings
 preload_app true
-GC.respond_to?(:copy_on_write_friendly=) and
-  GC.copy_on_write_friendly = true
 
 # Enable this flag to have unicorn test client connections by writing the
 # beginning of the HTTP headers before calling the application.  This
