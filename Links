@@ -39,9 +39,6 @@ or services behind them.
 
 * {nginx}[http://nginx.org/] - the reverse proxy for use with unicorn
 
-* {kgio}[http://bogomips.org/kgio/] - the I/O library written for unicorn
-  (deprecated and functionality being mainlined into Ruby)
-
 === Derivatives
 
 * {Green Unicorn}[http://gunicorn.org/] - a Python version of unicorn
