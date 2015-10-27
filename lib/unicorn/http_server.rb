@@ -772,12 +772,12 @@ class Unicorn::HttpServer
     sd_pid, sd_fds = ENV.values_at('LISTEN_PID', 'LISTEN_FDS')
     if sd_pid && sd_pid.to_i == $$
       # 3 = SD_LISTEN_FDS_START
-      inherited.concat((3...(3 + sd_fds.to_i)).map { |fd| Socket.for_fd(fd) })
+      inherited.concat((3...(3 + sd_fds.to_i)).to_a)
     end
     # to ease debugging, we will not unset LISTEN_PID and LISTEN_FDS
 
     inherited.map! do |fd|
-      io = String === fd ? Socket.for_fd(fd.to_i) : fd
+      io = Socket.for_fd(fd.to_i)
       io.autoclose = false
       io = server_cast(io)
       set_server_sockopt(io, listener_opts[sock_name(io)])

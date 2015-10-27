@@ -96,31 +96,37 @@ run lambda { |env|
     end
   end
 
-  # FIXME https://bugs.ruby-lang.org/issues/11336
-  # [ruby-core:69895] [Bug #11336]
-  def disabled_test_sd_listen_fds_emulation
+  def test_sd_listen_fds_emulation
     File.open("config.ru", "wb") { |fp| fp.write(HI) }
     sock = TCPServer.new(@addr, @port)
-    sock.setsockopt(:SOL_SOCKET, :SO_KEEPALIVE, 0)
 
-    pid = xfork do
-      redirect_test_io do
-        # pretend to be systemd
-        ENV['LISTEN_PID'] = "#$$"
-        ENV['LISTEN_FDS'] = '1'
+    [ %W(-l #@addr:#@port), nil ].each do |l|
+      sock.setsockopt(:SOL_SOCKET, :SO_KEEPALIVE, 0)
 
-        # 3 = SD_LISTEN_FDS_START
-        exec($unicorn_bin, "-l", "#@addr:#@port", 3 => sock)
+      pid = xfork do
+        redirect_test_io do
+          # pretend to be systemd
+          ENV['LISTEN_PID'] = "#$$"
+          ENV['LISTEN_FDS'] = '1'
+
+          # 3 = SD_LISTEN_FDS_START
+          args = [ $unicorn_bin ]
+          args.concat(l) if l
+          args << { 3 => sock }
+          exec(*args)
+        end
       end
+      res = hit(["http://#@addr:#@port/"])
+      assert_equal [ "HI\n" ], res
+      assert_shutdown(pid)
+      assert_equal 1, sock.getsockopt(:SOL_SOCKET, :SO_KEEPALIVE).int,
+                  'unicorn should always set SO_KEEPALIVE on inherited sockets'
     end
-    res = hit(["http://#{@addr}:#{@port}/"])
-    assert_equal [ "HI\n"], res
-    assert_shutdown(pid)
-    assert_equal 1, sock.getsockopt(:SOL_SOCKET, :SO_KEEPALIVE).int,
-                 "unicorn should always set SO_KEEPALIVE on inherited sockets"
   ensure
     sock.close if sock
-  end
+    # disabled test on old Rubies: https://bugs.ruby-lang.org/issues/11336
+    # [ruby-core:69895] [Bug #11336] fixed by r51576
+  end if RUBY_VERSION.to_f >= 2.3
 
   def test_working_directory_rel_path_config_file
     other = Tempfile.new('unicorn.wd')
