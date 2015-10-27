@@ -166,9 +166,7 @@ variable internally when doing transparent upgrades.
 UNICORN_FD is a comma-delimited list of one or more file descriptors
 used to implement USR2 upgrades.  Init systems may bind listen sockets
 itself and spawn unicorn with UNICORN_FD set to the file descriptor
-numbers of the listen socket(s).  The unicorn CONFIG_FILE must still
-have the inherited listen socket parameters defined as in a normal
-startup, otherwise the socket will be closed.
+numbers of the listen socket(s).
 
 # SEE ALSO
 

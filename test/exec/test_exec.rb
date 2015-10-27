@@ -128,6 +128,26 @@ run lambda { |env|
     # [ruby-core:69895] [Bug #11336] fixed by r51576
   end if RUBY_VERSION.to_f >= 2.3
 
+  def test_inherit_listener_unspecified
+    File.open("config.ru", "wb") { |fp| fp.write(HI) }
+    sock = TCPServer.new(@addr, @port)
+    sock.setsockopt(:SOL_SOCKET, :SO_KEEPALIVE, 0)
+
+    pid = xfork do
+      redirect_test_io do
+        ENV['UNICORN_FD'] = sock.fileno.to_s
+        exec($unicorn_bin, sock.fileno => sock.fileno)
+      end
+    end
+    res = hit(["http://#@addr:#@port/"])
+    assert_equal [ "HI\n" ], res
+    assert_shutdown(pid)
+    assert_equal 1, sock.getsockopt(:SOL_SOCKET, :SO_KEEPALIVE).int,
+                'unicorn should always set SO_KEEPALIVE on inherited sockets'
+  ensure
+    sock.close if sock
+  end
+
   def test_working_directory_rel_path_config_file
     other = Tempfile.new('unicorn.wd')
     File.unlink(other.path)
