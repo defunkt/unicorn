@@ -9,7 +9,7 @@ submit patches and/or obtain support after you have searched the
 * Cc: all participants in a thread or commit, as subscription is optional
 * Do not {top post}[http://catb.org/jargon/html/T/top-post.html] in replies
 * Quote as little as possible of the message you're replying to
-* Do not send HTML mail, it will be flagged as spam
+* Do not send HTML mail or images, it will be flagged as spam
 * Anonymous and pseudonymous messages will always be welcome.
 * The email submission port (587) is enabled on the bogomips.org MX:
   http://bogomips.org/unicorn-public/20141004232241.GA23908@dcvr.yhbt.net/t/

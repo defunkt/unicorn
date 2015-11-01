@@ -37,14 +37,15 @@ or services behind them.
 * {Ruby}[https://www.ruby-lang.org/en/] - the programming language of
   Rack and unicorn
 
-* {nginx}[http://nginx.org/] - the reverse proxy for use with unicorn
+* {nginx}[http://nginx.org/] (Free versions) -
+  the reverse proxy for use with unicorn
 
 === Derivatives
 
 * {Green Unicorn}[http://gunicorn.org/] - a Python version of unicorn
 
-* {yahns}[http://yahns.yhbt.net/] - the complete opposite of unicorn in
-  every imaginable way.  Designed for energy efficiency on idle sites.
+* {Starman}[http://search.cpan.org/dist/Starman/] - Plack/PSGI version
+  of unicorn
 
 === Prior Work
 
