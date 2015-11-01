@@ -770,7 +770,7 @@ class Unicorn::HttpServer
 
     # emulate sd_listen_fds() for systemd
     sd_pid, sd_fds = ENV.values_at('LISTEN_PID', 'LISTEN_FDS')
-    if sd_pid && sd_pid.to_i == $$
+    if sd_pid.to_i == $$ # n.b. $$ can never be zero
       # 3 = SD_LISTEN_FDS_START
       inherited.concat((3...(3 + sd_fds.to_i)).to_a)
     end
