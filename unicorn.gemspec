@@ -25,7 +25,11 @@ Gem::Specification.new do |s|
   s.files = manifest
   s.homepage = Olddoc.config['rdoc_url']
   s.test_files = test_files
-  s.required_ruby_version = [ '>= 1.9.3', '< 3.0' ]
+
+  # technically we need ">= 1.9.3", too, but avoid the array here since
+  # old rubygems versions (1.8.23.2 at least) do not support multiple
+  # version requirements here.
+  s.required_ruby_version = '< 3.0'
 
   # for people that are absolutely stuck on Rails 2.3.2 and can't
   # up/downgrade to any other version, the Rack dependency may be
@@ -38,5 +42,9 @@ Gem::Specification.new do |s|
   s.add_development_dependency('test-unit', '~> 3.0')
   s.add_development_dependency('olddoc', '~> 1.0')
 
-  s.licenses = ["GPLv2+", "Ruby 1.8"]
+  # Note: To avoid ambiguity, we intentionally avoid the SPDX-compatible
+  # 'Ruby' here since Ruby 1.9.3 switched to BSD-2-Clause, but we
+  # inherited our license from Mongrel when Ruby was at 1.8.
+  # We cannot automatically switch licenses when Ruby changes.
+  s.licenses = ['GPL-2.0+', 'Ruby-1.8']
 end
