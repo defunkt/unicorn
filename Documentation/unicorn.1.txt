@@ -168,6 +168,11 @@ used to implement USR2 upgrades.  Init systems may bind listen sockets
 itself and spawn unicorn with UNICORN_FD set to the file descriptor
 numbers of the listen socket(s).
 
+As of unicorn 5.0, LISTEN_PID and LISTEN_FDS are used for socket
+activation as documented in the sd_listen_fds(3) manpage.  Users
+relying on this feature do not need to specify a listen socket in
+the unicorn config file.
+
 # SEE ALSO
 
 * unicorn_rails(1)
