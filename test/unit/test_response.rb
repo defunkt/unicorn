@@ -33,6 +33,15 @@ class ResponseTest < Test::Unit::TestCase
     assert out.length > 0, "output didn't have data"
   end
 
+  # ref: <CAO47=rJa=zRcLn_Xm4v2cHPr6c0UswaFC_omYFEH+baSxHOWKQ@mail.gmail.com>
+  def test_response_header_broken_nil
+    out = StringIO.new
+    http_response_write(out, 200, {"Nil" => nil}, %w(hysterical raisin))
+    assert ! out.closed?
+
+    assert_match %r{^Nil: \r\n}sm, out.string, 'nil accepted'
+  end
+
   def test_response_string_status
     out = StringIO.new
     http_response_write(out,'200', {}, [])
