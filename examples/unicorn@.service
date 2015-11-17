@@ -1,0 +1,26 @@
+# ==> /etc/systemd/system/unicorn@.service <==
+# Since SIGUSR2 upgrades do not work under systemd, this service file
+# allows starting two simultaneous services during upgrade time
+# (e.g. unicorn@1 unicorn@2) with the intention that they take
+# turns running in-between upgrades.  This should allow upgrading
+# without downtime.
+
+[Unit]
+Description = unicorn Rack application server %i
+Wants = unicorn.socket
+After = unicorn.socket
+
+[Service]
+ExecStart = /usr/bin/unicorn -c /path/to/unicorn.conf.rb /path/to/config.ru
+Sockets = unicorn.socket
+KillSignal = SIGQUIT
+User = nobody
+Group = nogroup
+ExecReload = /bin/kill -HUP $MAINPID
+
+# This is based on the Unicorn::Configurator#timeout directive,
+# adding a few seconds for scheduling differences:
+TimeoutStopSec = 62
+
+[Install]
+WantedBy = multi-user.target
