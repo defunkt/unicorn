@@ -13,3 +13,4 @@ noindex:
 - unicorn_rails_1
 public_email: unicorn-public@bogomips.org
 private_email: unicorn@bogomips.org
+nntp_url: nntp://news.public-inbox.org/inbox.comp.lang.ruby.unicorn

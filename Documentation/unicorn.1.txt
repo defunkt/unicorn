@@ -175,7 +175,6 @@ the unicorn config file.
 
 # SEE ALSO
 
-* unicorn_rails(1)
 * *Rack::Builder* ri/RDoc
 * *Unicorn::Configurator* ri/RDoc
 * [Unicorn RDoc][1]

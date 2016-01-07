@@ -181,8 +181,6 @@ class Unicorn::Configurator
   # to have nginx always retry backends that may have had workers
   # SIGKILL-ed due to timeouts.
   #
-  #    # See http://wiki.nginx.org/NginxHttpUpstreamModule for more details
-  #    # on nginx upstream configuration:
   #    upstream unicorn_backend {
   #      # for UNIX domain socket setups:
   #      server unix:/path/to/.unicorn.sock fail_timeout=0;
@@ -192,6 +190,9 @@ class Unicorn::Configurator
   #      server 192.168.0.8:8080 fail_timeout=0;
   #      server 192.168.0.9:8080 fail_timeout=0;
   #    }
+  #
+  # See http://nginx.org/en/docs/http/ngx_http_upstream_module.html
+  # for more details on nginx upstream configuration.
   def timeout(seconds)
     set_int(:timeout, seconds, 3)
     # POSIX says 31 days is the smallest allowed maximum timeout for select()

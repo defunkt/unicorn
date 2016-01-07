@@ -13,7 +13,7 @@ both the the request and response in between unicorn and slow clients.
   {nginx}[http://nginx.org/] or {Rack}[http://rack.github.io/].
 
 * Compatible with Ruby 1.9.3 and later.
-  unicorn 4.8.x will remain supported for Ruby 1.8 users.
+  unicorn 4.x remains supported for Ruby 1.8 users.
 
 * Process management: unicorn will reap and restart workers that
   die from broken apps.  There is no need to manage multiple processes
@@ -60,7 +60,7 @@ both the the request and response in between unicorn and slow clients.
 
 == License
 
-unicorn is copyright 2009 by all contributors (see logs in git).
+unicorn is copyright 2009-2016 by all contributors (see logs in git).
 It is based on Mongrel 1.1.5.
 Mongrel is copyright 2007 Zed A. Shaw and contributors.
 
@@ -68,7 +68,7 @@ unicorn is licensed under (your choice) of the GPLv2 or later
 (GPLv3+ preferred), or Ruby (1.8)-specific terms.
 See the included LICENSE file for details.
 
-unicorn is 100% Free Software.
+unicorn is 100% Free Software (including all development tools used).
 
 == Install
 
@@ -85,10 +85,9 @@ You can get the latest source via git from the following locations
   git://bogomips.org/unicorn.git
   git://repo.or.cz/unicorn.git (mirror)
 
-You may browse the code from the web and download the latest snapshot
-tarballs here:
+You may browse the code from the web:
 
-* http://bogomips.org/unicorn.git (cgit)
+* http://bogomips.org/unicorn.git
 * http://repo.or.cz/w/unicorn.git (gitweb)
 
 See the HACKING guide on how to contribute and build prerelease gems
@@ -101,12 +100,6 @@ from git.
 In APP_ROOT, run:
 
   unicorn
-
-=== Ancient Rails 1.2 - 2.x versions
-
-In RAILS_ROOT, run:
-
-  unicorn_rails
 
 unicorn will bind to all interfaces on TCP port 8080 by default.
 You may use the +--listen/-l+ switch to bind to a different

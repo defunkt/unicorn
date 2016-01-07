@@ -4,7 +4,7 @@
 
 # NAME
 
-unicorn_rails - a script/server-like command to launch the Unicorn HTTP server
+unicorn_rails - unicorn launcher for Rails 1.x and 2.x users
 
 # SYNOPSIS
 
