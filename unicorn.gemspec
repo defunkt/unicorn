@@ -40,7 +40,7 @@ Gem::Specification.new do |s|
   s.add_dependency(%q<raindrops>, '~> 0.7')
 
   s.add_development_dependency('test-unit', '~> 3.0')
-  s.add_development_dependency('olddoc', '~> 1.0')
+  s.add_development_dependency('olddoc', '~> 1.2')
 
   # Note: To avoid ambiguity, we intentionally avoid the SPDX-compatible
   # 'Ruby' here since Ruby 1.9.3 switched to BSD-2-Clause, but we
