@@ -25,7 +25,9 @@ module Unicorn
   # application dispatch.  This is always raised with an empty backtrace
   # since there is nothing in the application stack that is responsible
   # for client shutdowns/disconnects.  This exception is visible to Rack
-  # applications unless PrereadInput middleware is loaded.
+  # applications unless PrereadInput middleware is loaded.  This
+  # is a subclass of the standard EOFError class and applications should
+  # not rescue it explicitly, but rescue EOFError instead.
   ClientShutdown = Class.new(EOFError)
 
   # :stopdoc:
