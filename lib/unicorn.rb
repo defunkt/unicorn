@@ -1,8 +1,13 @@
 # -*- encoding: binary -*-
 require 'etc'
 require 'stringio'
-require 'rack'
 require 'kgio'
+
+begin
+  require 'rack'
+rescue LoadError
+  warn 'rack not available, functionality reduced'
+end
 
 # :stopdoc:
 # Unicorn module containing all of the classes (include C extensions) for
@@ -32,6 +37,9 @@ module Unicorn
   def self.builder(ru, op)
     # allow Configurator to parse cli switches embedded in the ru file
     op = Unicorn::Configurator::RACKUP.merge!(:file => ru, :optparse => op)
+    if ru =~ /\.ru$/ && !defined?(Rack::Builder)
+      abort "rack and Rack::Builder must be available for processing #{ru}"
+    end
 
     # Op is going to get cleared before the returned lambda is called, so
     # save this value so that it's still there when we need it:
@@ -53,32 +61,33 @@ module Unicorn
 
       return inner_app if no_default_middleware
 
+      middleware = { # order matters
+        ContentLength: nil,
+        Chunked: nil,
+        CommonLogger: [ $stderr ],
+        ShowExceptions: nil,
+        Lint: nil,
+        TempfileReaper: nil,
+      }
+
       # return value, matches rackup defaults based on env
       # Unicorn does not support persistent connections, but Rainbows!
       # and Zbatery both do.  Users accustomed to the Rack::Server default
       # middlewares will need ContentLength/Chunked middlewares.
       case ENV["RACK_ENV"]
       when "development"
-        Rack::Builder.new do
-          use Rack::ContentLength
-          use Rack::Chunked
-          use Rack::CommonLogger, $stderr
-          use Rack::ShowExceptions
-          use Rack::Lint
-          use Rack::TempfileReaper if Rack.const_defined?(:TempfileReaper)
-          run inner_app
-        end.to_app
       when "deployment"
-        Rack::Builder.new do
-          use Rack::ContentLength
-          use Rack::Chunked
-          use Rack::CommonLogger, $stderr
-          use Rack::TempfileReaper if Rack.const_defined?(:TempfileReaper)
-          run inner_app
-        end.to_app
+        middleware.delete(:ShowExceptions)
+        middleware.delete(:Lint)
       else
-        inner_app
+        return inner_app
       end
+      Rack::Builder.new do
+        middleware.each do |m, args|
+          use(Rack.const_get(m), *args) if Rack.const_defined?(m)
+        end
+        run inner_app
+      end.to_app
     end
   end
 

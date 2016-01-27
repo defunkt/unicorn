@@ -10,10 +10,13 @@
 # is the job of Rack, with the exception of the "Date" and "Status" header.
 module Unicorn::HttpResponse
 
+  STATUS_CODES = defined?(Rack::Utils::HTTP_STATUS_CODES) ?
+                 Rack::Utils::HTTP_STATUS_CODES : {}
+
   # internal API, code will always be common-enough-for-even-old-Rack
   def err_response(code, response_start_sent)
     "#{response_start_sent ? '' : 'HTTP/1.1 '}" \
-      "#{code} #{Rack::Utils::HTTP_STATUS_CODES[code]}\r\n\r\n"
+      "#{code} #{STATUS_CODES[code]}\r\n\r\n"
   end
 
   # writes the rack_response to socket as an HTTP response
@@ -23,7 +26,7 @@ module Unicorn::HttpResponse
 
     if headers
       code = status.to_i
-      msg = Rack::Utils::HTTP_STATUS_CODES[code]
+      msg = STATUS_CODES[code]
       start = response_start_sent ? ''.freeze : 'HTTP/1.1 '.freeze
       buf = "#{start}#{msg ? %Q(#{code} #{msg}) : status}\r\n" \
             "Date: #{httpdate}\r\n" \

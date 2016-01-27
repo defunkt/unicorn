@@ -31,11 +31,11 @@ Gem::Specification.new do |s|
   # version requirements here.
   s.required_ruby_version = '< 3.0'
 
-  # for people that are absolutely stuck on Rails 2.3.2 and can't
-  # up/downgrade to any other version, the Rack dependency may be
-  # commented out.  Nevertheless, upgrading to Rails 2.3.4 or later is
-  # *strongly* recommended for security reasons.
-  s.add_dependency(%q<rack>)
+  # We do not have a hard dependency on rack, it's possible to load
+  # things which respond to #call.  HTTP status lines in responses
+  # won't have descriptive text, only the numeric status.
+  s.add_development_dependency(%q<rack>)
+
   s.add_dependency(%q<kgio>, '~> 2.6')
   s.add_dependency(%q<raindrops>, '~> 0.7')
 
