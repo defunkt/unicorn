@@ -63,9 +63,9 @@ before_exec hook as illustrated by https://gist.github.com/534668
 === Ruby 2.0.0 close-on-exec and SIGUSR2 incompatibility
 
 Ruby 2.0.0 enforces FD_CLOEXEC on file descriptors by default.  unicorn
-has been prepared for this behavior since unicorn 4.1.0, but we forgot
-to remind the Bundler developers.  This issue is being tracked here:
-https://github.com/bundler/bundler/issues/2628
+has been prepared for this behavior since unicorn 4.1.0, and bundler
+needs the "--keep-file-descriptors" option for "bundle exec":
+http://bundler.io/man/bundle-exec.1.html
 
 == Isolate
 

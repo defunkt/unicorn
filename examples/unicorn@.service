@@ -11,6 +11,8 @@ Wants = unicorn.socket
 After = unicorn.socket
 
 [Service]
+# bundler users must use the "--keep-file-descriptors" switch, here:
+# ExecStart = bundle exec --keep-file-descriptors unicorn -c ...
 ExecStart = /usr/bin/unicorn -c /path/to/unicorn.conf.rb /path/to/config.ru
 Sockets = unicorn.socket
 KillSignal = SIGQUIT
