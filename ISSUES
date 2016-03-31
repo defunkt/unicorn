@@ -5,7 +5,7 @@ submit patches and/or obtain support after you have searched the
 {email archives}[http://bogomips.org/unicorn-public/] and
 {documentation}[http://unicorn.bogomips.org/].
 
-* No subscription will ever be required to email the public inbox.
+* No subscription will ever be required to email us
 * Cc: all participants in a thread or commit, as subscription is optional
 * Do not {top post}[http://catb.org/jargon/html/T/top-post.html] in replies
 * Quote as little as possible of the message you're replying to
@@ -69,9 +69,7 @@ document distributed with git) on guidelines for patch submission.
 * nntp://news.public-inbox.org/inbox.comp.lang.ruby.unicorn
 * http://bogomips.org/unicorn-public/
 
-We operate a {public-inbox}[http://public-inbox.org/] which
-feeds the mailing list.  Subscription is optional, so Cc:
-all participants.
+Mailing list subscription is optional, so Cc: all participants.
 
 You can follow along via NNTP:
 
@@ -86,7 +84,7 @@ Or Atom feeds:
 	also has links to per-thread Atom feeds and downloadable
 	mboxes.
 
-You may also subscribe via plain-text email:
+You may optionally subscribe via plain-text email:
 
 	mailto:unicorn-public+subscribe@bogomips.org
 	(and confirming the auto-reply)

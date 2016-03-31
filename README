@@ -27,9 +27,6 @@ both the the request and response in between unicorn and slow clients.
   all run within their own isolated address space and only serve one
   client at a time for maximum robustness.
 
-* Supports all Rack applications, along with pre-Rack versions of
-  Ruby on Rails via a Rack wrapper.
-
 * Builtin reopening of all log files in your application via
   USR1 signal.  This allows logrotate to rotate files atomically and
   quickly via rename instead of the racy and slow copytruncate method.
@@ -54,9 +51,7 @@ both the the request and response in between unicorn and slow clients.
 
 * Simple and easy Ruby DSL for configuration.
 
-* Decodes chunked transfers on-the-fly, thus allowing upload progress
-  notification to be implemented as well as being able to tunnel
-  arbitrary stream-based protocols over HTTP.
+* Decodes chunked requests on-the-fly.
 
 == License
 
