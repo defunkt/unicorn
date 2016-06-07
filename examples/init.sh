@@ -45,7 +45,7 @@ restart|reload)
 	$CMD
 	;;
 upgrade)
-	if sig USR2 && sleep 2 && sig 0 && oldsig QUIT
+	if sig USR2 && sleep 2 && sig 0
 	then
 		n=$TIMEOUT
 		while test -s $old_pid && test $n -ge 0
