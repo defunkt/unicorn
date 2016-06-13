@@ -24,5 +24,10 @@ ExecReload = /bin/kill -HUP $MAINPID
 # adding a few seconds for scheduling differences:
 TimeoutStopSec = 62
 
+# Only kill the master process, it may be harmful to signal
+# workers via default "control-group" setting since some
+# Ruby extensions and applications misbehave on interrupts
+KillMode = process
+
 [Install]
 WantedBy = multi-user.target
