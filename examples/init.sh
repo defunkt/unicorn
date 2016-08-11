@@ -1,5 +1,5 @@
 #!/bin/sh
-set -e
+
 # Example init script, this can be used with nginx, too,
 # since nginx and unicorn accept the same signals
 
