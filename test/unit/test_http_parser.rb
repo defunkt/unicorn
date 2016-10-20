@@ -230,6 +230,24 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal expect, req['HTTP_X_SSL_BULLSHIT']
   end
 
+  def test_multiline_header_0d0a
+    parser = HttpParser.new
+    parser.buf << "GET / HTTP/1.0\r\n" \
+      "X-Multiline-Header: foo bar\r\n\tcha cha\r\n\tzha zha\r\n\r\n"
+    req = parser.env
+    assert_equal req, parser.parse
+    assert_equal 'foo bar cha cha zha zha', req['HTTP_X_MULTILINE_HEADER']
+  end
+
+  def test_multiline_header_0a
+    parser = HttpParser.new
+    parser.buf << "GET / HTTP/1.0\n" \
+      "X-Multiline-Header: foo bar\n\tcha cha\n\tzha zha\n\n"
+    req = parser.env
+    assert_equal req, parser.parse
+    assert_equal 'foo bar cha cha zha zha', req['HTTP_X_MULTILINE_HEADER']
+  end
+
   def test_continuation_eats_leading_spaces
     parser = HttpParser.new
     header = "GET / HTTP/1.1\r\n" \
