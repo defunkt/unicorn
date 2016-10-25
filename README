@@ -82,7 +82,7 @@ You can get the latest source via git from the following locations
 
 You may browse the code from the web:
 
-* http://bogomips.org/unicorn.git
+* https://bogomips.org/unicorn.git
 * http://repo.or.cz/w/unicorn.git (gitweb)
 
 See the HACKING guide on how to contribute and build prerelease gems
@@ -128,7 +128,7 @@ All feedback (bug reports, user/development dicussion, patches, pull
 requests) go to the mailing list/newsgroup.  See the ISSUES document for
 information on the {mailing list}[mailto:unicorn-public@bogomips.org].
 
-The mailing list is archived at http://bogomips.org/unicorn-public/
+The mailing list is archived at https://bogomips.org/unicorn-public/
 Read-only NNTP access is available at:
 nntp://news.public-inbox.org/inbox.comp.lang.ruby.unicorn and
 nntp://news.gmane.org/gmane.comp.lang.ruby.unicorn.general

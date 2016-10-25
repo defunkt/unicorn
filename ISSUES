@@ -2,8 +2,8 @@
 
 mailto:unicorn-public@bogomips.org is the best place to report bugs,
 submit patches and/or obtain support after you have searched the
-{email archives}[http://bogomips.org/unicorn-public/] and
-{documentation}[http://unicorn.bogomips.org/].
+{email archives}[https://bogomips.org/unicorn-public/] and
+{documentation}[https://bogomips.org/unicorn/].
 
 * No subscription will ever be required to email us
 * Cc: all participants in a thread or commit, as subscription is optional
@@ -12,7 +12,7 @@ submit patches and/or obtain support after you have searched the
 * Do not send HTML mail or images, it will be flagged as spam
 * Anonymous and pseudonymous messages will always be welcome.
 * The email submission port (587) is enabled on the bogomips.org MX:
-  http://bogomips.org/unicorn-public/20141004232241.GA23908@dcvr.yhbt.net/t/
+  https://bogomips.org/unicorn-public/20141004232241.GA23908@dcvr.yhbt.net/t/
 
 If your issue is of a sensitive nature or you're just shy in public,
 then feel free to email us privately at mailto:unicorn@bogomips.org
@@ -67,7 +67,7 @@ document distributed with git) on guidelines for patch submission.
 * private: mailto:unicorn@bogomips.org
 * nntp://news.gmane.org/gmane.comp.lang.ruby.unicorn.general
 * nntp://news.public-inbox.org/inbox.comp.lang.ruby.unicorn
-* http://bogomips.org/unicorn-public/
+* https://bogomips.org/unicorn-public/
 
 Mailing list subscription is optional, so Cc: all participants.
 
@@ -78,9 +78,9 @@ You can follow along via NNTP:
 
 Or Atom feeds:
 
-	http://bogomips.org/unicorn-public/new.atom
+	https://bogomips.org/unicorn-public/new.atom
 
-	The HTML archives at http://bogomips.org/unicorn-public/
+	The HTML archives at https://bogomips.org/unicorn-public/
 	also has links to per-thread Atom feeds and downloadable
 	mboxes.
 
