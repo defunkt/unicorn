@@ -183,13 +183,13 @@ doc: .document $(ext)/unicorn_http.c man html .olddoc.yml $(PLACEHOLDERS)
 	install -m644 $(man1_paths) doc/
 	tar cf - $$(git ls-files examples/) | (cd doc && tar xf -)
 
-# publishes docs to http://unicorn.bogomips.org
+# publishes docs to https://bogomips.org/unicorn/
 publish_doc:
 	-git set-file-times
 	$(MAKE) doc
 	$(MAKE) doc_gz
 	chmod 644 $$(find doc -type f)
-	$(RSYNC) -av doc/ unicorn.bogomips.org:/srv/unicorn/
+	$(RSYNC) -av doc/ bogomips.org:/srv/bogomips/unicorn/
 	git ls-files | xargs touch
 
 # Create gzip variants of the same timestamp as the original so nginx

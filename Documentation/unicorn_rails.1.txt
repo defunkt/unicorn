@@ -169,7 +169,7 @@ used by Unicorn.
 * [Rack RDoc][2]
 * [Rackup HowTo][3]
 
-[1]: http://unicorn.bogomips.org/
+[1]: https://bogomips.org/unicorn/
 [2]: http://www.rubydoc.info/github/rack/rack/
 [3]: https://github.com/rack/rack/wiki/tutorial-rackup-howto
-[4]: http://unicorn.bogomips.org/SIGNALS.html
+[4]: https://bogomips.org/unicorn/SIGNALS.html

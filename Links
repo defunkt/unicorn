@@ -26,7 +26,7 @@ or services behind them.
 * {raindrops}[http://raindrops.bogomips.org/] - real-time stats for
   preforking Rack servers
 
-* {UnXF}[http://bogomips.org/unxf/]  Un-X-Forward* the Rack environment,
+* {UnXF}[https://bogomips.org/unxf/]  Un-X-Forward* the Rack environment,
   useful since unicorn is designed to be deployed behind a reverse proxy.
 
 === unicorn is written to work with
@@ -52,5 +52,5 @@ or services behind them.
 * {Mongrel}[http://rubygems.org/gems/mongrel] - the awesome webserver
   unicorn is based on
 
-* {david}[http://bogomips.org/david.git] - a tool to explain why you need
+* {david}[https://bogomips.org/david.git] - a tool to explain why you need
   nginx in front of unicorn

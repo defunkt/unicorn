@@ -57,7 +57,7 @@ Please wrap documentation at 72 characters-per-line or less (long URLs
 are exempt) so it is comfortably readable from terminals.
 
 When referencing mailing list posts, use
-<tt>http://bogomips.org/unicorn-public/$MESSAGE_ID/</tt> if possible
+<tt>https://bogomips.org/unicorn-public/$MESSAGE_ID/</tt> if possible
 since the Message-ID remains searchable even if a particular site
 becomes unavailable.
 
