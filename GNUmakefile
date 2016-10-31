@@ -219,7 +219,7 @@ fix-perms:
 gem: $(pkggem)
 
 install-gem: $(pkggem)
-	gem install $(CURDIR)/$<
+	gem install --local $(CURDIR)/$<
 
 $(pkggem): .manifest fix-perms
 	gem build $(rfpackage).gemspec
