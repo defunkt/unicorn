@@ -125,9 +125,7 @@ private
   end
 
   def tee(buffer)
-    if buffer && buffer.size > 0
-      @tmp.write(buffer)
-    end
+    @tmp.write(buffer) if buffer
     buffer
   end
 end
