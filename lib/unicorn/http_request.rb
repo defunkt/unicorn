@@ -24,10 +24,7 @@ class Unicorn::HttpParser
   NULL_IO = StringIO.new("")
 
   # :stopdoc:
-  # A frozen format for this is about 15% faster
-  # Drop these frozen strings when Ruby 2.2 becomes more prevalent,
-  # 2.2+ optimizes hash assignments when used with literal string keys
-  HTTP_RESPONSE_START = [ 'HTTP', '/1.1 ']
+  HTTP_RESPONSE_START = [ 'HTTP'.freeze, '/1.1 '.freeze ]
   @@input_class = Unicorn::TeeInput
   @@check_client_connection = false
 
