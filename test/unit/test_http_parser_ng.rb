@@ -21,14 +21,28 @@ class HttpParserNgTest < Test::Unit::TestCase
     r = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
     @parser.buf << r
     @parser.parse
+    @parser.response_start_sent = true
     assert @parser.keepalive?
     assert @parser.next?
+    assert @parser.response_start_sent
 
     # persistent client makes another request:
     @parser.buf << r
     @parser.parse
     assert @parser.keepalive?
     assert @parser.next?
+    assert_equal false, @parser.response_start_sent
+  end
+
+  def test_response_start_sent
+    assert_equal false, @parser.response_start_sent, "default is false"
+    @parser.response_start_sent = true
+    assert_equal true, @parser.response_start_sent
+    @parser.response_start_sent = false
+    assert_equal false, @parser.response_start_sent
+    @parser.response_start_sent = true
+    @parser.clear
+    assert_equal false, @parser.response_start_sent
   end
 
   def test_connection_TE
