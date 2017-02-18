@@ -15,6 +15,7 @@ class Unicorn::HttpServer
                 :before_fork, :after_fork, :before_exec,
                 :listener_opts, :preload_app,
                 :orig_app, :config, :ready_pipe, :user
+  attr_writer   :after_worker_exit
 
   attr_reader :pid, :logger
   include Unicorn::SocketHelper
@@ -395,8 +396,7 @@ class Unicorn::HttpServer
         proc_name 'master'
       else
         worker = @workers.delete(wpid) and worker.close rescue nil
-        m = "reaped #{status.inspect} worker=#{worker.nr rescue 'unknown'}"
-        status.success? ? logger.info(m) : logger.error(m)
+        @after_worker_exit.call(self, worker, status)
       end
     rescue Errno::ECHILD
       break

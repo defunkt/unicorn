@@ -41,6 +41,14 @@ class Unicorn::Configurator
     :before_exec => lambda { |server|
         server.logger.info("forked child re-executing...")
       },
+    :after_worker_exit => lambda { |server, worker, status|
+        m = "reaped #{status.inspect} worker=#{worker.nr rescue 'unknown'}"
+        if status.success?
+          server.logger.info(m)
+        else
+          server.logger.error(m)
+        end
+      },
     :pid => nil,
     :preload_app => false,
     :check_client_connection => false,
@@ -149,6 +157,19 @@ class Unicorn::Configurator
   #  end
   def after_fork(*args, &block)
     set_hook(:after_fork, block_given? ? block : args[0])
+  end
+
+  # sets after_worker_exit hook to a given block.  This block will be called
+  # by the master process after a worker exits:
+  #
+  #  after_fork do |server,worker,status|
+  #    # status is a Process::Status instance for the exited worker process
+  #    unless status.success?
+  #      server.logger.error("worker process failure: #{status.inspect}")
+  #    end
+  #  end
+  def after_worker_exit(*args, &block)
+    set_hook(:after_worker_exit, block_given? ? block : args[0], 3)
   end
 
   # sets before_fork got be a given Proc object.  This Proc
