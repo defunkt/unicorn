@@ -18,7 +18,8 @@ after_fork { |s,w| }
     next if key =~ %r{\Astd(?:err|out)_path\z}
     key = key.to_sym
     def_value = defaults[key]
-    srv_value = srv.__send__(key)
+    srv_value = srv.respond_to?(key) ? srv.__send__(key)
+                                     : srv.instance_variable_get("@#{key}")
     fp << "#{key}|#{srv_value}|#{def_value}\\n"
   end
 }
