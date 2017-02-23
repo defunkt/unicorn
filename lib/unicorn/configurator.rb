@@ -162,7 +162,7 @@ class Unicorn::Configurator
   # sets after_worker_exit hook to a given block.  This block will be called
   # by the master process after a worker exits:
   #
-  #  after_fork do |server,worker,status|
+  #  after_worker_exit do |server,worker,status|
   #    # status is a Process::Status instance for the exited worker process
   #    unless status.success?
   #      server.logger.error("worker process failure: #{status.inspect}")
