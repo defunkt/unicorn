@@ -52,7 +52,7 @@ t_begin "worker pid unchanged (again)" && {
 }
 
 t_begin "nuking the existing Unicorn succeeds" && {
-	kill -9 $unicorn_pid $worker_pid
+	kill -9 $unicorn_pid
 	while kill -0 $unicorn_pid
 	do
 		sleep 1
