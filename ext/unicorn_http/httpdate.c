@@ -64,13 +64,13 @@ static VALUE httpdate(VALUE self)
 	return buf;
 }
 
-void init_unicorn_httpdate(void)
+void init_unicorn_httpdate(VALUE mark_ary)
 {
 	VALUE mod = rb_define_module("Unicorn");
 	mod = rb_define_module_under(mod, "HttpResponse");
 
 	buf = rb_str_new(0, buf_capa - 1);
-	rb_global_variable(&buf);
+	rb_ary_push(mark_ary, buf);
 	buf_ptr = RSTRING_PTR(buf);
 	httpdate(Qnil);
 

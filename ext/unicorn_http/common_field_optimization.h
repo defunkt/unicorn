@@ -60,7 +60,7 @@ static struct common_field common_http_fields[] = {
 #define HTTP_PREFIX_LEN (sizeof(HTTP_PREFIX) - 1)
 
 /* this function is not performance-critical, called only at load time */
-static void init_common_fields(void)
+static void init_common_fields(VALUE mark_ary)
 {
   int i;
   struct common_field *cf = common_http_fields;
@@ -77,7 +77,7 @@ static void init_common_fields(void)
       cf->value = rb_str_new(tmp, HTTP_PREFIX_LEN + cf->len);
     }
     cf->value = rb_obj_freeze(cf->value);
-    rb_global_variable(&cf->value);
+    rb_ary_push(mark_ary, cf->value);
   }
 }
 

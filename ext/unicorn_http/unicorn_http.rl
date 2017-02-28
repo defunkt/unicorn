@@ -13,7 +13,7 @@
 #include "global_variables.h"
 #include "c_util.h"
 
-void init_unicorn_httpdate(void);
+void init_unicorn_httpdate(VALUE mark_ary);
 
 #define UH_FL_CHUNKED  0x1
 #define UH_FL_HASBODY  0x2
@@ -917,8 +917,10 @@ static VALUE HttpParser_rssget(VALUE self)
 
 void Init_unicorn_http(void)
 {
+  static VALUE mark_ary;
   VALUE mUnicorn, cHttpParser;
 
+  mark_ary = rb_ary_new();
   mUnicorn = rb_define_module("Unicorn");
   cHttpParser = rb_define_class_under(mUnicorn, "HttpParser", rb_cObject);
   eHttpParserError =
@@ -928,7 +930,7 @@ void Init_unicorn_http(void)
   e414 = rb_define_class_under(mUnicorn, "RequestURITooLongError",
                                eHttpParserError);
 
-  init_globals();
+  init_globals(mark_ary);
   rb_define_alloc_func(cHttpParser, HttpParser_alloc);
   rb_define_method(cHttpParser, "initialize", HttpParser_init, 0);
   rb_define_method(cHttpParser, "clear", HttpParser_clear, 0);
@@ -964,14 +966,17 @@ void Init_unicorn_http(void)
 
   rb_define_singleton_method(cHttpParser, "max_header_len=", set_maxhdrlen, 1);
 
-  init_common_fields();
+  init_common_fields(mark_ary);
   SET_GLOBAL(g_http_host, "HOST");
   SET_GLOBAL(g_http_trailer, "TRAILER");
   SET_GLOBAL(g_http_transfer_encoding, "TRANSFER_ENCODING");
   SET_GLOBAL(g_content_length, "CONTENT_LENGTH");
   SET_GLOBAL(g_http_connection, "CONNECTION");
   id_set_backtrace = rb_intern("set_backtrace");
-  init_unicorn_httpdate();
+  init_unicorn_httpdate(mark_ary);
+
+  OBJ_FREEZE(mark_ary);
+  rb_global_variable(&mark_ary);
 
 #ifndef HAVE_RB_HASH_CLEAR
   id_clear = rb_intern("clear");
