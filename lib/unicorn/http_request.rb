@@ -2,6 +2,7 @@
 # :enddoc:
 # no stable API here
 require 'unicorn_http'
+require 'raindrops'
 
 # TODO: remove redundant names
 Unicorn.const_set(:HttpRequest, Unicorn::HttpParser)
@@ -25,6 +26,7 @@ class Unicorn::HttpParser
 
   # :stopdoc:
   HTTP_RESPONSE_START = [ 'HTTP'.freeze, '/1.1 '.freeze ]
+  EMPTY_ARRAY = [].freeze
   @@input_class = Unicorn::TeeInput
   @@check_client_connection = false
 
@@ -59,7 +61,7 @@ class Unicorn::HttpParser
   # returns an environment hash suitable for Rack if successful
   # This does minimal exception trapping and it is up to the caller
   # to handle any socket errors (e.g. user aborted upload).
-  def read(socket)
+  def read(socket, listener)
     clear
     e = env
 
@@ -80,11 +82,7 @@ class Unicorn::HttpParser
       false until add_parse(socket.kgio_read!(16384))
     end
 
-    # detect if the socket is valid by writing a partial response:
-    if @@check_client_connection && headers?
-      self.response_start_sent = true
-      HTTP_RESPONSE_START.each { |c| socket.write(c) }
-    end
+    check_client_connection(socket, listener) if @@check_client_connection
 
     e['rack.input'] = 0 == content_length ?
                       NULL_IO : @@input_class.new(socket, self)
@@ -104,5 +102,40 @@ class Unicorn::HttpParser
 
   def hijacked?
     env.include?('rack.hijack_io'.freeze)
+  end
+
+  if defined?(Raindrops::TCP_Info)
+    def check_client_connection(socket, listener) # :nodoc:
+      if Kgio::TCPServer === listener
+        @@tcp_info ||= Raindrops::TCP_Info.new(socket)
+        @@tcp_info.get!(socket)
+        raise Errno::EPIPE, "client closed connection".freeze,
+              EMPTY_ARRAY if closed_state?(@@tcp_info.state)
+      else
+        write_http_header(socket)
+      end
+    end
+
+    def closed_state?(state) # :nodoc:
+      case state
+      when 1 # ESTABLISHED
+        false
+      when 8, 6, 7, 9, 11 # CLOSE_WAIT, TIME_WAIT, CLOSE, LAST_ACK, CLOSING
+        true
+      else
+        false
+      end
+    end
+  else
+    def check_client_connection(socket, listener) # :nodoc:
+      write_http_header(socket)
+    end
+  end
+
+  def write_http_header(socket) # :nodoc:
+    if headers?
+      self.response_start_sent = true
+      HTTP_RESPONSE_START.each { |c| socket.write(c) }
+    end
   end
 end
