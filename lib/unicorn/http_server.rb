@@ -558,8 +558,8 @@ class Unicorn::HttpServer
 
   # once a client is accepted, it is processed in its entirety here
   # in 3 easy steps: read request, call app, write app response
-  def process_client(client)
-    status, headers, body = @app.call(env = @request.read(client))
+  def process_client(client, listener)
+    status, headers, body = @app.call(env = @request.read(client, listener))
 
     begin
       return if @request.hijacked?
@@ -655,7 +655,7 @@ class Unicorn::HttpServer
         # Unicorn::Worker#kgio_tryaccept is not like accept(2) at all,
         # but that will return false
         if client = sock.kgio_tryaccept
-          process_client(client)
+          process_client(client, sock)
           nr += 1
           worker.tick = time_now.to_i
         end

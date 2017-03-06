@@ -67,8 +67,8 @@ module Unicorn::OobGC
 
   #:stopdoc:
   PATH_INFO = "PATH_INFO"
-  def process_client(client)
-    super(client) # Unicorn::HttpServer#process_client
+  def process_client(client, listener)
+    super(client, listener) # Unicorn::HttpServer#process_client
     if OOBGC_PATH =~ OOBGC_ENV[PATH_INFO] && ((@@nr -= 1) <= 0)
       @@nr = OOBGC_INTERVAL
       OOBGC_ENV.clear

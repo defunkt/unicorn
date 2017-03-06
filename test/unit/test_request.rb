@@ -30,7 +30,7 @@ class RequestTest < Test::Unit::TestCase
   def test_options
     client = MockRequest.new("OPTIONS * HTTP/1.1\r\n" \
                              "Host: foo\r\n\r\n")
-    env = @request.read(client)
+    env = @request.read(client, nil)
     assert_equal '', env['REQUEST_PATH']
     assert_equal '', env['PATH_INFO']
     assert_equal '*', env['REQUEST_URI']
@@ -40,7 +40,7 @@ class RequestTest < Test::Unit::TestCase
   def test_absolute_uri_with_query
     client = MockRequest.new("GET http://e:3/x?y=z HTTP/1.1\r\n" \
                              "Host: foo\r\n\r\n")
-    env = @request.read(client)
+    env = @request.read(client, nil)
     assert_equal '/x', env['REQUEST_PATH']
     assert_equal '/x', env['PATH_INFO']
     assert_equal 'y=z', env['QUERY_STRING']
@@ -50,7 +50,7 @@ class RequestTest < Test::Unit::TestCase
   def test_absolute_uri_with_fragment
     client = MockRequest.new("GET http://e:3/x#frag HTTP/1.1\r\n" \
                              "Host: foo\r\n\r\n")
-    env = @request.read(client)
+    env = @request.read(client, nil)
     assert_equal '/x', env['REQUEST_PATH']
     assert_equal '/x', env['PATH_INFO']
     assert_equal '', env['QUERY_STRING']
@@ -61,7 +61,7 @@ class RequestTest < Test::Unit::TestCase
   def test_absolute_uri_with_query_and_fragment
     client = MockRequest.new("GET http://e:3/x?a=b#frag HTTP/1.1\r\n" \
                              "Host: foo\r\n\r\n")
-    env = @request.read(client)
+    env = @request.read(client, nil)
     assert_equal '/x', env['REQUEST_PATH']
     assert_equal '/x', env['PATH_INFO']
     assert_equal 'a=b', env['QUERY_STRING']
@@ -73,7 +73,7 @@ class RequestTest < Test::Unit::TestCase
     %w(ssh+http://e/ ftp://e/x http+ssh://e/x).each do |abs_uri|
       client = MockRequest.new("GET #{abs_uri} HTTP/1.1\r\n" \
                                "Host: foo\r\n\r\n")
-      assert_raises(HttpParserError) { @request.read(client) }
+      assert_raises(HttpParserError) { @request.read(client, nil) }
     end
   end
 
@@ -81,7 +81,7 @@ class RequestTest < Test::Unit::TestCase
     client = MockRequest.new("GET / HTTP/1.1\r\n" \
                              "X-Forwarded-Proto: https\r\n" \
                              "Host: foo\r\n\r\n")
-    env = @request.read(client)
+    env = @request.read(client, nil)
     assert_equal "https", env['rack.url_scheme']
     res = @lint.call(env)
   end
@@ -90,7 +90,7 @@ class RequestTest < Test::Unit::TestCase
     client = MockRequest.new("GET / HTTP/1.1\r\n" \
                              "X-Forwarded-Proto: http\r\n" \
                              "Host: foo\r\n\r\n")
-    env = @request.read(client)
+    env = @request.read(client, nil)
     assert_equal "http", env['rack.url_scheme']
     res = @lint.call(env)
   end
@@ -99,14 +99,14 @@ class RequestTest < Test::Unit::TestCase
     client = MockRequest.new("GET / HTTP/1.1\r\n" \
                              "X-Forwarded-Proto: ftp\r\n" \
                              "Host: foo\r\n\r\n")
-    env = @request.read(client)
+    env = @request.read(client, nil)
     assert_equal "http", env['rack.url_scheme']
     res = @lint.call(env)
   end
 
   def test_rack_lint_get
     client = MockRequest.new("GET / HTTP/1.1\r\nHost: foo\r\n\r\n")
-    env = @request.read(client)
+    env = @request.read(client, nil)
     assert_equal "http", env['rack.url_scheme']
     assert_equal '127.0.0.1', env['REMOTE_ADDR']
     res = @lint.call(env)
@@ -114,7 +114,7 @@ class RequestTest < Test::Unit::TestCase
 
   def test_no_content_stringio
     client = MockRequest.new("GET / HTTP/1.1\r\nHost: foo\r\n\r\n")
-    env = @request.read(client)
+    env = @request.read(client, nil)
     assert_equal StringIO, env['rack.input'].class
   end
 
@@ -122,7 +122,7 @@ class RequestTest < Test::Unit::TestCase
     client = MockRequest.new("PUT / HTTP/1.1\r\n" \
                              "Content-Length: 0\r\n" \
                              "Host: foo\r\n\r\n")
-    env = @request.read(client)
+    env = @request.read(client, nil)
     assert_equal StringIO, env['rack.input'].class
   end
 
@@ -130,7 +130,7 @@ class RequestTest < Test::Unit::TestCase
     client = MockRequest.new("PUT / HTTP/1.1\r\n" \
                              "Content-Length: 1\r\n" \
                              "Host: foo\r\n\r\n")
-    env = @request.read(client)
+    env = @request.read(client, nil)
     assert_equal Unicorn::TeeInput, env['rack.input'].class
   end
 
@@ -141,7 +141,7 @@ class RequestTest < Test::Unit::TestCase
       "Content-Length: 5\r\n" \
       "\r\n" \
       "abcde")
-    env = @request.read(client)
+    env = @request.read(client, nil)
     assert ! env.include?(:http_body)
     res = @lint.call(env)
   end
@@ -167,7 +167,7 @@ class RequestTest < Test::Unit::TestCase
       "\r\n")
     count.times { assert_equal bs, client.syswrite(buf) }
     assert_equal 0, client.sysseek(0)
-    env = @request.read(client)
+    env = @request.read(client, nil)
     assert ! env.include?(:http_body)
     assert_equal length, env['rack.input'].size
     count.times {
