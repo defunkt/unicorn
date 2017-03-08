@@ -61,7 +61,7 @@ class Unicorn::HttpParser
   # returns an environment hash suitable for Rack if successful
   # This does minimal exception trapping and it is up to the caller
   # to handle any socket errors (e.g. user aborted upload).
-  def read(socket, listener)
+  def read(socket)
     clear
     e = env
 
@@ -82,7 +82,7 @@ class Unicorn::HttpParser
       false until add_parse(socket.kgio_read!(16384))
     end
 
-    check_client_connection(socket, listener) if @@check_client_connection
+    check_client_connection(socket) if @@check_client_connection
 
     e['rack.input'] = 0 == content_length ?
                       NULL_IO : @@input_class.new(socket, self)
@@ -105,8 +105,8 @@ class Unicorn::HttpParser
   end
 
   if defined?(Raindrops::TCP_Info)
-    def check_client_connection(socket, listener) # :nodoc:
-      if Kgio::TCPServer === listener
+    def check_client_connection(socket) # :nodoc:
+      if Unicorn::TCPClient === socket
         @@tcp_info ||= Raindrops::TCP_Info.new(socket)
         @@tcp_info.get!(socket)
         raise Errno::EPIPE, "client closed connection".freeze,
@@ -127,7 +127,7 @@ class Unicorn::HttpParser
       end
     end
   else
-    def check_client_connection(socket, listener) # :nodoc:
+    def check_client_connection(socket) # :nodoc:
       write_http_header(socket)
     end
   end
