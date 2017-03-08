@@ -186,6 +186,8 @@ class Unicorn::Configurator
   #
   # Do not use Configurator#user if you rely on changing users in the
   # after_worker_ready hook.
+  #
+  # after_worker_ready is only available in unicorn 5.3.0+
   def after_worker_ready(*args, &block)
     set_hook(:after_worker_ready, block_given? ? block : args[0])
   end
