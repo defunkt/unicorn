@@ -125,7 +125,10 @@ class Unicorn::Worker
   # Any and all errors raised within this method will be propagated
   # directly back to the caller (usually the +after_fork+ hook.
   # These errors commonly include ArgumentError for specifying an
-  # invalid user/group and Errno::EPERM for insufficient privileges
+  # invalid user/group and Errno::EPERM for insufficient privileges.
+  #
+  # chroot support is only available in unicorn 5.3.0+
+  # user and group switching appeared in unicorn 0.94.0 (2009-11-05)
   def user(user, group = nil, chroot = false)
     # we do not protect the caller, checking Process.euid == 0 is
     # insufficient because modern systems have fine-grained
