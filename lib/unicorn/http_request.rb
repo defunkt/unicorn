@@ -29,6 +29,7 @@ class Unicorn::HttpParser
   EMPTY_ARRAY = [].freeze
   @@input_class = Unicorn::TeeInput
   @@check_client_connection = false
+  @@tcpi_inspect_ok = true
 
   def self.input_class
     @@input_class
@@ -127,8 +128,37 @@ class Unicorn::HttpParser
       end
     end
   else
+
+    # Ruby 2.2+ can show struct tcp_info as a string Socket::Option#inspect.
+    # Not that efficient, but probably still better than doing unnecessary
+    # work after a client gives up.
     def check_client_connection(socket) # :nodoc:
-      write_http_header(socket)
+      if Unicorn::TCPClient === socket && @@tcpi_inspect_ok
+        opt = socket.getsockopt(:IPPROTO_TCP, :TCP_INFO).inspect
+        if opt =~ /\bstate=(\S+)/
+          @@tcpi_inspect_ok = true
+          raise Errno::EPIPE, "client closed connection".freeze,
+                EMPTY_ARRAY if closed_state_str?($1)
+        else
+          @@tcpi_inspect_ok = false
+          write_http_header(socket)
+        end
+        opt.clear
+      else
+        write_http_header(socket)
+      end
+    end
+
+    def closed_state_str?(state)
+      case state
+      when 'ESTABLISHED'
+        false
+      # not a typo, ruby maps TCP_CLOSE (no 'D') to state=CLOSED (w/ 'D')
+      when 'CLOSE_WAIT', 'TIME_WAIT', 'CLOSED', 'LAST_ACK', 'CLOSING'
+        true
+      else
+        false
+      end
     end
   end
 
