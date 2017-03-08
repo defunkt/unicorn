@@ -111,9 +111,11 @@ class Unicorn::Worker
   # In most cases, you should be using the Unicorn::Configurator#user
   # directive instead.  This method should only be used if you need
   # fine-grained control of exactly when you want to change permissions
-  # in your after_fork hooks.
+  # in your after_fork or after_worker_ready hooks, or if you want to
+  # use the chroot support.
   #
-  # Changes the worker process to the specified +user+ and +group+
+  # Changes the worker process to the specified +user+ and +group+,
+  # and chroots to the current working directory if +chroot+ is set.
   # This is only intended to be called from within the worker
   # process from the +after_fork+ hook.  This should be called in
   # the +after_fork+ hook after any privileged functions need to be
@@ -123,7 +125,7 @@ class Unicorn::Worker
   # directly back to the caller (usually the +after_fork+ hook.
   # These errors commonly include ArgumentError for specifying an
   # invalid user/group and Errno::EPERM for insufficient privileges
-  def user(user, group = nil)
+  def user(user, group = nil, chroot = false)
     # we do not protect the caller, checking Process.euid == 0 is
     # insufficient because modern systems have fine-grained
     # capabilities.  Let the caller handle any and all errors.
@@ -133,6 +135,11 @@ class Unicorn::Worker
     if gid && Process.egid != gid
       Process.initgroups(user, gid)
       Process::GID.change_privilege(gid)
+    end
+    if chroot
+      chroot = Dir.pwd if chroot == true
+      Dir.chroot(chroot)
+      Dir.chdir('/')
     end
     Process.euid != uid and Process::UID.change_privilege(uid)
     @switched = true

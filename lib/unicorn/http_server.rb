@@ -15,7 +15,7 @@ class Unicorn::HttpServer
                 :before_fork, :after_fork, :before_exec,
                 :listener_opts, :preload_app,
                 :orig_app, :config, :ready_pipe, :user
-  attr_writer   :after_worker_exit
+  attr_writer   :after_worker_exit, :after_worker_ready
 
   attr_reader :pid, :logger
   include Unicorn::SocketHelper
@@ -644,7 +644,7 @@ class Unicorn::HttpServer
     trap(:USR1) { nr = -65536 }
 
     ready = readers.dup
-    @logger.info "worker=#{worker.nr} ready"
+    @after_worker_ready.call(self, worker)
 
     begin
       nr < 0 and reopen_worker_logs(worker.nr)
