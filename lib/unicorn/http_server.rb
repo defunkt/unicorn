@@ -15,7 +15,7 @@ class Unicorn::HttpServer
                 :before_fork, :after_fork, :before_exec,
                 :listener_opts, :preload_app,
                 :orig_app, :config, :ready_pipe, :user
-  attr_writer   :after_worker_exit, :after_worker_ready
+  attr_writer   :after_worker_exit, :after_worker_ready, :worker_exec
 
   attr_reader :pid, :logger
   include Unicorn::SocketHelper
@@ -105,6 +105,14 @@ class Unicorn::HttpServer
     # list of signals we care about and trap in master.
     @queue_sigs = [
       :WINCH, :QUIT, :INT, :TERM, :USR1, :USR2, :HUP, :TTIN, :TTOU ]
+
+    @worker_data = if worker_data = ENV['UNICORN_WORKER']
+      worker_data = worker_data.split(',').map!(&:to_i)
+      worker_data[1] = worker_data.slice!(1..2).map do |i|
+        Kgio::Pipe.for_fd(i)
+      end
+      worker_data
+    end
   end
 
   # Runs the thing.  Returns self so you can run join on it
@@ -113,7 +121,7 @@ class Unicorn::HttpServer
     # this pipe is used to wake us up from select(2) in #join when signals
     # are trapped.  See trap_deferred.
     @self_pipe.replace(Unicorn.pipe)
-    @master_pid = $$
+    @master_pid = @worker_data ? Process.ppid : $$
 
     # setup signal handlers before writing pid file in case people get
     # trigger happy and send signals as soon as the pid file exists.
@@ -430,11 +438,7 @@ class Unicorn::HttpServer
     end
 
     @reexec_pid = fork do
-      listener_fds = {}
-      LISTENERS.each do |sock|
-        sock.close_on_exec = false
-        listener_fds[sock.fileno] = sock
-      end
+      listener_fds = listener_sockets
       ENV['UNICORN_FD'] = listener_fds.keys.join(',')
       Dir.chdir(START_CTX[:cwd])
       cmd = [ START_CTX[0] ].concat(START_CTX[:argv])
@@ -442,12 +446,7 @@ class Unicorn::HttpServer
       # avoid leaking FDs we don't know about, but let before_exec
       # unset FD_CLOEXEC, if anything else in the app eventually
       # relies on FD inheritence.
-      (3..1024).each do |io|
-        next if listener_fds.include?(io)
-        io = IO.for_fd(io) rescue next
-        io.autoclose = false
-        io.close_on_exec = true
-      end
+      close_sockets_on_exec(listener_fds)
 
       # exec(command, hash) works in at least 1.9.1+, but will only be
       # required in 1.9.4/2.0.0 at earliest.
@@ -457,6 +456,40 @@ class Unicorn::HttpServer
       exec(*cmd)
     end
     proc_name 'master (old)'
+  end
+
+  def worker_spawn(worker)
+    listener_fds = listener_sockets
+    env = {}
+    env['UNICORN_FD'] = listener_fds.keys.join(',')
+
+    listener_fds[worker.to_io.fileno] = worker.to_io
+    listener_fds[worker.master.fileno] = worker.master
+
+    worker_info = [worker.nr, worker.to_io.fileno, worker.master.fileno]
+    env['UNICORN_WORKER'] = worker_info.join(',')
+
+    close_sockets_on_exec(listener_fds)
+
+    Process.spawn(env, START_CTX[0], *START_CTX[:argv], listener_fds)
+  end
+
+  def listener_sockets
+    listener_fds = {}
+    LISTENERS.each do |sock|
+      sock.close_on_exec = false
+      listener_fds[sock.fileno] = sock
+    end
+    listener_fds
+  end
+
+  def close_sockets_on_exec(sockets)
+    (3..1024).each do |io|
+      next if sockets.include?(io)
+      io = IO.for_fd(io) rescue next
+      io.autoclose = false
+      io.close_on_exec = true
+    end
   end
 
   # forcibly terminate all workers that haven't checked in in timeout seconds.  The timeout is implemented using an unlinked File
@@ -495,19 +528,31 @@ class Unicorn::HttpServer
   end
 
   def spawn_missing_workers
+    if @worker_data
+      worker = Unicorn::Worker.new(*@worker_data)
+      after_fork_internal
+      worker_loop(worker)
+      exit
+    end
+
     worker_nr = -1
     until (worker_nr += 1) == @worker_processes
       @workers.value?(worker_nr) and next
       worker = Unicorn::Worker.new(worker_nr)
       before_fork.call(self, worker)
-      if pid = fork
-        @workers[pid] = worker
-        worker.atfork_parent
+
+      pid = if @worker_exec
+        worker_spawn(worker)
       else
-        after_fork_internal
-        worker_loop(worker)
-        exit
+        fork do
+          after_fork_internal
+          worker_loop(worker)
+          exit
+        end
       end
+
+      @workers[pid] = worker
+      worker.atfork_parent
     end
     rescue => e
       @logger.error(e) rescue nil

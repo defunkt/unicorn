@@ -53,6 +53,7 @@ class Unicorn::Configurator
         server.logger.info("worker=#{worker.nr} ready")
       },
     :pid => nil,
+    :worker_exec => false,
     :preload_app => false,
     :check_client_connection => false,
     :rewindable_input => true, # for Rack 2.x: (Rack::VERSION[0] <= 1),
@@ -237,6 +238,15 @@ class Unicorn::Configurator
     # POSIX says 31 days is the smallest allowed maximum timeout for select()
     max = 30 * 60 * 60 * 24
     set[:timeout] = seconds > max ? max : seconds
+  end
+
+  # Whether to exec in each worker process after forking.  This changes the
+  # memory layout of each worker process, which is a security feature designed
+  # to defeat possible address space discovery attacks.  Note that using
+  # worker_exec only makes sense if you are not preloading the application,
+  # and will result in higher memory usage.
+  def worker_exec(bool)
+    set_bool(:worker_exec, bool)
   end
 
   # sets the current number of worker_processes to +nr+.  Each worker
