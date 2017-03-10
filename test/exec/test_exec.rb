@@ -97,6 +97,9 @@ run lambda { |env|
   end
 
   def test_sd_listen_fds_emulation
+    # [ruby-core:69895] [Bug #11336] fixed by r51576
+    return if RUBY_VERSION.to_f < 2.3
+
     File.open("config.ru", "wb") { |fp| fp.write(HI) }
     sock = TCPServer.new(@addr, @port)
 
@@ -124,9 +127,7 @@ run lambda { |env|
     end
   ensure
     sock.close if sock
-    # disabled test on old Rubies: https://bugs.ruby-lang.org/issues/11336
-    # [ruby-core:69895] [Bug #11336] fixed by r51576
-  end if RUBY_VERSION.to_f >= 2.3
+  end
 
   def test_inherit_listener_unspecified
     File.open("config.ru", "wb") { |fp| fp.write(HI) }

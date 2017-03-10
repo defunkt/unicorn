@@ -851,24 +851,6 @@ class HttpParserTest < Test::Unit::TestCase
     assert_equal '', parser.env['HTTP_HOST']
   end
 
-  # so we don't  care about the portability of this test
-  # if it doesn't leak on Linux, it won't leak anywhere else
-  # unless your C compiler or platform is otherwise broken
-  LINUX_PROC_PID_STATUS = "/proc/self/status"
-  def test_memory_leak
-    match_rss = /^VmRSS:\s+(\d+)/
-    if File.read(LINUX_PROC_PID_STATUS) =~ match_rss
-      before = $1.to_i
-      1000000.times { Unicorn::HttpParser.new }
-      File.read(LINUX_PROC_PID_STATUS) =~ match_rss
-      after = $1.to_i
-      diff = after - before
-      assert(diff < 10000, "memory grew more than 10M: #{diff}")
-    end
-  end if RUBY_PLATFORM =~ /linux/ &&
-         File.readable?(LINUX_PROC_PID_STATUS) &&
-         !defined?(RUBY_ENGINE)
-
   def test_memsize
     require 'objspace'
     if ObjectSpace.respond_to?(:memsize_of)

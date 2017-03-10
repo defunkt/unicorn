@@ -69,7 +69,7 @@ class TestUtil < Test::Unit::TestCase
       }
     }
     tmp.close!
-  end if STDIN.respond_to?(:external_encoding)
+  end
 
   def test_reopen_logs_renamed_with_internal_encoding
     tmp = Tempfile.new('')
@@ -101,5 +101,5 @@ class TestUtil < Test::Unit::TestCase
       }
     }
     tmp.close!
-  end if STDIN.respond_to?(:external_encoding)
+  end
 end

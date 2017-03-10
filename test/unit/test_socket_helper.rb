@@ -150,28 +150,31 @@ class TestSocketHelper < Test::Unit::TestCase
   end
 
   def test_tcp_defer_accept_default
+    return unless defined?(TCP_DEFER_ACCEPT)
     port = unused_port @test_addr
     name = "#@test_addr:#{port}"
     sock = bind_listen(name)
     cur = sock.getsockopt(Socket::SOL_TCP, TCP_DEFER_ACCEPT).unpack('i')[0]
     assert cur >= 1
-  end if defined?(TCP_DEFER_ACCEPT)
+  end
 
   def test_tcp_defer_accept_disable
+    return unless defined?(TCP_DEFER_ACCEPT)
     port = unused_port @test_addr
     name = "#@test_addr:#{port}"
     sock = bind_listen(name, :tcp_defer_accept => false)
     cur = sock.getsockopt(Socket::SOL_TCP, TCP_DEFER_ACCEPT).unpack('i')[0]
     assert_equal 0, cur
-  end if defined?(TCP_DEFER_ACCEPT)
+  end
 
   def test_tcp_defer_accept_nr
+    return unless defined?(TCP_DEFER_ACCEPT)
     port = unused_port @test_addr
     name = "#@test_addr:#{port}"
     sock = bind_listen(name, :tcp_defer_accept => 60)
     cur = sock.getsockopt(Socket::SOL_TCP, TCP_DEFER_ACCEPT).unpack('i')[0]
     assert cur > 1
-  end if defined?(TCP_DEFER_ACCEPT)
+  end
 
   def test_ipv6only
     port = begin
@@ -186,6 +189,7 @@ class TestSocketHelper < Test::Unit::TestCase
   end
 
   def test_reuseport
+    return unless defined?(Socket::SO_REUSEPORT)
     port = unused_port @test_addr
     name = "#@test_addr:#{port}"
     sock = bind_listen(name, :reuseport => true)
@@ -193,5 +197,5 @@ class TestSocketHelper < Test::Unit::TestCase
     assert_operator cur, :>, 0
   rescue Errno::ENOPROTOOPT
     # kernel does not support SO_REUSEPORT (older Linux)
-  end if defined?(Socket::SO_REUSEPORT)
+  end
 end
