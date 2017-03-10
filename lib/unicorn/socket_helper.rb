@@ -63,12 +63,15 @@ module Unicorn
       elsif respond_to?(:accf_arg)
         name = opt[:accept_filter]
         name = DEFAULTS[:accept_filter] if name.nil?
+        sock.listen(opt[:backlog])
+        got = (sock.getsockopt(:SOL_SOCKET, :SO_ACCEPTFILTER) rescue nil).to_s
+        arg = accf_arg(name)
         begin
-          sock.setsockopt(:SOL_SOCKET, :SO_ACCEPTFILTER, accf_arg(name))
+          sock.setsockopt(:SOL_SOCKET, :SO_ACCEPTFILTER, arg)
         rescue => e
           logger.error("#{sock_name(sock)} " \
                        "failed to set accept_filter=#{name} (#{e.inspect})")
-        end
+        end if arg != got
       end
     end
 
