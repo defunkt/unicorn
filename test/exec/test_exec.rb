@@ -143,7 +143,7 @@ run lambda { |env|
     res = hit(["http://#@addr:#@port/"])
     assert_equal [ "HI\n" ], res
     assert_shutdown(pid)
-    assert_equal 1, sock.getsockopt(:SOL_SOCKET, :SO_KEEPALIVE).int,
+    assert sock.getsockopt(:SOL_SOCKET, :SO_KEEPALIVE).bool,
                 'unicorn should always set SO_KEEPALIVE on inherited sockets'
   ensure
     sock.close if sock
