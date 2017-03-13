@@ -541,14 +541,12 @@ class Unicorn::HttpServer
       worker = Unicorn::Worker.new(worker_nr)
       before_fork.call(self, worker)
 
-      pid = if @worker_exec
-        worker_spawn(worker)
-      else
-        fork do
-          after_fork_internal
-          worker_loop(worker)
-          exit
-        end
+      pid = @worker_exec ? worker_spawn(worker) : fork
+
+      unless pid
+        after_fork_internal
+        worker_loop(worker)
+        exit
       end
 
       @workers[pid] = worker
