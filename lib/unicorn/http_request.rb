@@ -106,12 +106,13 @@ class Unicorn::HttpParser
   end
 
   if defined?(Raindrops::TCP_Info)
+    TCPI = Raindrops::TCP_Info.allocate
+
     def check_client_connection(socket) # :nodoc:
       if Unicorn::TCPClient === socket
-        @@tcp_info ||= Raindrops::TCP_Info.new(socket)
-        @@tcp_info.get!(socket)
+        # Raindrops::TCP_Info#get!, #state (reads struct tcp_info#tcpi_state)
         raise Errno::EPIPE, "client closed connection".freeze,
-              EMPTY_ARRAY if closed_state?(@@tcp_info.state)
+              EMPTY_ARRAY if closed_state?(TCPI.get!(socket).state)
       else
         write_http_header(socket)
       end
