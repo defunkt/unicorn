@@ -23,7 +23,7 @@ or services behind them.
 * {golden_brindle}[https://github.com/simonoff/golden_brindle] - tool to
   manage multiple unicorn instances/applications on a single server
 
-* {raindrops}[http://raindrops.bogomips.org/] - real-time stats for
+* {raindrops}[https://bogomips.org/raindrops/] - real-time stats for
   preforking Rack servers
 
 * {UnXF}[https://bogomips.org/unxf/]  Un-X-Forward* the Rack environment,
