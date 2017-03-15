@@ -2,6 +2,7 @@
 # :enddoc:
 # no stable API here
 require 'unicorn_http'
+require 'raindrops'
 
 # TODO: remove redundant names
 Unicorn.const_set(:HttpRequest, Unicorn::HttpParser)
@@ -25,8 +26,10 @@ class Unicorn::HttpParser
 
   # :stopdoc:
   HTTP_RESPONSE_START = [ 'HTTP'.freeze, '/1.1 '.freeze ]
+  EMPTY_ARRAY = [].freeze
   @@input_class = Unicorn::TeeInput
   @@check_client_connection = false
+  @@tcpi_inspect_ok = true
 
   def self.input_class
     @@input_class
@@ -80,11 +83,7 @@ class Unicorn::HttpParser
       false until add_parse(socket.kgio_read!(16384))
     end
 
-    # detect if the socket is valid by writing a partial response:
-    if @@check_client_connection && headers?
-      self.response_start_sent = true
-      HTTP_RESPONSE_START.each { |c| socket.write(c) }
-    end
+    check_client_connection(socket) if @@check_client_connection
 
     e['rack.input'] = 0 == content_length ?
                       NULL_IO : @@input_class.new(socket, self)
@@ -104,5 +103,70 @@ class Unicorn::HttpParser
 
   def hijacked?
     env.include?('rack.hijack_io'.freeze)
+  end
+
+  if defined?(Raindrops::TCP_Info)
+    TCPI = Raindrops::TCP_Info.allocate
+
+    def check_client_connection(socket) # :nodoc:
+      if Unicorn::TCPClient === socket
+        # Raindrops::TCP_Info#get!, #state (reads struct tcp_info#tcpi_state)
+        raise Errno::EPIPE, "client closed connection".freeze,
+              EMPTY_ARRAY if closed_state?(TCPI.get!(socket).state)
+      else
+        write_http_header(socket)
+      end
+    end
+
+    def closed_state?(state) # :nodoc:
+      case state
+      when 1 # ESTABLISHED
+        false
+      when 8, 6, 7, 9, 11 # CLOSE_WAIT, TIME_WAIT, CLOSE, LAST_ACK, CLOSING
+        true
+      else
+        false
+      end
+    end
+  else
+
+    # Ruby 2.2+ can show struct tcp_info as a string Socket::Option#inspect.
+    # Not that efficient, but probably still better than doing unnecessary
+    # work after a client gives up.
+    def check_client_connection(socket) # :nodoc:
+      if Unicorn::TCPClient === socket && @@tcpi_inspect_ok
+        opt = socket.getsockopt(:IPPROTO_TCP, :TCP_INFO).inspect
+        if opt =~ /\bstate=(\S+)/
+          @@tcpi_inspect_ok = true
+          raise Errno::EPIPE, "client closed connection".freeze,
+                EMPTY_ARRAY if closed_state_str?($1)
+        else
+          @@tcpi_inspect_ok = false
+          write_http_header(socket)
+        end
+        opt.clear
+      else
+        write_http_header(socket)
+      end
+    end
+
+    def closed_state_str?(state)
+      case state
+      when 'ESTABLISHED'
+        false
+      # not a typo, ruby maps TCP_CLOSE (no 'D') to state=CLOSED (w/ 'D')
+      when 'CLOSE_WAIT', 'TIME_WAIT', 'CLOSED', 'LAST_ACK', 'CLOSING'
+        true
+      else
+        false
+      end
+    end
+  end
+
+  def write_http_header(socket) # :nodoc:
+    if headers?
+      self.response_start_sent = true
+      HTTP_RESPONSE_START.each { |c| socket.write(c) }
+    end
   end
 end
