@@ -9,14 +9,16 @@ submit patches and/or obtain support after you have searched the
 * Cc: all participants in a thread or commit, as subscription is optional
 * Do not {top post}[http://catb.org/jargon/html/T/top-post.html] in replies
 * Quote as little as possible of the message you're replying to
-* Do not send HTML mail or images, it will be flagged as spam
-* Anonymous and pseudonymous messages will always be welcome.
+* Do not send HTML mail or images,
+  they hurt reader privacy and will be flagged as spam
+* Anonymous and pseudonymous messages will ALWAYS be welcome
 * The email submission port (587) is enabled on the bogomips.org MX:
   https://bogomips.org/unicorn-public/20141004232241.GA23908@dcvr.yhbt.net/t/
 
 If your issue is of a sensitive nature or you're just shy in public,
-then feel free to email us privately at mailto:unicorn@bogomips.org
-instead and your issue will be handled discreetly.
+use anonymity tools such as Tor or Mixmaster; and rely on the public
+mail archives for responses.  Be sure to scrub sensitive log messages
+and such.
 
 If you don't get a response within a few days, we may have forgotten
 about it so feel free to ask again.
@@ -64,7 +66,6 @@ document distributed with git) on guidelines for patch submission.
 == Contact Info
 
 * public: mailto:unicorn-public@bogomips.org
-* private: mailto:unicorn@bogomips.org
 * nntp://news.gmane.org/gmane.comp.lang.ruby.unicorn.general
 * nntp://news.public-inbox.org/inbox.comp.lang.ruby.unicorn
 * https://bogomips.org/unicorn-public/
