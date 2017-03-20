@@ -55,7 +55,7 @@ class Unicorn::Configurator
     :pid => nil,
     :preload_app => false,
     :check_client_connection => false,
-    :rewindable_input => true, # for Rack 2.x: (Rack::VERSION[0] <= 1),
+    :rewindable_input => true,
     :client_body_buffer_size => Unicorn::Const::MAX_BODY,
   }
   #:startdoc:
@@ -505,13 +505,12 @@ class Unicorn::Configurator
   # Disabling rewindability can improve performance by lowering
   # I/O and memory usage for applications that accept uploads.
   # Keep in mind that the Rack 1.x spec requires
-  # \env[\"rack.input\"] to be rewindable, so this allows
-  # intentionally violating the current Rack 1.x spec.
+  # \env[\"rack.input\"] to be rewindable,
+  # but the Rack 2.x spec does not.
   #
-  # +rewindable_input+ defaults to +true+ when used with Rack 1.x for
-  # Rack conformance.  When Rack 2.x is finalized, this will most
-  # likely default to +false+ while still conforming to the newer
-  # (less demanding) spec.
+  # +rewindable_input+ defaults to +true+ for compatibility.
+  # Setting it to +false+ may be safe for applications and
+  # frameworks developed for Rack 2.x and later.
   def rewindable_input(bool)
     set_bool(:rewindable_input, bool)
   end

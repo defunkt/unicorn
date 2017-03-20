@@ -1,6 +1,6 @@
 # -*- encoding: binary -*-
 
-# acts like tee(1) on an input input to provide a input-like stream
+# Acts like tee(1) on an input input to provide a input-like stream
 # while providing rewindable semantics through a File/StringIO backing
 # store.  On the first pass, the input is only read on demand so your
 # Rack application can use input notification (upload progress and
@@ -9,22 +9,22 @@
 # strict interpretation of Rack::Lint::InputWrapper functionality and
 # will not support any deviations from it.
 #
-# When processing uploads, Unicorn exposes a TeeInput object under
-# "rack.input" of the Rack environment.
+# When processing uploads, unicorn exposes a TeeInput object under
+# "rack.input" of the Rack environment by default.
 class Unicorn::TeeInput < Unicorn::StreamInput
   # The maximum size (in +bytes+) to buffer in memory before
   # resorting to a temporary file.  Default is 112 kilobytes.
-  @@client_body_buffer_size = Unicorn::Const::MAX_BODY
+  @@client_body_buffer_size = Unicorn::Const::MAX_BODY # :nodoc:
 
   # sets the maximum size of request bodies to buffer in memory,
   # amounts larger than this are buffered to the filesystem
-  def self.client_body_buffer_size=(bytes)
+  def self.client_body_buffer_size=(bytes) # :nodoc:
     @@client_body_buffer_size = bytes
   end
 
   # returns the maximum size of request bodies to buffer in memory,
   # amounts larger than this are buffered to the filesystem
-  def self.client_body_buffer_size
+  def self.client_body_buffer_size # :nodoc:
     @@client_body_buffer_size
   end
 
@@ -37,7 +37,7 @@ class Unicorn::TeeInput < Unicorn::StreamInput
 
   # Initializes a new TeeInput object.  You normally do not have to call
   # this unless you are writing an HTTP server.
-  def initialize(socket, request)
+  def initialize(socket, request) # :nodoc:
     @len = request.content_length
     super
     @tmp = @len && @len <= @@client_body_buffer_size ?

@@ -1,16 +1,17 @@
 # -*- encoding: binary -*-
 
-# When processing uploads, Unicorn may expose a StreamInput object under
-# "rack.input" of the (future) Rack (2.x) environment.
+# When processing uploads, unicorn may expose a StreamInput object under
+# "rack.input" of the Rack environment when
+# Unicorn::Configurator#rewindable_input is set to +false+
 class Unicorn::StreamInput
   # The I/O chunk size (in +bytes+) for I/O operations where
   # the size cannot be user-specified when a method is called.
   # The default is 16 kilobytes.
-  @@io_chunk_size = Unicorn::Const::CHUNK_SIZE
+  @@io_chunk_size = Unicorn::Const::CHUNK_SIZE # :nodoc:
 
   # Initializes a new StreamInput object.  You normally do not have to call
   # this unless you are writing an HTTP server.
-  def initialize(socket, request)
+  def initialize(socket, request) # :nodoc:
     @chunked = request.content_length.nil?
     @socket = socket
     @parser = request
