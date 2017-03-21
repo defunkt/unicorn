@@ -89,6 +89,7 @@ class Unicorn::HttpServer
     @self_pipe = []
     @workers = {} # hash maps PIDs to Workers
     @sig_queue = [] # signal queue used for self-piping
+    @pid = nil
 
     # we try inheriting listeners first, so we bind them later.
     # we don't write the pid file until we've bound listeners in case
