@@ -105,7 +105,7 @@ class Unicorn::HttpParser
     env.include?('rack.hijack_io'.freeze)
   end
 
-  if defined?(Raindrops::TCP_Info)
+  if Raindrops.const_defined?(:TCP_Info)
     TCPI = Raindrops::TCP_Info.allocate
 
     def check_client_connection(socket) # :nodoc:
@@ -118,14 +118,34 @@ class Unicorn::HttpParser
       end
     end
 
-    def closed_state?(state) # :nodoc:
-      case state
-      when 1 # ESTABLISHED
-        false
-      when 8, 6, 7, 9, 11 # CLOSE_WAIT, TIME_WAIT, CLOSE, LAST_ACK, CLOSING
-        true
-      else
-        false
+    if Raindrops.const_defined?(:TCP)
+      # raindrops 0.18.0+ supports FreeBSD + Linux using the same names
+      # Evaluate these hash lookups at load time so we can
+      # generate an opt_case_dispatch instruction
+      eval <<-EOS
+      def closed_state?(state) # :nodoc:
+        case state
+        when #{Raindrops::TCP[:ESTABLISHED]}
+          false
+        when #{Raindrops::TCP.values_at(
+              :CLOSE_WAIT, :TIME_WAIT, :CLOSE, :LAST_ACK, :CLOSING).join(',')}
+          true
+        else
+          false
+        end
+      end
+      EOS
+    else
+      # raindrops before 0.18 only supported TCP_INFO under Linux
+      def closed_state?(state) # :nodoc:
+        case state
+        when 1 # ESTABLISHED
+          false
+        when 8, 6, 7, 9, 11 # CLOSE_WAIT, TIME_WAIT, CLOSE, LAST_ACK, CLOSING
+          true
+        else
+          false
+        end
       end
     end
   else
