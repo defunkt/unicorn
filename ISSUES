@@ -68,10 +68,11 @@ document distributed with git) on guidelines for patch submission.
 * nntp://news.gmane.org/gmane.comp.lang.ruby.unicorn.general
 * nntp://news.public-inbox.org/inbox.comp.lang.ruby.unicorn
 * https://bogomips.org/unicorn-public/
+* http://ou63pmih66umazou.onion/unicorn-public/
 
 Mailing list subscription is optional, so Cc: all participants.
 
-You can follow along via NNTP:
+You can follow along via NNTP (read-only):
 
 	nntp://news.public-inbox.org/inbox.comp.lang.ruby.unicorn
 	nntp://news.gmane.org/gmane.comp.lang.ruby.unicorn.general
@@ -79,6 +80,7 @@ You can follow along via NNTP:
 Or Atom feeds:
 
 	https://bogomips.org/unicorn-public/new.atom
+	http://ou63pmih66umazou.onion/unicorn-public/new.atom
 
 	The HTML archives at https://bogomips.org/unicorn-public/
 	also has links to per-thread Atom feeds and downloadable
@@ -88,3 +90,6 @@ You may optionally subscribe via plain-text email:
 
 	mailto:unicorn-public+subscribe@bogomips.org
 	(and confirming the auto-reply)
+
+Just keep in mind we suck at delivering email, so using NNTP,
+or Atom feeds might be a better bet...
