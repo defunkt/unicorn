@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-DEF_VER = "v5.2.0"
+DEF_VER = "v5.3.0.pre1"
 CONSTANT = "Unicorn::Const::UNICORN_VERSION"
 RVF = "lib/unicorn/version.rb"
 GVF = "GIT-VERSION-FILE"
