@@ -12,7 +12,9 @@ class TestCccTCPI < Test::Unit::TestCase
     port = srv.addr[1]
     err = Tempfile.new('unicorn_ccc')
     rd, wr = IO.pipe
+    sleep_pipe = IO.pipe
     pid = fork do
+      sleep_pipe[1].close
       reqs = 0
       rd.close
       worker_pid = nil
@@ -22,7 +24,10 @@ class TestCccTCPI < Test::Unit::TestCase
           $$
         end
         reqs += 1
-        sleep(1) if env['PATH_INFO'] == '/sleep'
+
+        # will wake up when writer closes
+        sleep_pipe[0].read if env['PATH_INFO'] == '/sleep'
+
         [ 200, [ %w(Content-Length 0),  %w(Content-Type text/plain) ], [] ]
       end
       ENV['UNICORN_FD'] = srv.fileno.to_s
@@ -57,6 +62,10 @@ class TestCccTCPI < Test::Unit::TestCase
                    "Host: example.com\r\n\r\n")
       client.close
     end
+    sleep_pipe[1].close # wake up the reader in the worker
+    res = sleeper.read
+    assert_match %r{\AHTTP/1\.1 200}, res, 'got part of first sleeper response'
+    assert_match %r{\r\n\r\n\z}, res, 'got end of sleeper response'
     sleeper.close
     kpid = pid
     pid = nil
