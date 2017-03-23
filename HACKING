@@ -104,7 +104,6 @@ don't email the git mailing list or maintainer with Unicorn patches :)
 
 In order to build the gem, you must install the following components:
 
- * olddoc (RubyGem)
  * pandoc
 
 You can build the Unicorn gem with the following command:

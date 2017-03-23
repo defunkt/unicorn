@@ -1,9 +1,6 @@
 # -*- encoding: binary -*-
-ENV["VERSION"] or abort "VERSION= must be specified"
-manifest = File.readlines('.manifest').map! { |x| x.chomp! }
-require 'olddoc'
-extend Olddoc::Gemspec
-name, summary, title = readme_metadata
+manifest = File.exist?('.manifest') ?
+  IO.readlines('.manifest').map!(&:chomp!) : `git ls-files`.split("\n")
 
 # don't bother with tests that fork, not worth our time to get working
 # with `gem check -t` ... (of course we care for them when testing with
@@ -14,16 +11,18 @@ end.compact
 
 Gem::Specification.new do |s|
   s.name = %q{unicorn}
-  s.version = ENV["VERSION"].dup
-  s.authors = ["#{name} hackers"]
-  s.summary = summary
-  s.description = readme_description
+  s.version = (ENV['VERSION'] || '5.2.0').dup
+  s.authors = ['unicorn hackers']
+  s.summary = 'Rack HTTP server for fast clients and Unix'
+  s.description = File.read('README').split("\n\n")[1]
   s.email = %q{unicorn-public@bogomips.org}
   s.executables = %w(unicorn unicorn_rails)
   s.extensions = %w(ext/unicorn_http/extconf.rb)
-  s.extra_rdoc_files = extra_rdoc_files(manifest)
+  s.extra_rdoc_files = IO.readlines('.document').map!(&:chomp!).keep_if do |f|
+    File.exist?(f)
+  end
   s.files = manifest
-  s.homepage = Olddoc.config['rdoc_url']
+  s.homepage = 'https://bogomips.org/unicorn/'
   s.test_files = test_files
 
   # technically we need ">= 1.9.3", too, but avoid the array here since
@@ -40,7 +39,6 @@ Gem::Specification.new do |s|
   s.add_dependency(%q<raindrops>, '~> 0.7')
 
   s.add_development_dependency('test-unit', '~> 3.0')
-  s.add_development_dependency('olddoc', '~> 1.2')
 
   # Note: To avoid ambiguity, we intentionally avoid the SPDX-compatible
   # 'Ruby' here since Ruby 1.9.3 switched to BSD-2-Clause, but we
