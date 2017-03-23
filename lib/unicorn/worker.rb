@@ -12,18 +12,19 @@ class Unicorn::Worker
   # :stopdoc:
   attr_accessor :nr, :switched
   attr_reader :to_io # IO.select-compatible
+  attr_reader :master
 
   PER_DROP = Raindrops::PAGE_SIZE / Raindrops::SIZE
   DROPS = []
 
-  def initialize(nr)
+  def initialize(nr, pipe=nil)
     drop_index = nr / PER_DROP
     @raindrop = DROPS[drop_index] ||= Raindrops.new(PER_DROP)
     @offset = nr % PER_DROP
     @raindrop[@offset] = 0
     @nr = nr
     @switched = false
-    @to_io, @master = Unicorn.pipe
+    @to_io, @master = pipe || Unicorn.pipe
   end
 
   def atfork_child # :nodoc:
