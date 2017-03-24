@@ -172,6 +172,8 @@ class Unicorn::Configurator
   #      server.logger.error("worker process failure: #{status.inspect}")
   #    end
   #  end
+  #
+  # after_worker_exit is only available in unicorn 5.3.0+
   def after_worker_exit(*args, &block)
     set_hook(:after_worker_exit, block_given? ? block : args[0], 3)
   end
