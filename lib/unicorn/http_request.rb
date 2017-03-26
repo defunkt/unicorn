@@ -29,7 +29,7 @@ class Unicorn::HttpParser
   EMPTY_ARRAY = [].freeze
   @@input_class = Unicorn::TeeInput
   @@check_client_connection = false
-  @@tcpi_inspect_ok = nil
+  @@tcpi_inspect_ok = Socket.const_defined?(:TCP_INFO)
 
   def self.input_class
     @@input_class
@@ -154,19 +154,8 @@ class Unicorn::HttpParser
     # Not that efficient, but probably still better than doing unnecessary
     # work after a client gives up.
     def check_client_connection(socket) # :nodoc:
-      if Unicorn::TCPClient === socket && @@tcpi_inspect_ok != false
-        if @@tcpi_inspect_ok
-          opt = socket.getsockopt(:IPPROTO_TCP, :TCP_INFO).inspect
-        else
-          @@tcpi_inspect_ok = true
-          opt = begin
-            socket.getsockopt(:IPPROTO_TCP, :TCP_INFO)
-          rescue SocketError
-            @@tcpi_inspect_ok = false
-            return write_http_header(socket)
-          end.inspect
-        end
-
+      if Unicorn::TCPClient === socket && @@tcpi_inspect_ok
+        opt = socket.getsockopt(Socket::IPPROTO_TCP, Socket::TCP_INFO).inspect
         if opt =~ /\bstate=(\S+)/
           raise Errno::EPIPE, "client closed connection".freeze,
                 EMPTY_ARRAY if closed_state_str?($1)
