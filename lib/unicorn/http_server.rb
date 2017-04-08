@@ -148,7 +148,7 @@ class Unicorn::HttpServer
   def listeners=(listeners)
     cur_names, dead_names = [], []
     listener_names.each do |name|
-      if ?/ == name[0]
+      if name.start_with?('/')
         # mark unlinked sockets as dead so we can rebind them
         (File.socket?(name) ? cur_names : dead_names) << name
       else

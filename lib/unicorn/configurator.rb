@@ -587,7 +587,7 @@ class Unicorn::Configurator
     # just let chdir raise errors
     path = File.expand_path(path)
     if config_file &&
-       config_file[0] != ?/ &&
+       ! config_file.start_with?('/') &&
        ! File.readable?("#{path}/#{config_file}")
       raise ArgumentError,
             "config_file=#{config_file} would not be accessible in" \
