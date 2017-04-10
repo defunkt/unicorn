@@ -98,6 +98,11 @@ after_fork do |server, worker|
   # addr = "127.0.0.1:#{9293 + worker.nr}"
   # server.listen(addr, :tries => -1, :delay => 5, :tcp_nopush => true)
 
+  # The following is to dump backtrace when a worker_processe is killed for timeout
+  # trap 'INT' do
+  #   server.logger.error "worker=#{worker.nr} backtrace dump:\n#{caller.join("\n    \\_ ")}"
+  # end
+
   # the following is *required* for Rails + "preload_app true",
   defined?(ActiveRecord::Base) and
     ActiveRecord::Base.establish_connection
