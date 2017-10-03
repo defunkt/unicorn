@@ -921,6 +921,7 @@ void Init_unicorn_http(void)
   VALUE mUnicorn, cHttpParser;
 
   mark_ary = rb_ary_new();
+  rb_global_variable(&mark_ary);
   mUnicorn = rb_define_module("Unicorn");
   cHttpParser = rb_define_class_under(mUnicorn, "HttpParser", rb_cObject);
   eHttpParserError =
@@ -976,7 +977,6 @@ void Init_unicorn_http(void)
   init_unicorn_httpdate(mark_ary);
 
   OBJ_FREEZE(mark_ary);
-  rb_global_variable(&mark_ary);
 
 #ifndef HAVE_RB_HASH_CLEAR
   id_clear = rb_intern("clear");
