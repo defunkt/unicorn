@@ -59,7 +59,10 @@ module Unicorn
         Object.const_get(File.basename(ru, '.rb').capitalize)
       end
 
-      pp({ :inner_app => inner_app }) if $DEBUG
+      if $DEBUG
+        require 'pp'
+        pp({ :inner_app => inner_app })
+      end
 
       return inner_app if no_default_middleware
 
