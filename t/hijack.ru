@@ -11,11 +11,15 @@ class DieIfUsed
     warn "closed DieIfUsed #{@@n += 1}\n"
   end
 end
+
+envs = []
+
 run lambda { |env|
   case env["PATH_INFO"]
   when "/hijack_req"
     if env["rack.hijack?"]
       io = env["rack.hijack"].call
+      envs << env
       if io.respond_to?(:read_nonblock) &&
          env["rack.hijack_io"].respond_to?(:read_nonblock)
 
@@ -33,11 +37,19 @@ run lambda { |env|
       {
         "Content-Length" => r.bytesize.to_s,
         "rack.hijack" => proc do |io|
+          envs << env
           io.write(r)
           io.close
         end
       },
       DieIfUsed.new
     ]
+  when "/normal_env_id"
+    b = "#{env.object_id}\n"
+    h = {
+      'Content-Type' => 'text/plain',
+      'Content-Length' => b.bytesize.to_s,
+    }
+    [ 200, h, [ b ] ]
   end
 }

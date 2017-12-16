@@ -26,6 +26,7 @@ void init_unicorn_httpdate(VALUE mark_ary);
 #define UH_FL_HASHEADER 0x100
 #define UH_FL_TO_CLEAR 0x200
 #define UH_FL_RESSTART 0x400 /* for check_client_connection */
+#define UH_FL_HIJACK 0x800
 
 /* all of these flags need to be set for keepalive to be supported */
 #define UH_FL_KEEPALIVE (UH_FL_KAVERSION | UH_FL_REQEOF | UH_FL_HASHEADER)
@@ -607,6 +608,10 @@ static VALUE HttpParser_clear(VALUE self)
 {
   struct http_parser *hp = data_get(self);
 
+  /* we can't safely reuse .buf and .env if hijacked */
+  if (HP_FL_TEST(hp, HIJACK))
+    return HttpParser_init(self);
+
   http_parser_init(hp);
   my_hash_clear(hp->env);
 
@@ -813,6 +818,15 @@ static VALUE HttpParser_env(VALUE self)
   return data_get(self)->env;
 }
 
+static VALUE HttpParser_hijacked_bang(VALUE self)
+{
+  struct http_parser *hp = data_get(self);
+
+  HP_FL_SET(hp, HIJACK);
+
+  return self;
+}
+
 /**
  * call-seq:
  *    parser.filter_body(dst, src) => nil/src
@@ -947,6 +961,7 @@ void Init_unicorn_http(void)
   rb_define_method(cHttpParser, "next?", HttpParser_next, 0);
   rb_define_method(cHttpParser, "buf", HttpParser_buf, 0);
   rb_define_method(cHttpParser, "env", HttpParser_env, 0);
+  rb_define_method(cHttpParser, "hijacked!", HttpParser_hijacked_bang, 0);
   rb_define_method(cHttpParser, "response_start_sent=", HttpParser_rssset, 1);
   rb_define_method(cHttpParser, "response_start_sent", HttpParser_rssget, 0);
 

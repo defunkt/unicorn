@@ -21,13 +21,13 @@ module Unicorn::HttpResponse
 
   # writes the rack_response to socket as an HTTP response
   def http_response_write(socket, status, headers, body,
-                          response_start_sent=false)
+                          req = Unicorn::HttpRequest.new)
     hijack = nil
 
     if headers
       code = status.to_i
       msg = STATUS_CODES[code]
-      start = response_start_sent ? ''.freeze : 'HTTP/1.1 '.freeze
+      start = req.response_start_sent ? ''.freeze : 'HTTP/1.1 '.freeze
       buf = "#{start}#{msg ? %Q(#{code} #{msg}) : status}\r\n" \
             "Date: #{httpdate}\r\n" \
             "Connection: close\r\n"
@@ -52,6 +52,7 @@ module Unicorn::HttpResponse
     end
 
     if hijack
+      req.hijacked!
       hijack.call(socket)
     else
       body.each { |chunk| socket.write(chunk) }

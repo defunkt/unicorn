@@ -98,6 +98,7 @@ class Unicorn::HttpParser
   # for rack.hijack, we respond to this method so no extra allocation
   # of a proc object
   def call
+    hijacked!
     env['rack.hijack_io'] = env['unicorn.socket']
   end
 
