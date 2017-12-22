@@ -4,7 +4,7 @@ require 'unicorn'
 class TestDroplet < Test::Unit::TestCase
   def test_create_many_droplets
     now = Time.now.to_i
-    tmp = (0..1024).map do |i|
+    (0..1024).each do |i|
       droplet = Unicorn::Worker.new(i)
       assert droplet.respond_to?(:tick)
       assert_equal 0, droplet.tick

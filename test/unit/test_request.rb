@@ -34,7 +34,7 @@ class RequestTest < Test::Unit::TestCase
     assert_equal '', env['REQUEST_PATH']
     assert_equal '', env['PATH_INFO']
     assert_equal '*', env['REQUEST_URI']
-    res = @lint.call(env)
+    assert_kind_of Array, @lint.call(env)
   end
 
   def test_absolute_uri_with_query
@@ -44,7 +44,7 @@ class RequestTest < Test::Unit::TestCase
     assert_equal '/x', env['REQUEST_PATH']
     assert_equal '/x', env['PATH_INFO']
     assert_equal 'y=z', env['QUERY_STRING']
-    res = @lint.call(env)
+    assert_kind_of Array, @lint.call(env)
   end
 
   def test_absolute_uri_with_fragment
@@ -55,7 +55,7 @@ class RequestTest < Test::Unit::TestCase
     assert_equal '/x', env['PATH_INFO']
     assert_equal '', env['QUERY_STRING']
     assert_equal 'frag', env['FRAGMENT']
-    res = @lint.call(env)
+    assert_kind_of Array, @lint.call(env)
   end
 
   def test_absolute_uri_with_query_and_fragment
@@ -66,7 +66,7 @@ class RequestTest < Test::Unit::TestCase
     assert_equal '/x', env['PATH_INFO']
     assert_equal 'a=b', env['QUERY_STRING']
     assert_equal 'frag', env['FRAGMENT']
-    res = @lint.call(env)
+    assert_kind_of Array, @lint.call(env)
   end
 
   def test_absolute_uri_unsupported_schemes
@@ -83,7 +83,7 @@ class RequestTest < Test::Unit::TestCase
                              "Host: foo\r\n\r\n")
     env = @request.read(client)
     assert_equal "https", env['rack.url_scheme']
-    res = @lint.call(env)
+    assert_kind_of Array, @lint.call(env)
   end
 
   def test_x_forwarded_proto_http
@@ -92,7 +92,7 @@ class RequestTest < Test::Unit::TestCase
                              "Host: foo\r\n\r\n")
     env = @request.read(client)
     assert_equal "http", env['rack.url_scheme']
-    res = @lint.call(env)
+    assert_kind_of Array, @lint.call(env)
   end
 
   def test_x_forwarded_proto_invalid
@@ -101,7 +101,7 @@ class RequestTest < Test::Unit::TestCase
                              "Host: foo\r\n\r\n")
     env = @request.read(client)
     assert_equal "http", env['rack.url_scheme']
-    res = @lint.call(env)
+    assert_kind_of Array, @lint.call(env)
   end
 
   def test_rack_lint_get
@@ -109,7 +109,7 @@ class RequestTest < Test::Unit::TestCase
     env = @request.read(client)
     assert_equal "http", env['rack.url_scheme']
     assert_equal '127.0.0.1', env['REMOTE_ADDR']
-    res = @lint.call(env)
+    assert_kind_of Array, @lint.call(env)
   end
 
   def test_no_content_stringio
@@ -143,7 +143,7 @@ class RequestTest < Test::Unit::TestCase
       "abcde")
     env = @request.read(client)
     assert ! env.include?(:http_body)
-    res = @lint.call(env)
+    assert_kind_of Array, @lint.call(env)
   end
 
   def test_rack_lint_big_put
@@ -177,6 +177,6 @@ class RequestTest < Test::Unit::TestCase
     }
     assert_nil env['rack.input'].read(bs)
     env['rack.input'].rewind
-    res = @lint.call(env)
+    assert_kind_of Array, @lint.call(env)
   end
 end

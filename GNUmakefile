@@ -249,5 +249,10 @@ endif
 $(PLACEHOLDERS):
 	echo olddoc_placeholder > $@
 
+check-warnings:
+	@(for i in $$(git ls-files '*.rb' bin | grep -v '^setup\.rb$$'); \
+	  do $(RUBY) --disable-gems -d -W2 -c \
+	  $$i; done) | grep -v '^Syntax OK$$' || :
+
 .PHONY: .FORCE-GIT-VERSION-FILE doc $(T) $(slow_tests) man
 .PHONY: test-install
