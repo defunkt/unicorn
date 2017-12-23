@@ -15,6 +15,11 @@ submit patches and/or obtain support after you have searched the
 * The email submission port (587) is enabled on the bogomips.org MX:
   https://bogomips.org/unicorn-public/20141004232241.GA23908@dcvr.yhbt.net/t/
 
+We will never have a centralized or formal bug tracker.  Instead we
+can interoperate with any bug tracker which can Cc: us plain-text to
+mailto:unicorn-public@bogomips.org   This includes the Debian BTS
+at https://bugs.debian.org/unicorn and possibly others.
+
 If your issue is of a sensitive nature or you're just shy in public,
 use anonymity tools such as Tor or Mixmaster; and rely on the public
 mail archives for responses.  Be sure to scrub sensitive log messages
