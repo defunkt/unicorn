@@ -1,0 +1,73 @@
+version: 2
+jobs:
+  test-2-5: &test
+    docker:
+      - image: ruby:2.5
+    steps:
+      - checkout
+      - run: apt-get update && apt-get install build-essential ragel -y
+      - run: gem install rack
+      - run: gem install kgio
+      - run: gem install raindrops
+      - run: gem install test-unit
+      - run: make -j 8
+  test-2-4:
+    <<: *test
+    docker:
+      - image: ruby:2.4
+  test-2-3:
+    <<: *test
+    docker:
+      - image: ruby:2.3
+  test-2-2:
+    <<: *test
+    docker:
+      - image: ruby:2.2
+  test-2-1:
+    <<: *test
+    docker:
+      - image: ruby:2.1
+    steps:
+      - checkout
+      - run: apt-get update && apt-get install build-essential ragel -y
+      - run: gem install rack -v '< 2'
+      - run: gem install kgio
+      - run: gem install raindrops
+      - run: gem install test-unit
+      - run: make -j 8
+  test-2-0:
+    <<: *test
+    docker:
+      - image: ruby:2.0
+    steps:
+      - checkout
+      - run: apt-get update && apt-get install build-essential ragel -y
+      - run: gem install rack -v '< 2'
+      - run: gem install kgio
+      - run: gem install raindrops
+      - run: gem install test-unit
+      - run: make -j 8
+  test-1-9:
+    <<: *test
+    docker:
+      - image: ruby:1.9
+    steps:
+      - checkout
+      - run: apt-get update && apt-get install build-essential ragel -y
+      - run: gem install rack -v '< 2'
+      - run: gem install kgio
+      - run: gem install raindrops
+      - run: gem install test-unit
+      - run: make -j 8
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - test-2-5
+      - test-2-4
+      - test-2-3
+      - test-2-2
+      - test-2-1
+      - test-2-0
+      - test-1-9
