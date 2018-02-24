@@ -44,7 +44,7 @@ class TestCccTCPI < Test::Unit::TestCase
     # make sure the server is running, at least
     client = TCPSocket.new(host, port)
     client.write("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n")
-    assert client.wait_readable(10), 'never got response from server'
+    assert client.wait(10), 'never got response from server'
     res = client.read
     assert_match %r{\AHTTP/1\.1 200}, res, 'got part of first response'
     assert_match %r{\r\n\r\n\z}, res, 'got end of response, server is ready'
