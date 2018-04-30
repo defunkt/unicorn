@@ -553,9 +553,9 @@ class Unicorn::HttpServer
       @workers[pid] = worker
       worker.atfork_parent
     end
-    rescue => e
-      @logger.error(e) rescue nil
-      exit!
+  rescue => e
+    @logger.error(e) rescue nil
+    exit!
   end
 
   def maintain_worker_count
@@ -586,7 +586,7 @@ class Unicorn::HttpServer
       client.kgio_trywrite(err_response(code, @request.response_start_sent))
     end
     client.close
-    rescue
+  rescue
   end
 
   def e100_response_write(client, env)
@@ -669,9 +669,9 @@ class Unicorn::HttpServer
     logger.info "worker=#{worker_nr} reopening logs..."
     Unicorn::Util.reopen_logs
     logger.info "worker=#{worker_nr} done reopening logs"
-    rescue => e
-      logger.error(e) rescue nil
-      exit!(77) # EX_NOPERM in sysexits.h
+  rescue => e
+    logger.error(e) rescue nil
+    exit!(77) # EX_NOPERM in sysexits.h
   end
 
   # runs inside each forked worker, this sits around and waits
@@ -757,11 +757,11 @@ class Unicorn::HttpServer
     wpid <= 0 and return
     Process.kill(0, wpid)
     wpid
-    rescue Errno::EPERM
-      logger.info "pid=#{path} possibly stale, got EPERM signalling PID:#{wpid}"
-      nil
-    rescue Errno::ESRCH, Errno::ENOENT
-      # don't unlink stale pid files, racy without non-portable locking...
+  rescue Errno::EPERM
+    logger.info "pid=#{path} possibly stale, got EPERM signalling PID:#{wpid}"
+    nil
+  rescue Errno::ESRCH, Errno::ENOENT
+    # don't unlink stale pid files, racy without non-portable locking...
   end
 
   def load_config!

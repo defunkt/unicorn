@@ -193,8 +193,8 @@ EOF
     assert_equal other.path, results.first
 
     Process.kill(:QUIT, pid)
-    ensure
-      FileUtils.rmtree(other.path)
+  ensure
+    FileUtils.rmtree(other.path)
   end
 
   def test_working_directory
@@ -229,8 +229,8 @@ EOF
     assert_equal other.path, results.first
 
     Process.kill(:QUIT, pid)
-    ensure
-      FileUtils.rmtree(other.path)
+  ensure
+    FileUtils.rmtree(other.path)
   end
 
   def test_working_directory_controls_relative_paths
@@ -271,10 +271,9 @@ EOF
     wait_master_ready("#{other.path}/stderr_log_here")
 
     Process.kill(:QUIT, pid)
-    ensure
-      FileUtils.rmtree(other.path)
+  ensure
+    FileUtils.rmtree(other.path)
   end
-
 
   def test_exit_signals
     %w(INT TERM QUIT).each do |sig|

@@ -11,8 +11,8 @@ module Unicorn::Util # :nodoc:
       fp.stat.file? &&
       fp.sync &&
       (fp.fcntl(Fcntl::F_GETFL) & append_flags) == append_flags
-    rescue IOError, Errno::EBADF
-      false
+  rescue IOError, Errno::EBADF
+    false
   end
 
   def self.chown_logs(uid, gid)

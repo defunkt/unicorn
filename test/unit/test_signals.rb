@@ -114,8 +114,8 @@ class SignalsTest < Test::Unit::TestCase
     assert_nil buf
     assert diff > 1.0, "diff was #{diff.inspect}"
     assert diff < 60.0
-    ensure
-      Process.kill(:TERM, pid) rescue nil
+  ensure
+    Process.kill(:TERM, pid) rescue nil
   end
 
   def test_response_write

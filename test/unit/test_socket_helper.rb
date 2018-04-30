@@ -57,8 +57,8 @@ class TestSocketHelper < Test::Unit::TestCase
     assert File.readable?(@unix_listener_path), "not readable"
     assert File.writable?(@unix_listener_path), "not writable"
     assert_equal 0777, File.umask
-    ensure
-      File.umask(old_umask)
+  ensure
+    File.umask(old_umask)
   end
 
   def test_bind_listen_unix_umask
@@ -71,8 +71,8 @@ class TestSocketHelper < Test::Unit::TestCase
     assert_equal @unix_listener_path, sock_name(@unix_listener)
     assert_equal 0140700, File.stat(@unix_listener_path).mode
     assert_equal 0777, File.umask
-    ensure
-      File.umask(old_umask)
+  ensure
+    File.umask(old_umask)
   end
 
   def test_bind_listen_unix_idempotent

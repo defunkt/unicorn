@@ -17,9 +17,9 @@ class TestHandler
     while env['rack.input'].read(4096)
     end
     [200, { 'Content-Type' => 'text/plain' }, ['hello!\n']]
-    rescue Unicorn::ClientShutdown, Unicorn::HttpParserError => e
-      $stderr.syswrite("#{e.class}: #{e.message} #{e.backtrace.empty?}\n")
-      raise e
+  rescue Unicorn::ClientShutdown, Unicorn::HttpParserError => e
+    $stderr.syswrite("#{e.class}: #{e.message} #{e.backtrace.empty?}\n")
+    raise e
   end
 end
 
@@ -80,8 +80,8 @@ class WebServerTest < Test::Unit::TestCase
     loader_pid = tmp.sysread(4096).to_i
     assert_equal $$, loader_pid
     assert worker_pid != loader_pid
-    ensure
-      tmp.close!
+  ensure
+    tmp.close!
   end
 
   def test_broken_app
