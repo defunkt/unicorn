@@ -380,7 +380,7 @@ class Unicorn::HttpServer
 
   # wait for a signal hander to wake us up and then consume the pipe
   def master_sleep(sec)
-    @self_pipe[0].kgio_wait_readable(sec) or return
+    @self_pipe[0].wait(sec) or return
     # 11 bytes is the maximum string length which can be embedded within
     # the Ruby itself and not require a separate malloc (on 32-bit MRI 1.9+).
     # Most reads are only one byte here and uncommon, so it's not worth a

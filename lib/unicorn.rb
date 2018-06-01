@@ -2,6 +2,7 @@
 require 'etc'
 require 'stringio'
 require 'kgio'
+require 'io/wait'
 
 begin
   require 'rack'
