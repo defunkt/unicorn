@@ -31,7 +31,7 @@ module Unicorn::Launcher
       #  \_ parent  - exits immediately ASAP
       #      \_ unicorn master - writes to pipe when ready
 
-      rd, wr = IO.pipe
+      rd, wr = Unicorn.pipe
       grandparent = $$
       if fork
         wr.close # grandparent does not write

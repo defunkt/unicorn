@@ -2,6 +2,7 @@
 require 'etc'
 require 'stringio'
 require 'kgio'
+require 'raindrops'
 require 'io/wait'
 
 begin
@@ -113,9 +114,22 @@ module Unicorn
     exc.backtrace.each { |line| logger.error(line) }
   end
 
-  # remove this when we only support Ruby >= 2.0
+  F_SETPIPE_SZ = 1031 if RUBY_PLATFORM =~ /linux/
+
   def self.pipe # :nodoc:
-    Kgio::Pipe.new.each { |io| io.close_on_exec = true }
+    Kgio::Pipe.new.each do |io|
+      io.close_on_exec = true  # remove this when we only support Ruby >= 2.0
+
+      # shrink pipes to minimize impact on /proc/sys/fs/pipe-user-pages-soft
+      # limits.
+      if defined?(F_SETPIPE_SZ)
+        begin
+          io.fcntl(F_SETPIPE_SZ, Raindrops::PAGE_SIZE)
+        rescue Errno::EINVAL
+          # old kernel
+        end
+      end
+    end
   end
   # :startdoc:
 end

@@ -2,7 +2,6 @@
 # :enddoc:
 # no stable API here
 require 'unicorn_http'
-require 'raindrops'
 
 # TODO: remove redundant names
 Unicorn.const_set(:HttpRequest, Unicorn::HttpParser)
