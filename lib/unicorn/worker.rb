@@ -122,6 +122,11 @@ class Unicorn::Worker
   # the +after_fork+ hook after any privileged functions need to be
   # run (e.g. to set per-worker CPU affinity, niceness, etc)
   #
+  # +group+ can be specified as a string, or as an array of two
+  # strings.  If an array of two strings is given, the first string
+  # is used as the primary group of the process, and the second is
+  # used as the group of the log files.
+  #
   # Any and all errors raised within this method will be propagated
   # directly back to the caller (usually the +after_fork+ hook.
   # These errors commonly include ArgumentError for specifying an
@@ -134,8 +139,17 @@ class Unicorn::Worker
     # insufficient because modern systems have fine-grained
     # capabilities.  Let the caller handle any and all errors.
     uid = Etc.getpwnam(user).uid
-    gid = Etc.getgrnam(group).gid if group
-    Unicorn::Util.chown_logs(uid, gid)
+
+    if group
+      if group.is_a?(Array)
+        group, log_group = group
+        log_gid = Etc.getgrnam(log_group).gid
+      end
+      gid = Etc.getgrnam(group).gid
+      log_gid ||= gid
+    end
+
+    Unicorn::Util.chown_logs(uid, log_gid)
     if gid && Process.egid != gid
       Process.initgroups(user, gid)
       Process::GID.change_privilege(gid)
