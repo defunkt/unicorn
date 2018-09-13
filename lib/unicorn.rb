@@ -45,12 +45,8 @@ module Unicorn
       abort "rack and Rack::Builder must be available for processing #{ru}"
     end
 
-    # Op is going to get cleared before the returned lambda is called, so
-    # save this value so that it's still there when we need it:
-    no_default_middleware = op[:no_default_middleware]
-
     # always called after config file parsing, may be called after forking
-    lambda do ||
+    lambda do |_, server|
       inner_app = case ru
       when /\.ru$/
         raw = File.read(ru)
@@ -66,7 +62,7 @@ module Unicorn
         pp({ :inner_app => inner_app })
       end
 
-      return inner_app if no_default_middleware
+      return inner_app unless server.default_middleware
 
       middleware = { # order matters
         ContentLength: nil,

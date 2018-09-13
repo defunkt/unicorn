@@ -6,6 +6,7 @@ require 'optparse'
 ENV["RACK_ENV"] ||= "development"
 rackup_opts = Unicorn::Configurator::RACKUP
 options = rackup_opts[:options]
+set_no_default_middleware = true
 
 op = OptionParser.new("", 24, '  ') do |opts|
   cmd = File.basename($0)
@@ -60,7 +61,7 @@ op = OptionParser.new("", 24, '  ') do |opts|
 
   opts.on("-N", "--no-default-middleware",
           "do not load middleware implied by RACK_ENV") do |e|
-    rackup_opts[:no_default_middleware] = true
+    rackup_opts[:no_default_middleware] = true if set_no_default_middleware
   end
 
   opts.on("-D", "--daemonize", "run daemonized in the background") do |d|
@@ -110,6 +111,7 @@ op = OptionParser.new("", 24, '  ') do |opts|
   opts.parse! ARGV
 end
 
+set_no_default_middleware = false
 app = Unicorn.builder(ARGV[0] || 'config.ru', op)
 op = nil
 

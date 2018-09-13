@@ -88,6 +88,9 @@ class Unicorn::Configurator
     RACKUP[:set_listener] and
       set[:listeners] << "#{RACKUP[:host]}:#{RACKUP[:port]}"
 
+    RACKUP[:no_default_middleware] and
+      set[:default_middleware] = false
+
     # unicorn_rails creates dirs here after working_directory is bound
     after_reload.call if after_reload
 
@@ -263,6 +266,14 @@ class Unicorn::Configurator
   # for more information.
   def worker_processes(nr)
     set_int(:worker_processes, nr, 1)
+  end
+
+  # sets whether to add default middleware in the development and
+  # deployment RACK_ENVs.
+  #
+  # default_middleware is only available in unicorn 5.5.0+
+  def default_middleware(bool)
+    set_bool(:default_middleware, bool)
   end
 
   # sets listeners to the given +addresses+, replacing or augmenting the

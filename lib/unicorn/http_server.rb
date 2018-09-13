@@ -14,7 +14,8 @@ class Unicorn::HttpServer
   attr_accessor :app, :timeout, :worker_processes,
                 :before_fork, :after_fork, :before_exec,
                 :listener_opts, :preload_app,
-                :orig_app, :config, :ready_pipe, :user
+                :orig_app, :config, :ready_pipe, :user,
+                :default_middleware
   attr_writer   :after_worker_exit, :after_worker_ready, :worker_exec
 
   attr_reader :pid, :logger
@@ -70,6 +71,7 @@ class Unicorn::HttpServer
     @app = app
     @request = Unicorn::HttpRequest.new
     @reexec_pid = 0
+    @default_middleware = true
     options = options.dup
     @ready_pipe = options.delete(:ready_pipe)
     @init_listeners = options[:listeners] ? options[:listeners].dup : []
@@ -784,12 +786,12 @@ class Unicorn::HttpServer
   end
 
   def build_app!
-    if app.respond_to?(:arity) && app.arity == 0
+    if app.respond_to?(:arity) && (app.arity == 0 || app.arity == 2)
       if defined?(Gem) && Gem.respond_to?(:refresh)
         logger.info "Refreshing Gem list"
         Gem.refresh
       end
-      self.app = app.call
+      self.app = app.arity == 0 ? app.call : app.call(nil, self)
     end
   end
 
