@@ -84,7 +84,7 @@ class Unicorn::HttpServer
     # * The master process never closes or reinitializes this once
     # initialized.  Signal handlers in the master process will write to
     # it to wake up the master from IO.select in exactly the same manner
-    # djb describes in http://cr.yp.to/docs/selfpipe.html
+    # djb describes in https://cr.yp.to/docs/selfpipe.html
     #
     # * The workers immediately close the pipe they inherit.  See the
     # Unicorn::Worker class for the pipe workers use.

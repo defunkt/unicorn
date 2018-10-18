@@ -10,7 +10,7 @@ both the the request and response in between unicorn and slow clients.
 
 * Designed for Rack, Unix, fast clients, and ease-of-debugging.  We
   cut out everything that is better supported by the operating system,
-  {nginx}[http://nginx.org/] or {Rack}[http://rack.github.io/].
+  {nginx}[https://nginx.org/] or {Rack}[https://rack.github.io/].
 
 * Compatible with Ruby 1.9.3 and later.
   unicorn 4.x remains supported for Ruby 1.8 users.
@@ -77,13 +77,13 @@ You may install it via RubyGems on RubyGems.org:
 You can get the latest source via git from the following locations
 (these versions may not be stable):
 
-  git://bogomips.org/unicorn.git
-  git://repo.or.cz/unicorn.git (mirror)
+  https://bogomips.org/unicorn.git
+  https://repo.or.cz/unicorn.git (mirror)
 
 You may browse the code from the web:
 
 * https://bogomips.org/unicorn.git
-* http://repo.or.cz/w/unicorn.git (gitweb)
+* https://repo.or.cz/w/unicorn.git (gitweb)
 
 See the HACKING guide on how to contribute and build prerelease gems
 from git.

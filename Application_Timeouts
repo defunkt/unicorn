@@ -23,10 +23,10 @@ Most database adapters allow configurable timeouts.
 Net::HTTP and Net::SMTP in the Ruby standard library allow
 configurable timeouts.
 
-Even for things as fast as {memcached}[http://memcached.org/],
-{dalli}[http://rubygems.org/gems/dalli],
-{memcached}[http://rubygems.org/gems/memcached] and
-{memcache-client}[http://rubygems.org/gems/memcache-client] RubyGems all
+Even for things as fast as {memcached}[https://memcached.org/],
+{dalli}[https://rubygems.org/gems/dalli],
+{memcached}[https://rubygems.org/gems/memcached] and
+{memcache-client}[https://rubygems.org/gems/memcache-client] RubyGems all
 offer configurable timeouts.
 
 Consult the relevant documentation for the libraries you use on

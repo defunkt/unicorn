@@ -8,8 +8,8 @@ any later version.  We currently prefer the GPLv3 or later for
 derivative works, but the GPLv2 is fine.
 
 The complete texts of the GPLv2 and GPLv3 are below:
-GPLv2 - http://www.gnu.org/licenses/gpl-2.0.txt
-GPLv3 - http://www.gnu.org/licenses/gpl-3.0.txt
+GPLv2 - https://www.gnu.org/licenses/gpl-2.0.txt
+GPLv3 - https://www.gnu.org/licenses/gpl-3.0.txt
 
 You may (against our _preference_) also use the Ruby 1.8 license terms
 which we inherited from the original Mongrel project when we forked it:

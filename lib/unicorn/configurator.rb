@@ -238,7 +238,7 @@ class Unicorn::Configurator
   #      server 192.168.0.9:8080 fail_timeout=0;
   #    }
   #
-  # See http://nginx.org/en/docs/http/ngx_http_upstream_module.html
+  # See https://nginx.org/en/docs/http/ngx_http_upstream_module.html
   # for more details on nginx upstream configuration.
   def timeout(seconds)
     set_int(:timeout, seconds, 3)

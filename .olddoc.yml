@@ -1,6 +1,6 @@
 ---
 cgit_url: https://bogomips.org/unicorn.git
-git_url: git://bogomips.org/unicorn.git
+git_url: https://bogomips.org/unicorn.git
 rdoc_url: https://bogomips.org/unicorn/
 ml_url: https://bogomips.org/unicorn-public/
 merge_html:

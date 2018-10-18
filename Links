@@ -10,7 +10,7 @@ The unicorn project is not responsible for the content in these links.
 Furthermore, the unicorn project has never, does not and will never endorse:
 
 * any for-profit entities or services
-* any non-{Free Software}[http://www.gnu.org/philosophy/free-sw.html]
+* any non-{Free Software}[https://www.gnu.org/philosophy/free-sw.html]
 
 The existence of these links does not imply endorsement of any entities
 or services behind them.
@@ -31,25 +31,25 @@ or services behind them.
 
 === unicorn is written to work with
 
-* {Rack}[http://rack.github.io/] - a minimal interface between webservers
+* {Rack}[https://rack.github.io/] - a minimal interface between webservers
   supporting Ruby and Ruby frameworks
 
 * {Ruby}[https://www.ruby-lang.org/en/] - the programming language of
   Rack and unicorn
 
-* {nginx}[http://nginx.org/] (Free versions) -
+* {nginx}[https://nginx.org/] (Free versions) -
   the reverse proxy for use with unicorn
 
 === Derivatives
 
-* {Green Unicorn}[http://gunicorn.org/] - a Python version of unicorn
+* {Green Unicorn}[https://gunicorn.org/] - a Python version of unicorn
 
-* {Starman}[http://search.cpan.org/dist/Starman/] - Plack/PSGI version
+* {Starman}[https://metacpan.org/release/Starman/] - Plack/PSGI version
   of unicorn
 
 === Prior Work
 
-* {Mongrel}[http://rubygems.org/gems/mongrel] - the awesome webserver
+* {Mongrel}[https://rubygems.org/gems/mongrel] - the awesome webserver
   unicorn is based on
 
 * {david}[https://bogomips.org/david.git] - a tool to explain why you need
