@@ -865,4 +865,20 @@ class HttpParserTest < Test::Unit::TestCase
   rescue LoadError
     # not all Ruby implementations have objspace
   end
+
+  def test_dedupe
+    parser = HttpParser.new
+    # n.b. String#freeze optimization doesn't work under modern test-unit
+    exp = -'HTTP_HOST'
+    get = "GET / HTTP/1.1\r\nHost: example.com\r\nHavpbea-fhpxf: true\r\n\r\n"
+    assert parser.add_parse(get)
+    key = parser.env.keys.detect { |k| k == exp }
+    assert_same exp, key
+
+    if RUBY_VERSION.to_r >= 2.6 # 2.6.0-rc1+
+      exp = -'HTTP_HAVPBEA_FHPXF'
+      key = parser.env.keys.detect { |k| k == exp }
+      assert_same exp, key
+    end
+  end if RUBY_VERSION.to_r >= 2.5 && RUBY_ENGINE == 'ruby'
 end

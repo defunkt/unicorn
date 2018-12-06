@@ -58,6 +58,23 @@ static struct common_field common_http_fields[] = {
 
 #define HTTP_PREFIX "HTTP_"
 #define HTTP_PREFIX_LEN (sizeof(HTTP_PREFIX) - 1)
+static ID id_uminus;
+
+/* this dedupes under Ruby 2.5+ (December 2017) */
+static VALUE str_dd_freeze(VALUE str)
+{
+  if (STR_UMINUS_DEDUPE)
+    return rb_funcall(str, id_uminus, 0);
+
+  /* freeze,since it speeds up older MRI slightly */
+  OBJ_FREEZE(str);
+  return str;
+}
+
+static VALUE str_new_dd_freeze(const char *ptr, long len)
+{
+  return str_dd_freeze(rb_str_new(ptr, len));
+}
 
 /* this function is not performance-critical, called only at load time */
 static void init_common_fields(VALUE mark_ary)
@@ -65,18 +82,19 @@ static void init_common_fields(VALUE mark_ary)
   int i;
   struct common_field *cf = common_http_fields;
   char tmp[64];
+
+  id_uminus = rb_intern("-@");
   memcpy(tmp, HTTP_PREFIX, HTTP_PREFIX_LEN);
 
   for(i = ARRAY_SIZE(common_http_fields); --i >= 0; cf++) {
     /* Rack doesn't like certain headers prefixed with "HTTP_" */
     if (!strcmp("CONTENT_LENGTH", cf->name) ||
         !strcmp("CONTENT_TYPE", cf->name)) {
-      cf->value = rb_str_new(cf->name, cf->len);
+      cf->value = str_new_dd_freeze(cf->name, cf->len);
     } else {
       memcpy(tmp + HTTP_PREFIX_LEN, cf->name, cf->len + 1);
-      cf->value = rb_str_new(tmp, HTTP_PREFIX_LEN + cf->len);
+      cf->value = str_new_dd_freeze(tmp, HTTP_PREFIX_LEN + cf->len);
     }
-    cf->value = rb_obj_freeze(cf->value);
     rb_ary_push(mark_ary, cf->value);
   }
 }
@@ -105,7 +123,7 @@ static VALUE uncommon_field(const char *field, size_t flen)
   memcpy(RSTRING_PTR(f) + HTTP_PREFIX_LEN, field, flen);
   assert(*(RSTRING_PTR(f) + RSTRING_LEN(f)) == '\0' &&
          "string didn't end with \\0"); /* paranoia */
-  return rb_obj_freeze(f);
+  return HASH_ASET_DEDUPE ? f : str_dd_freeze(f);
 }
 
 #endif /* common_field_optimization_h */
