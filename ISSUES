@@ -39,6 +39,7 @@ https://bugs.ruby-lang.org/ and discuss+fix them on the ruby-core
 list at mailto:ruby-core@ruby-lang.org
 Subscription to post is required to ruby-core, unfortunately:
 mailto:ruby-core-request@ruby-lang.org?subject=subscribe
+Unofficial archives are available at: https://public-inbox.org/ruby-core/
 
 For uncommon bugs in Rack, we may forward bugs to
 mailto:rack-devel@googlegroups.com and discuss there.
@@ -46,6 +47,7 @@ Subscription (without any web UI or Google account) is possible via:
 mailto:rack-devel+subscribe@googlegroups.com
 Note: not everyone can use the proprietary bug tracker used by Rack,
 but their mailing list remains operational.
+Unofficial archives are available at: https://public-inbox.org/rack-devel/
 
 Uncommon bugs we encounter in the Linux kernel should be Cc:-ed to the
 Linux kernel mailing list (LKML) at mailto:linux-kernel@vger.kernel.org
@@ -54,11 +56,12 @@ and subsystem maintainers such as mailto:netdev@vger.kernel.org
 involved with any problematic commits (including those in the
 Signed-off-by: and other trailer lines).  No subscription is necessary,
 and the our mailing list follows the same conventions as LKML for
-interopability.  There is a kernel.org Bugzilla instance, but it is
-ignored by most developers.
+interopability. Archives are available at https://lore.kernel.org/lkml/
+There is a kernel.org Bugzilla instance, but it is ignored by most.
 
 Likewise for any rare glibc bugs we might encounter, we should Cc:
 mailto:libc-alpha@sourceware.org
+Unofficial archives are available at: https://public-inbox.org/libc-alpha/
 Keep in mind glibc upstream does use Bugzilla for tracking bugs:
 https://sourceware.org/bugzilla/
 
