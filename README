@@ -37,12 +37,15 @@ both the the request and response in between unicorn and slow clients.
   You can upgrade unicorn, your entire application, libraries
   and even your Ruby interpreter without dropping clients.
 
+* transparent upgrades using systemd socket activation is
+  supported since unicorn 5.0
+
 * before_fork and after_fork hooks in case your application
   has special needs when dealing with forked processes.  These
   should not be needed when the "preload_app" directive is
   false (the default).
 
-* Can be used with copy-on-write-friendly memory management
+* Can be used with copy-on-write-friendly GC in Ruby 2.0+
   to save memory (by setting "preload_app" to true).
 
 * Able to listen on multiple interfaces including UNIX sockets,
@@ -55,7 +58,7 @@ both the the request and response in between unicorn and slow clients.
 
 == License
 
-unicorn is copyright 2009-2016 by all contributors (see logs in git).
+unicorn is copyright 2009-2018 by all contributors (see logs in git).
 It is based on Mongrel 1.1.5.
 Mongrel is copyright 2007 Zed A. Shaw and contributors.
 
@@ -121,6 +124,10 @@ There is NO WARRANTY whatsoever if anything goes wrong, but
 unicorn is designed to only serve fast clients either on the local host
 or a fast LAN.  See the PHILOSOPHY and DESIGN documents for more details
 regarding this.
+
+Due to its ability to tolerate crashes and isolate clients, unicorn
+is unfortunately known to prolong the existence of bugs in applications
+and libraries which run on top of it.
 
 == Contact
 
