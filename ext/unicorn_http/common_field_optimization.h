@@ -77,7 +77,7 @@ static VALUE str_new_dd_freeze(const char *ptr, long len)
 }
 
 /* this function is not performance-critical, called only at load time */
-static void init_common_fields(VALUE mark_ary)
+static void init_common_fields(void)
 {
   int i;
   struct common_field *cf = common_http_fields;
@@ -95,7 +95,7 @@ static void init_common_fields(VALUE mark_ary)
       memcpy(tmp + HTTP_PREFIX_LEN, cf->name, cf->len + 1);
       cf->value = str_new_dd_freeze(tmp, HTTP_PREFIX_LEN + cf->len);
     }
-    rb_ary_push(mark_ary, cf->value);
+    rb_gc_register_mark_object(cf->value);
   }
 }
 

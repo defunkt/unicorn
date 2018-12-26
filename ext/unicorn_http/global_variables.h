@@ -56,7 +56,7 @@ NORETURN(static void parser_raise(VALUE klass, const char *));
 /** Defines global strings in the init method. */
 #define DEF_GLOBAL(N, val) do { \
   g_##N = rb_obj_freeze(rb_str_new(val, sizeof(val) - 1)); \
-  rb_ary_push(mark_ary, g_##N); \
+  rb_gc_register_mark_object(g_##N); \
 } while (0)
 
 /* Defines the maximum allowed lengths for various input elements.*/
@@ -67,7 +67,7 @@ DEF_MAX_LENGTH(FRAGMENT, 1024); /* Don't know if this length is specified somewh
 DEF_MAX_LENGTH(REQUEST_PATH, 4096); /* common PATH_MAX on modern systems */
 DEF_MAX_LENGTH(QUERY_STRING, (1024 * 10));
 
-static void init_globals(VALUE mark_ary)
+static void init_globals(void)
 {
   DEF_GLOBAL(rack_url_scheme, "rack.url_scheme");
   DEF_GLOBAL(request_method, "REQUEST_METHOD");
