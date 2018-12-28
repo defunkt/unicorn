@@ -50,7 +50,9 @@ or services behind them.
 === Prior Work
 
 * {Mongrel}[https://rubygems.org/gems/mongrel] - the awesome webserver
-  unicorn is based on
+  unicorn is based on.  A historical archive of the mongrel dev list
+  featuring early discussions of unicorn is available at:
+  https://bogomips.org/mongrel-devel/
 
 * {david}[https://bogomips.org/david.git] - a tool to explain why you need
   nginx in front of unicorn
