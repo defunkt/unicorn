@@ -132,11 +132,11 @@ def rails_builder(ru, op, daemonize)
 
   # this lambda won't run until after forking if preload_app is false
   # this runs after config file reloading
-  lambda do ||
+  lambda do |x, server|
     # Rails 3 includes a config.ru, use it if we find it after
     # working_directory is bound.
     ::File.exist?('config.ru') and
-      return Unicorn.builder('config.ru', op).call
+      return Unicorn.builder('config.ru', op).call(x, server)
 
     # Load Rails and (possibly) the private version of Rack it bundles.
     begin
