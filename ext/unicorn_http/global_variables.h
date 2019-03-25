@@ -64,7 +64,7 @@ DEF_MAX_LENGTH(FIELD_NAME, 256);
 DEF_MAX_LENGTH(FIELD_VALUE, 80 * 1024);
 DEF_MAX_LENGTH(REQUEST_URI, 1024 * 15);
 DEF_MAX_LENGTH(FRAGMENT, 1024); /* Don't know if this length is specified somewhere or not */
-DEF_MAX_LENGTH(REQUEST_PATH, 4096); /* common PATH_MAX on modern systems */
+DEF_MAX_LENGTH(REQUEST_PATH, 8192); /* common PATH_MAX on modern systems */
 DEF_MAX_LENGTH(QUERY_STRING, (1024 * 10));
 
 static void init_globals(void)
