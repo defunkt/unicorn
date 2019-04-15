@@ -12,14 +12,12 @@ unicorn_rails [-c CONFIG_FILE] [-E RAILS_ENV] [-D] [RACKUP_FILE]
 
 # DESCRIPTION
 
-A rackup(1)-like command to launch Rails applications using Unicorn.  It
-is expected to be started in your Rails application root (RAILS_ROOT),
-but the "working_directory" directive may be used in the CONFIG_FILE.
+A rackup(1)-like command to launch ancient Rails (2.x and earlier)
+applications using Unicorn.  Rails 3 (and later) support Rack natively,
+so users are encouraged to use unicorn(1) instead of unicorn_rails(1).
 
-It is designed to help Rails 1.x and 2.y users transition to Rack, but
-it is NOT needed for Rails 3 applications.  Rails 3 users are encouraged
-to use unicorn(1) instead of unicorn_rails(1).  Users of Rails 1.x/2.y
-may also use unicorn(1) instead of unicorn_rails(1).
+It is expected to be started in your Rails application root (RAILS_ROOT),
+but the "working_directory" directive may be used in the CONFIG_FILE.
 
 The outward interface resembles rackup(1), the internals and default
 middleware loading is designed like the `script/server` command
