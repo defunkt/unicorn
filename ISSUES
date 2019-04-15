@@ -94,11 +94,3 @@ Or Atom feeds:
 	The HTML archives at https://bogomips.org/unicorn-public/
 	also has links to per-thread Atom feeds and downloadable
 	mboxes.
-
-You may optionally subscribe via plain-text email:
-
-	mailto:unicorn-public+subscribe@bogomips.org
-	(and confirming the auto-reply)
-
-Just keep in mind we suck at delivering email, so using NNTP,
-or Atom feeds might be a better bet...
