@@ -175,7 +175,7 @@ doc: .document $(ext)/unicorn_http.c man html .olddoc.yml $(PLACEHOLDERS)
 	find bin lib -type f -name '*.rbc' -exec rm -f '{}' ';'
 	$(RM) -r doc
 	$(OLDDOC) prepare
-	$(RDOC) -f oldweb
+	$(RDOC) -f dark216
 	$(OLDDOC) merge
 	install -m644 COPYING doc/COPYING
 	install -m644 NEWS.atom.xml doc/NEWS.atom.xml
