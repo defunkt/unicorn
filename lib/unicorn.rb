@@ -123,6 +123,9 @@ module Unicorn
           io.fcntl(F_SETPIPE_SZ, Raindrops::PAGE_SIZE)
         rescue Errno::EINVAL
           # old kernel
+        rescue Errno::EPERM
+          # resizes fail if Linux is close to the pipe limit for the user
+          # or if the user does not have permissions to resize
         end
       end
     end
