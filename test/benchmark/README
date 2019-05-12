@@ -42,9 +42,14 @@ The benchmark client is usually httperf.
 Another gentle reminder: performance with slow networks/clients
 is NOT our problem.  That is the job of nginx (or similar).
 
+== ddstream.ru
+
+Standalone Rack app intended to show how BAD we are at slow clients.
+See usage in comments.
+
 == Contributors
 
-This directory is maintained independently in the "benchmark" branch
-based against v0.1.0.  Only changes to this directory (test/benchmarks)
-are committed to this branch although the master branch may merge this
-branch occassionaly.
+This directory is intended to remain stable.  Do not make changes
+to benchmarking code which can change performance and invalidate
+results across revisions.  Instead, write new benchmarks and update
+coments/documentation as necessary.
