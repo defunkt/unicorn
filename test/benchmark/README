@@ -47,6 +47,11 @@ is NOT our problem.  That is the job of nginx (or similar).
 Standalone Rack app intended to show how BAD we are at slow clients.
 See usage in comments.
 
+== readinput.ru
+
+Standalone Rack app intended to show how bad we are with slow uploaders.
+See usage in comments.
+
 == Contributors
 
 This directory is intended to remain stable.  Do not make changes
