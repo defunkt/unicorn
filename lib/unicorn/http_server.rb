@@ -387,12 +387,13 @@ class Unicorn::HttpServer
     # the Ruby itself and not require a separate malloc (on 32-bit MRI 1.9+).
     # Most reads are only one byte here and uncommon, so it's not worth a
     # persistent buffer, either:
-    @self_pipe[0].kgio_tryread(11)
+    @self_pipe[0].read_nonblock(11, exception: false)
   end
 
   def awaken_master
     return if $$ != @master_pid
-    @self_pipe[1].kgio_trywrite('.') # wakeup master process from select
+    # wakeup master process from select
+    @self_pipe[1].write_nonblock('.', exception: false)
   end
 
   # reaps all unreaped workers
@@ -582,7 +583,8 @@ class Unicorn::HttpServer
       500
     end
     if code
-      client.kgio_trywrite(err_response(code, @request.response_start_sent))
+      code = err_response(code, @request.response_start_sent)
+      client.write_nonblock(code, exception: false)
     end
     client.close
   rescue

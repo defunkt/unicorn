@@ -65,7 +65,7 @@ class Unicorn::Worker
     end
     # writing and reading 4 bytes on a pipe is atomic on all POSIX platforms
     # Do not care in the odd case the buffer is full, here.
-    @master.kgio_trywrite([signum].pack('l'))
+    @master.write_nonblock([signum].pack('l'), exception: false)
   rescue Errno::EPIPE
     # worker will be reaped soon
   end
@@ -73,7 +73,7 @@ class Unicorn::Worker
   # this only runs when the Rack app.call is not running
   # act like a listener
   def kgio_tryaccept # :nodoc:
-    case buf = @to_io.kgio_tryread(4)
+    case buf = @to_io.read_nonblock(4, exception: false)
     when String
       # unpack the buffer and trigger the signal handler
       signum = buf.unpack('l')

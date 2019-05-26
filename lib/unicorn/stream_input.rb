@@ -49,8 +49,7 @@ class Unicorn::StreamInput
         to_read = length - @rbuf.size
         rv.replace(@rbuf.slice!(0, @rbuf.size))
         until to_read == 0 || eof? || (rv.size > 0 && @chunked)
-          @socket.kgio_read(to_read, @buf) or eof!
-          filter_body(@rbuf, @buf)
+          filter_body(@rbuf, @socket.readpartial(to_read, @buf))
           rv << @rbuf
           to_read -= @rbuf.size
         end
@@ -61,6 +60,8 @@ class Unicorn::StreamInput
       read_all(rv)
     end
     rv
+  rescue EOFError
+    return eof!
   end
 
   # :call-seq:
@@ -83,9 +84,10 @@ class Unicorn::StreamInput
     begin
       @rbuf.sub!(re, '') and return $1
       return @rbuf.empty? ? nil : @rbuf.slice!(0, @rbuf.size) if eof?
-      @socket.kgio_read(@@io_chunk_size, @buf) or eof!
-      filter_body(once = '', @buf)
+      filter_body(once = '', @socket.readpartial(@@io_chunk_size, @buf))
       @rbuf << once
+    rescue EOFError
+      return eof!
     end while true
   end
 
@@ -107,14 +109,15 @@ private
   def eof?
     if @parser.body_eof?
       while @chunked && ! @parser.parse
-        once = @socket.kgio_read(@@io_chunk_size) or eof!
-        @buf << once
+        @buf << @socket.readpartial(@@io_chunk_size)
       end
       @socket = nil
       true
     else
       false
     end
+  rescue EOFError
+    return eof!
   end
 
   def filter_body(dst, src)
@@ -127,10 +130,11 @@ private
     dst.replace(@rbuf)
     @socket or return
     until eof?
-      @socket.kgio_read(@@io_chunk_size, @buf) or eof!
-      filter_body(@rbuf, @buf)
+      filter_body(@rbuf, @socket.readpartial(@@io_chunk_size, @buf))
       dst << @rbuf
     end
+  rescue EOFError
+    return eof!
   ensure
     @rbuf.clear
   end

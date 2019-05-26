@@ -75,11 +75,11 @@ class Unicorn::HttpParser
     e['REMOTE_ADDR'] = socket.kgio_addr
 
     # short circuit the common case with small GET requests first
-    socket.kgio_read!(16384, buf)
+    socket.readpartial(16384, buf)
     if parse.nil?
       # Parser is not done, queue up more data to read and continue parsing
       # an Exception thrown from the parser will throw us out of the loop
-      false until add_parse(socket.kgio_read!(16384))
+      false until add_parse(socket.readpartial(16384))
     end
 
     check_client_connection(socket) if @@check_client_connection
