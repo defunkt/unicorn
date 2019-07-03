@@ -14,7 +14,14 @@ After = unicorn.socket
 # bundler users must use the "--keep-file-descriptors" switch, here:
 # ExecStart = bundle exec --keep-file-descriptors unicorn -c ...
 ExecStart = /usr/bin/unicorn -c /path/to/unicorn.conf.rb /path/to/config.ru
+
+# NonBlocking MUST be true if using socket activation with unicorn.
+# Otherwise, there's a small window in-between when the non-blocking
+# flag is set by us and our accept4 call where systemd can momentarily
+# make the socket blocking, causing us to block on accept4:
+NonBlocking = true
 Sockets = unicorn.socket
+
 KillSignal = SIGQUIT
 User = nobody
 Group = nogroup
