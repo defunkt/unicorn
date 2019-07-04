@@ -10,6 +10,7 @@ RAGEL = ragel
 RSYNC = rsync
 OLDDOC = olddoc
 RDOC = rdoc
+GPERF = gperf
 
 GIT-VERSION-FILE: .FORCE-GIT-VERSION-FILE
 	@./GIT-VERSION-GEN
@@ -40,7 +41,9 @@ T_n_log := $(subst .n,$(log_suffix),$(T_n))
 test_prefix = $(CURDIR)/test/$(RUBY_ENGINE)-$(RUBY_VERSION)
 
 ext := ext/unicorn_http
-c_files := $(ext)/unicorn_http.c $(ext)/httpdate.c $(wildcard $(ext)/*.h)
+c_files := $(addprefix $(ext)/, unicorn_http.c common_fields.h \
+	httpdate.c common_field_optimization.h ext_help.h \
+	global_variables.h)
 rl_files := $(wildcard $(ext)/*.rl)
 base_bins := unicorn unicorn_rails
 bins := $(addprefix bin/, $(base_bins))
@@ -48,7 +51,14 @@ man1_rdoc := $(addsuffix _1, $(base_bins))
 man1_bins := $(addsuffix .1, $(base_bins))
 man1_paths := $(addprefix man/man1/, $(man1_bins))
 rb_files := $(bins) $(shell find lib ext -type f -name '*.rb')
-inst_deps := $(c_files) $(rb_files) GNUmakefile test/test_helper.rb
+inst_deps := $(c_files) $(rb_files) GNUmakefile test/test_helper.rb \
+		$(ext)/common_fields.gperf
+
+gperf :: $(ext)/common_fields.h
+$(ext)/common_fields.h : $(ext)/common_fields.gperf $(ext)/gperf.rb
+	$(GPERF) $< >$@-
+	$(MRI) --disable-gems $(ext)/gperf.rb <$@- >$@+
+	test -s $@+ && mv $@+ $@ && $(RM) $@-
 
 ragel: $(ext)/unicorn_http.c
 $(ext)/unicorn_http.c: $(rl_files)
@@ -159,12 +169,12 @@ man html:
 	$(MAKE) -C Documentation install-$@
 
 pkg_extra := GIT-VERSION-FILE lib/unicorn/version.rb LATEST NEWS \
-             $(ext)/unicorn_http.c $(man1_paths)
+             $(ext)/unicorn_http.c $(ext)/common_fields.h $(man1_paths)
 
 NEWS:
 	$(OLDDOC) prepare
 
-.manifest: $(ext)/unicorn_http.c man NEWS
+.manifest: $(ext)/unicorn_http.c $(ext)/common_fields.h man NEWS
 	(git ls-files && for i in $@ $(pkg_extra); do echo $$i; done) | \
 	  LC_ALL=C sort > $@+
 	cmp $@+ $@ || mv $@+ $@

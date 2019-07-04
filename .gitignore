@@ -12,6 +12,7 @@
 /test/ruby-*
 ext/unicorn_http/Makefile
 ext/unicorn_http/unicorn_http.c
+ext/unicorn_http/common_fields.h
 log/
 pkg/
 /vendor

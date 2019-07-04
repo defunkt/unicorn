@@ -3,58 +3,12 @@
 #include "ruby.h"
 #include "c_util.h"
 
-struct common_field {
-  const signed long len;
-  const char *name;
-  VALUE value;
-};
-
 /*
  * A list of common HTTP headers we expect to receive.
  * This allows us to avoid repeatedly creating identical string
  * objects to be used with rb_hash_aset().
  */
-static struct common_field common_http_fields[] = {
-# define f(N) { (sizeof(N) - 1), N, Qnil }
-  f("ACCEPT"),
-  f("ACCEPT_CHARSET"),
-  f("ACCEPT_ENCODING"),
-  f("ACCEPT_LANGUAGE"),
-  f("ALLOW"),
-  f("AUTHORIZATION"),
-  f("CACHE_CONTROL"),
-  f("CONNECTION"),
-  f("CONTENT_ENCODING"),
-  f("CONTENT_LENGTH"),
-  f("CONTENT_TYPE"),
-  f("COOKIE"),
-  f("DATE"),
-  f("EXPECT"),
-  f("FROM"),
-  f("HOST"),
-  f("IF_MATCH"),
-  f("IF_MODIFIED_SINCE"),
-  f("IF_NONE_MATCH"),
-  f("IF_RANGE"),
-  f("IF_UNMODIFIED_SINCE"),
-  f("KEEP_ALIVE"), /* Firefox sends this */
-  f("MAX_FORWARDS"),
-  f("PRAGMA"),
-  f("PROXY_AUTHORIZATION"),
-  f("RANGE"),
-  f("REFERER"),
-  f("TE"),
-  f("TRAILER"),
-  f("TRANSFER_ENCODING"),
-  f("UPGRADE"),
-  f("USER_AGENT"),
-  f("VIA"),
-  f("X_FORWARDED_FOR"), /* common for proxies */
-  f("X_FORWARDED_PROTO"), /* common for proxies */
-  f("X_REAL_IP"), /* common for proxies */
-  f("WARNING")
-# undef f
-};
+#include "common_fields.h"
 
 #define HTTP_PREFIX "HTTP_"
 #define HTTP_PREFIX_LEN (sizeof(HTTP_PREFIX) - 1)
@@ -79,21 +33,27 @@ static VALUE str_new_dd_freeze(const char *ptr, long len)
 /* this function is not performance-critical, called only at load time */
 static void init_common_fields(void)
 {
-  int i;
-  struct common_field *cf = common_http_fields;
+  size_t i;
   char tmp[64];
 
   id_uminus = rb_intern("-@");
   memcpy(tmp, HTTP_PREFIX, HTTP_PREFIX_LEN);
 
-  for(i = ARRAY_SIZE(common_http_fields); --i >= 0; cf++) {
+  for (i = 0; i < ARRAY_SIZE(cf_wordlist); i++) {
+    long len = (long)cf_lengthtable[i];
+    struct common_field *cf = &cf_wordlist[i];
+    const char *s;
+
+    if (!len)
+      continue;
+
+    s = cf->name + cf_stringpool;
     /* Rack doesn't like certain headers prefixed with "HTTP_" */
-    if (!strcmp("CONTENT_LENGTH", cf->name) ||
-        !strcmp("CONTENT_TYPE", cf->name)) {
-      cf->value = str_new_dd_freeze(cf->name, cf->len);
+    if (!strcmp("CONTENT_LENGTH", s) || !strcmp("CONTENT_TYPE", s)) {
+      cf->value = str_new_dd_freeze(s, len);
     } else {
-      memcpy(tmp + HTTP_PREFIX_LEN, cf->name, cf->len + 1);
-      cf->value = str_new_dd_freeze(tmp, HTTP_PREFIX_LEN + cf->len);
+      memcpy(tmp + HTTP_PREFIX_LEN, s, len + 1);
+      cf->value = str_new_dd_freeze(tmp, HTTP_PREFIX_LEN + len);
     }
     rb_gc_register_mark_object(cf->value);
   }
@@ -102,12 +62,11 @@ static void init_common_fields(void)
 /* this function is called for every header set */
 static VALUE find_common_field(const char *field, size_t flen)
 {
-  int i;
-  struct common_field *cf = common_http_fields;
+  struct common_field *cf = cf_lookup(field, flen);
 
-  for(i = ARRAY_SIZE(common_http_fields); --i >= 0; cf++) {
-    if (cf->len == (long)flen && !memcmp(cf->name, field, flen))
-      return cf->value;
+  if (cf) {
+    assert(cf->value);
+    return cf->value;
   }
   return Qnil;
 }

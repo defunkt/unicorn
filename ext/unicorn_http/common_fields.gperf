@@ -1,0 +1,56 @@
+%{
+#include <ruby.h>
+%}
+%compare-lengths
+%enum
+%global-table
+%language=ANSI-C
+%pic
+%struct-type
+%define hash-function-name cf_hash
+%define length-table-name cf_lengthtable
+%define lookup-function-name cf_lookup
+%define string-pool-name cf_stringpool
+%define word-array-name cf_wordlist
+
+struct common_field { size_t name; VALUE value; };
+%%
+ACCEPT
+ACCEPT_CHARSET
+ACCEPT_ENCODING
+ACCEPT_LANGUAGE
+ALLOW
+AUTHORIZATION
+CACHE_CONTROL
+CONNECTION
+CONTENT_ENCODING
+CONTENT_LENGTH
+CONTENT_TYPE
+COOKIE
+DATE
+EXPECT
+FROM
+HOST
+IF_MATCH
+IF_MODIFIED_SINCE
+IF_NONE_MATCH
+IF_RANGE
+IF_UNMODIFIED_SINCE
+# Firefox sends Keep-Alive (or maybe only old versions?)
+KEEP_ALIVE
+MAX_FORWARDS
+PRAGMA
+PROXY_AUTHORIZATION
+RANGE
+REFERER
+TE
+TRAILER
+TRANSFER_ENCODING
+UPGRADE
+USER_AGENT
+VIA
+# common proxies set some of these X- headers
+X_FORWARDED_FOR
+X_FORWARDED_PROTO
+X_REAL_IP
+WARNING
