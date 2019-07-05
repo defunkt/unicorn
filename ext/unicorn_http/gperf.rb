@@ -9,7 +9,8 @@ print buf.sub!(
   "\nstatic#$&"
 }.
 
-gsub!(
+# gperf 3.0.3 (on FreeBSD 12.0) actually uses offsetof
+gsub(
 # gperf 3.0.x used "(int)(long)", 3.1 uses "(int)(size_t)",
 #  input: {(int)(size_t)&((struct cf_pool_t *)0)->cf_pool_str3},
 # output: {offsetof(struct cf_pool_t, cf_pool_str3)},
