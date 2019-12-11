@@ -11,12 +11,18 @@ class Unicorn::TmpIO < File
   # immediately, switched to binary mode, and userspace output
   # buffering is disabled
   def self.new
+    path = nil
+
+    # workaround File#path being tainted:
+    # https://bugs.ruby-lang.org/issues/14485
     fp = begin
-      super("#{Dir::tmpdir}/#{rand}", RDWR|CREAT|EXCL, 0600)
+      path = "#{Dir::tmpdir}/#{rand}"
+      super(path, RDWR|CREAT|EXCL, 0600)
     rescue Errno::EEXIST
       retry
     end
-    unlink(fp.path)
+
+    unlink(path)
     fp.binmode
     fp.sync = true
     fp
