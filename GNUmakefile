@@ -150,13 +150,23 @@ prep_setup_rb := @-$(RM) $(setup_rb_files);$(MAKE) -C $(ext) clean
 
 clean:
 	-$(MAKE) -C $(ext) clean
-	-$(MAKE) -C Documentation clean
 	$(RM) $(ext)/Makefile
 	$(RM) $(setup_rb_files) $(t_log)
 	$(RM) -r $(test_prefix) man
+	$(RM) $(man1) $(html1)
 
-man html:
-	$(MAKE) -C Documentation install-$@
+man1 := $(addprefix Documentation/, unicorn.1 unicorn_rails.1)
+html1 := $(addsuffix .html, $(man1))
+man :
+	mkdir -p man/man1
+	install -m 644 $(man1) man/man1
+
+html : $(html1)
+	mkdir -p doc/man1
+	install -m 644 $(html1) doc/man1
+
+%.1.html: %.1
+	$(OLDDOC) man2html -o $@ ./$<
 
 pkg_extra := GIT-VERSION-FILE lib/unicorn/version.rb LATEST NEWS \
              $(ext)/unicorn_http.c $(man1_paths)
