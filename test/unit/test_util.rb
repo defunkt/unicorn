@@ -114,7 +114,7 @@ class TestUtil < Test::Unit::TestCase
       f_getpipe_sz = 1032
       IO.pipe do |a, b|
         a_sz = a.fcntl(f_getpipe_sz)
-        b_sz = b.fcntl(f_getpipe_sz)
+        b.fcntl(f_getpipe_sz)
         assert_kind_of Integer, a_sz
         r_sz = r.fcntl(f_getpipe_sz)
         assert_equal Raindrops::PAGE_SIZE, r_sz
