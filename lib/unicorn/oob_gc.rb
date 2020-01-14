@@ -43,8 +43,8 @@
 #     use Unicorn::OobGC, 2, %r{\A/(?:expensive/foo|more_expensive/foo)}
 #
 # Feedback from users of early implementations of this module:
-# * https://bogomips.org/unicorn-public/0BFC98E9-072B-47EE-9A70-05478C20141B@lukemelia.com/
-# * https://bogomips.org/unicorn-public/AANLkTilUbgdyDv9W1bi-s_W6kq9sOhWfmuYkKLoKGOLj@mail.gmail.com/
+# * https://yhbt.net/unicorn-public/0BFC98E9-072B-47EE-9A70-05478C20141B@lukemelia.com/
+# * https://yhbt.net/unicorn-public/AANLkTilUbgdyDv9W1bi-s_W6kq9sOhWfmuYkKLoKGOLj@mail.gmail.com/
 
 module Unicorn::OobGC
 

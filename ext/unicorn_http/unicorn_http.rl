@@ -487,7 +487,7 @@ static void set_url_scheme(VALUE env, VALUE *server_port)
      * and X-Forwarded-Proto handling from this parser?  We've had it
      * forever and nobody has said anything against it, either.
      * Anyways, please send comments to our public mailing list:
-     * unicorn-public@bogomips.org (no HTML mail, no subscription necessary)
+     * unicorn-public@yhbt.net (no HTML mail, no subscription necessary)
      */
     scheme = rb_hash_aref(env, g_http_x_forwarded_ssl);
     if (!NIL_P(scheme) && STR_CSTR_EQ(scheme, "on")) {

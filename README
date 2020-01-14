@@ -80,12 +80,12 @@ You may install it via RubyGems on RubyGems.org:
 You can get the latest source via git from the following locations
 (these versions may not be stable):
 
-  https://bogomips.org/unicorn.git
+  https://yhbt.net/unicorn.git
   https://repo.or.cz/unicorn.git (mirror)
 
 You may browse the code from the web:
 
-* https://bogomips.org/unicorn.git
+* https://yhbt.net/unicorn.git
 * https://repo.or.cz/w/unicorn.git (gitweb)
 
 See the HACKING guide on how to contribute and build prerelease gems
@@ -133,13 +133,13 @@ and libraries which run on top of it.
 
 All feedback (bug reports, user/development dicussion, patches, pull
 requests) go to the mailing list/newsgroup.  See the ISSUES document for
-information on the {mailing list}[mailto:unicorn-public@bogomips.org].
+information on the {mailing list}[mailto:unicorn-public@yhbt.net].
 
-The mailing list is archived at https://bogomips.org/unicorn-public/
+The mailing list is archived at https://yhbt.net/unicorn-public/
 Read-only NNTP access is available at:
 nntp://news.public-inbox.org/inbox.comp.lang.ruby.unicorn and
-nntp://news.gmane.org/gmane.comp.lang.ruby.unicorn.general
+nntp://news.gmane.io/gmane.comp.lang.ruby.unicorn.general
 
 For the latest on unicorn releases, you may also finger us at
-unicorn@bogomips.org or check our NEWS page (and subscribe to our Atom
+unicorn@yhbt.net or check our NEWS page (and subscribe to our Atom
 feed).

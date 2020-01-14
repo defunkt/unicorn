@@ -8,7 +8,7 @@ should be possible to easily share process management scripts between
 Unicorn and nginx.
 
 One example init script is distributed with unicorn:
-https://bogomips.org/unicorn/examples/init.sh
+https://yhbt.net/unicorn/examples/init.sh
 
 === Master Process
 

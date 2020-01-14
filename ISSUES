@@ -1,9 +1,9 @@
 = Issues
 
-mailto:unicorn-public@bogomips.org is the best place to report bugs,
+mailto:unicorn-public@yhbt.net is the best place to report bugs,
 submit patches and/or obtain support after you have searched the
-{email archives}[https://bogomips.org/unicorn-public/] and
-{documentation}[https://bogomips.org/unicorn/].
+{email archives}[https://yhbt.net/unicorn-public/] and
+{documentation}[https://yhbt.net/unicorn/].
 
 * No subscription will ever be required to email us
 * Cc: all participants in a thread or commit, as subscription is optional
@@ -12,12 +12,12 @@ submit patches and/or obtain support after you have searched the
 * Do not send HTML mail or images,
   they hurt reader privacy and will be flagged as spam
 * Anonymous and pseudonymous messages will ALWAYS be welcome
-* The email submission port (587) is enabled on the bogomips.org MX:
-  https://bogomips.org/unicorn-public/20141004232241.GA23908@dcvr.yhbt.net/t/
+* The email submission port (587) is enabled on the yhbt.net MX:
+  https://yhbt.net/unicorn-public/20141004232241.GA23908@dcvr.yhbt.net/t/
 
 We will never have a centralized or formal bug tracker.  Instead we
 can interoperate with any bug tracker which can Cc: us plain-text to
-mailto:unicorn-public@bogomips.org   This includes the Debian BTS
+mailto:unicorn-public@yhbt.net   This includes the Debian BTS
 at https://bugs.debian.org/unicorn and possibly others.
 
 If your issue is of a sensitive nature or you're just shy in public,
@@ -73,10 +73,10 @@ document distributed with git) on guidelines for patch submission.
 
 == Contact Info
 
-* public: mailto:unicorn-public@bogomips.org
-* nntp://news.gmane.org/gmane.comp.lang.ruby.unicorn.general
+* public: mailto:unicorn-public@yhbt.net
+* nntp://news.gmane.io/gmane.comp.lang.ruby.unicorn.general
 * nntp://news.public-inbox.org/inbox.comp.lang.ruby.unicorn
-* https://bogomips.org/unicorn-public/
+* https://yhbt.net/unicorn-public/
 * http://ou63pmih66umazou.onion/unicorn-public/
 
 Mailing list subscription is optional, so Cc: all participants.
@@ -84,13 +84,13 @@ Mailing list subscription is optional, so Cc: all participants.
 You can follow along via NNTP (read-only):
 
 	nntp://news.public-inbox.org/inbox.comp.lang.ruby.unicorn
-	nntp://news.gmane.org/gmane.comp.lang.ruby.unicorn.general
+	nntp://news.gmane.io/gmane.comp.lang.ruby.unicorn.general
 
 Or Atom feeds:
 
-	https://bogomips.org/unicorn-public/new.atom
+	https://yhbt.net/unicorn-public/new.atom
 	http://ou63pmih66umazou.onion/unicorn-public/new.atom
 
-	The HTML archives at https://bogomips.org/unicorn-public/
+	The HTML archives at https://yhbt.net/unicorn-public/
 	also has links to per-thread Atom feeds and downloadable
 	mboxes.

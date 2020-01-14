@@ -6,7 +6,7 @@
 # forked worker children.
 #
 # Users do not need to know the internals of this class, but reading the
-# {source}[https://bogomips.org/unicorn.git/tree/lib/unicorn/http_server.rb]
+# {source}[https://yhbt.net/unicorn.git/tree/lib/unicorn/http_server.rb]
 # is education for programmers wishing to learn how unicorn works.
 # See Unicorn::Configurator for information on how to configure unicorn.
 class Unicorn::HttpServer

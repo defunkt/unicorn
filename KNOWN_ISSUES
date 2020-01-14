@@ -9,7 +9,7 @@ acceptable solution.  Those issues are documented here.
   handlers.
 
 * Issues with FreeBSD jails can be worked around as documented by Tatsuya Ono:
-  https://bogomips.org/unicorn-public/CAHBuKRj09FdxAgzsefJWotexw-7JYZGJMtgUp_dhjPz9VbKD6Q@mail.gmail.com/
+  https://yhbt.net/unicorn-public/CAHBuKRj09FdxAgzsefJWotexw-7JYZGJMtgUp_dhjPz9VbKD6Q@mail.gmail.com/
 
 * PRNGs (pseudo-random number generators) loaded before forking
   (e.g. "preload_app true") may need to have their internal state
@@ -60,7 +60,7 @@ acceptable solution.  Those issues are documented here.
   application to use Rails 2.3.2 and you have no other choice, then
   you may edit your unicorn gemspec and remove the Rack dependency.
 
-  ref: https://bogomips.org/unicorn-public/20091014221552.GA30624@dcvr.yhbt.net/
+  ref: https://yhbt.net/unicorn-public/20091014221552.GA30624@dcvr.yhbt.net/
   Note: the workaround described in the article above only made
   the issue more subtle and we didn't notice them immediately.
 

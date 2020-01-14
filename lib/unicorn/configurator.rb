@@ -3,11 +3,11 @@ require 'logger'
 
 # Implements a simple DSL for configuring a unicorn server.
 #
-# See https://bogomips.org/unicorn/examples/unicorn.conf.rb and
-# https://bogomips.org/unicorn/examples/unicorn.conf.minimal.rb
+# See https://yhbt.net/unicorn/examples/unicorn.conf.rb and
+# https://yhbt.net/unicorn/examples/unicorn.conf.minimal.rb
 # example configuration files.  An example config file for use with
 # nginx is also available at
-# https://bogomips.org/unicorn/examples/nginx.conf
+# https://yhbt.net/unicorn/examples/nginx.conf
 #
 # See the link:/TUNING.html document for more information on tuning unicorn.
 class Unicorn::Configurator

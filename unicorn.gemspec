@@ -15,14 +15,14 @@ Gem::Specification.new do |s|
   s.authors = ['unicorn hackers']
   s.summary = 'Rack HTTP server for fast clients and Unix'
   s.description = File.read('README').split("\n\n")[1]
-  s.email = %q{unicorn-public@bogomips.org}
+  s.email = %q{unicorn-public@yhbt.net}
   s.executables = %w(unicorn unicorn_rails)
   s.extensions = %w(ext/unicorn_http/extconf.rb)
   s.extra_rdoc_files = IO.readlines('.document').map!(&:chomp!).keep_if do |f|
     File.exist?(f)
   end
   s.files = manifest
-  s.homepage = 'https://bogomips.org/unicorn/'
+  s.homepage = 'https://yhbt.net/unicorn/'
   s.test_files = test_files
 
   # technically we need ">= 1.9.3", too, but avoid the array here since

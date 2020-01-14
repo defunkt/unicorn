@@ -34,7 +34,7 @@ is the primary issue with sandboxing tools such as Bundler and Isolate.
 If you're bundling unicorn, use "bundle exec unicorn" (or "bundle exec
 unicorn_rails") to start unicorn with the correct environment variables
 
-ref: https://bogomips.org/unicorn-public/9ECF07C4-5216-47BE-961D-AFC0F0C82060@internetfamo.us/
+ref: https://yhbt.net/unicorn-public/9ECF07C4-5216-47BE-961D-AFC0F0C82060@internetfamo.us/
 
 Otherwise (if you choose to not sandbox your unicorn installation), we
 expect the tips for Isolate (below) apply, too.
@@ -44,7 +44,7 @@ expect the tips for Isolate (below) apply, too.
 This is no longer be an issue as of bundler 0.9.17
 
 ref:
-https://bogomips.org/unicorn-public/8FC34B23-5994-41CC-B5AF-7198EF06909E@tramchase.com/
+https://yhbt.net/unicorn-public/8FC34B23-5994-41CC-B5AF-7198EF06909E@tramchase.com/
 
 === BUNDLE_GEMFILE for Capistrano users
 

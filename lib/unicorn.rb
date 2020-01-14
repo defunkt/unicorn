@@ -96,7 +96,7 @@ module Unicorn
 
   # returns an array of strings representing TCP listen socket addresses
   # and Unix domain socket paths.  This is useful for use with
-  # Raindrops::Middleware under Linux: https://bogomips.org/raindrops/
+  # Raindrops::Middleware under Linux: https://yhbt.net/raindrops/
   def self.listener_names
     Unicorn::HttpServer::LISTENERS.map do |io|
       Unicorn::SocketHelper.sock_name(io)
