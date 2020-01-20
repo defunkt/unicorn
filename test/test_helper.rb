@@ -265,32 +265,6 @@ def wait_for_death(pid)
   raise "PID:#{pid} never died!"
 end
 
-# executes +cmd+ and chunks its STDOUT
-def chunked_spawn(stdout, *cmd)
-  fork {
-    crd, cwr = IO.pipe
-    crd.binmode
-    cwr.binmode
-    crd.sync = cwr.sync = true
-
-    pid = fork {
-      STDOUT.reopen(cwr)
-      crd.close
-      cwr.close
-      exec(*cmd)
-    }
-    cwr.close
-    begin
-      buf = crd.readpartial(16384)
-      stdout.write("#{'%x' % buf.size}\r\n#{buf}")
-    rescue EOFError
-      stdout.write("0\r\n")
-      pid, status = Process.waitpid(pid)
-      exit status.exitstatus
-    end while true
-  }
-end
-
 def reset_sig_handlers
   %w(WINCH QUIT INT TERM USR1 USR2 HUP TTIN TTOU CHLD).each do |sig|
     trap(sig, "DEFAULT")
