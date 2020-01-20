@@ -45,8 +45,9 @@ end
 
   COMMON_TMP = Tempfile.new('unicorn_tmp') unless defined?(COMMON_TMP)
 
+  HEAVY_WORKERS = 2
   HEAVY_CFG = <<-EOS
-worker_processes 4
+worker_processes #{HEAVY_WORKERS}
 timeout 30
 logger Logger.new('#{COMMON_TMP.path}')
 before_fork do |server, worker|
@@ -606,6 +607,7 @@ EOF
   def test_weird_config_settings
     File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
     ucfg = Tempfile.new('unicorn_test_config')
+    proc_total = HEAVY_WORKERS + 1 # + 1 for master
     ucfg.syswrite(HEAVY_CFG)
     pid = xfork do
       redirect_test_io do
@@ -616,9 +618,9 @@ EOF
     results = retry_hit(["http://#{@addr}:#{@port}/"])
     assert_equal String, results[0].class
     wait_master_ready(COMMON_TMP.path)
-    wait_workers_ready(COMMON_TMP.path, 4)
+    wait_workers_ready(COMMON_TMP.path, HEAVY_WORKERS)
     bf = File.readlines(COMMON_TMP.path).grep(/\bbefore_fork: worker=/)
-    assert_equal 4, bf.size
+    assert_equal HEAVY_WORKERS, bf.size
     rotate = Tempfile.new('unicorn_rotate')
 
     File.rename(COMMON_TMP.path, rotate.path)
@@ -630,20 +632,20 @@ EOF
     tries = DEFAULT_TRIES
     log = File.readlines(rotate.path)
     while (tries -= 1) > 0 &&
-          log.grep(/reopening logs\.\.\./).size < 5
+          log.grep(/reopening logs\.\.\./).size < proc_total
       sleep DEFAULT_RES
       log = File.readlines(rotate.path)
     end
-    assert_equal 5, log.grep(/reopening logs\.\.\./).size
+    assert_equal proc_total, log.grep(/reopening logs\.\.\./).size
     assert_equal 0, log.grep(/done reopening logs/).size
 
     tries = DEFAULT_TRIES
     log = File.readlines(COMMON_TMP.path)
-    while (tries -= 1) > 0 && log.grep(/done reopening logs/).size < 5
+    while (tries -= 1) > 0 && log.grep(/done reopening logs/).size < proc_total
       sleep DEFAULT_RES
       log = File.readlines(COMMON_TMP.path)
     end
-    assert_equal 5, log.grep(/done reopening logs/).size
+    assert_equal proc_total, log.grep(/done reopening logs/).size
     assert_equal 0, log.grep(/reopening logs\.\.\./).size
 
     Process.kill(:QUIT, pid)
