@@ -236,15 +236,10 @@ class UploadTest < Test::Unit::TestCase
     resp = Tempfile.new('resp')
     resp.sync = true
 
-    rd, wr = IO.pipe
-    wr.sync = rd.sync = true
-    pid = fork {
-      STDIN.reopen(rd)
-      rd.close
-      wr.close
-      STDOUT.reopen(resp)
-      exec cmd
-    }
+    rd, wr = IO.pipe.each do |io|
+      io.sync = io.close_on_exec = true
+    end
+    pid = spawn(*cmd, { 0 => rd, 1 => resp })
     rd.close
 
     tmp.rewind
