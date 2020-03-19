@@ -62,7 +62,8 @@ struct http_parser {
   } len;
 };
 
-static ID id_set_backtrace;
+static ID id_set_backtrace, id_is_chunked_p;
+static VALUE cHttpParser;
 
 #ifdef HAVE_RB_HASH_CLEAR /* Ruby >= 2.0 */
 #  define my_hash_clear(h) (void)rb_hash_clear(h)
@@ -220,6 +221,19 @@ static void write_cont_value(struct http_parser *hp,
   rb_str_buf_cat(hp->cont, vptr, end + 1);
 }
 
+static int is_chunked(VALUE v)
+{
+  /* common case first */
+  if (STR_CSTR_CASE_EQ(v, "chunked"))
+    return 1;
+
+  /*
+   * call Ruby function in unicorn/http_request.rb to deal with unlikely
+   * comma-delimited case
+   */
+  return rb_funcall(cHttpParser, id_is_chunked_p, 1, v) != Qfalse;
+}
+
 static void write_value(struct http_parser *hp,
                         const char *buffer, const char *p)
 {
@@ -246,7 +260,9 @@ static void write_value(struct http_parser *hp,
     f = uncommon_field(field, flen);
   } else if (f == g_http_connection) {
     hp_keepalive_connection(hp, v);
-  } else if (f == g_content_length) {
+  } else if (f == g_content_length && !HP_FL_TEST(hp, CHUNKED)) {
+    if (hp->len.content)
+      parser_raise(eHttpParserError, "Content-Length already set");
     hp->len.content = parse_length(RSTRING_PTR(v), RSTRING_LEN(v));
     if (hp->len.content < 0)
       parser_raise(eHttpParserError, "invalid Content-Length");
@@ -254,9 +270,30 @@ static void write_value(struct http_parser *hp,
       HP_FL_SET(hp, HASBODY);
     hp_invalid_if_trailer(hp);
   } else if (f == g_http_transfer_encoding) {
-    if (STR_CSTR_CASE_EQ(v, "chunked")) {
+    if (is_chunked(v)) {
+      if (HP_FL_TEST(hp, CHUNKED))
+        /*
+         * RFC 7230 3.3.1:
+         * A sender MUST NOT apply chunked more than once to a message body
+         * (i.e., chunking an already chunked message is not allowed).
+         */
+        parser_raise(eHttpParserError, "Transfer-Encoding double chunked");
+
       HP_FL_SET(hp, CHUNKED);
       HP_FL_SET(hp, HASBODY);
+
+      /* RFC 7230 3.3.3, 3: favor chunked if Content-Length exists */
+      hp->len.content = 0;
+    } else if (HP_FL_TEST(hp, CHUNKED)) {
+      /*
+       * RFC 7230 3.3.3, point 3 states:
+       * If a Transfer-Encoding header field is present in a request and
+       * the chunked transfer coding is not the final encoding, the
+       * message body length cannot be determined reliably; the server
+       * MUST respond with the 400 (Bad Request) status code and then
+       * close the connection.
+       */
+      parser_raise(eHttpParserError, "invalid Transfer-Encoding");
     }
     hp_invalid_if_trailer(hp);
   } else if (f == g_http_trailer) {
@@ -931,7 +968,7 @@ static VALUE HttpParser_rssget(VALUE self)
 
 void Init_unicorn_http(void)
 {
-  VALUE mUnicorn, cHttpParser;
+  VALUE mUnicorn;
 
   mUnicorn = rb_define_module("Unicorn");
   cHttpParser = rb_define_class_under(mUnicorn, "HttpParser", rb_cObject);
@@ -991,5 +1028,6 @@ void Init_unicorn_http(void)
 #ifndef HAVE_RB_HASH_CLEAR
   id_clear = rb_intern("clear");
 #endif
+  id_is_chunked_p = rb_intern("is_chunked?");
 }
 #undef SET_GLOBAL

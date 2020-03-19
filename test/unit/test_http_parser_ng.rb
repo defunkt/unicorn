@@ -11,6 +11,20 @@ class HttpParserNgTest < Test::Unit::TestCase
     @parser = HttpParser.new
   end
 
+  # RFC 7230 allows gzip/deflate/compress Transfer-Encoding,
+  # but "chunked" must be last if used
+  def test_is_chunked
+    [ 'chunked,chunked', 'chunked,gzip', 'chunked,gzip,chunked' ].each do |x|
+      assert_raise(HttpParserError) { HttpParser.is_chunked?(x) }
+    end
+    [ 'gzip, chunked', 'gzip,chunked', 'gzip ,chunked' ].each do |x|
+      assert HttpParser.is_chunked?(x)
+    end
+    [ 'gzip', 'xhunked', 'xchunked' ].each do |x|
+      assert !HttpParser.is_chunked?(x)
+    end
+  end
+
   def test_parser_max_len
     assert_raises(RangeError) do
       HttpParser.max_header_len = 0xffffffff + 1
@@ -564,6 +578,73 @@ class HttpParserNgTest < Test::Unit::TestCase
     assert_raises(HttpParserError) do
       @parser.headers(req, str)
     end
+  end
+
+  def test_duplicate_content_length
+    str = "PUT / HTTP/1.1\r\n" \
+          "Content-Length: 1\r\n" \
+          "Content-Length: 9\r\n" \
+          "\r\n"
+    assert_raises(HttpParserError) { @parser.headers({}, str) }
+  end
+
+  def test_chunked_overrides_content_length
+    order = [ 'Transfer-Encoding: chunked', 'Content-Length: 666' ]
+    %w(a b).each do |x|
+      str = "PUT /#{x} HTTP/1.1\r\n" \
+            "#{order.join("\r\n")}" \
+            "\r\n\r\na\r\nhelloworld\r\n0\r\n\r\n"
+      order.reverse!
+      env = @parser.headers({}, str)
+      assert_nil @parser.content_length
+      assert_equal 'chunked', env['HTTP_TRANSFER_ENCODING']
+      assert_equal '666', env['CONTENT_LENGTH'],
+        'Content-Length logged so the app can log a possible client bug/attack'
+      @parser.filter_body(dst = '', str)
+      assert_equal 'helloworld', dst
+      @parser.parse # handle the non-existent trailer
+      assert @parser.next?
+    end
+  end
+
+  def test_chunked_order_good
+    str = "PUT /x HTTP/1.1\r\n" \
+          "Transfer-Encoding: gzip\r\n" \
+          "Transfer-Encoding: chunked\r\n" \
+          "\r\n"
+    env = @parser.headers({}, str)
+    assert_equal 'gzip,chunked', env['HTTP_TRANSFER_ENCODING']
+    assert_nil @parser.content_length
+
+    @parser.clear
+    str = "PUT /x HTTP/1.1\r\n" \
+          "Transfer-Encoding: gzip, chunked\r\n" \
+          "\r\n"
+    env = @parser.headers({}, str)
+    assert_equal 'gzip, chunked', env['HTTP_TRANSFER_ENCODING']
+    assert_nil @parser.content_length
+  end
+
+  def test_chunked_order_bad
+    str = "PUT /x HTTP/1.1\r\n" \
+          "Transfer-Encoding: chunked\r\n" \
+          "Transfer-Encoding: gzip\r\n" \
+          "\r\n"
+    assert_raise(HttpParserError) { @parser.headers({}, str) }
+  end
+
+  def test_double_chunked
+    str = "PUT /x HTTP/1.1\r\n" \
+          "Transfer-Encoding: chunked\r\n" \
+          "Transfer-Encoding: chunked\r\n" \
+          "\r\n"
+    assert_raise(HttpParserError) { @parser.headers({}, str) }
+
+    @parser.clear
+    str = "PUT /x HTTP/1.1\r\n" \
+          "Transfer-Encoding: chunked,chunked\r\n" \
+          "\r\n"
+    assert_raise(HttpParserError) { @parser.headers({}, str) }
   end
 
   def test_backtrace_is_empty

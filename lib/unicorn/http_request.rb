@@ -188,4 +188,15 @@ class Unicorn::HttpParser
       HTTP_RESPONSE_START.each { |c| socket.write(c) }
     end
   end
+
+  # called by ext/unicorn_http/unicorn_http.rl via rb_funcall
+  def self.is_chunked?(v) # :nodoc:
+    vals = v.split(/[ \t]*,[ \t]*/).map!(&:downcase)
+    if vals.pop == 'chunked'.freeze
+      return true unless vals.include?('chunked'.freeze)
+      raise Unicorn::HttpParserError, 'double chunked', []
+    end
+    return false unless vals.include?('chunked'.freeze)
+    raise Unicorn::HttpParserError, 'chunked not last', []
+  end
 end
