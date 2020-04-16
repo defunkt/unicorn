@@ -686,6 +686,7 @@ class Unicorn::HttpServer
     trap(:USR1) { nr = -65536 }
 
     ready = readers.dup
+    nr_listeners = readers.size
     @after_worker_ready.call(self, worker)
 
     begin
@@ -708,7 +709,7 @@ class Unicorn::HttpServer
       # we're probably reasonably busy, so avoid calling select()
       # and do a speculative non-blocking accept() on ready listeners
       # before we sleep again in select().
-      unless nr == 0
+      if nr == nr_listeners
         tmp = ready.dup
         redo
       end
