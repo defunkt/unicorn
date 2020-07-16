@@ -276,6 +276,15 @@ class Unicorn::Configurator
     set_bool(:default_middleware, bool)
   end
 
+  # sets whether to enable the proposed early hints Rack API.
+  # If enabled, Rails 5.2+ will automatically send a 103 Early Hint
+  # for all the `javascript_include_tag` and `stylesheet_link_tag`
+  # in your response. See: https://api.rubyonrails.org/v5.2/classes/ActionDispatch/Request.html#method-i-send_early_hints
+  # See also https://tools.ietf.org/html/rfc8297
+  def early_hints(bool)
+    set_bool(:early_hints, bool)
+  end
+
   # sets listeners to the given +addresses+, replacing or augmenting the
   # current set.  This is for the global listener pool shared by all
   # worker processes.  For per-worker listeners, see the after_fork example

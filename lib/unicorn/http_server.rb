@@ -15,7 +15,7 @@ class Unicorn::HttpServer
                 :before_fork, :after_fork, :before_exec,
                 :listener_opts, :preload_app,
                 :orig_app, :config, :ready_pipe, :user,
-                :default_middleware
+                :default_middleware, :early_hints
   attr_writer   :after_worker_exit, :after_worker_ready, :worker_exec
 
   attr_reader :pid, :logger
@@ -588,6 +588,25 @@ class Unicorn::HttpServer
   rescue
   end
 
+  def e103_response_write(client, headers)
+    response = if @request.response_start_sent
+      "103 Early Hints\r\n"
+    else
+      "HTTP/1.1 103 Early Hints\r\n"
+    end
+
+    headers.each_pair do |k, vs|
+      next if !vs || vs.empty?
+      values = vs.to_s.split("\n".freeze)
+      values.each do |v|
+        response << "#{k}: #{v}\r\n"
+      end
+    end
+    response << "\r\n".freeze
+    response << "HTTP/1.1 ".freeze if @request.response_start_sent
+    client.write(response)
+  end
+
   def e100_response_write(client, env)
     # We use String#freeze to avoid allocations under Ruby 2.1+
     # Not many users hit this code path, so it's better to reduce the
@@ -602,7 +621,15 @@ class Unicorn::HttpServer
   # once a client is accepted, it is processed in its entirety here
   # in 3 easy steps: read request, call app, write app response
   def process_client(client)
-    status, headers, body = @app.call(env = @request.read(client))
+    env = @request.read(client)
+
+    if early_hints
+      env["rack.early_hints"] = lambda do |headers|
+        e103_response_write(client, headers)
+      end
+    end
+
+    status, headers, body = @app.call(env)
 
     begin
       return if @request.hijacked?

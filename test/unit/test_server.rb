@@ -23,6 +23,16 @@ class TestHandler
   end
 end
 
+class TestEarlyHintsHandler
+  def call(env)
+    while env['rack.input'].read(4096)
+    end
+    env['rack.early_hints'].call(
+      "Link" => "</style.css>; rel=preload; as=style\n</script.js>; rel=preload"
+    )
+    [200, { 'Content-Type' => 'text/plain' }, ['hello!\n']]
+  end
+end
 
 class WebServerTest < Test::Unit::TestCase
 
@@ -82,6 +92,26 @@ class WebServerTest < Test::Unit::TestCase
     assert worker_pid != loader_pid
   ensure
     tmp.close!
+  end
+
+  def test_early_hints
+    teardown
+    redirect_test_io do
+      @server = HttpServer.new(TestEarlyHintsHandler.new,
+                               :listeners => [ "127.0.0.1:#@port"],
+                               :early_hints => true)
+      @server.start
+    end
+
+    sock = TCPSocket.new('127.0.0.1', @port)
+    sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+
+    responses = sock.sysread(4096)
+    assert_match %r{\AHTTP/1.[01] 103\b}, responses
+    assert_match %r{^Link: </style\.css>}, responses
+    assert_match %r{^Link: </script\.js>}, responses
+
+    assert_match %r{^HTTP/1.[01] 200\b}, responses
   end
 
   def test_broken_app
