@@ -53,6 +53,7 @@ class Unicorn::Configurator
         server.logger.info("worker=#{worker.nr} ready")
       },
     :pid => nil,
+    :early_hints => false,
     :worker_exec => false,
     :preload_app => false,
     :check_client_connection => false,
