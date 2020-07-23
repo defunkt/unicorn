@@ -106,7 +106,7 @@ class WebServerTest < Test::Unit::TestCase
     sock = TCPSocket.new('127.0.0.1', @port)
     sock.syswrite("GET / HTTP/1.0\r\n\r\n")
 
-    responses = sock.sysread(4096)
+    responses = sock.read(4096)
     assert_match %r{\AHTTP/1.[01] 103\b}, responses
     assert_match %r{^Link: </style\.css>}, responses
     assert_match %r{^Link: </script\.js>}, responses
