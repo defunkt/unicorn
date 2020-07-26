@@ -37,13 +37,25 @@ end
 def redirect_test_io
   orig_err = STDERR.dup
   orig_out = STDOUT.dup
-  STDERR.reopen("test_stderr.#{$$}.log", "a")
-  STDOUT.reopen("test_stdout.#{$$}.log", "a")
+  new_out = File.open("test_stdout.#$$.log", "a")
+  new_err = File.open("test_stderr.#$$.log", "a")
+  new_out.sync = new_err.sync = true
+
+  if tail = ENV['TAIL'] # "tail -F" if GNU, "tail -f" otherwise
+    require 'shellwords'
+    cmd = tail.shellsplit
+    cmd << new_out.path
+    cmd << new_err.path
+    pid = Process.spawn(*cmd, { 1 => 2, :pgroup => true })
+    sleep 0.1 # wait for tail(1) to startup
+  end
+  STDERR.reopen(new_err)
+  STDOUT.reopen(new_out)
   STDERR.sync = STDOUT.sync = true
 
   at_exit do
-    File.unlink("test_stderr.#{$$}.log") rescue nil
-    File.unlink("test_stdout.#{$$}.log") rescue nil
+    File.unlink(new_out.path) rescue nil
+    File.unlink(new_err.path) rescue nil
   end
 
   begin
@@ -51,6 +63,7 @@ def redirect_test_io
   ensure
     STDERR.reopen(orig_err)
     STDOUT.reopen(orig_out)
+    Process.kill(:TERM, pid) if pid
   end
 end
 
