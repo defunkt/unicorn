@@ -10,6 +10,7 @@ RAGEL = ragel
 RSYNC = rsync
 OLDDOC = olddoc
 RDOC = rdoc
+INSTALL = install
 
 GIT-VERSION-FILE: .FORCE-GIT-VERSION-FILE
 	@./GIT-VERSION-GEN
@@ -25,7 +26,38 @@ endif
 
 RUBY_ENGINE := $(shell $(RUBY) -e 'puts((RUBY_ENGINE rescue "ruby"))')
 
-MYLIBS = $(RUBYLIB)
+# we should never package more than one ext to avoid DSO proliferation:
+# https://udrepper.livejournal.com/8790.html
+ext := $(firstword $(wildcard ext/*))
+
+ragel: $(ext)/unicorn_http.c
+
+rl_files := $(wildcard $(ext)/*.rl)
+ragel: $(ext)/unicorn_http.c
+$(ext)/unicorn_http.c: $(rl_files)
+	cd $(@D) && $(RAGEL) unicorn_http.rl -C $(RLFLAGS) -o $(@F)
+ext_pfx := test/$(RUBY_ENGINE)-$(RUBY_VERSION)
+tmp_bin := $(ext_pfx)/bin
+ext_h := $(wildcard $(ext)/*/*.h $(ext)/*.h)
+ext_src := $(sort $(wildcard $(ext)/*.c) $(ext_h) $(ext)/unicorn_http.c)
+ext_pfx_src := $(addprefix $(ext_pfx)/,$(ext_src))
+ext_dir := $(ext_pfx)/$(ext)
+$(ext)/extconf.rb: $(wildcard $(ext)/*.h)
+	@>>$@
+$(ext_dir) $(tmp_bin) man/man1 doc/man1 pkg t/trash:
+	@mkdir -p $@
+$(ext_pfx)/$(ext)/%: $(ext)/% | $(ext_dir)
+	$(INSTALL) -m 644 $< $@
+$(ext_pfx)/$(ext)/Makefile: $(ext)/extconf.rb $(ext_h) | $(ext_dir)
+	$(RM) -f $(@D)/*.o
+	cd $(@D) && $(RUBY) $(CURDIR)/$(ext)/extconf.rb $(EXTCONF_ARGS)
+ext_sfx := _ext.$(DLEXT)
+ext_dl := $(ext_pfx)/$(ext)/$(notdir $(ext)_ext.$(DLEXT))
+$(ext_dl): $(ext_src) $(ext_pfx_src) $(ext_pfx)/$(ext)/Makefile
+	$(MAKE) -C $(@D)
+lib := $(CURDIR)/lib:$(CURDIR)/$(ext_pfx)/$(ext)
+http build: $(ext_dl)
+$(ext_pfx)/$(ext)/unicorn_http.c: ext/unicorn_http/unicorn_http.c
 
 # dunno how to implement this as concisely in Ruby, and hell, I love awk
 awk_slow := awk '/def test_/{print FILENAME"--"$$2".n"}' 2>/dev/null
@@ -37,44 +69,21 @@ T := $(filter-out $(slow_tests), $(wildcard test/*/test*.rb))
 T_n := $(shell $(awk_slow) $(slow_tests))
 T_log := $(subst .rb,$(log_suffix),$(T))
 T_n_log := $(subst .n,$(log_suffix),$(T_n))
-test_prefix = $(CURDIR)/test/$(RUBY_ENGINE)-$(RUBY_VERSION)
 
-ext := ext/unicorn_http
-c_files := $(ext)/unicorn_http.c $(ext)/httpdate.c $(wildcard $(ext)/*.h)
-rl_files := $(wildcard $(ext)/*.rl)
 base_bins := unicorn unicorn_rails
 bins := $(addprefix bin/, $(base_bins))
 man1_rdoc := $(addsuffix _1, $(base_bins))
 man1_bins := $(addsuffix .1, $(base_bins))
 man1_paths := $(addprefix man/man1/, $(man1_bins))
-rb_files := $(bins) $(shell find lib ext -type f -name '*.rb')
-inst_deps := $(c_files) $(rb_files) GNUmakefile test/test_helper.rb
+tmp_bins = $(addprefix $(tmp_bin)/, unicorn unicorn_rails)
+pid := $(shell echo $$PPID)
 
-ragel: $(ext)/unicorn_http.c
-$(ext)/unicorn_http.c: $(rl_files)
-	cd $(@D) && $(RAGEL) unicorn_http.rl -C $(RLFLAGS) -o $(@F)
-$(ext)/Makefile: $(ext)/extconf.rb $(c_files)
-	cd $(@D) && $(RUBY) extconf.rb
-$(ext)/unicorn_http.$(DLEXT): $(ext)/Makefile
-	$(MAKE) -C $(@D)
-http: $(ext)/unicorn_http.$(DLEXT)
+$(tmp_bin)/%: bin/% | $(tmp_bin)
+	$(INSTALL) -m 755 $< $@.$(pid)
+	$(MRI) -i -p -e '$$_.gsub!(%r{^#!.*$$},"#!$(ruby_bin)")' $@.$(pid)
+	mv $@.$(pid) $@
 
-# only used for tests
-http-install: $(ext)/unicorn_http.$(DLEXT)
-	install -m644 $< lib/
-
-test-install: $(test_prefix)/.stamp
-$(test_prefix)/.stamp: $(inst_deps)
-	mkdir -p $(test_prefix)/.ccache
-	tar cf - $(inst_deps) GIT-VERSION-GEN | \
-	  (cd $(test_prefix) && tar xf -)
-	$(MAKE) -C $(test_prefix) clean
-	$(MAKE) -C $(test_prefix) http-install shebang RUBY="$(RUBY)"
-	> $@
-
-# this is only intended to be run within $(test_prefix)
-shebang: $(bins)
-	$(MRI) -i -p -e '$$_.gsub!(%r{^#!.*$$},"#!$(ruby_bin)")' $^
+bins: $(tmp_bins)
 
 t_log := $(T_log) $(T_n_log)
 test: $(T) $(T_n)
@@ -83,15 +92,54 @@ test: $(T) $(T_n)
 
 test-exec: $(wildcard test/exec/test_*.rb)
 test-unit: $(wildcard test/unit/test_*.rb)
-$(slow_tests): $(test_prefix)/.stamp
+$(slow_tests): $(ext_dl)
 	@$(MAKE) $(shell $(awk_slow) $@)
 
 # ensure we can require just the HTTP parser without the rest of unicorn
-test-require: $(ext)/unicorn_http.$(DLEXT)
-	$(RUBY) --disable-gems -I$(ext) -runicorn_http -e Unicorn
+test-require: $(ext_dl)
+	$(RUBY) --disable-gems -I$(ext_pfx)/$(ext) -runicorn_http -e Unicorn
 
-test-integration: $(test_prefix)/.stamp
-	$(MAKE) -C t
+test_prereq := $(tmp_bins) $(ext_dl)
+
+SH_TEST_OPTS =
+ifdef V
+  ifeq ($(V),2)
+    SH_TEST_OPTS += --trace
+  else
+    SH_TEST_OPTS += --verbose
+  endif
+endif
+
+# do we trust Ruby behavior to be stable? some tests are
+# (mostly) POSIX sh (not bash or ksh93, so no "set -o pipefail"
+# TRACER = strace -f -o $(t_pfx).strace -s 100000
+# TRACER = /usr/bin/time -o $(t_pfx).time
+t_pfx = trash/$@-$(RUBY_ENGINE)-$(RUBY_VERSION)
+T_sh = $(wildcard t/t[0-9][0-9][0-9][0-9]-*.sh)
+$(T_sh): export RUBY := $(RUBY)
+$(T_sh): export PATH := $(CURDIR)/$(tmp_bin):$(PATH)
+$(T_sh): export RUBYLIB := $(lib):$(RUBYLIB)
+$(T_sh): dep $(test_prereq) t/random_blob t/trash/.gitignore
+	cd t && $(TRACER) $(SHELL) $(SH_TEST_OPTS) $(@F) $(TEST_OPTS)
+
+t/trash/.gitignore : | t/trash
+	echo '*' >$@
+
+dependencies := socat curl
+deps := $(addprefix t/.dep+,$(dependencies))
+$(deps): dep_bin = $(lastword $(subst +, ,$@))
+$(deps):
+	@which $(dep_bin) > $@.$(pid) 2>/dev/null || :
+	@test -s $@.$(pid) || \
+	  { echo >&2 "E '$(dep_bin)' not found in PATH=$(PATH)"; exit 1; }
+	@mv $@.$(pid) $@
+dep: $(deps)
+
+t/random_blob:
+	dd if=/dev/urandom bs=1M count=30 of=$@.$(pid)
+	mv $@.$(pid) $@
+
+test-integration: $(T_sh)
 
 check: test-require test test-integration
 test-all: check
@@ -122,16 +170,16 @@ run_test = $(quiet_pre) \
 
 %.n: arg = $(subst .n,,$(subst --, -n ,$@))
 %.n: t = $(subst .n,$(log_suffix),$@)
-%.n: export PATH := $(test_prefix)/bin:$(PATH)
-%.n: export RUBYLIB := $(test_prefix)/lib:$(MYLIBS)
-%.n: $(test_prefix)/.stamp
+%.n: export PATH := $(CURDIR)/$(tmp_bin):$(PATH)
+%.n: export RUBYLIB := $(lib):$(RUBYLIB)
+%.n: $(test_prereq)
 	$(run_test)
 
 $(T): arg = $@
 $(T): t = $(subst .rb,$(log_suffix),$@)
-$(T): export PATH := $(test_prefix)/bin:$(PATH)
-$(T): export RUBYLIB := $(test_prefix)/lib:$(MYLIBS)
-$(T): $(test_prefix)/.stamp
+$(T): export PATH := $(CURDIR)/$(tmp_bin):$(PATH)
+$(T): export RUBYLIB := $(lib):$(RUBYLIB)
+$(T): $(test_prereq)
 	$(run_test)
 
 install: $(bins) $(ext)/unicorn_http.c
@@ -152,18 +200,16 @@ clean:
 	-$(MAKE) -C $(ext) clean
 	$(RM) $(ext)/Makefile
 	$(RM) $(setup_rb_files) $(t_log)
-	$(RM) -r $(test_prefix) man
-	$(RM) $(man1) $(html1)
+	$(RM) -r $(ext_pfx) man t/trash
+	$(RM) $(html1)
 
 man1 := $(addprefix Documentation/, unicorn.1 unicorn_rails.1)
 html1 := $(addsuffix .html, $(man1))
-man :
-	mkdir -p man/man1
-	install -m 644 $(man1) man/man1
+man : $(man1) | man/man1
+	$(INSTALL) -m 644 $(man1) man/man1
 
-html : $(html1)
-	mkdir -p doc/man1
-	install -m 644 $(html1) doc/man1
+html : $(html1) | doc/man1
+	$(INSTALL) -m 644 $(html1) doc/man1
 
 %.1.html: %.1
 	$(OLDDOC) man2html -o $@ ./$<
@@ -187,10 +233,10 @@ doc: .document $(ext)/unicorn_http.c man html .olddoc.yml $(PLACEHOLDERS)
 	$(OLDDOC) prepare
 	$(RDOC) -f dark216
 	$(OLDDOC) merge
-	install -m644 COPYING doc/COPYING
-	install -m644 NEWS.atom.xml doc/NEWS.atom.xml
-	install -m644 $(shell LC_ALL=C grep '^[A-Z]' .document) doc/
-	install -m644 $(man1_paths) doc/
+	$(INSTALL) -m 644 COPYING doc/COPYING
+	$(INSTALL) -m 644 NEWS.atom.xml doc/NEWS.atom.xml
+	$(INSTALL) -m 644 $(shell LC_ALL=C grep '^[A-Z]' .document) doc/
+	$(INSTALL) -m 644 $(man1_paths) doc/
 	tar cf - $$(git ls-files examples/) | (cd doc && tar xf -)
 
 # publishes docs to https://yhbt.net/unicorn/
@@ -231,9 +277,8 @@ gem: $(pkggem)
 install-gem: $(pkggem)
 	gem install --local $(CURDIR)/$<
 
-$(pkggem): .manifest fix-perms
+$(pkggem): .manifest fix-perms | pkg
 	gem build $(rfpackage).gemspec
-	mkdir -p pkg
 	mv $(@F) $@
 
 $(pkgtgz): distdir = $(basename $@)
@@ -264,5 +309,4 @@ check-warnings:
 	  do $(RUBY) --disable-gems -d -W2 -c \
 	  $$i; done) | grep -v '^Syntax OK$$' || :
 
-.PHONY: .FORCE-GIT-VERSION-FILE doc $(T) $(slow_tests) man
-.PHONY: test-install
+.PHONY: .FORCE-GIT-VERSION-FILE doc $(T) $(slow_tests) man $(T_sh) clean
