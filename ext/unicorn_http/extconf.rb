@@ -1,6 +1,11 @@
 # -*- encoding: binary -*-
 require 'mkmf'
 
+unless RUBY_VERSION < '3.1'
+  warn "Unicorn was only tested against MRI up to 3.0.\n" \
+       "It might not properly work with #{RUBY_VERSION}"
+end
+
 have_macro("SIZEOF_OFF_T", "ruby.h") or check_sizeof("off_t", "sys/types.h")
 have_macro("SIZEOF_SIZE_T", "ruby.h") or check_sizeof("size_t", "sys/types.h")
 have_macro("SIZEOF_LONG", "ruby.h") or check_sizeof("long", "sys/types.h")

@@ -25,10 +25,11 @@ Gem::Specification.new do |s|
   s.homepage = 'https://yhbt.net/unicorn/'
   s.test_files = test_files
 
-  # technically we need ">= 1.9.3", too, but avoid the array here since
-  # old rubygems versions (1.8.23.2 at least) do not support multiple
-  # version requirements here.
-  s.required_ruby_version = '< 3.0'
+  # 1.9.3 is the minumum supported version. We don't specify
+  # a maximum version to make it easier to test pre-releases,
+  # but we do warn users if they install unicorn on an untested
+  # version in extconf.rb
+  s.required_ruby_version = ">= 1.9.3"
 
   # We do not have a hard dependency on rack, it's possible to load
   # things which respond to #call.  HTTP status lines in responses

@@ -34,6 +34,11 @@ if ENV['DEBUG']
   Debugger.start
 end
 
+unless RUBY_VERSION < '3.1'
+  warn "Unicorn was only tested against MRI up to 3.0.\n" \
+       "It might not properly work with #{RUBY_VERSION}"
+end
+
 def redirect_test_io
   orig_err = STDERR.dup
   orig_out = STDOUT.dup
