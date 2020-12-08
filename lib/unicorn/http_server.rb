@@ -629,6 +629,8 @@ class Unicorn::HttpServer
       end
     end
 
+    env["rack.after_reply"] = []
+
     status, headers, body = @app.call(env)
 
     begin
@@ -651,6 +653,8 @@ class Unicorn::HttpServer
     end
   rescue => e
     handle_error(client, e)
+  ensure
+    env["rack.after_reply"].each(&:call) if env
   end
 
   def nuke_listeners!(readers)

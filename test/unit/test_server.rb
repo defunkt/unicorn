@@ -34,6 +34,24 @@ class TestEarlyHintsHandler
   end
 end
 
+class TestRackAfterReply
+  def initialize
+    @called = false
+  end
+
+  def call(env)
+    while env['rack.input'].read(4096)
+    end
+
+    env["rack.after_reply"] << -> { @called = true }
+
+    [200, { 'Content-Type' => 'text/plain' }, ["after_reply_called: #{@called}"]]
+  rescue Unicorn::ClientShutdown, Unicorn::HttpParserError => e
+    $stderr.syswrite("#{e.class}: #{e.message} #{e.backtrace.empty?}\n")
+    raise e
+  end
+end
+
 class WebServerTest < Test::Unit::TestCase
 
   def setup
@@ -112,6 +130,32 @@ class WebServerTest < Test::Unit::TestCase
     assert_match %r{^Link: </script\.js>}, responses
 
     assert_match %r{^HTTP/1.[01] 200\b}, responses
+  end
+
+  def test_after_reply
+    teardown
+
+    redirect_test_io do
+      @server = HttpServer.new(TestRackAfterReply.new,
+                               :listeners => [ "127.0.0.1:#@port"])
+      @server.start
+    end
+
+    sock = TCPSocket.new('127.0.0.1', @port)
+    sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+
+    responses = sock.read(4096)
+    assert_match %r{\AHTTP/1.[01] 200\b}, responses
+    assert_match %r{^after_reply_called: false}, responses
+
+    sock = TCPSocket.new('127.0.0.1', @port)
+    sock.syswrite("GET / HTTP/1.0\r\n\r\n")
+
+    responses = sock.read(4096)
+    assert_match %r{\AHTTP/1.[01] 200\b}, responses
+    assert_match %r{^after_reply_called: true}, responses
+
+    sock.close
   end
 
   def test_broken_app
