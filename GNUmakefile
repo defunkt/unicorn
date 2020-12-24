@@ -245,7 +245,8 @@ publish_doc:
 	$(MAKE) doc
 	$(MAKE) doc_gz
 	chmod 644 $$(find doc -type f)
-	$(RSYNC) -av doc/ yhbt.net:/srv/yhbt/unicorn/
+	$(RSYNC) -av doc/ yhbt.net:/srv/yhbt/unicorn/ \
+		--exclude index.html* --exclude created.rid*
 	git ls-files | xargs touch
 
 # Create gzip variants of the same timestamp as the original so nginx
