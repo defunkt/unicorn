@@ -69,7 +69,6 @@ class Unicorn::HttpServer
   # incoming requests on the socket.
   def initialize(app, options = {})
     @app = app
-    @request = Unicorn::HttpRequest.new
     @reexec_pid = 0
     @default_middleware = true
     options = options.dup
@@ -621,6 +620,7 @@ class Unicorn::HttpServer
   # once a client is accepted, it is processed in its entirety here
   # in 3 easy steps: read request, call app, write app response
   def process_client(client)
+    @request = Unicorn::HttpRequest.new
     env = @request.read(client)
 
     if early_hints

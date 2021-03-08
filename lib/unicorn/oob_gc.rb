@@ -60,7 +60,6 @@ module Unicorn::OobGC
     self.const_set :OOBGC_INTERVAL, interval
     ObjectSpace.each_object(Unicorn::HttpServer) do |s|
       s.extend(self)
-      self.const_set :OOBGC_ENV, s.instance_variable_get(:@request).env
     end
     app # pretend to be Rack middleware since it was in the past
   end
@@ -68,9 +67,10 @@ module Unicorn::OobGC
   #:stopdoc:
   def process_client(client)
     super(client) # Unicorn::HttpServer#process_client
-    if OOBGC_PATH =~ OOBGC_ENV['PATH_INFO'] && ((@@nr -= 1) <= 0)
+    env = instance_variable_get(:@request).env
+    if OOBGC_PATH =~ env['PATH_INFO'] && ((@@nr -= 1) <= 0)
       @@nr = OOBGC_INTERVAL
-      OOBGC_ENV.clear
+      env.clear
       disabled = GC.enable
       GC.start
       GC.disable if disabled
