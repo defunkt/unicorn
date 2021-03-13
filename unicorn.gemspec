@@ -11,7 +11,7 @@ end.compact
 
 Gem::Specification.new do |s|
   s.name = %q{unicorn}
-  s.version = (ENV['VERSION'] || '5.8.0').dup
+  s.version = (ENV['VERSION'] || '6.0.0.GIT').dup
   s.authors = ['unicorn hackers']
   s.summary = 'Rack HTTP server for fast clients and Unix'
   s.description = File.read('README').split("\n\n")[1]
