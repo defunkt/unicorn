@@ -42,6 +42,7 @@ end
 def redirect_test_io
   orig_err = STDERR.dup
   orig_out = STDOUT.dup
+  rdr_pid = $$
   new_out = File.open("test_stdout.#$$.log", "a")
   new_err = File.open("test_stderr.#$$.log", "a")
   new_out.sync = new_err.sync = true
@@ -59,8 +60,10 @@ def redirect_test_io
   STDERR.sync = STDOUT.sync = true
 
   at_exit do
-    File.unlink(new_out.path) rescue nil
-    File.unlink(new_err.path) rescue nil
+    if rdr_pid == $$
+      File.unlink(new_out.path) rescue nil
+      File.unlink(new_err.path) rescue nil
+    end
   end
 
   begin
