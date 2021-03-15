@@ -116,7 +116,7 @@ class TestSocketHelper < Test::Unit::TestCase
       client.syswrite('abcde')
       exit 0
     end
-    s = UNIXSocket.new(@unix_listener_path)
+    s = unix_socket(@unix_listener_path)
     IO.select([s])
     assert_equal 'abcde', s.sysread(5)
     pid, status = Process.waitpid2(pid)

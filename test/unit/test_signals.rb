@@ -52,7 +52,7 @@ class SignalsTest < Test::Unit::TestCase
       redirect_test_io { HttpServer.new(app, opts).start.join }
     }
     wait_workers_ready("test_stderr.#{pid}.log", 1)
-    sock = TCPSocket.new('127.0.0.1', @port)
+    sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("GET / HTTP/1.0\r\n\r\n")
     buf = sock.readpartial(4096)
     assert_nil sock.close
@@ -79,7 +79,7 @@ class SignalsTest < Test::Unit::TestCase
     }
     wr.close
     wait_workers_ready("test_stderr.#{pid}.log", 1)
-    sock = TCPSocket.new('127.0.0.1', @port)
+    sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("GET / HTTP/1.0\r\n\r\n")
     buf = rd.readpartial(1)
     wait_master_ready("test_stderr.#{pid}.log")
@@ -102,7 +102,7 @@ class SignalsTest < Test::Unit::TestCase
     }
     t0 = Time.now
     wait_workers_ready("test_stderr.#{pid}.log", 1)
-    sock = TCPSocket.new('127.0.0.1', @port)
+    sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("GET / HTTP/1.0\r\n\r\n")
 
     buf = nil
@@ -125,7 +125,7 @@ class SignalsTest < Test::Unit::TestCase
     }
     redirect_test_io { @server = HttpServer.new(app, @server_opts).start }
     wait_workers_ready("test_stderr.#{$$}.log", 1)
-    sock = TCPSocket.new('127.0.0.1', @port)
+    sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("GET / HTTP/1.0\r\n\r\n")
     buf = ''
     header_len = pid = nil
@@ -163,13 +163,13 @@ class SignalsTest < Test::Unit::TestCase
     redirect_test_io { @server = HttpServer.new(app, @server_opts).start }
 
     wait_workers_ready("test_stderr.#{$$}.log", 1)
-    sock = TCPSocket.new('127.0.0.1', @port)
+    sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("GET / HTTP/1.0\r\n\r\n")
     pid = sock.sysread(4096)[/\r\nX-Pid: (\d+)\r\n/, 1].to_i
     assert_nil sock.close
 
     assert pid > 0, "pid not positive: #{pid.inspect}"
-    sock = TCPSocket.new('127.0.0.1', @port)
+    sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("PUT / HTTP/1.0\r\n")
     sock.syswrite("Content-Length: #{@bs * @count}\r\n\r\n")
     1000.times { Process.kill(:HUP, pid) }

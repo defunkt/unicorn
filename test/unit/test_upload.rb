@@ -60,7 +60,7 @@ class UploadTest < Test::Unit::TestCase
 
   def test_put
     start_server(@sha1_app)
-    sock = TCPSocket.new(@addr, @port)
+    sock = tcp_socket(@addr, @port)
     sock.syswrite("PUT / HTTP/1.0\r\nContent-Length: #{length}\r\n\r\n")
     @count.times do |i|
       buf = @random.sysread(@bs)
@@ -77,7 +77,7 @@ class UploadTest < Test::Unit::TestCase
   def test_put_content_md5
     md5 = Digest::MD5.new
     start_server(@sha1_app)
-    sock = TCPSocket.new(@addr, @port)
+    sock = tcp_socket(@addr, @port)
     sock.syswrite("PUT / HTTP/1.0\r\nTransfer-Encoding: chunked\r\n" \
                   "Trailer: Content-MD5\r\n\r\n")
     @count.times do |i|
@@ -103,7 +103,7 @@ class UploadTest < Test::Unit::TestCase
     @count, @bs = 2, 128
     start_server(@sha1_app)
     assert_equal 256, length
-    sock = TCPSocket.new(@addr, @port)
+    sock = tcp_socket(@addr, @port)
     hdr = "PUT / HTTP/1.0\r\nContent-Length: #{length}\r\n\r\n"
     @count.times do
       buf = @random.sysread(@bs)
@@ -122,7 +122,7 @@ class UploadTest < Test::Unit::TestCase
 
   def test_put_keepalive_truncates_small_overwrite
     start_server(@sha1_app)
-    sock = TCPSocket.new(@addr, @port)
+    sock = tcp_socket(@addr, @port)
     to_upload = length + 1
     sock.syswrite("PUT / HTTP/1.0\r\nContent-Length: #{to_upload}\r\n\r\n")
     @count.times do
@@ -155,7 +155,7 @@ class UploadTest < Test::Unit::TestCase
       tmp.write(nr.to_s)
       [ 200, @hdr, [] ]
     })
-    sock = TCPSocket.new(@addr, @port)
+    sock = tcp_socket(@addr, @port)
     buf = ' ' * @bs
     sock.syswrite("PUT / HTTP/1.0\r\nContent-Length: #{length}\r\n\r\n")
 

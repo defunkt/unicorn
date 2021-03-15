@@ -121,7 +121,7 @@ class WebServerTest < Test::Unit::TestCase
       @server.start
     end
 
-    sock = TCPSocket.new('127.0.0.1', @port)
+    sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("GET / HTTP/1.0\r\n\r\n")
 
     responses = sock.read(4096)
@@ -141,14 +141,14 @@ class WebServerTest < Test::Unit::TestCase
       @server.start
     end
 
-    sock = TCPSocket.new('127.0.0.1', @port)
+    sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("GET / HTTP/1.0\r\n\r\n")
 
     responses = sock.read(4096)
     assert_match %r{\AHTTP/1.[01] 200\b}, responses
     assert_match %r{^after_reply_called: false}, responses
 
-    sock = TCPSocket.new('127.0.0.1', @port)
+    sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("GET / HTTP/1.0\r\n\r\n")
 
     responses = sock.read(4096)
@@ -166,7 +166,7 @@ class WebServerTest < Test::Unit::TestCase
       @server = HttpServer.new(app, :listeners => [ "127.0.0.1:#@port"] )
       @server.start
     end
-    sock = TCPSocket.new('127.0.0.1', @port)
+    sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("GET / HTTP/1.0\r\n\r\n")
     assert_match %r{\AHTTP/1.[01] 500\b}, sock.sysread(4096)
     assert_nil sock.close
@@ -179,7 +179,7 @@ class WebServerTest < Test::Unit::TestCase
 
   def test_client_shutdown_writes
     bs = 15609315 * rand
-    sock = TCPSocket.new('127.0.0.1', @port)
+    sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("PUT /hello HTTP/1.1\r\n")
     sock.syswrite("Host: example.com\r\n")
     sock.syswrite("Transfer-Encoding: chunked\r\n")
@@ -206,7 +206,7 @@ class WebServerTest < Test::Unit::TestCase
 
   def test_client_shutdown_write_truncates
     bs = 15609315 * rand
-    sock = TCPSocket.new('127.0.0.1', @port)
+    sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("PUT /hello HTTP/1.1\r\n")
     sock.syswrite("Host: example.com\r\n")
     sock.syswrite("Transfer-Encoding: chunked\r\n")
@@ -232,7 +232,7 @@ class WebServerTest < Test::Unit::TestCase
 
   def test_client_malformed_body
     bs = 15653984
-    sock = TCPSocket.new('127.0.0.1', @port)
+    sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("PUT /hello HTTP/1.1\r\n")
     sock.syswrite("Host: example.com\r\n")
     sock.syswrite("Transfer-Encoding: chunked\r\n")
@@ -254,7 +254,7 @@ class WebServerTest < Test::Unit::TestCase
 
   def do_test(string, chunk, close_after=nil, shutdown_delay=0)
     # Do not use instance variables here, because it needs to be thread safe
-    socket = TCPSocket.new("127.0.0.1", @port);
+    socket = tcp_socket("127.0.0.1", @port);
     request = StringIO.new(string)
     chunks_out = 0
 
@@ -299,14 +299,14 @@ class WebServerTest < Test::Unit::TestCase
   end
 
   def test_bad_client_400
-    sock = TCPSocket.new('127.0.0.1', @port)
+    sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("GET / HTTP/1.0\r\nHost: foo\rbar\r\n\r\n")
     assert_match %r{\AHTTP/1.[01] 400\b}, sock.sysread(4096)
     assert_nil sock.close
   end
 
   def test_http_0_9
-    sock = TCPSocket.new('127.0.0.1', @port)
+    sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("GET /hello\r\n")
     assert_match 'hello!\n', sock.sysread(4096)
     assert_nil sock.close

@@ -574,7 +574,7 @@ EOF
     assert_equal String, results[0].class
     worker_pid = results[0].to_i
     assert_not_equal pid, worker_pid
-    s = UNIXSocket.new(tmp.path)
+    s = unix_socket(tmp.path)
     s.syswrite("GET / HTTP/1.0\r\n\r\n")
     results = ''
     loop { results << s.sysread(4096) } rescue nil
@@ -732,7 +732,7 @@ EOF
     wait_for_file(sock_path)
     assert File.socket?(sock_path)
 
-    sock = UNIXSocket.new(sock_path)
+    sock = unix_socket(sock_path)
     sock.syswrite("GET / HTTP/1.0\r\n\r\n")
     results = sock.sysread(4096)
 
@@ -742,7 +742,7 @@ EOF
     wait_for_file(sock_path)
     assert File.socket?(sock_path)
 
-    sock = UNIXSocket.new(sock_path)
+    sock = unix_socket(sock_path)
     sock.syswrite("GET / HTTP/1.0\r\n\r\n")
     results = sock.sysread(4096)
 
@@ -777,7 +777,7 @@ EOF
     assert_equal pid, File.read(pid_file).to_i
     assert File.socket?(sock_path), "socket created"
 
-    sock = UNIXSocket.new(sock_path)
+    sock = unix_socket(sock_path)
     sock.syswrite("GET / HTTP/1.0\r\n\r\n")
     results = sock.sysread(4096)
 
@@ -803,7 +803,7 @@ EOF
     wait_for_file(new_sock_path)
     assert File.socket?(new_sock_path), "socket exists"
     @sockets.each do |path|
-      sock = UNIXSocket.new(path)
+      sock = unix_socket(path)
       sock.syswrite("GET / HTTP/1.0\r\n\r\n")
       results = sock.sysread(4096)
       assert_equal String, results.class

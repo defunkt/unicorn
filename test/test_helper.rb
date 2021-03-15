@@ -28,6 +28,7 @@ require 'tempfile'
 require 'fileutils'
 require 'logger'
 require 'unicorn'
+require 'io/nonblock'
 
 if ENV['DEBUG']
   require 'ruby-debug'
@@ -290,4 +291,16 @@ def reset_sig_handlers
   %w(WINCH QUIT INT TERM USR1 USR2 HUP TTIN TTOU CHLD).each do |sig|
     trap(sig, "DEFAULT")
   end
+end
+
+def tcp_socket(*args)
+  sock = TCPSocket.new(*args)
+  sock.nonblock = false
+  sock
+end
+
+def unix_socket(*args)
+  sock = UNIXSocket.new(*args)
+  sock.nonblock = false
+  sock
 end

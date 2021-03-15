@@ -3,6 +3,7 @@ require 'unicorn'
 require 'io/wait'
 require 'tempfile'
 require 'test/unit'
+require './test/test_helper'
 
 class TestCccTCPI < Test::Unit::TestCase
   def test_ccc_tcpi
@@ -42,7 +43,7 @@ class TestCccTCPI < Test::Unit::TestCase
     wr.close
 
     # make sure the server is running, at least
-    client = TCPSocket.new(host, port)
+    client = tcp_socket(host, port)
     client.write("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n")
     assert client.wait(10), 'never got response from server'
     res = client.read
@@ -51,13 +52,13 @@ class TestCccTCPI < Test::Unit::TestCase
     client.close
 
     # start a slow request...
-    sleeper = TCPSocket.new(host, port)
+    sleeper = tcp_socket(host, port)
     sleeper.write("GET /sleep HTTP/1.1\r\nHost: example.com\r\n\r\n")
 
     # and a bunch of aborted ones
     nr = 100
     nr.times do |i|
-      client = TCPSocket.new(host, port)
+      client = tcp_socket(host, port)
       client.write("GET /collections/#{rand(10000)} HTTP/1.1\r\n" \
                    "Host: example.com\r\n\r\n")
       client.close
