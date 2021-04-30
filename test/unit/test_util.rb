@@ -51,7 +51,7 @@ class TestUtil < Test::Unit::TestCase
   def test_reopen_logs_renamed_with_encoding
     tmp = Tempfile.new('')
     tmp_path = tmp.path.dup.freeze
-    Encoding.list.each { |encoding|
+    Encoding.list.sample(5).each { |encoding|
       File.open(tmp_path, "a:#{encoding.to_s}") { |fp|
         fp.sync = true
         assert_equal encoding, fp.external_encoding
@@ -74,8 +74,9 @@ class TestUtil < Test::Unit::TestCase
   def test_reopen_logs_renamed_with_internal_encoding
     tmp = Tempfile.new('')
     tmp_path = tmp.path.dup.freeze
-    Encoding.list.each { |ext|
-      Encoding.list.each { |int|
+    full = Encoding.list
+    full.sample(2).each { |ext|
+      full.sample(2).each { |int|
         next if ext == int
         File.open(tmp_path, "a:#{ext.to_s}:#{int.to_s}") { |fp|
           fp.sync = true
