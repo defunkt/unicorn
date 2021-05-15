@@ -56,7 +56,9 @@ op = OptionParser.new("", 24, '  ') do |opts|
 
   opts.on("-E", "--env RAILS_ENV",
           "use RAILS_ENV for defaults (default: development)") do |e|
-    ENV['RAILS_ENV'] = e
+    # This should not be set by -E
+    # -E is for setting the unicorn environment only..
+    #ENV['RAILS_ENV'] = e
   end
 
   opts.on("-D", "--daemonize", "run daemonized in the background") do |d|
