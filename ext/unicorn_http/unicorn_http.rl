@@ -65,18 +65,6 @@ struct http_parser {
 static ID id_set_backtrace, id_is_chunked_p;
 static VALUE cHttpParser;
 
-#ifdef HAVE_RB_HASH_CLEAR /* Ruby >= 2.0 */
-#  define my_hash_clear(h) (void)rb_hash_clear(h)
-#else /* !HAVE_RB_HASH_CLEAR - Ruby <= 1.9.3 */
-
-static ID id_clear;
-
-static void my_hash_clear(VALUE h)
-{
-  rb_funcall(h, id_clear, 0);
-}
-#endif /* HAVE_RB_HASH_CLEAR */
-
 static void finalize_header(struct http_parser *hp);
 
 static void parser_raise(VALUE klass, const char *msg)
@@ -650,7 +638,7 @@ static VALUE HttpParser_clear(VALUE self)
     return HttpParser_init(self);
 
   http_parser_init(hp);
-  my_hash_clear(hp->env);
+  rb_hash_clear(hp->env);
 
   return self;
 }

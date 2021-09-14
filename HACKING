@@ -63,7 +63,7 @@ becomes unavailable.
 
 === Ruby/C Compatibility
 
-We target mainline Ruby 1.9.3 and later.  We need the Ruby
+We target C Ruby 2.0 and later.  We need the Ruby
 implementation to support fork, exec, pipe, UNIX signals, access to
 integer file descriptors and ability to use unlinked files.
 

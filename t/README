@@ -10,7 +10,7 @@ comfortable writing integration tests with.
 
 == Requirements
 
-* {Ruby 1.9.3+}[https://www.ruby-lang.org/en/] (duh!)
+* {Ruby 2.0.0+}[https://www.ruby-lang.org/en/] (duh!)
 * {GNU make}[https://www.gnu.org/software/make/]
 * {socat}[http://www.dest-unreach.org/socat/]
 * {curl}[https://curl.haxx.se/]

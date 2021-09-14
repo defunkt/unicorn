@@ -609,7 +609,7 @@ class Unicorn::HttpServer
   def e100_response_write(client, env)
     # We use String#freeze to avoid allocations under Ruby 2.1+
     # Not many users hit this code path, so it's better to reduce the
-    # constant table sizes even for 1.9.3-2.0 users who'll hit extra
+    # constant table sizes even for Ruby 2.0 users who'll hit extra
     # allocations here.
     client.write(@request.response_start_sent ?
                  "100 Continue\r\n\r\nHTTP/1.1 ".freeze :
