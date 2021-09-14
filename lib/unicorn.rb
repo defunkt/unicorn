@@ -114,8 +114,6 @@ module Unicorn
 
   def self.pipe # :nodoc:
     Kgio::Pipe.new.each do |io|
-      io.close_on_exec = true  # remove this when we only support Ruby >= 2.0
-
       # shrink pipes to minimize impact on /proc/sys/fs/pipe-user-pages-soft
       # limits.
       if defined?(F_SETPIPE_SZ)
