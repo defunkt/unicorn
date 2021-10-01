@@ -50,9 +50,6 @@ programming experience will come in handy (or be learned) here.
 
 === Documentation
 
-Due to the lack of RDoc-to-manpage converters we know about, we're
-writing manpages in Markdown and converting to troff/HTML with Pandoc.
-
 Please wrap documentation at 72 characters-per-line or less (long URLs
 are exempt) so it is comfortably readable from terminals.
 
@@ -101,10 +98,6 @@ distributed with git on on patch submission guidelines to follow.  Just
 don't email the git mailing list or maintainer with Unicorn patches :)
 
 == Building a Gem
-
-In order to build the gem, you must install the following components:
-
- * pandoc
 
 You can build the Unicorn gem with the following command:
 
