@@ -42,13 +42,13 @@ ext_h := $(wildcard $(ext)/*/*.h $(ext)/*.h)
 ext_src := $(sort $(wildcard $(ext)/*.c) $(ext_h) $(ext)/unicorn_http.c)
 ext_pfx_src := $(addprefix $(ext_pfx)/,$(ext_src))
 ext_dir := $(ext_pfx)/$(ext)
-$(ext)/extconf.rb: $(wildcard $(ext)/*.h)
+$(ext)/extconf.rb:
 	@>>$@
 $(ext_dir) $(tmp_bin) man/man1 doc/man1 pkg t/trash:
 	@mkdir -p $@
 $(ext_pfx)/$(ext)/%: $(ext)/% | $(ext_dir)
 	$(INSTALL) -m 644 $< $@
-$(ext_pfx)/$(ext)/Makefile: $(ext)/extconf.rb $(ext_h) | $(ext_dir)
+$(ext_pfx)/$(ext)/Makefile: $(ext)/extconf.rb | $(ext_dir)
 	$(RM) -f $(@D)/*.o
 	cd $(@D) && $(RUBY) $(CURDIR)/$(ext)/extconf.rb $(EXTCONF_ARGS)
 ext_sfx := _ext.$(DLEXT)
