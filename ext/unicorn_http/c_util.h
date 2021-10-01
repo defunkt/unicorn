@@ -8,23 +8,15 @@
 
 #include <unistd.h>
 #include <assert.h>
+#include <limits.h>
 
 #define MIN(a,b) (a < b ? a : b)
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
-#ifndef SIZEOF_OFF_T
-#  define SIZEOF_OFF_T 4
-#  warning SIZEOF_OFF_T not defined, guessing 4.  Did you run extconf.rb?
-#endif
-
-#if SIZEOF_OFF_T == 4
-#  define UH_OFF_T_MAX 0x7fffffff
-#elif SIZEOF_OFF_T == 8
-#  if SIZEOF_LONG == 4
-#    define UH_OFF_T_MAX 0x7fffffffffffffffLL
-#  else
-#    define UH_OFF_T_MAX 0x7fffffffffffffff
-#  endif
+#if SIZEOF_OFF_T == SIZEOF_INT
+#  define UH_OFF_T_MAX INT_MAX
+#elif SIZEOF_OFF_T == SIZEOF_LONG_LONG
+#  define UH_OFF_T_MAX LLONG_MAX
 #else
 #  error off_t size unknown for this platform!
 #endif /* SIZEOF_OFF_T check */

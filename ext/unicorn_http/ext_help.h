@@ -8,30 +8,6 @@
 #  define assert_frozen(f) do {} while (0)
 #endif /* !defined(OBJ_FROZEN) */
 
-#if !defined(OFFT2NUM)
-#  if SIZEOF_OFF_T == SIZEOF_LONG
-#    define OFFT2NUM(n) LONG2NUM(n)
-#  else
-#    define OFFT2NUM(n) LL2NUM(n)
-#  endif
-#endif /* ! defined(OFFT2NUM) */
-
-#if !defined(SIZET2NUM)
-#  if SIZEOF_SIZE_T == SIZEOF_LONG
-#    define SIZET2NUM(n) ULONG2NUM(n)
-#  else
-#    define SIZET2NUM(n) ULL2NUM(n)
-#  endif
-#endif /* ! defined(SIZET2NUM) */
-
-#if !defined(NUM2SIZET)
-#  if SIZEOF_SIZE_T == SIZEOF_LONG
-#    define NUM2SIZET(n) ((size_t)NUM2ULONG(n))
-#  else
-#    define NUM2SIZET(n) ((size_t)NUM2ULL(n))
-#  endif
-#endif /* ! defined(NUM2SIZET) */
-
 static inline int str_cstr_eq(VALUE val, const char *ptr, long len)
 {
   return (RSTRING_LEN(val) == len && !memcmp(ptr, RSTRING_PTR(val), len));

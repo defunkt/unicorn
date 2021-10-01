@@ -11,6 +11,7 @@ static const char months[] = "Jan\0Feb\0Mar\0Apr\0May\0Jun\0"
 
 /* for people on wonky systems only */
 #ifndef HAVE_GMTIME_R
+# warning using fake gmtime_r
 static struct tm * my_gmtime_r(time_t *now, struct tm *tm)
 {
 	struct tm *global = gmtime(now);
