@@ -699,6 +699,7 @@ class Unicorn::HttpServer
     logger.info "worker=#{worker_nr} reopening logs..."
     Unicorn::Util.reopen_logs
     logger.info "worker=#{worker_nr} done reopening logs"
+    false
   rescue => e
     logger.error(e) rescue nil
     exit!(77) # EX_NOPERM in sysexits.h
@@ -709,19 +710,17 @@ class Unicorn::HttpServer
   # given a INT, QUIT, or TERM signal)
   def worker_loop(worker)
     readers = init_worker_process(worker)
-    nr = 0 # this becomes negative if we need to reopen logs
+    reopen = false
 
     # this only works immediately if the master sent us the signal
     # (which is the normal case)
-    trap(:USR1) { nr = -65536 }
+    trap(:USR1) { reopen = true }
 
     ready = readers.dup
-    nr_listeners = readers.size
     @after_worker_ready.call(self, worker)
 
     begin
-      nr < 0 and reopen_worker_logs(worker.nr)
-      nr = 0
+      reopen = reopen_worker_logs(worker.nr) if reopen
       worker.tick = time_now.to_i
       tmp = ready.dup
       while sock = tmp.shift
@@ -729,26 +728,16 @@ class Unicorn::HttpServer
         # but that will return false
         if client = sock.kgio_tryaccept
           process_client(client)
-          nr += 1
           worker.tick = time_now.to_i
         end
-        break if nr < 0
+        break if reopen
       end
 
-      # make the following bet: if we accepted clients this round,
-      # we're probably reasonably busy, so avoid calling select()
-      # and do a speculative non-blocking accept() on ready listeners
-      # before we sleep again in select().
-      if nr == nr_listeners
-        tmp = ready.dup
-        redo
-      end
-
-      # timeout used so we can detect parent death:
+      # timeout so we can .tick and keep parent from SIGKILL-ing us
       worker.tick = time_now.to_i
       ret = IO.select(readers, nil, nil, @timeout) and ready = ret[0]
     rescue => e
-      redo if nr < 0 && readers[0]
+      redo if reopen && readers[0]
       Unicorn.log_error(@logger, "listen loop error", e) if readers[0]
     end while readers[0]
   end
