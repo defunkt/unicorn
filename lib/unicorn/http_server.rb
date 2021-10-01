@@ -708,7 +708,6 @@ class Unicorn::HttpServer
   # for connections and doesn't die until the parent dies (or is
   # given a INT, QUIT, or TERM signal)
   def worker_loop(worker)
-    ppid = @master_pid
     readers = init_worker_process(worker)
     nr = 0 # this becomes negative if we need to reopen logs
 
@@ -744,8 +743,6 @@ class Unicorn::HttpServer
         tmp = ready.dup
         redo
       end
-
-      ppid == Process.ppid or return
 
       # timeout used so we can detect parent death:
       worker.tick = time_now.to_i
