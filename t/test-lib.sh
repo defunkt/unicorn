@@ -94,7 +94,8 @@ check_stderr () {
 	set +u
 	_r_err=${1-${r_err}}
 	set -u
-	if grep -v $T $_r_err | grep -i Error
+	if grep -v $T $_r_err | grep -i Error | \
+		grep -v NameError.*Unicorn::Waiter
 	then
 		die "Errors found in $_r_err"
 	elif grep SIGKILL $_r_err

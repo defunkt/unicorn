@@ -685,7 +685,6 @@ class Unicorn::HttpServer
     LISTENERS.each { |sock| sock.close_on_exec = true }
 
     worker.user(*user) if user.kind_of?(Array) && ! worker.switched
-    self.timeout /= 2.0 # halve it for select()
     @config = nil
     build_app! unless preload_app
     @after_fork = @listener_opts = @orig_app = nil
@@ -705,11 +704,22 @@ class Unicorn::HttpServer
     exit!(77) # EX_NOPERM in sysexits.h
   end
 
+  def prep_readers(readers)
+    wtr = Unicorn::Waiter.prep_readers(readers)
+    @timeout *= 500 # to milliseconds for epoll, but halved
+    wtr
+  rescue
+    require_relative 'select_waiter'
+    @timeout /= 2.0 # halved for IO.select
+    Unicorn::SelectWaiter.new
+  end
+
   # runs inside each forked worker, this sits around and waits
   # for connections and doesn't die until the parent dies (or is
   # given a INT, QUIT, or TERM signal)
   def worker_loop(worker)
     readers = init_worker_process(worker)
+    waiter = prep_readers(readers)
     reopen = false
 
     # this only works immediately if the master sent us the signal
@@ -722,8 +732,7 @@ class Unicorn::HttpServer
     begin
       reopen = reopen_worker_logs(worker.nr) if reopen
       worker.tick = time_now.to_i
-      tmp = ready.dup
-      while sock = tmp.shift
+      while sock = ready.shift
         # Unicorn::Worker#kgio_tryaccept is not like accept(2) at all,
         # but that will return false
         if client = sock.kgio_tryaccept
@@ -735,7 +744,7 @@ class Unicorn::HttpServer
 
       # timeout so we can .tick and keep parent from SIGKILL-ing us
       worker.tick = time_now.to_i
-      ret = IO.select(readers, nil, nil, @timeout) and ready = ret[0]
+      waiter.get_readers(ready, readers, @timeout)
     rescue => e
       redo if reopen && readers[0]
       Unicorn.log_error(@logger, "listen loop error", e) if readers[0]

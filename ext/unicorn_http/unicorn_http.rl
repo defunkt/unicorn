@@ -12,6 +12,7 @@
 #include "common_field_optimization.h"
 #include "global_variables.h"
 #include "c_util.h"
+#include "epollexclusive.h"
 
 void init_unicorn_httpdate(void);
 
@@ -1017,5 +1018,7 @@ void Init_unicorn_http(void)
   id_clear = rb_intern("clear");
 #endif
   id_is_chunked_p = rb_intern("is_chunked?");
+
+  init_epollexclusive(mUnicorn);
 }
 #undef SET_GLOBAL

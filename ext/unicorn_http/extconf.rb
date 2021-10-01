@@ -38,4 +38,5 @@ else
   message("no, needs Ruby 2.6+\n")
 end
 
+have_func('epoll_create1', %w(sys/epoll.h))
 create_makefile("unicorn_http")
