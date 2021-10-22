@@ -83,7 +83,6 @@ static void init_common_fields(void)
   struct common_field *cf = common_http_fields;
   char tmp[64];
 
-  id_uminus = rb_intern("-@");
   memcpy(tmp, HTTP_PREFIX, HTTP_PREFIX_LEN);
 
   for(i = ARRAY_SIZE(common_http_fields); --i >= 0; cf++) {

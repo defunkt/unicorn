@@ -55,7 +55,7 @@ NORETURN(static void parser_raise(VALUE klass, const char *));
 
 /** Defines global strings in the init method. */
 #define DEF_GLOBAL(N, val) do { \
-  g_##N = rb_obj_freeze(rb_str_new(val, sizeof(val) - 1)); \
+  g_##N = str_new_dd_freeze(val, (long)sizeof(val) - 1); \
   rb_gc_register_mark_object(g_##N); \
 } while (0)
 

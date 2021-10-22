@@ -968,6 +968,7 @@ void Init_unicorn_http(void)
   e414 = rb_define_class_under(mUnicorn, "RequestURITooLongError",
                                eHttpParserError);
 
+  id_uminus = rb_intern("-@");
   init_globals();
   rb_define_alloc_func(cHttpParser, HttpParser_alloc);
   rb_define_method(cHttpParser, "initialize", HttpParser_init, 0);
