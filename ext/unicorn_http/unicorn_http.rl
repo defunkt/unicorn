@@ -13,6 +13,8 @@
 #include "global_variables.h"
 #include "c_util.h"
 #include "epollexclusive.h"
+#include "picohttpparser.h"
+#include "picohttpparser.c.h"
 
 void init_unicorn_httpdate(void);
 
@@ -21,7 +23,6 @@ void init_unicorn_httpdate(void);
 #define UH_FL_INBODY   0x4
 #define UH_FL_HASTRAILER 0x8
 #define UH_FL_INTRAILER 0x10
-#define UH_FL_INCHUNK  0x20
 #define UH_FL_REQEOF 0x40
 #define UH_FL_KAVERSION 0x80
 #define UH_FL_HASHEADER 0x100
@@ -52,15 +53,14 @@ struct http_parser {
   } start;
   union {
     unsigned int field_len; /* only used during header processing */
-    unsigned int dest_offset; /* only used during body processing */
   } s;
   VALUE buf;
   VALUE env;
   VALUE cont; /* Qfalse: unset, Qnil: ignored header, T_STRING: append */
   union {
-    off_t content;
-    off_t chunk;
-  } len;
+    off_t clen;
+    struct phr_chunked_decoder pcd;
+  } bdy;
 };
 
 static ID id_set_backtrace, id_is_chunked_p;
@@ -250,12 +250,12 @@ static void write_value(struct http_parser *hp,
   } else if (f == g_http_connection) {
     hp_keepalive_connection(hp, v);
   } else if (f == g_content_length && !HP_FL_TEST(hp, CHUNKED)) {
-    if (hp->len.content)
+    if (hp->bdy.clen)
       parser_raise(eHttpParserError, "Content-Length already set");
-    hp->len.content = parse_length(RSTRING_PTR(v), RSTRING_LEN(v));
-    if (hp->len.content < 0)
+    hp->bdy.clen = parse_length(RSTRING_PTR(v), RSTRING_LEN(v));
+    if (hp->bdy.clen < 0)
       parser_raise(eHttpParserError, "invalid Content-Length");
-    if (hp->len.content != 0)
+    if (hp->bdy.clen != 0)
       HP_FL_SET(hp, HASBODY);
     hp_invalid_if_trailer(hp);
   } else if (f == g_http_transfer_encoding) {
@@ -272,7 +272,7 @@ static void write_value(struct http_parser *hp,
       HP_FL_SET(hp, HASBODY);
 
       /* RFC 7230 3.3.3, 3: favor chunked if Content-Length exists */
-      hp->len.content = 0;
+      hp->bdy.clen = 0;
     } else if (HP_FL_TEST(hp, CHUNKED)) {
       /*
        * RFC 7230 3.3.3, point 3 states:
@@ -362,19 +362,12 @@ static void write_value(struct http_parser *hp,
     if (!STR_CSTR_EQ(val, "*"))
       rb_hash_aset(hp->env, g_path_info, val);
   }
-  action add_to_chunk_size {
-    hp->len.chunk = step_incr(hp->len.chunk, fc, 16);
-    if (hp->len.chunk < 0)
-      parser_raise(eHttpParserError, "invalid chunk size");
-  }
   action header_done {
     finalize_header(hp);
 
     cs = http_parser_first_final;
     if (HP_FL_TEST(hp, HASBODY)) {
       HP_FL_SET(hp, INBODY);
-      if (HP_FL_TEST(hp, CHUNKED))
-        cs = http_parser_en_ChunkedBody;
     } else {
       HP_FL_SET(hp, REQEOF);
       assert(!HP_FL_TEST(hp, CHUNKED) && "chunked encoding without body!");
@@ -385,37 +378,10 @@ static void write_value(struct http_parser *hp,
      */
     goto post_exec;
   }
-
   action end_trailers {
     cs = http_parser_first_final;
     goto post_exec;
   }
-
-  action end_chunked_body {
-    HP_FL_SET(hp, INTRAILER);
-    cs = http_parser_en_Trailers;
-    ++p;
-    assert(p <= pe && "buffer overflow after chunked body");
-    goto post_exec;
-  }
-
-  action skip_chunk_data {
-  skip_chunk_data_hack: {
-    size_t nr = MIN((size_t)hp->len.chunk, REMAINING);
-    memcpy(RSTRING_PTR(hp->cont) + hp->s.dest_offset, fpc, nr);
-    hp->s.dest_offset += nr;
-    hp->len.chunk -= nr;
-    p += nr;
-    assert(hp->len.chunk >= 0 && "negative chunk length");
-    if ((size_t)hp->len.chunk > REMAINING) {
-      HP_FL_SET(hp, INCHUNK);
-      goto post_exec;
-    } else {
-      fhold;
-      fgoto chunk_end;
-    }
-  }}
-
   include unicorn_http_common "unicorn_http_common.rl";
 }%%
 
@@ -430,8 +396,8 @@ static void http_parser_init(struct http_parser *hp)
   hp->offset = 0;
   hp->start.field = 0;
   hp->s.field_len = 0;
-  hp->len.content = 0;
   hp->cont = Qfalse; /* zero on MRI, should be optimized away by above */
+  memset(&hp->bdy.pcd, 0, sizeof(hp->bdy.pcd));
   %% write init;
   hp->cs = cs;
 }
@@ -454,11 +420,6 @@ http_parser_execute(struct http_parser *hp, char *buffer, size_t len)
 
   assert((void *)(pe - p) == (void *)(len - off) &&
          "pointers aren't same distance");
-
-  if (HP_FL_TEST(hp, INCHUNK)) {
-    HP_FL_UNSET(hp, INCHUNK);
-    goto skip_chunk_data_hack;
-  }
   %% write exec;
 post_exec: /* "_out:" also goes here */
   if (hp->cs != http_parser_error)
@@ -676,7 +637,7 @@ static VALUE HttpParser_content_length(VALUE self)
 {
   struct http_parser *hp = data_get(self);
 
-  return HP_FL_TEST(hp, CHUNKED) ? Qnil : OFFT2NUM(hp->len.content);
+  return HP_FL_TEST(hp, CHUNKED) ? Qnil : OFFT2NUM(hp->bdy.clen);
 }
 
 /**
@@ -703,8 +664,7 @@ static VALUE HttpParser_parse(VALUE self)
   if (hp->offset > MAX_HEADER_LEN)
     parser_raise(e413, "HTTP header is too large");
 
-  if (hp->cs == http_parser_first_final ||
-      hp->cs == http_parser_en_ChunkedBody) {
+  if (hp->cs == http_parser_first_final) {
     advance_str(data, hp->offset + 1);
     hp->offset = 0;
     if (HP_FL_TEST(hp, INTRAILER))
@@ -763,7 +723,7 @@ static VALUE HttpParser_headers(VALUE self, VALUE env, VALUE buf)
 
 static int chunked_eof(struct http_parser *hp)
 {
-  return ((hp->cs == http_parser_first_final) || HP_FL_TEST(hp, INTRAILER));
+  return HP_FL_TEST(hp, INTRAILER);
 }
 
 /**
@@ -780,7 +740,7 @@ static VALUE HttpParser_body_eof(VALUE self)
   if (HP_FL_TEST(hp, CHUNKED))
     return chunked_eof(hp) ? Qtrue : Qfalse;
 
-  return hp->len.content == 0 ? Qtrue : Qfalse;
+  return hp->bdy.clen == 0 ? Qtrue : Qfalse;
 }
 
 /**
@@ -853,6 +813,14 @@ static VALUE HttpParser_hijacked_bang(VALUE self)
   return self;
 }
 
+static VALUE parse_trailers(struct http_parser *hp, VALUE src)
+{
+  hp->cs = http_parser_en_Trailers;
+  hp->buf = src;
+  return src;
+  /* TODO: switch to pico, here */
+}
+
 /**
  * call-seq:
  *    parser.filter_body(dst, src) => nil/src
@@ -870,42 +838,50 @@ static VALUE HttpParser_hijacked_bang(VALUE self)
 static VALUE HttpParser_filter_body(VALUE self, VALUE dst, VALUE src)
 {
   struct http_parser *hp = data_get(self);
-  char *srcptr;
-  long srclen;
-
-  srcptr = RSTRING_PTR(src);
-  srclen = RSTRING_LEN(src);
+  const char *srcptr = RSTRING_PTR(src);
+  long srclen = RSTRING_LEN(src);
 
   StringValue(dst);
 
   if (HP_FL_TEST(hp, CHUNKED)) {
     if (!chunked_eof(hp)) {
+      size_t bufsz = srclen;
+      char *dstptr;
+      ssize_t pret;
+
       rb_str_modify(dst);
       rb_str_resize(dst, srclen); /* we can never copy more than srclen bytes */
-
-      hp->s.dest_offset = 0;
-      hp->cont = dst;
+      dstptr = RSTRING_PTR(dst);
+      memcpy(dstptr, srcptr, srclen);
       hp->buf = src;
-      http_parser_execute(hp, srcptr, srclen);
-      if (hp->cs == http_parser_error)
-        parser_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
-
-      assert(hp->s.dest_offset <= hp->offset &&
-             "destination buffer overflow");
-      advance_str(src, hp->offset);
-      rb_str_set_len(dst, hp->s.dest_offset);
-
-      if (RSTRING_LEN(dst) == 0 && chunked_eof(hp)) {
-        assert(hp->len.chunk == 0 && "chunk at EOF but more to parse");
+      pret = phr_decode_chunked(&hp->bdy.pcd, dstptr, &bufsz);
+      if (pret >= 0) {
+        rb_str_modify(src);
+	if (pret)
+          memcpy(RSTRING_PTR(src), dstptr + bufsz, pret);
+        rb_str_set_len(src, (long)pret);
+        rb_str_set_len(dst, (long)bufsz);
+        HP_FL_SET(hp, INTRAILER);
       } else {
-        src = Qnil;
+        switch (pret) {
+        case -2: /* incomplete */
+          rb_str_set_len(dst, (long)bufsz);
+          rb_str_set_len(src, 0);
+          return Qnil;
+        case -1:
+          parser_raise(eHttpParserError, "Invalid HTTP format, parsing fails.");
+        default:
+          assert(pret >= 0 && "phr_decode_chunked returned < -2");
+        }
       }
     }
+    assert(HP_FL_TEST(hp, INTRAILER) && "INTRAILER not set");
+    return parse_trailers(hp, src);
   } else {
     /* no need to enter the Ragel machine for unchunked transfers */
-    assert(hp->len.content >= 0 && "negative Content-Length");
-    if (hp->len.content > 0) {
-      long nr = MIN(srclen, hp->len.content);
+    assert(hp->bdy.clen >= 0 && "negative Content-Length");
+    if (hp->bdy.clen > 0) {
+      long nr = MIN(srclen, hp->bdy.clen);
 
       rb_str_modify(dst);
       rb_str_resize(dst, nr);
@@ -918,8 +894,8 @@ static VALUE HttpParser_filter_body(VALUE self, VALUE dst, VALUE src)
        */
       hp->buf = src;
       memcpy(RSTRING_PTR(dst), srcptr, nr);
-      hp->len.content -= nr;
-      if (hp->len.content == 0) {
+      hp->bdy.clen -= nr;
+      if (hp->bdy.clen == 0) {
         HP_FL_SET(hp, REQEOF);
         hp->cs = http_parser_first_final;
       }
@@ -995,7 +971,7 @@ void Init_unicorn_http(void)
    * it is highly unlikely to encounter clients that send more than
    * several kilobytes at once.
    */
-  rb_define_const(cHttpParser, "CHUNK_MAX", OFFT2NUM(UH_OFF_T_MAX));
+  rb_define_const(cHttpParser, "CHUNK_MAX", SIZET2NUM(SIZE_MAX));
 
   /*
    * The maximum size of the body as specified by Content-Length.
