@@ -110,7 +110,6 @@ get_readers(VALUE epio, VALUE ready, VALUE readers, VALUE timeout_msec)
 			rb_ary_push(ready, obj);
 	}
 	rb_str_resize(buf, 0);
-	rb_gc_force_recycle(buf);
 	return Qfalse;
 }
 #endif /* USE_EPOLL */
