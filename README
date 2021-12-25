@@ -137,13 +137,13 @@ information on the {mailing list}[mailto:unicorn-public@yhbt.net].
 The mailing list is archived at https://yhbt.net/unicorn-public/
 
 Read-only NNTP access is available at:
-nntp://news.public-inbox.org/inbox.comp.lang.ruby.unicorn and
+nntps://news.public-inbox.org/inbox.comp.lang.ruby.unicorn and
 nntp://news.gmane.io/gmane.comp.lang.ruby.unicorn.general
 
 Read-only IMAP access is also avaialble at:
-imaps://news.public-inbox.org/inbox.comp.lang.ruby.unicorn.0 and
-imap://ou63pmih66umazou.onion/inbox.comp.lang.ruby.unicorn.0
-AUTH=ANONYMOUS mechanism is supported, as is any username+password
+imaps://yhbt.net/inbox.comp.lang.ruby.unicorn.0 and
+imap://7fh6tueqddpjyxjmgtdiueylzoqt6pt7hec3pukyptlmohoowvhde4yd.onion/inbox.comp.lang.ruby.unicorn.0
+The AUTH=ANONYMOUS mechanism is supported, as is any username+password
 combination.
 
 For the latest on unicorn releases, you may also finger us at
