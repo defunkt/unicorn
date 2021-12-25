@@ -1,11 +1,6 @@
 # -*- encoding: binary -*-
 require 'mkmf'
 
-unless RUBY_VERSION < '3.1'
-  warn "Unicorn was only tested against MRI up to 3.0.\n" \
-       "It might not properly work with #{RUBY_VERSION}"
-end
-
 have_func("rb_hash_clear", "ruby.h") or abort 'Ruby 2.0+ required'
 
 message('checking if String#-@ (str_uminus) dedupes... ')

@@ -25,7 +25,7 @@ Gem::Specification.new do |s|
   s.homepage = 'https://yhbt.net/unicorn/'
   s.test_files = test_files
 
-  # 2.0.0 is the minumum supported version. We don't specify
+  # 2.0.0 is the minimum supported version. We don't specify
   # a maximum version to make it easier to test pre-releases,
   # but we do warn users if they install unicorn on an untested
   # version in extconf.rb
