@@ -140,11 +140,12 @@ Read-only NNTP access is available at:
 nntps://news.public-inbox.org/inbox.comp.lang.ruby.unicorn and
 nntp://news.gmane.io/gmane.comp.lang.ruby.unicorn.general
 
-Read-only IMAP access is also avaialble at:
-imaps://yhbt.net/inbox.comp.lang.ruby.unicorn.0 and
-imap://7fh6tueqddpjyxjmgtdiueylzoqt6pt7hec3pukyptlmohoowvhde4yd.onion/inbox.comp.lang.ruby.unicorn.0
-The AUTH=ANONYMOUS mechanism is supported, as is any username+password
-combination.
+Read-only IMAP access is also available at:
+imaps://;AUTH=ANONYMOUS@yhbt.net/inbox.comp.lang.ruby.unicorn.0 and
+imap://;AUTH=ANONYMOUS@7fh6tueqddpjyxjmgtdiueylzoqt6pt7hec3pukyptlmohoowvhde4yd.onion/inbox.comp.lang.ruby.unicorn.0
+
+Archives are also available over POP3, instructions at:
+https://yhbt.net/unicorn-public/_/text/help/#pop3
 
 For the latest on unicorn releases, you may also finger us at
 unicorn@yhbt.net or check our NEWS page (and subscribe to our Atom

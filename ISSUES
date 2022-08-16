@@ -81,14 +81,15 @@ Mail is publicly-archived, SMTP subscription is discouraged to avoid
 servers being a single-point-of-failure, so Cc: all participants.
 
 The HTTP(S) archives have links to per-thread Atom feeds and downloadable
-mboxes.  Read-only IMAP(S) folders and NNTP(S) newsgroups are also available.
+mboxes.  Read-only IMAP(S) folders, POP3, and NNTP(S) newsgroups are available.
 
 * https://yhbt.net/unicorn-public/
 * http://7fh6tueqddpjyxjmgtdiueylzoqt6pt7hec3pukyptlmohoowvhde4yd.onion/unicorn-public/
-* imaps://yhbt.net/inbox.comp.lang.ruby.unicorn.0
-* imap://7fh6tueqddpjyxjmgtdiueylzoqt6pt7hec3pukyptlmohoowvhde4yd.onion/inbox.comp.lang.ruby.unicorn.0
+* imaps://;AUTH=ANONYMOUS@yhbt.net/inbox.comp.lang.ruby.unicorn.0
+* imap://;AUTH=ANONYMOUS@7fh6tueqddpjyxjmgtdiueylzoqt6pt7hec3pukyptlmohoowvhde4yd.onion/inbox.comp.lang.ruby.unicorn.0
 * nntps://news.public-inbox.org/inbox.comp.lang.ruby.unicorn
 * nntp://news.gmane.io/gmane.comp.lang.ruby.unicorn.general
+* https://yhbt.net/unicorn-public/_/text/help/#pop3
 
 Full Atom feeds:
 * https://yhbt.net/unicorn-public/new.atom
