@@ -187,7 +187,8 @@ class Unicorn::HttpServer
       rescue Errno::EEXIST
         retry
       end
-      fp.syswrite("#$$\n")
+      fp.sync = true
+      fp.write("#$$\n")
       File.rename(fp.path, path)
       fp.close
     end
