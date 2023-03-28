@@ -64,18 +64,22 @@ static VALUE prep_readers(VALUE cls, VALUE readers)
 
 #if USE_EPOLL
 struct ep_wait {
-	struct epoll_event *events;
+	struct epoll_event event;
 	rb_io_t *fptr;
-	int maxevents;
 	int timeout_msec;
 };
 
 static void *do_wait(void *ptr) /* runs w/o GVL */
 {
 	struct ep_wait *epw = ptr;
-
-	return (void *)(long)epoll_wait(epw->fptr->fd, epw->events,
-				epw->maxevents, epw->timeout_msec);
+	/*
+	 * Linux delivers epoll events in the order received, and using
+	 * maxevents=1 ensures we pluck one item off ep->rdllist
+	 * at-a-time (c.f. fs/eventpoll.c in linux.git, it's quite
+	 * easy-to-understand for anybody familiar with Ruby C).
+	 */
+	return (void *)(long)epoll_wait(epw->fptr->fd, &epw->event, 1,
+					epw->timeout_msec);
 }
 
 /* :nodoc: */
@@ -84,14 +88,10 @@ static VALUE
 get_readers(VALUE epio, VALUE ready, VALUE readers, VALUE timeout_msec)
 {
 	struct ep_wait epw;
-	long i, n;
-	VALUE buf;
+	long n;
 
 	Check_Type(ready, T_ARRAY);
 	Check_Type(readers, T_ARRAY);
-	epw.maxevents = RARRAY_LENINT(readers);
-	buf = rb_str_buf_new(sizeof(struct epoll_event) * epw.maxevents);
-	epw.events = (struct epoll_event *)RSTRING_PTR(buf);
 	epio = rb_io_get_io(epio);
 	GetOpenFile(epio, epw.fptr);
 
@@ -99,17 +99,12 @@ get_readers(VALUE epio, VALUE ready, VALUE readers, VALUE timeout_msec)
 	n = (long)rb_thread_call_without_gvl(do_wait, &epw, RUBY_UBF_IO, NULL);
 	if (n < 0) {
 		if (errno != EINTR) rb_sys_fail("epoll_wait");
-		n = 0;
-	}
-	/* Linux delivers events in order received */
-	for (i = 0; i < n; i++) {
-		struct epoll_event *ev = &epw.events[i];
-		VALUE obj = rb_ary_entry(readers, ev->data.u64);
+	} else if (n > 0) { /* maxevents is hardcoded to 1 */
+		VALUE obj = rb_ary_entry(readers, epw.event.data.u64);
 
 		if (RTEST(obj))
 			rb_ary_push(ready, obj);
-	}
-	rb_str_resize(buf, 0);
+	} /* n == 0 : timeout */
 	return Qfalse;
 }
 #endif /* USE_EPOLL */
