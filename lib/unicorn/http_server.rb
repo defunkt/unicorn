@@ -446,11 +446,6 @@ class Unicorn::HttpServer
       Dir.chdir(START_CTX[:cwd])
       cmd = [ START_CTX[0] ].concat(START_CTX[:argv])
 
-      # avoid leaking FDs we don't know about, but let before_exec
-      # unset FD_CLOEXEC, if anything else in the app eventually
-      # relies on FD inheritence.
-      close_sockets_on_exec(listener_fds)
-
       # exec(command, hash) works in at least 1.9.1+, but will only be
       # required in 1.9.4/2.0.0 at earliest.
       cmd << listener_fds
@@ -472,8 +467,6 @@ class Unicorn::HttpServer
     worker_info = [worker.nr, worker.to_io.fileno, worker.master.fileno]
     env['UNICORN_WORKER'] = worker_info.join(',')
 
-    close_sockets_on_exec(listener_fds)
-
     Process.spawn(env, START_CTX[0], *START_CTX[:argv], listener_fds)
   end
 
@@ -484,15 +477,6 @@ class Unicorn::HttpServer
       listener_fds[sock.fileno] = sock
     end
     listener_fds
-  end
-
-  def close_sockets_on_exec(sockets)
-    (3..1024).each do |io|
-      next if sockets.include?(io)
-      io = IO.for_fd(io) rescue next
-      io.autoclose = false
-      io.close_on_exec = true
-    end
   end
 
   # forcibly terminate all workers that haven't checked in in timeout seconds.  The timeout is implemented using an unlinked File
