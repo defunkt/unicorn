@@ -12,6 +12,12 @@ module Unicorn::HttpResponse
 
   STATUS_CODES = defined?(Rack::Utils::HTTP_STATUS_CODES) ?
                  Rack::Utils::HTTP_STATUS_CODES : {}
+  STATUS_WITH_NO_ENTITY_BODY = defined?(
+                 Rack::Utils::STATUS_WITH_NO_ENTITY_BODY) ?
+                 Rack::Utils::STATUS_WITH_NO_ENTITY_BODY : begin
+    warn 'Rack::Utils::STATUS_WITH_NO_ENTITY_BODY missing'
+    {}
+  end
 
   # internal API, code will always be common-enough-for-even-old-Rack
   def err_response(code, response_start_sent)
@@ -35,11 +41,12 @@ module Unicorn::HttpResponse
   def http_response_write(socket, status, headers, body,
                           req = Unicorn::HttpRequest.new)
     hijack = nil
-
+    do_chunk = false
     if headers
       code = status.to_i
       msg = STATUS_CODES[code]
       start = req.response_start_sent ? ''.freeze : 'HTTP/1.1 '.freeze
+      term = STATUS_WITH_NO_ENTITY_BODY.include?(code) || false
       buf = "#{start}#{msg ? %Q(#{code} #{msg}) : status}\r\n" \
             "Date: #{httpdate}\r\n" \
             "Connection: close\r\n"
@@ -47,6 +54,12 @@ module Unicorn::HttpResponse
         case key
         when %r{\A(?:Date|Connection)\z}i
           next
+        when %r{\AContent-Length\z}i
+          append_header(buf, key, value)
+          term = true
+        when %r{\ATransfer-Encoding\z}i
+          append_header(buf, key, value)
+          term = true if /\bchunked\b/i === value # value may be Array :x
         when "rack.hijack"
           # This should only be hit under Rack >= 1.5, as this was an illegal
           # key in Rack < 1.5
@@ -55,12 +68,24 @@ module Unicorn::HttpResponse
           append_header(buf, key, value)
         end
       end
+      if !hijack && !term && req.chunkable_response?
+        do_chunk = true
+        buf << "Transfer-Encoding: chunked\r\n".freeze
+      end
       socket.write(buf << "\r\n".freeze)
     end
 
     if hijack
       req.hijacked!
       hijack.call(socket)
+    elsif do_chunk
+      begin
+        body.each do |b|
+          socket.write("#{b.bytesize.to_s(16)}\r\n", b, "\r\n".freeze)
+        end
+      ensure
+        socket.write("0\r\n\r\n".freeze)
+      end
     else
       body.each { |chunk| socket.write(chunk) }
     end

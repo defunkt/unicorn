@@ -196,7 +196,7 @@ class WebServerTest < Test::Unit::TestCase
     # continue to process our request and never hit EOFError on our sock
     sock.shutdown(Socket::SHUT_WR)
     buf = sock.read
-    assert_equal 'hello!\n', buf.split(/\r\n\r\n/).last
+    assert_match %r{\bhello!\\n\b}, buf.split(/\r\n\r\n/, 2).last
     next_client = Net::HTTP.get(URI.parse("http://127.0.0.1:#@port/"))
     assert_equal 'hello!\n', next_client
     lines = File.readlines("test_stderr.#$$.log")

@@ -28,9 +28,14 @@ void init_unicorn_httpdate(void);
 #define UH_FL_TO_CLEAR 0x200
 #define UH_FL_RESSTART 0x400 /* for check_client_connection */
 #define UH_FL_HIJACK 0x800
+#define UH_FL_RES_CHUNK_VER (1U << 12)
+#define UH_FL_RES_CHUNK_METHOD (1U << 13)
 
 /* all of these flags need to be set for keepalive to be supported */
 #define UH_FL_KEEPALIVE (UH_FL_KAVERSION | UH_FL_REQEOF | UH_FL_HASHEADER)
+
+/* we can only chunk responses for non-HEAD HTTP/1.1 requests */
+#define UH_FL_RES_CHUNKABLE (UH_FL_RES_CHUNK_VER | UH_FL_RES_CHUNK_METHOD)
 
 static unsigned int MAX_HEADER_LEN = 1024 * (80 + 32); /* same as Mongrel */
 
@@ -145,6 +150,9 @@ request_method(struct http_parser *hp, const char *ptr, size_t len)
 {
   VALUE v = rb_str_new(ptr, len);
 
+  if (len != 4 || memcmp(ptr, "HEAD", 4))
+    HP_FL_SET(hp, RES_CHUNK_METHOD);
+
   rb_hash_aset(hp->env, g_request_method, v);
 }
 
@@ -158,6 +166,7 @@ http_version(struct http_parser *hp, const char *ptr, size_t len)
   if (CONST_MEM_EQ("HTTP/1.1", ptr, len)) {
     /* HTTP/1.1 implies keepalive unless "Connection: close" is set */
     HP_FL_SET(hp, KAVERSION);
+    HP_FL_SET(hp, RES_CHUNK_VER);
     v = g_http_11;
   } else if (CONST_MEM_EQ("HTTP/1.0", ptr, len)) {
     v = g_http_10;
@@ -801,6 +810,14 @@ static VALUE HttpParser_keepalive(VALUE self)
   return HP_FL_ALL(hp, KEEPALIVE) ? Qtrue : Qfalse;
 }
 
+/* :nodoc: */
+static VALUE chunkable_response_p(VALUE self)
+{
+  const struct http_parser *hp = data_get(self);
+
+  return HP_FL_ALL(hp, RES_CHUNKABLE) ? Qtrue : Qfalse;
+}
+
 /**
  * call-seq:
  *    parser.next? => true or false
@@ -981,6 +998,7 @@ void Init_unicorn_http(void)
   rb_define_method(cHttpParser, "content_length", HttpParser_content_length, 0);
   rb_define_method(cHttpParser, "body_eof?", HttpParser_body_eof, 0);
   rb_define_method(cHttpParser, "keepalive?", HttpParser_keepalive, 0);
+  rb_define_method(cHttpParser, "chunkable_response?", chunkable_response_p, 0);
   rb_define_method(cHttpParser, "headers?", HttpParser_has_headers, 0);
   rb_define_method(cHttpParser, "next?", HttpParser_next, 0);
   rb_define_method(cHttpParser, "buf", HttpParser_buf, 0);

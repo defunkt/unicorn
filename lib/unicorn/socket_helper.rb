@@ -15,6 +15,20 @@ module Unicorn
     end
   end
 
+  if IO.instance_method(:write).arity == 1 # Ruby <= 2.4
+    require 'unicorn/write_splat'
+    UNIXClient = Class.new(Kgio::Socket) # :nodoc:
+    class UNIXSrv < Kgio::UNIXServer # :nodoc:
+      include Unicorn::WriteSplat
+      def kgio_tryaccept # :nodoc:
+        super(UNIXClient)
+      end
+    end
+    TCPClient.__send__(:include, Unicorn::WriteSplat)
+  else # Ruby 2.5+
+    UNIXSrv = Kgio::UNIXServer
+  end
+
   module SocketHelper
 
     # internal interface
@@ -135,7 +149,7 @@ module Unicorn
         end
         old_umask = File.umask(opt[:umask] || 0)
         begin
-          Kgio::UNIXServer.new(address)
+          UNIXSrv.new(address)
         ensure
           File.umask(old_umask)
         end
@@ -203,7 +217,7 @@ module Unicorn
         Socket.unpack_sockaddr_in(sock.getsockname)
         TCPSrv.for_fd(sock.fileno)
       rescue ArgumentError
-        Kgio::UNIXServer.for_fd(sock.fileno)
+        UNIXSrv.for_fd(sock.fileno)
       end
     end
 

@@ -66,7 +66,6 @@ module Unicorn
 
       middleware = { # order matters
         ContentLength: nil,
-        Chunked: nil,
         CommonLogger: [ $stderr ],
         ShowExceptions: nil,
         Lint: nil,
@@ -75,8 +74,8 @@ module Unicorn
 
       # return value, matches rackup defaults based on env
       # Unicorn does not support persistent connections, but Rainbows!
-      # and Zbatery both do.  Users accustomed to the Rack::Server default
-      # middlewares will need ContentLength/Chunked middlewares.
+      # does.  Users accustomed to the Rack::Server default
+      # middlewares will need ContentLength middleware.
       case ENV["RACK_ENV"]
       when "development"
       when "deployment"
