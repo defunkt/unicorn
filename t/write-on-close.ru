@@ -8,4 +8,4 @@ class WriteOnClose
   end
 end
 use Rack::ContentType, "text/plain"
-run(lambda { |_| [ 200, [%w(Transfer-Encoding chunked)], WriteOnClose.new ] })
+run(lambda { |_| [ 200, { 'transfer-encoding' => 'chunked' }, WriteOnClose.new ] })

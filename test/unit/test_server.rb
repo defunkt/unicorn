@@ -16,7 +16,7 @@ class TestHandler
   def call(env)
     while env['rack.input'].read(4096)
     end
-    [200, { 'Content-Type' => 'text/plain' }, ['hello!\n']]
+    [200, { 'content-type' => 'text/plain' }, ['hello!\n']]
   rescue Unicorn::ClientShutdown, Unicorn::HttpParserError => e
     $stderr.syswrite("#{e.class}: #{e.message} #{e.backtrace.empty?}\n")
     raise e
@@ -30,7 +30,7 @@ class TestEarlyHintsHandler
     env['rack.early_hints'].call(
       "Link" => "</style.css>; rel=preload; as=style\n</script.js>; rel=preload"
     )
-    [200, { 'Content-Type' => 'text/plain' }, ['hello!\n']]
+    [200, { 'content-type' => 'text/plain' }, ['hello!\n']]
   end
 end
 
@@ -45,7 +45,7 @@ class TestRackAfterReply
 
     env["rack.after_reply"] << -> { @called = true }
 
-    [200, { 'Content-Type' => 'text/plain' }, ["after_reply_called: #{@called}"]]
+    [200, { 'content-type' => 'text/plain' }, ["after_reply_called: #{@called}"]]
   rescue Unicorn::ClientShutdown, Unicorn::HttpParserError => e
     $stderr.syswrite("#{e.class}: #{e.message} #{e.backtrace.empty?}\n")
     raise e
@@ -81,7 +81,7 @@ class WebServerTest < Test::Unit::TestCase
       tmp.sysseek(0)
       tmp.truncate(0)
       tmp.syswrite($$)
-      lambda { |env| [ 200, { 'Content-Type' => 'text/plain' }, [ "#$$\n" ] ] }
+      lambda { |env| [ 200, { 'content-type' => 'text/plain' }, [ "#$$\n" ] ] }
     }
     redirect_test_io do
       @server = HttpServer.new(app, :listeners => [ "127.0.0.1:#@port"] )

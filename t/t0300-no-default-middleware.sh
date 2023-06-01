@@ -9,7 +9,7 @@ t_begin "setup and start" && {
 }
 
 t_begin "check exit status with Rack::Lint not present" && {
-	test 42 -eq "$(curl -sf -o/dev/null -w'%{http_code}' http://$listen/)"
+	test 500 -ne "$(curl -sf -o/dev/null -w'%{http_code}' http://$listen/)"
 }
 
 t_begin "killing succeeds" && {

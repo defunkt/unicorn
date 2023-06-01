@@ -6,8 +6,8 @@ run(lambda do |env|
         "lint=#{caller.grep(%r{rack/lint\.rb})[0].split(':')[0]}\n"
   end
   h = {
-    'Content-Length' => b.size.to_s,
-    'Content-Type' => 'text/plain',
+    'content-length' => b.size.to_s,
+    'content-type' => 'text/plain',
   }
   [ 200, h, [ b ] ]
 end)

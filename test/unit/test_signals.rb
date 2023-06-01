@@ -47,7 +47,7 @@ class SignalsTest < Test::Unit::TestCase
 
   def test_worker_dies_on_dead_master
     pid = fork {
-      app = lambda { |env| [ 200, {'X-Pid' => "#$$" }, [] ] }
+      app = lambda { |env| [ 200, {'x-pid' => "#$$" }, [] ] }
       opts = @server_opts.merge(:timeout => 3)
       redirect_test_io { HttpServer.new(app, opts).start.join }
     }
@@ -56,7 +56,7 @@ class SignalsTest < Test::Unit::TestCase
     sock.syswrite("GET / HTTP/1.0\r\n\r\n")
     buf = sock.readpartial(4096)
     assert_nil sock.close
-    buf =~ /\bX-Pid: (\d+)\b/ or raise Exception
+    buf =~ /\bx-pid: (\d+)\b/ or raise Exception
     child = $1.to_i
     wait_master_ready("test_stderr.#{pid}.log")
     wait_workers_ready("test_stderr.#{pid}.log", 1)
@@ -120,7 +120,7 @@ class SignalsTest < Test::Unit::TestCase
 
   def test_response_write
     app = lambda { |env|
-      [ 200, { 'Content-Type' => 'text/plain', 'X-Pid' => Process.pid.to_s },
+      [ 200, { 'content-type' => 'text/plain', 'x-pid' => Process.pid.to_s },
         Dd.new(@bs, @count) ]
     }
     redirect_test_io { @server = HttpServer.new(app, @server_opts).start }
@@ -130,7 +130,7 @@ class SignalsTest < Test::Unit::TestCase
     buf = ''
     header_len = pid = nil
     buf = sock.sysread(16384, buf)
-    pid = buf[/\r\nX-Pid: (\d+)\r\n/, 1].to_i
+    pid = buf[/\r\nx-pid: (\d+)\r\n/, 1].to_i
     header_len = buf[/\A(.+?\r\n\r\n)/m, 1].size
     assert pid > 0, "pid not positive: #{pid.inspect}"
     read = buf.size
@@ -158,14 +158,14 @@ class SignalsTest < Test::Unit::TestCase
     app = lambda { |env|
       while env['rack.input'].read(4096)
       end
-      [ 200, {'Content-Type'=>'text/plain', 'X-Pid'=>Process.pid.to_s}, [] ]
+      [ 200, {'content-type'=>'text/plain', 'x-pid'=>Process.pid.to_s}, [] ]
     }
     redirect_test_io { @server = HttpServer.new(app, @server_opts).start }
 
     wait_workers_ready("test_stderr.#{$$}.log", 1)
     sock = tcp_socket('127.0.0.1', @port)
     sock.syswrite("GET / HTTP/1.0\r\n\r\n")
-    pid = sock.sysread(4096)[/\r\nX-Pid: (\d+)\r\n/, 1].to_i
+    pid = sock.sysread(4096)[/\r\nx-pid: (\d+)\r\n/, 1].to_i
     assert_nil sock.close
 
     assert pid > 0, "pid not positive: #{pid.inspect}"
@@ -182,7 +182,7 @@ class SignalsTest < Test::Unit::TestCase
     redirect_test_io { @server.stop(true) }
     # can't check for == since pending signals get merged
     assert size_before < @tmp.stat.size
-    assert_equal pid, sock.sysread(4096)[/\r\nX-Pid: (\d+)\r\n/, 1].to_i
+    assert_equal pid, sock.sysread(4096)[/\r\nx-pid: (\d+)\r\n/, 1].to_i
     assert_nil sock.close
   end
 end

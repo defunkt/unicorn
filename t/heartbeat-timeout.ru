@@ -1,5 +1,5 @@
 use Rack::ContentLength
-headers = { 'Content-Type' => 'text/plain' }
+headers = { 'content-type' => 'text/plain' }
 run lambda { |env|
   case env['PATH_INFO']
   when "/block-forever"

@@ -29,7 +29,7 @@ class TestCccTCPI < Test::Unit::TestCase
         # will wake up when writer closes
         sleep_pipe[0].read if env['PATH_INFO'] == '/sleep'
 
-        [ 200, [ %w(Content-Length 0),  %w(Content-Type text/plain) ], [] ]
+        [ 200, {'content-length'=>'0', 'content-type'=>'text/plain'}, [] ]
       end
       ENV['UNICORN_FD'] = srv.fileno.to_s
       opts = {

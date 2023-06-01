@@ -22,7 +22,7 @@ class RequestTest < Test::Unit::TestCase
   def setup
     @request = HttpRequest.new
     @app = lambda do |env|
-      [ 200, { 'Content-Length' => '0', 'Content-Type' => 'text/plain' }, [] ]
+      [ 200, { 'content-length' => '0', 'content-type' => 'text/plain' }, [] ]
     end
     @lint = Rack::Lint.new(@app)
   end

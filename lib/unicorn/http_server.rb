@@ -573,22 +573,11 @@ class Unicorn::HttpServer
   end
 
   def e103_response_write(client, headers)
-    response = if @request.response_start_sent
-      "103 Early Hints\r\n"
-    else
-      "HTTP/1.1 103 Early Hints\r\n"
-    end
-
-    headers.each_pair do |k, vs|
-      next if !vs || vs.empty?
-      values = vs.to_s.split("\n".freeze)
-      values.each do |v|
-        response << "#{k}: #{v}\r\n"
-      end
-    end
-    response << "\r\n".freeze
-    response << "HTTP/1.1 ".freeze if @request.response_start_sent
-    client.write(response)
+    rss = @request.response_start_sent
+    buf = rss ? "103 Early Hints\r\n" : "HTTP/1.1 103 Early Hints\r\n"
+    headers.each { |key, value| append_header(buf, key, value) }
+    buf << (rss ? "\r\nHTTP/1.1 ".freeze : "\r\n".freeze)
+    client.write(buf)
   end
 
   def e100_response_write(client, env)

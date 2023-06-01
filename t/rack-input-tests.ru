@@ -16,6 +16,6 @@ app = lambda do |env|
     end while input.read(rand(cap), buf)
   end
 
-  [ 200, {'Content-Type' => 'text/plain'}, [ digest.hexdigest << "\n" ] ]
+  [ 200, {'content-type' => 'text/plain'}, [ digest.hexdigest << "\n" ] ]
 end
 run app

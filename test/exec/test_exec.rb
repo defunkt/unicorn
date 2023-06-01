@@ -25,20 +25,20 @@ class ExecTest < Test::Unit::TestCase
 
   HI = <<-EOS
 use Rack::ContentLength
-run proc { |env| [ 200, { 'Content-Type' => 'text/plain' }, [ "HI\\n" ] ] }
+run proc { |env| [ 200, { 'content-type' => 'text/plain' }, [ "HI\\n" ] ] }
   EOS
 
   SHOW_RACK_ENV = <<-EOS
 use Rack::ContentLength
 run proc { |env|
-  [ 200, { 'Content-Type' => 'text/plain' }, [ ENV['RACK_ENV'] ] ]
+  [ 200, { 'content-type' => 'text/plain' }, [ ENV['RACK_ENV'] ] ]
 }
   EOS
 
   HELLO = <<-EOS
 class Hello
   def call(env)
-    [ 200, { 'Content-Type' => 'text/plain' }, [ "HI\\n" ] ]
+    [ 200, { 'content-type' => 'text/plain' }, [ "HI\\n" ] ]
   end
 end
   EOS
@@ -62,9 +62,9 @@ run lambda { |env|
   a = ::File.stat(pwd)
   b = ::File.stat(Dir.pwd)
   if (a.ino == b.ino && a.dev == b.dev)
-    [ 200, { 'Content-Type' => 'text/plain' }, [ pwd ] ]
+    [ 200, { 'content-type' => 'text/plain' }, [ pwd ] ]
   else
-    [ 404, { 'Content-Type' => 'text/plain' }, [] ]
+    [ 404, { 'content-type' => 'text/plain' }, [] ]
   end
 }
   EOS
@@ -255,7 +255,13 @@ after_fork do |server, worker|
 end
 EOF
     pid = xfork { redirect_test_io { exec($unicorn_bin, "-c#{tmp.path}") } }
-    File.open("#{other.path}/fifo", "rb").close
+    begin
+      fifo = File.open("#{other.path}/fifo", "rb")
+    rescue Errno::EINTR
+      # OpenBSD raises Errno::EINTR when opening
+      return if RUBY_PLATFORM =~ /openbsd/
+    end
+    fifo.close
 
     assert ! File.exist?("stderr_log_here")
     assert ! File.exist?("stdout_log_here")
@@ -557,7 +563,7 @@ EOF
   def test_unicorn_config_per_worker_listen
     port2 = unused_port
     pid_spit = 'use Rack::ContentLength;' \
-      'run proc { |e| [ 200, {"Content-Type"=>"text/plain"}, ["#$$\\n"] ] }'
+      'run proc { |e| [ 200, {"content-type"=>"text/plain"}, ["#$$\\n"] ] }'
     File.open("config.ru", "wb") { |fp| fp.syswrite(pid_spit) }
     tmp = Tempfile.new('test.socket')
     File.unlink(tmp.path)
