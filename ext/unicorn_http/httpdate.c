@@ -1,5 +1,5 @@
 #include <ruby.h>
-#include <time.h>
+#include <sys/time.h>
 #include <stdio.h>
 
 static const size_t buf_capa = sizeof("Thu, 01 Jan 1970 00:00:00 GMT");
@@ -43,13 +43,24 @@ static struct tm * my_gmtime_r(time_t *now, struct tm *tm)
 static VALUE httpdate(VALUE self)
 {
 	static time_t last;
-	time_t now = time(NULL); /* not a syscall on modern 64-bit systems */
+	struct timeval now;
 	struct tm tm;
 
-	if (last == now)
+	/*
+	 * Favor gettimeofday(2) over time(2), as the latter can return the
+	 * wrong value in the first 1 .. 2.5 ms of every second(!)
+	 *
+	 * https://lore.kernel.org/git/20230320230507.3932018-1-gitster@pobox.com/
+	 * https://inbox.sourceware.org/libc-alpha/20230306160321.2942372-1-adhemerval.zanella@linaro.org/T/
+	 * https://sourceware.org/bugzilla/show_bug.cgi?id=30200
+	 */
+	if (gettimeofday(&now, NULL))
+		rb_sys_fail("gettimeofday");
+
+	if (last == now.tv_sec)
 		return buf;
-	last = now;
-	gmtime_r(&now, &tm);
+	last = now.tv_sec;
+	gmtime_r(&now.tv_sec, &tm);
 
 	/* we can make this thread-safe later if our Ruby loses the GVL */
 	snprintf(buf_ptr, buf_capa,
