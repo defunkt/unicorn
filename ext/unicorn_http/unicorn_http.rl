@@ -1033,9 +1033,6 @@ void Init_unicorn_http(void)
   id_set_backtrace = rb_intern("set_backtrace");
   init_unicorn_httpdate();
 
-#ifndef HAVE_RB_HASH_CLEAR
-  id_clear = rb_intern("clear");
-#endif
   id_is_chunked_p = rb_intern("is_chunked?");
 
   init_epollexclusive(mUnicorn);
