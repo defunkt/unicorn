@@ -27,7 +27,6 @@ my %PUT = (
 	chunked_md5 => sub {
 		my ($in, $out, $path, %opt) = @_;
 		my $bs = $opt{bs} // 16384;
-		require Digest::MD5;
 		my $dig = Digest::MD5->new;
 		print $out <<EOM;
 PUT $path HTTP/1.1\r
@@ -186,8 +185,8 @@ SKIP: {
 	CORE::open(my $rh, '<', 't/random_blob') or
 		skip "t/random_blob not generated $!", 1;
 	$blob_size = -s $rh;
-	require Digest::SHA;
-	$blob_hash = Digest::SHA->new(1)->addfile($rh)->hexdigest;
+	require Digest::MD5;
+	$blob_hash = Digest::MD5->new->addfile($rh)->hexdigest;
 
 	my $ck_hash = sub {
 		my ($sub, $path, %opt) = @_;

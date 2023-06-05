@@ -55,8 +55,8 @@ end
 def rack_input_tests(env)
   return [ 100, {}, [] ] if /\A100-continue\z/i =~ env['HTTP_EXPECT']
   cap = 16384
-  require 'digest/sha1'
-  digest = Digest::SHA1.new
+  require 'digest/md5'
+  dig = Digest::MD5.new
   input = env['rack.input']
   case env['PATH_INFO']
   when '/rack_input/size_first'; input.size
@@ -68,11 +68,21 @@ def rack_input_tests(env)
   if buf = input.read(rand(cap))
     begin
       raise "#{buf.size} > #{cap}" if buf.size > cap
-      digest.update(buf)
+      dig.update(buf)
     end while input.read(rand(cap), buf)
+    buf.clear # remove this call if Ruby ever gets escape analysis
   end
-  [ 200, {'content-length' => '40', 'content-type' => 'text/plain'},
-    [ digest.hexdigest ] ]
+  h = { 'content-type' => 'text/plain' }
+  if env['HTTP_TRAILER'] =~ /\bContent-MD5\b/i
+    cmd5_b64 = env['HTTP_CONTENT_MD5'] or return [500, {}, ['No Content-MD5']]
+    cmd5_bin = cmd5_b64.unpack('m')[0]
+    if cmd5_bin != dig.digest
+      h['content-length'] = cmd5_b64.size.to_s
+      return [ 500, h, [ cmd5_b64 ] ]
+    end
+  end
+  h['content-length'] = '32'
+  [ 200, h, [ dig.hexdigest ] ]
 end
 
 run(lambda do |env|
