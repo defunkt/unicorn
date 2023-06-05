@@ -17,7 +17,6 @@ my $u1 = "$tmpdir/u1";
 print $conf_fh <<EOM;
 early_hints true
 listen "$u1"
-listen "$host_port" # TODO: remove this requirement for SIGHUP
 EOM
 my $ar = unicorn(qw(-E none t/integration.ru -c), $conf, { 3 => $srv });
 my $curl = which('curl');

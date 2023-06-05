@@ -36,7 +36,6 @@ POSIX::mkfifo($fifo, 0600) or die "mkfifo: $!";
 seek($conf_fh, 0, SEEK_SET);
 truncate($conf_fh, 0);
 print $conf_fh <<EOM;
-listen "$host_port" # TODO: remove this requirement for SIGHUP
 after_fork { |_,_| File.open('$fifo', 'w') { |fp| fp.write "pid=#\$\$" } }
 EOM
 $ar->do_kill('HUP');

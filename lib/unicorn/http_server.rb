@@ -77,6 +77,7 @@ class Unicorn::HttpServer
     options[:use_defaults] = true
     self.config = Unicorn::Configurator.new(options)
     self.listener_opts = {}
+    @immortal = [] # immortal inherited sockets from systemd
 
     # We use @self_pipe differently in the master and worker processes:
     #
@@ -158,6 +159,7 @@ class Unicorn::HttpServer
     end
     set_names = listener_names(listeners)
     dead_names.concat(cur_names - set_names).uniq!
+    dead_names -= @immortal.map { |io| sock_name(io) }
 
     LISTENERS.delete_if do |io|
       if dead_names.include?(sock_name(io))
@@ -807,17 +809,20 @@ class Unicorn::HttpServer
     # inherit sockets from parents, they need to be plain Socket objects
     # before they become Kgio::UNIXServer or Kgio::TCPServer
     inherited = ENV['UNICORN_FD'].to_s.split(',')
+    immortal = []
 
     # emulate sd_listen_fds() for systemd
     sd_pid, sd_fds = ENV.values_at('LISTEN_PID', 'LISTEN_FDS')
     if sd_pid.to_i == $$ # n.b. $$ can never be zero
       # 3 = SD_LISTEN_FDS_START
-      inherited.concat((3...(3 + sd_fds.to_i)).to_a)
+      immortal = (3...(3 + sd_fds.to_i)).to_a
+      inherited.concat(immortal)
     end
     # to ease debugging, we will not unset LISTEN_PID and LISTEN_FDS
 
     inherited.map! do |fd|
       io = Socket.for_fd(fd.to_i)
+      @immortal << io if immortal.include?(fd)
       io.autoclose = false
       io = server_cast(io)
       set_server_sockopt(io, listener_opts[sock_name(io)])
