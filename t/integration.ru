@@ -47,6 +47,29 @@ def env_dump(env)
   h.to_json
 end
 
+def rack_input_tests(env)
+  return [ 100, {}, [] ] if /\A100-continue\z/i =~ env['HTTP_EXPECT']
+  cap = 16384
+  require 'digest/sha1'
+  digest = Digest::SHA1.new
+  input = env['rack.input']
+  case env['PATH_INFO']
+  when '/rack_input/size_first'; input.size
+  when '/rack_input/rewind_first'; input.rewind
+  when '/rack_input'; # OK
+  else
+    abort "bad path: #{env['PATH_INFO']}"
+  end
+  if buf = input.read(rand(cap))
+    begin
+      raise "#{buf.size} > #{cap}" if buf.size > cap
+      digest.update(buf)
+    end while input.read(rand(cap), buf)
+  end
+  [ 200, {'content-length' => '40', 'content-type' => 'text/plain'},
+    [ digest.hexdigest ] ]
+end
+
 run(lambda do |env|
   case env['REQUEST_METHOD']
   when 'GET'
@@ -66,6 +89,8 @@ run(lambda do |env|
     end # case PATH_INFO (POST)
     # ...
   when 'PUT'
-    # ...
+    case env['PATH_INFO']
+    when %r{\A/rack_input}; rack_input_tests(env)
+    end
   end # case REQUEST_METHOD
 end) # run

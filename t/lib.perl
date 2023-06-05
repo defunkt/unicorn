@@ -10,7 +10,7 @@ use POSIX qw(dup2 _exit setpgid :signal_h SEEK_SET F_SETFD);
 use File::Temp 0.19 (); # 0.19 for ->newdir
 our ($tmpdir, $errfh);
 our @EXPORT = qw(unicorn slurp tcp_server tcp_connect unicorn $tmpdir $errfh
-	SEEK_SET tcp_host_port start_req);
+	SEEK_SET tcp_host_port start_req which spawn);
 
 my ($base) = ($0 =~ m!\b([^/]+)\.[^\.]+\z!);
 $tmpdir = File::Temp->newdir("unicorn-$base-XXXX", TMPDIR => 1);
@@ -193,4 +193,5 @@ Test::More->import;
 # try to ensure ->DESTROY fires:
 $SIG{TERM} = sub { exit(15 + 128) };
 $SIG{INT} = sub { exit(2 + 128) };
+$SIG{PIPE} = sub { exit(13 + 128) };
 1;

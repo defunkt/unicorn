@@ -1,13 +1,16 @@
 #!perl -w
 # Copyright (C) unicorn hackers <unicorn-public@yhbt.net>
 # License: GPL-3.0+ <https://www.gnu.org/licenses/gpl-3.0.txt>
+# this is the main integration test for things which don't require
+# restarting or signals
 
 use v5.14; BEGIN { require './t/lib.perl' };
 my $srv = tcp_server();
 my $host_port = tcp_host_port($srv);
 my $t0 = time;
 my $ar = unicorn(qw(-E none t/integration.ru), { 3 => $srv });
-
+my $curl = which('curl');
+END { diag slurp("$tmpdir/err.log") if $tmpdir };
 sub slurp_hdr {
 	my ($c) = @_;
 	local $/ = "\r\n\r\n"; # affects both readline+chomp
@@ -16,6 +19,48 @@ sub slurp_hdr {
 	diag explain([ $status, \@hdr ]) if $ENV{V};
 	($status, \@hdr);
 }
+
+my %PUT = (
+	chunked_md5 => sub {
+		my ($in, $out, $path, %opt) = @_;
+		my $bs = $opt{bs} // 16384;
+		require Digest::MD5;
+		my $dig = Digest::MD5->new;
+		print $out <<EOM;
+PUT $path HTTP/1.1\r
+Transfer-Encoding: chunked\r
+Trailer: Content-MD5\r
+\r
+EOM
+		my ($buf, $r);
+		while (1) {
+			$r = read($in, $buf, $bs) // die "read: $!";
+			last if $r == 0;
+			printf $out "%x\r\n", length($buf);
+			print $out $buf, "\r\n";
+			$dig->add($buf);
+		}
+		print $out "0\r\nContent-MD5: ", $dig->b64digest, "\r\n\r\n";
+	},
+	identity => sub {
+		my ($in, $out, $path, %opt) = @_;
+		my $bs = $opt{bs} // 16384;
+		my $clen = $opt{-s} // -s $in;
+		print $out <<EOM;
+PUT $path HTTP/1.0\r
+Content-Length: $clen\r
+\r
+EOM
+		my ($buf, $r, $len);
+		while ($clen) {
+			$len = $clen > $bs ? $bs : $clen;
+			$r = read($in, $buf, $len) // die "read: $!";
+			die 'premature EOF' if $r == 0;
+			print $out $buf;
+			$clen -= $r;
+		}
+	},
+);
 
 my ($c, $status, $hdr);
 
@@ -111,6 +156,55 @@ if ('bad requests') {
 	like($status, qr!\AHTTP/1\.[01] 414 \b!, '414 on FRAGMENT > (1024)');
 }
 
+# input tests
+my ($blob_size, $blob_hash);
+SKIP: {
+	open(my $rh, '<', 't/random_blob') or
+		skip "t/random_blob not generated $!", 1;
+	$blob_size = -s $rh;
+	require Digest::SHA;
+	$blob_hash = Digest::SHA->new(1)->addfile($rh)->hexdigest;
+
+	my $ck_hash = sub {
+		my ($sub, $path, %opt) = @_;
+		seek($rh, 0, SEEK_SET) // die "seek: $!";
+		$c = tcp_connect($srv);
+		$c->autoflush(0);
+		$PUT{$sub}->($rh, $c, $path, %opt);
+		$c->flush or die "flush: $!";
+		($status, $hdr) = slurp_hdr($c);
+		is(readline($c), $blob_hash, "$sub $path");
+	};
+	$ck_hash->('identity', '/rack_input', -s => $blob_size);
+	$ck_hash->('chunked_md5', '/rack_input');
+	$ck_hash->('identity', '/rack_input/size_first', -s => $blob_size);
+	$ck_hash->('identity', '/rack_input/rewind_first', -s => $blob_size);
+	$ck_hash->('chunked_md5', '/rack_input/size_first');
+	$ck_hash->('chunked_md5', '/rack_input/rewind_first');
+
+
+	$curl // skip 'no curl found in PATH', 1;
+
+	my ($copt, $cout);
+	my $url = "http://$host_port/rack_input";
+	my $do_curl = sub {
+		my (@arg) = @_;
+		pipe(my $cout, $copt->{1}) or die "pipe: $!";
+		open $copt->{2}, '>', "$tmpdir/curl.err" or die $!;
+		my $cpid = spawn($curl, '-sSf', @arg, $url, $copt);
+		close(delete $copt->{1}) or die "close: $!";
+		is(readline($cout), $blob_hash, "curl @arg response");
+		is(waitpid($cpid, 0), $cpid, "curl @arg exited");
+		is($?, 0, "no error from curl @arg");
+		is(slurp("$tmpdir/curl.err"), '', "no stderr from curl @arg");
+	};
+
+	$do_curl->(qw(-T t/random_blob));
+
+	seek($rh, 0, SEEK_SET) // die "seek: $!";
+	$copt->{0} = $rh;
+	$do_curl->('-T-');
+}
 
 # ... more stuff here
 undef $ar;
@@ -120,4 +214,5 @@ my @err = grep(!/NameError.*Unicorn::Waiter/, grep(/error/i, @log));
 is_deeply(\@err, [], 'no unexpected errors in stderr');
 is_deeply([grep(/SIGKILL/, @log)], [], 'no SIGKILL in stderr');
 
+undef $tmpdir;
 done_testing;
