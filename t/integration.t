@@ -26,7 +26,6 @@ POSIX::mkfifo($fifo, 0600) or die "mkfifo: $!";
 my %PUT = (
 	chunked_md5 => sub {
 		my ($in, $out, $path, %opt) = @_;
-		my $bs = $opt{bs} // 16384;
 		my $dig = Digest::MD5->new;
 		print $out <<EOM;
 PUT $path HTTP/1.1\r
@@ -36,7 +35,7 @@ Trailer: Content-MD5\r
 EOM
 		my ($buf, $r);
 		while (1) {
-			$r = read($in, $buf, $bs);
+			$r = read($in, $buf, 999 + int(rand(0xffff)));
 			last if $r == 0;
 			printf $out "%x\r\n", length($buf);
 			print $out $buf, "\r\n";
@@ -46,15 +45,15 @@ EOM
 	},
 	identity => sub {
 		my ($in, $out, $path, %opt) = @_;
-		my $bs = $opt{bs} // 16384;
 		my $clen = $opt{-s} // -s $in;
 		print $out <<EOM;
 PUT $path HTTP/1.0\r
 Content-Length: $clen\r
 \r
 EOM
-		my ($buf, $r, $len);
+		my ($buf, $r, $len, $bs);
 		while ($clen) {
+			$bs = 999 + int(rand(0xffff));
 			$len = $clen > $bs ? $bs : $clen;
 			$r = read($in, $buf, $len);
 			die 'premature EOF' if $r == 0;
@@ -192,8 +191,10 @@ SKIP: {
 		my ($sub, $path, %opt) = @_;
 		seek($rh, 0, SEEK_SET);
 		$c = tcp_start($srv);
-		$c->autoflush(0);
+		$c->autoflush($opt{sync} // 0);
 		$PUT{$sub}->($rh, $c, $path, %opt);
+		defined($opt{overwrite}) and
+			print { $c } ('x' x $opt{overwrite});
 		$c->flush or die $!;
 		($status, $hdr) = slurp_hdr($c);
 		is(readline($c), $blob_hash, "$sub $path");
@@ -205,6 +206,27 @@ SKIP: {
 	$ck_hash->('chunked_md5', '/rack_input/size_first');
 	$ck_hash->('chunked_md5', '/rack_input/rewind_first');
 
+	$ck_hash->('identity', '/rack_input', -s => $blob_size, sync => 1);
+	$ck_hash->('chunked_md5', '/rack_input', sync => 1);
+
+	# ensure small overwrites don't get checksummed
+	$ck_hash->('identity', '/rack_input', -s => $blob_size,
+			overwrite => 1); # one extra byte
+
+	# excessive overwrite truncated
+	$c = tcp_start($srv);
+	$c->autoflush(0);
+	print $c "PUT /rack_input HTTP/1.0\r\nContent-Length: 1\r\n\r\n";
+	if (1) {
+		local $SIG{PIPE} = 'IGNORE';
+		my $buf = "\0" x 8192;
+		my $n = 0;
+		my $end = time + 5;
+		$! = 0;
+		while (print $c $buf and time < $end) { ++$n }
+		ok($!, 'overwrite truncated') or diag "n=$n err=$! ".time;
+	}
+	undef $c;
 
 	$curl // skip 'no curl found in PATH', 1;
 
