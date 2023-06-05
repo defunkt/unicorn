@@ -5,6 +5,7 @@
 # restarting or signals
 
 use v5.14; BEGIN { require './t/lib.perl' };
+use autodie;
 my $srv = tcp_server();
 my $host_port = tcp_host_port($srv);
 my $t0 = time;
@@ -34,7 +35,7 @@ Trailer: Content-MD5\r
 EOM
 		my ($buf, $r);
 		while (1) {
-			$r = read($in, $buf, $bs) // die "read: $!";
+			$r = read($in, $buf, $bs);
 			last if $r == 0;
 			printf $out "%x\r\n", length($buf);
 			print $out $buf, "\r\n";
@@ -54,7 +55,7 @@ EOM
 		my ($buf, $r, $len);
 		while ($clen) {
 			$len = $clen > $bs ? $bs : $clen;
-			$r = read($in, $buf, $len) // die "read: $!";
+			$r = read($in, $buf, $len);
 			die 'premature EOF' if $r == 0;
 			print $out $buf;
 			$clen -= $r;
@@ -130,28 +131,28 @@ if ('bad requests') {
 	like($status, qr!\AHTTP/1\.[01] 400 \b!, 'got 400 on bad request');
 
 	$c = tcp_connect($srv);
-	print $c 'GET /' or die $!;
+	print $c 'GET /';
 	my $buf = join('', (0..9), 'ab');
-	for (0..1023) { print $c $buf or die $! }
-	print $c " HTTP/1.0\r\n\r\n" or die $!;
+	for (0..1023) { print $c $buf }
+	print $c " HTTP/1.0\r\n\r\n";
 	($status, $hdr) = slurp_hdr($c);
 	like($status, qr!\AHTTP/1\.[01] 414 \b!,
 		'414 on REQUEST_PATH > (12 * 1024)');
 
 	$c = tcp_connect($srv);
-	print $c 'GET /hello-world?a' or die $!;
+	print $c 'GET /hello-world?a';
 	$buf = join('', (0..9));
-	for (0..1023) { print $c $buf or die $! }
-	print $c " HTTP/1.0\r\n\r\n" or die $!;
+	for (0..1023) { print $c $buf }
+	print $c " HTTP/1.0\r\n\r\n";
 	($status, $hdr) = slurp_hdr($c);
 	like($status, qr!\AHTTP/1\.[01] 414 \b!,
 		'414 on QUERY_STRING > (10 * 1024)');
 
 	$c = tcp_connect($srv);
-	print $c 'GET /hello-world#a' or die $!;
+	print $c 'GET /hello-world#a';
 	$buf = join('', (0..9), 'a'..'f');
-	for (0..63) { print $c $buf or die $! }
-	print $c " HTTP/1.0\r\n\r\n" or die $!;
+	for (0..63) { print $c $buf }
+	print $c " HTTP/1.0\r\n\r\n";
 	($status, $hdr) = slurp_hdr($c);
 	like($status, qr!\AHTTP/1\.[01] 414 \b!, '414 on FRAGMENT > (1024)');
 }
@@ -159,7 +160,7 @@ if ('bad requests') {
 # input tests
 my ($blob_size, $blob_hash);
 SKIP: {
-	open(my $rh, '<', 't/random_blob') or
+	CORE::open(my $rh, '<', 't/random_blob') or
 		skip "t/random_blob not generated $!", 1;
 	$blob_size = -s $rh;
 	require Digest::SHA;
@@ -167,11 +168,11 @@ SKIP: {
 
 	my $ck_hash = sub {
 		my ($sub, $path, %opt) = @_;
-		seek($rh, 0, SEEK_SET) // die "seek: $!";
+		seek($rh, 0, SEEK_SET);
 		$c = tcp_connect($srv);
 		$c->autoflush(0);
 		$PUT{$sub}->($rh, $c, $path, %opt);
-		$c->flush or die "flush: $!";
+		$c->flush or die $!;
 		($status, $hdr) = slurp_hdr($c);
 		is(readline($c), $blob_hash, "$sub $path");
 	};
@@ -189,10 +190,10 @@ SKIP: {
 	my $url = "http://$host_port/rack_input";
 	my $do_curl = sub {
 		my (@arg) = @_;
-		pipe(my $cout, $copt->{1}) or die "pipe: $!";
-		open $copt->{2}, '>', "$tmpdir/curl.err" or die $!;
+		pipe(my $cout, $copt->{1});
+		open $copt->{2}, '>', "$tmpdir/curl.err";
 		my $cpid = spawn($curl, '-sSf', @arg, $url, $copt);
-		close(delete $copt->{1}) or die "close: $!";
+		close(delete $copt->{1});
 		is(readline($cout), $blob_hash, "curl @arg response");
 		is(waitpid($cpid, 0), $cpid, "curl @arg exited");
 		is($?, 0, "no error from curl @arg");
@@ -201,7 +202,7 @@ SKIP: {
 
 	$do_curl->(qw(-T t/random_blob));
 
-	seek($rh, 0, SEEK_SET) // die "seek: $!";
+	seek($rh, 0, SEEK_SET);
 	$copt->{0} = $rh;
 	$do_curl->('-T-');
 }

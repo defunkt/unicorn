@@ -4,6 +4,7 @@
 package UnicornTest;
 use v5.14;
 use parent qw(Exporter);
+use autodie;
 use Test::More;
 use IO::Socket::INET;
 use POSIX qw(dup2 _exit setpgid :signal_h SEEK_SET F_SETFD);
@@ -14,7 +15,7 @@ our @EXPORT = qw(unicorn slurp tcp_server tcp_connect unicorn $tmpdir $errfh
 
 my ($base) = ($0 =~ m!\b([^/]+)\.[^\.]+\z!);
 $tmpdir = File::Temp->newdir("unicorn-$base-XXXX", TMPDIR => 1);
-open($errfh, '>>', "$tmpdir/err.log") or die "open: $!";
+open($errfh, '>>', "$tmpdir/err.log");
 
 sub tcp_server {
 	my %opt = (
@@ -62,14 +63,14 @@ sub tcp_connect {
 sub start_req {
 	my ($srv, @req) = @_;
 	my $c = tcp_connect($srv);
-	print $c @req, "\r\n\r\n" or die "print: $!";
+	print $c @req, "\r\n\r\n";
 	$c;
 }
 
 sub slurp {
-	open my $fh, '<', $_[0] or die "open($_[0]): $!";
+	open my $fh, '<', $_[0];
 	local $/;
-	<$fh>;
+	readline($fh);
 }
 
 sub spawn {
@@ -80,8 +81,8 @@ sub spawn {
 	my $set = POSIX::SigSet->new;
 	$set->fillset or die "sigfillset: $!";
 	sigprocmask(SIG_SETMASK, $set, $old) or die "SIG_SETMASK: $!";
-	pipe(my ($r, $w)) or die "pipe: $!";
-	my $pid = fork // die "fork: $!";
+	pipe(my $r, my $w);
+	my $pid = fork;
 	if ($pid == 0) {
 		close $r;
 		$SIG{__DIE__} = sub {
@@ -94,9 +95,9 @@ sub spawn {
 		my $cfd;
 		for ($cfd = 0; ($cfd < 3) || defined($opt->{$cfd}); $cfd++) {
 			my $io = $opt->{$cfd} // next;
-			my $pfd = fileno($io) // die "fileno($io): $!";
+			my $pfd = fileno($io);
 			if ($pfd == $cfd) {
-				fcntl($io, F_SETFD, 0) // die "F_SETFD: $!";
+				fcntl($io, F_SETFD, 0);
 			} else {
 				dup2($pfd, $cfd) // die "dup2($pfd, $cfd): $!";
 			}
@@ -110,9 +111,7 @@ sub spawn {
 			setpgid(0, $pgid) // die "setpgid(0, $pgid): $!";
 		}
 		$SIG{$_} = 'DEFAULT' for grep(!/^__/, keys %SIG);
-		if (defined(my $cd = $opt->{-C})) {
-			chdir $cd // die "chdir($cd): $!";
-		}
+		if (defined(my $cd = $opt->{-C})) { chdir $cd }
 		$old->delset(POSIX::SIGCHLD) or die "sigdelset CHLD: $!";
 		sigprocmask(SIG_SETMASK, $old) or die "SIG_SETMASK: ~CHLD: $!";
 		@ENV{keys %$env} = values(%$env) if $env;
@@ -162,22 +161,23 @@ sub unicorn {
 # automatically kill + reap children when this goes out-of-scope
 package UnicornTest::AutoReap;
 use v5.14;
+use autodie;
 
 sub new {
 	my (undef, $pid) = @_;
 	bless { pid => $pid, owner => $$ }, __PACKAGE__
 }
 
-sub kill {
+sub do_kill {
 	my ($self, $sig) = @_;
-	CORE::kill($sig // 'TERM', $self->{pid});
+	kill($sig // 'TERM', $self->{pid});
 }
 
 sub join {
 	my ($self, $sig) = @_;
 	my $pid = delete $self->{pid} or return;
-	CORE::kill($sig, $pid) if defined $sig;
-	my $ret = waitpid($pid, 0) // die "waitpid($pid): $!";
+	kill($sig, $pid) if defined $sig;
+	my $ret = waitpid($pid, 0);
 	$ret == $pid or die "BUG: waitpid($pid) != $ret";
 }
 

@@ -4,17 +4,18 @@
 
 use v5.14; BEGIN { require './t/lib.perl' };
 use IO::Socket::UNIX;
+use autodie;
+no autodie 'kill';
 my %to_kill;
 END { kill('TERM', values(%to_kill)) if keys %to_kill }
 my $u1 = "$tmpdir/u1.sock";
 my $u2 = "$tmpdir/u2.sock";
 my $unix_req = sub {
 	my $s = IO::Socket::UNIX->new(Peer => shift, Type => SOCK_STREAM);
-	print $s @_, "\r\n\r\n" or die $!;
+	print $s @_, "\r\n\r\n";
 	$s;
 };
 {
-	use autodie;
 	open my $fh, '>', "$tmpdir/u1.conf.rb";
 	print $fh <<EOM;
 pid "$tmpdir/u.pid"
@@ -43,8 +44,8 @@ EOM
 my @uarg = qw(-D -E none t/integration.ru);
 
 # this pipe will be used to notify us when all daemons die:
-pipe(my ($p0, $p1)) or die "pipe: $!";
-fcntl($p1, POSIX::F_SETFD, 0) or die "fcntl: $!"; # clear FD_CLOEXEC
+pipe(my $p0, my $p1);
+fcntl($p1, POSIX::F_SETFD, 0);
 
 # start the first instance
 unicorn('-c', "$tmpdir/u1.conf.rb", @uarg)->join;
@@ -93,8 +94,8 @@ is($pidf, $to_kill{u1}, 'pid file contents unchanged after 2nd start failure');
 
 # restart the first instance
 {
-	pipe(($p0, $p1)) or die "pipe: $!";
-	fcntl($p1, POSIX::F_SETFD, 0) or die "fcntl: $!"; # clear FD_CLOEXEC
+	pipe($p0, $p1);
+	fcntl($p1, POSIX::F_SETFD, 0);
 	unicorn('-c', "$tmpdir/u1.conf.rb", @uarg)->join;
 	is($?, 0, 'daemonized 1st process');
 	chomp($to_kill{u1} = slurp("$tmpdir/u.pid"));
