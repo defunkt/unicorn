@@ -85,6 +85,39 @@ SKIP: {
 	is($res->{content}, 'Goodbye', 'write-on-close body read');
 }
 
+if ('bad requests') {
+	$c = start_req($srv, 'GET /env_dump HTTP/1/1');
+	($status, $hdr) = slurp_hdr($c);
+	like($status, qr!\AHTTP/1\.[01] 400 \b!, 'got 400 on bad request');
+
+	$c = tcp_connect($srv);
+	print $c 'GET /' or die $!;
+	my $buf = join('', (0..9), 'ab');
+	for (0..1023) { print $c $buf or die $! }
+	print $c " HTTP/1.0\r\n\r\n" or die $!;
+	($status, $hdr) = slurp_hdr($c);
+	like($status, qr!\AHTTP/1\.[01] 414 \b!,
+		'414 on REQUEST_PATH > (12 * 1024)');
+
+	$c = tcp_connect($srv);
+	print $c 'GET /hello-world?a' or die $!;
+	$buf = join('', (0..9));
+	for (0..1023) { print $c $buf or die $! }
+	print $c " HTTP/1.0\r\n\r\n" or die $!;
+	($status, $hdr) = slurp_hdr($c);
+	like($status, qr!\AHTTP/1\.[01] 414 \b!,
+		'414 on QUERY_STRING > (10 * 1024)');
+
+	$c = tcp_connect($srv);
+	print $c 'GET /hello-world#a' or die $!;
+	$buf = join('', (0..9), 'a'..'f');
+	for (0..63) { print $c $buf or die $! }
+	print $c " HTTP/1.0\r\n\r\n" or die $!;
+	($status, $hdr) = slurp_hdr($c);
+	like($status, qr!\AHTTP/1\.[01] 414 \b!, '414 on FRAGMENT > (1024)');
+}
+
+
 # ... more stuff here
 undef $ar;
 my @log = slurp("$tmpdir/err.log");

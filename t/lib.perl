@@ -10,7 +10,7 @@ use POSIX qw(dup2 _exit setpgid :signal_h SEEK_SET F_SETFD);
 use File::Temp 0.19 (); # 0.19 for ->newdir
 our ($tmpdir, $errfh);
 our @EXPORT = qw(unicorn slurp tcp_server tcp_connect unicorn $tmpdir $errfh
-	SEEK_SET tcp_host_port);
+	SEEK_SET tcp_host_port start_req);
 
 my ($base) = ($0 =~ m!\b([^/]+)\.[^\.]+\z!);
 $tmpdir = File::Temp->newdir("unicorn-$base-XXXX", TMPDIR => 1);
@@ -57,6 +57,13 @@ sub tcp_connect {
 	) or BAIL_OUT "failed to connect to $addr: $!";
 	$s->autoflush(1);
 	$s;
+}
+
+sub start_req {
+	my ($srv, @req) = @_;
+	my $c = tcp_connect($srv);
+	print $c @req, "\r\n\r\n" or die "print: $!";
+	$c;
 }
 
 sub slurp {
