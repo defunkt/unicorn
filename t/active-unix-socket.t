@@ -10,11 +10,6 @@ my %to_kill;
 END { kill('TERM', values(%to_kill)) if keys %to_kill }
 my $u1 = "$tmpdir/u1.sock";
 my $u2 = "$tmpdir/u2.sock";
-my $unix_req = sub {
-	my $s = IO::Socket::UNIX->new(Peer => shift, Type => SOCK_STREAM);
-	print $s @_, "\r\n\r\n";
-	$s;
-};
 {
 	open my $fh, '>', "$tmpdir/u1.conf.rb";
 	print $fh <<EOM;
@@ -53,7 +48,7 @@ is($?, 0, 'daemonized 1st process');
 chomp($to_kill{u1} = slurp("$tmpdir/u.pid"));
 like($to_kill{u1}, qr/\A\d+\z/s, 'read pid file');
 
-chomp(my $worker_pid = readline($unix_req->($u1, 'GET /pid')));
+chomp(my $worker_pid = readline(unix_start($u1, 'GET /pid')));
 like($worker_pid, qr/\A\d+\z/s, 'captured worker pid');
 ok(kill(0, $worker_pid), 'worker is kill-able');
 
@@ -65,7 +60,7 @@ isnt($?, 0, 'conflicting PID file fails to start');
 chomp(my $pidf = slurp("$tmpdir/u.pid"));
 is($pidf, $to_kill{u1}, 'pid file contents unchanged after start failure');
 
-chomp(my $pid2 = readline($unix_req->($u1, 'GET /pid')));
+chomp(my $pid2 = readline(unix_start($u1, 'GET /pid')));
 is($worker_pid, $pid2, 'worker PID unchanged');
 
 
@@ -73,7 +68,7 @@ is($worker_pid, $pid2, 'worker PID unchanged');
 unicorn('-c', "$tmpdir/u3.conf.rb", @uarg)->join;
 isnt($?, 0, 'conflicting UNIX socket fails to start');
 
-chomp($pid2 = readline($unix_req->($u1, 'GET /pid')));
+chomp($pid2 = readline(unix_start($u1, 'GET /pid')));
 is($worker_pid, $pid2, 'worker PID still unchanged');
 
 chomp($pidf = slurp("$tmpdir/u.pid"));
@@ -101,7 +96,7 @@ is($pidf, $to_kill{u1}, 'pid file contents unchanged after 2nd start failure');
 	chomp($to_kill{u1} = slurp("$tmpdir/u.pid"));
 	like($to_kill{u1}, qr/\A\d+\z/s, 'read pid file');
 
-	chomp($pid2 = readline($unix_req->($u1, 'GET /pid')));
+	chomp($pid2 = readline(unix_start($u1, 'GET /pid')));
 	like($pid2, qr/\A\d+\z/, 'worker running');
 
 	ok(kill('TERM', delete $to_kill{u1}), 'SIGTERM restarted daemon');

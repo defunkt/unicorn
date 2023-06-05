@@ -70,7 +70,7 @@ EOM
 my ($c, $status, $hdr);
 
 # response header tests
-$c = start_req($srv, 'GET /rack-2-newline-headers HTTP/1.0');
+$c = tcp_start($srv, 'GET /rack-2-newline-headers HTTP/1.0');
 ($status, $hdr) = slurp_hdr($c);
 like($status, qr!\AHTTP/1\.[01] 200\b!, 'status line valid');
 my $orig_200_status = $status;
@@ -89,7 +89,7 @@ SKIP: { # Date header check
 };
 
 
-$c = start_req($srv, 'GET /rack-3-array-headers HTTP/1.0');
+$c = tcp_start($srv, 'GET /rack-3-array-headers HTTP/1.0');
 ($status, $hdr) = slurp_hdr($c);
 is_deeply([ grep(/^x-r3: /, @$hdr) ],
 	[ 'x-r3: a', 'x-r3: b', 'x-r3: c' ],
@@ -97,7 +97,7 @@ is_deeply([ grep(/^x-r3: /, @$hdr) ],
 
 SKIP: {
 	eval { require JSON::PP } or skip "JSON::PP missing: $@", 1;
-	my $c = start_req($srv, 'GET /env_dump');
+	my $c = tcp_start($srv, 'GET /env_dump');
 	my $json = do { local $/; readline($c) };
 	unlike($json, qr/^Connection: /smi, 'no connection header for 0.9');
 	unlike($json, qr!\AHTTP/!s, 'no HTTP/1.x prefix for 0.9');
@@ -107,17 +107,17 @@ SKIP: {
 }
 
 # cf. <CAO47=rJa=zRcLn_Xm4v2cHPr6c0UswaFC_omYFEH+baSxHOWKQ@mail.gmail.com>
-$c = start_req($srv, 'GET /nil-header-value HTTP/1.0');
+$c = tcp_start($srv, 'GET /nil-header-value HTTP/1.0');
 ($status, $hdr) = slurp_hdr($c);
 is_deeply([grep(/^X-Nil:/, @$hdr)], ['X-Nil: '],
 	'nil header value accepted for broken apps') or diag(explain($hdr));
 
 if ('TODO: ensure Rack::Utils::HTTP_STATUS_CODES is available') {
-	$c = start_req($srv, 'POST /tweak-status-code HTTP/1.0');
+	$c = tcp_start($srv, 'POST /tweak-status-code HTTP/1.0');
 	($status, $hdr) = slurp_hdr($c);
 	like($status, qr!\AHTTP/1\.[01] 200 HI\b!, 'status tweaked');
 
-	$c = start_req($srv, 'POST /restore-status-code HTTP/1.0');
+	$c = tcp_start($srv, 'POST /restore-status-code HTTP/1.0');
 	($status, $hdr) = slurp_hdr($c);
 	is($status, $orig_200_status, 'original status restored');
 }
@@ -130,12 +130,12 @@ SKIP: {
 }
 
 if ('bad requests') {
-	$c = start_req($srv, 'GET /env_dump HTTP/1/1');
+	$c = tcp_start($srv, 'GET /env_dump HTTP/1/1');
 	($status, $hdr) = slurp_hdr($c);
 	like($status, qr!\AHTTP/1\.[01] 400 \b!, 'got 400 on bad request');
 
-	$c = tcp_connect($srv);
-	print $c 'GET /';
+	$c = tcp_start($srv);
+	print $c 'GET /';;
 	my $buf = join('', (0..9), 'ab');
 	for (0..1023) { print $c $buf }
 	print $c " HTTP/1.0\r\n\r\n";
@@ -143,7 +143,7 @@ if ('bad requests') {
 	like($status, qr!\AHTTP/1\.[01] 414 \b!,
 		'414 on REQUEST_PATH > (12 * 1024)');
 
-	$c = tcp_connect($srv);
+	$c = tcp_start($srv);
 	print $c 'GET /hello-world?a';
 	$buf = join('', (0..9));
 	for (0..1023) { print $c $buf }
@@ -152,7 +152,7 @@ if ('bad requests') {
 	like($status, qr!\AHTTP/1\.[01] 414 \b!,
 		'414 on QUERY_STRING > (10 * 1024)');
 
-	$c = tcp_connect($srv);
+	$c = tcp_start($srv);
 	print $c 'GET /hello-world#a';
 	$buf = join('', (0..9), 'a'..'f');
 	for (0..63) { print $c $buf }
@@ -173,7 +173,7 @@ SKIP: {
 	my $ck_hash = sub {
 		my ($sub, $path, %opt) = @_;
 		seek($rh, 0, SEEK_SET);
-		$c = tcp_connect($srv);
+		$c = tcp_start($srv);
 		$c->autoflush(0);
 		$PUT{$sub}->($rh, $c, $path, %opt);
 		$c->flush or die $!;
@@ -235,11 +235,11 @@ EOM
 	$wpid =~ s/\Apid=// or die;
 	ok(CORE::kill(0, $wpid), 'worker PID retrieved');
 
-	$c = start_req($srv, $req);
+	$c = tcp_start($srv, $req);
 	($status, $hdr) = slurp_hdr($c);
 	like($status, qr!\AHTTP/1\.[01] 200\b!, 'minimal request succeeds');
 
-	$c = start_req($srv, 'GET /xxxxxx HTTP/1.0');
+	$c = tcp_start($srv, 'GET /xxxxxx HTTP/1.0');
 	($status, $hdr) = slurp_hdr($c);
 	like($status, qr!\AHTTP/1\.[01] 413\b!, 'big request fails');
 }

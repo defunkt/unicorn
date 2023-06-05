@@ -10,8 +10,8 @@ use IO::Socket::INET;
 use POSIX qw(dup2 _exit setpgid :signal_h SEEK_SET F_SETFD);
 use File::Temp 0.19 (); # 0.19 for ->newdir
 our ($tmpdir, $errfh);
-our @EXPORT = qw(unicorn slurp tcp_server tcp_connect unicorn $tmpdir $errfh
-	SEEK_SET tcp_host_port start_req which spawn check_stderr);
+our @EXPORT = qw(unicorn slurp tcp_server tcp_start unicorn $tmpdir $errfh
+	SEEK_SET tcp_host_port which spawn check_stderr unix_start);
 
 my ($base) = ($0 =~ m!\b([^/]+)\.[^\.]+\z!);
 $tmpdir = File::Temp->newdir("unicorn-$base-XXXX", TMPDIR => 1);
@@ -55,24 +55,26 @@ sub tcp_host_port {
 	}
 }
 
-sub tcp_connect {
-	my ($dest, %opt) = @_;
-	my $addr = tcp_host_port($dest);
-	my $s = ref($dest)->new(
-		Proto => 'tcp',
-		Type => SOCK_STREAM,
-		PeerAddr => $addr,
-		%opt,
-	) or BAIL_OUT "failed to connect to $addr: $!";
+sub unix_start ($@) {
+	my ($dst, @req) = @_;
+	my $s = IO::Socket::UNIX->new(Peer => $dst, Type => SOCK_STREAM) or
+		BAIL_OUT "unix connect $dst: $!";
 	$s->autoflush(1);
+	print $s @req, "\r\n\r\n" if @req;
 	$s;
 }
 
-sub start_req {
-	my ($srv, @req) = @_;
-	my $c = tcp_connect($srv);
-	print $c @req, "\r\n\r\n";
-	$c;
+sub tcp_start ($@) {
+	my ($dst, @req) = @_;
+	my $addr = tcp_host_port($dst);
+	my $s = ref($dst)->new(
+		Proto => 'tcp',
+		Type => SOCK_STREAM,
+		PeerAddr => $addr,
+	) or BAIL_OUT "failed to connect to $addr: $!";
+	$s->autoflush(1);
+	print $s @req, "\r\n\r\n" if @req;
+	$s;
 }
 
 sub slurp {
