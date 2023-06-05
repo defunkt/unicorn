@@ -123,7 +123,3 @@ unicorn_wait_start () {
 	# no need to play tricks with FIFOs since we got "ready_pipe" now
 	unicorn_pid=$(cat $pid)
 }
-
-rsha1 () {
-	sha1sum.rb
-}
