@@ -472,10 +472,7 @@ class Unicorn::HttpServer
 
   def listener_sockets
     listener_fds = {}
-    LISTENERS.each do |sock|
-      sock.close_on_exec = false
-      listener_fds[sock.fileno] = sock
-    end
+    LISTENERS.each { |sock| listener_fds[sock.fileno] = sock }
     listener_fds
   end
 
