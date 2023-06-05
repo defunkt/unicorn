@@ -1,15 +1,19 @@
 #!perl -w
 # Copyright (C) unicorn hackers <unicorn-public@yhbt.net>
 # License: GPL-3.0+ <https://www.gnu.org/licenses/gpl-3.0.txt>
-# this is the main integration test for things which don't require
-# restarting or signals
+
+# This is the main integration test for fast-ish things to minimize
+# Ruby startup time penalties.
 
 use v5.14; BEGIN { require './t/lib.perl' };
 use autodie;
 my $srv = tcp_server();
 my $host_port = tcp_host_port($srv);
 my $t0 = time;
-my $ar = unicorn(qw(-E none t/integration.ru), { 3 => $srv });
+my $conf = "$tmpdir/u.conf.rb";
+open my $conf_fh, '>', $conf;
+$conf_fh->autoflush(1);
+my $ar = unicorn(qw(-E none t/integration.ru -c), $conf, { 3 => $srv });
 my $curl = which('curl');
 END { diag slurp("$tmpdir/err.log") if $tmpdir };
 sub slurp_hdr {
@@ -207,7 +211,40 @@ SKIP: {
 	$do_curl->('-T-');
 }
 
+
 # ... more stuff here
+
+# SIGHUP-able stuff goes here
+
+if ('max_header_len internal API') {
+	undef $c;
+	my $req = 'GET / HTTP/1.0';
+	my $len = length($req."\r\n\r\n");
+	my $fifo = "$tmpdir/fifo";
+	POSIX::mkfifo($fifo, 0600) or die "mkfifo: $!";
+	print $conf_fh <<EOM;
+Unicorn::HttpParser.max_header_len = $len
+listen "$host_port" # TODO: remove this requirement for SIGHUP
+after_fork { |_,_| File.open('$fifo', 'w') { |fp| fp.write "pid=#\$\$" } }
+EOM
+	$ar->do_kill('HUP');
+	open my $fifo_fh, '<', $fifo;
+	my $wpid = readline($fifo_fh);
+	like($wpid, qr/\Apid=\d+\z/a , 'new worker ready');
+	close $fifo_fh;
+	$wpid =~ s/\Apid=// or die;
+	ok(CORE::kill(0, $wpid), 'worker PID retrieved');
+
+	$c = start_req($srv, $req);
+	($status, $hdr) = slurp_hdr($c);
+	like($status, qr!\AHTTP/1\.[01] 200\b!, 'minimal request succeeds');
+
+	$c = start_req($srv, 'GET /xxxxxx HTTP/1.0');
+	($status, $hdr) = slurp_hdr($c);
+	like($status, qr!\AHTTP/1\.[01] 413\b!, 'big request fails');
+}
+
+
 undef $ar;
 my @log = slurp("$tmpdir/err.log");
 diag("@log") if $ENV{V};

@@ -81,6 +81,7 @@ run(lambda do |env|
     when '/env_dump'; [ 200, {}, [ env_dump(env) ] ]
     when '/write_on_close'; write_on_close
     when '/pid'; [ 200, {}, [ "#$$\n" ] ]
+    else '/'; [ 200, {}, [ env_dump(env) ] ]
     end # case PATH_INFO (GET)
   when 'POST'
     case env['PATH_INFO']

@@ -125,7 +125,7 @@ $(T_sh): dep $(test_prereq) t/random_blob t/trash/.gitignore
 t/trash/.gitignore : | t/trash
 	echo '*' >$@
 
-dependencies := socat curl
+dependencies := curl
 deps := $(addprefix t/.dep+,$(dependencies))
 $(deps): dep_bin = $(lastword $(subst +, ,$@))
 $(deps):
