@@ -5,16 +5,24 @@ TCP ports or Unix domain sockets.  They're all designed to run
 concurrently with other tests to minimize test time, but tests may be
 run independently as well.
 
-We write our tests in Bourne shell because that's what we're
-comfortable writing integration tests with.
+New tests are written in Perl 5 because we need a stable language
+to test real-world behavior and Ruby introduces incompatibilities
+at a far faster rate than Perl 5.  Perl is Ruby's older cousin, so
+it should be easy-to-learn for Rubyists.
+
+Old tests are in Bourne shell, but the socat(1) dependency was probably
+too rare compared to Perl 5.
 
 == Requirements
 
-* {Ruby 2.0.0+}[https://www.ruby-lang.org/en/] (duh!)
+* {Ruby 2.0.0+}[https://www.ruby-lang.org/en/]
+* {Perl 5.14+}[https://www.perl.org/] # your distro should have it
 * {GNU make}[https://www.gnu.org/software/make/]
+
+The following requirements will eventually be dropped.
+
 * {socat}[http://www.dest-unreach.org/socat/]
 * {curl}[https://curl.haxx.se/]
-* standard UNIX shell utilities (Bourne sh, awk, sed, grep, ...)
 
 We do not use bashisms or any non-portable, non-POSIX constructs
 in our shell code.  We use the "pipefail" option if available and
@@ -26,9 +34,13 @@ with {dash}[http://gondor.apana.org.au/~herbert/dash/] and
 
 To run the entire test suite with 8 tests running at once:
 
-  make -j8
+  make -j8 && prove -vw
 
-To run one individual test:
+To run one individual test (Perl5):
+
+  prove -vw t/integration.t
+
+To run one individual test (shell):
 
   make t0000-simple-http.sh
 

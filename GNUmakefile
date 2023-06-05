@@ -86,7 +86,7 @@ $(tmp_bin)/%: bin/% | $(tmp_bin)
 bins: $(tmp_bins)
 
 t_log := $(T_log) $(T_n_log)
-test: $(T) $(T_n)
+test: $(T) $(T_n) test-prove
 	@cat $(t_log) | $(MRI) test/aggregate.rb
 	@$(RM) $(t_log)
 
@@ -140,6 +140,9 @@ t/random_blob:
 	mv $@.$(pid) $@
 
 test-integration: $(T_sh)
+
+test-prove:
+	prove -vw
 
 check: test-require test test-integration
 test-all: check
