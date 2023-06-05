@@ -5,6 +5,11 @@
 # this goes for t/integration.t  We'll try to put as many tests
 # in here as possible to avoid startup overhead of Ruby.
 
+def early_hints(env, val)
+  env['rack.early_hints'].call('link' => val) # val may be ary or string
+  [ 200, {}, [ val.class.to_s ] ]
+end
+
 $orig_rack_200 = nil
 def tweak_status_code
   $orig_rack_200 = Rack::Utils::HTTP_STATUS_CODES[200]
@@ -81,6 +86,8 @@ run(lambda do |env|
     when '/env_dump'; [ 200, {}, [ env_dump(env) ] ]
     when '/write_on_close'; write_on_close
     when '/pid'; [ 200, {}, [ "#$$\n" ] ]
+    when '/early_hints_rack2'; early_hints(env, "r\n2")
+    when '/early_hints_rack3'; early_hints(env, %w(r 3))
     else '/'; [ 200, {}, [ env_dump(env) ] ]
     end # case PATH_INFO (GET)
   when 'POST'

@@ -13,8 +13,16 @@ my $t0 = time;
 my $conf = "$tmpdir/u.conf.rb";
 open my $conf_fh, '>', $conf;
 $conf_fh->autoflush(1);
+my $u1 = "$tmpdir/u1";
+print $conf_fh <<EOM;
+early_hints true
+listen "$u1"
+listen "$host_port" # TODO: remove this requirement for SIGHUP
+EOM
 my $ar = unicorn(qw(-E none t/integration.ru -c), $conf, { 3 => $srv });
 my $curl = which('curl');
+my $fifo = "$tmpdir/fifo";
+POSIX::mkfifo($fifo, 0600) or die "mkfifo: $!";
 my %PUT = (
 	chunked_md5 => sub {
 		my ($in, $out, $path, %opt) = @_;
@@ -102,6 +110,26 @@ $c = tcp_start($srv, 'GET /nil-header-value HTTP/1.0');
 is_deeply([grep(/^X-Nil:/, @$hdr)], ['X-Nil: '],
 	'nil header value accepted for broken apps') or diag(explain($hdr));
 
+my $ck_early_hints = sub {
+	my ($note) = @_;
+	$c = unix_start($u1, 'GET /early_hints_rack2 HTTP/1.0');
+	($status, $hdr) = slurp_hdr($c);
+	like($status, qr!\AHTTP/1\.[01] 103\b!, 'got 103 for rack 2 value');
+	is_deeply(['link: r', 'link: 2'], $hdr, 'rack 2 hints match '.$note);
+	($status, $hdr) = slurp_hdr($c);
+	like($status, qr!\AHTTP/1\.[01] 200\b!, 'got 200 afterwards');
+	is(readline($c), 'String', 'early hints used a String for rack 2');
+
+	$c = unix_start($u1, 'GET /early_hints_rack3 HTTP/1.0');
+	($status, $hdr) = slurp_hdr($c);
+	like($status, qr!\AHTTP/1\.[01] 103\b!, 'got 103 for rack 3');
+	is_deeply(['link: r', 'link: 3'], $hdr, 'rack 3 hints match '.$note);
+	($status, $hdr) = slurp_hdr($c);
+	like($status, qr!\AHTTP/1\.[01] 200\b!, 'got 200 afterwards');
+	is(readline($c), 'Array', 'early hints used a String for rack 3');
+};
+$ck_early_hints->('ccc off'); # we'll retest later
+
 if ('TODO: ensure Rack::Utils::HTTP_STATUS_CODES is available') {
 	$c = tcp_start($srv, 'POST /tweak-status-code HTTP/1.0');
 	($status, $hdr) = slurp_hdr($c);
@@ -154,6 +182,7 @@ if ('bad requests') {
 # input tests
 my ($blob_size, $blob_hash);
 SKIP: {
+	skip 'SKIP_EXPENSIVE on', 1 if $ENV{SKIP_EXPENSIVE};
 	CORE::open(my $rh, '<', 't/random_blob') or
 		skip "t/random_blob not generated $!", 1;
 	$blob_size = -s $rh;
@@ -232,16 +261,24 @@ SKIP: {
 
 # SIGHUP-able stuff goes here
 
+if ('check_client_connection') {
+	print $conf_fh <<EOM; # appending to existing
+check_client_connection true
+after_fork { |_,_| File.open('$fifo', 'w') { |fp| fp.write "pid=#\$\$" } }
+EOM
+	$ar->do_kill('HUP');
+	open my $fifo_fh, '<', $fifo;
+	my $wpid = readline($fifo_fh);
+	like($wpid, qr/\Apid=\d+\z/a , 'new worker ready');
+	$ck_early_hints->('ccc on');
+}
+
 if ('max_header_len internal API') {
 	undef $c;
 	my $req = 'GET / HTTP/1.0';
 	my $len = length($req."\r\n\r\n");
-	my $fifo = "$tmpdir/fifo";
-	POSIX::mkfifo($fifo, 0600) or die "mkfifo: $!";
-	print $conf_fh <<EOM;
+	print $conf_fh <<EOM; # appending to existing
 Unicorn::HttpParser.max_header_len = $len
-listen "$host_port" # TODO: remove this requirement for SIGHUP
-after_fork { |_,_| File.open('$fifo', 'w') { |fp| fp.write "pid=#\$\$" } }
 EOM
 	$ar->do_kill('HUP');
 	open my $fifo_fh, '<', $fifo;
