@@ -265,16 +265,6 @@ EOF
     end
   end
 
-  def test_basic
-    File.open("config.ru", "wb") { |fp| fp.syswrite(HI) }
-    pid = fork do
-      redirect_test_io { exec($unicorn_bin, "-l", "#{@addr}:#{@port}") }
-    end
-    results = retry_hit(["http://#{@addr}:#{@port}/"])
-    assert_equal String, results[0].class
-    assert_shutdown(pid)
-  end
-
   def test_rack_env_unset
     File.open("config.ru", "wb") { |fp| fp.syswrite(SHOW_RACK_ENV) }
     pid = fork { redirect_test_io { exec($unicorn_bin, "-l#@addr:#@port") } }
@@ -633,20 +623,6 @@ EOF
       fp.syswrite(HI)
     end
     pid = fork { redirect_test_io { exec($unicorn_bin) } }
-    results = retry_hit(["http://#{@addr}:#{@port}/"])
-    assert_equal String, results[0].class
-    assert_shutdown(pid)
-  end
-
-  def test_config_ru_alt_path
-    config_path = "#{@tmpdir}/foo.ru"
-    File.open(config_path, "wb") { |fp| fp.syswrite(HI) }
-    pid = fork do
-      redirect_test_io do
-        Dir.chdir("/")
-        exec($unicorn_bin, "-l#{@addr}:#{@port}", config_path)
-      end
-    end
     results = retry_hit(["http://#{@addr}:#{@port}/"])
     assert_equal String, results[0].class
     assert_shutdown(pid)
