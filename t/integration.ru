@@ -18,6 +18,20 @@ def restore_status_code
   [ 200, {}, [] ]
 end
 
+class WriteOnClose
+  def each(&block)
+    @callback = block
+  end
+
+  def close
+    @callback.call "7\r\nGoodbye\r\n0\r\n\r\n"
+  end
+end
+
+def write_on_close
+  [ 200, { 'transfer-encoding' => 'chunked' }, WriteOnClose.new ]
+end
+
 run(lambda do |env|
   case env['REQUEST_METHOD']
   when 'GET'
@@ -26,6 +40,7 @@ run(lambda do |env|
     when '/rack-3-array-headers'; [ 200, { 'x-r3' => %w(a b c) }, [] ]
     when '/nil-header-value'; [ 200, { 'X-Nil' => nil }, [] ]
     when '/unknown-status-pass-through'; [ '666 I AM THE BEAST', {}, [] ]
+    when '/write_on_close'; write_on_close
     end # case PATH_INFO (GET)
   when 'POST'
     case env['PATH_INFO']

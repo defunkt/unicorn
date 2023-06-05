@@ -4,6 +4,7 @@
 
 use v5.14; BEGIN { require './t/lib.perl' };
 my $srv = tcp_server();
+my $host_port = tcp_host_port($srv);
 my $t0 = time;
 my $ar = unicorn(qw(-E none t/integration.ru), { 3 => $srv });
 
@@ -66,8 +67,19 @@ if ('TODO: ensure Rack::Utils::HTTP_STATUS_CODES is available') {
 	is($status, $orig_200_status, 'original status restored');
 }
 
+SKIP: {
+	eval { require HTTP::Tiny } or skip "HTTP::Tiny missing: $@", 1;
+	my $ht = HTTP::Tiny->new;
+	my $res = $ht->get("http://$host_port/write_on_close");
+	is($res->{content}, 'Goodbye', 'write-on-close body read');
+}
 
 # ... more stuff here
 undef $ar;
-diag slurp("$tmpdir/err.log") if $ENV{V};
+my @log = slurp("$tmpdir/err.log");
+diag("@log") if $ENV{V};
+my @err = grep(!/NameError.*Unicorn::Waiter/, grep(/error/i, @log));
+is_deeply(\@err, [], 'no unexpected errors in stderr');
+is_deeply([grep(/SIGKILL/, @log)], [], 'no SIGKILL in stderr');
+
 done_testing;
