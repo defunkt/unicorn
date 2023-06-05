@@ -20,8 +20,7 @@ sub slurp_hdr {
 my ($c, $status, $hdr);
 
 # response header tests
-$c = tcp_connect($srv);
-print $c "GET /rack-2-newline-headers HTTP/1.0\r\n\r\n" or die $!;
+$c = start_req($srv, 'GET /rack-2-newline-headers HTTP/1.0');
 ($status, $hdr) = slurp_hdr($c);
 like($status, qr!\AHTTP/1\.[01] 200\b!, 'status line valid');
 my $orig_200_status = $status;
@@ -40,8 +39,7 @@ SKIP: { # Date header check
 };
 
 
-$c = tcp_connect($srv);
-print $c "GET /rack-3-array-headers HTTP/1.0\r\n\r\n" or die $!;
+$c = start_req($srv, 'GET /rack-3-array-headers HTTP/1.0');
 ($status, $hdr) = slurp_hdr($c);
 is_deeply([ grep(/^x-r3: /, @$hdr) ],
 	[ 'x-r3: a', 'x-r3: b', 'x-r3: c' ],
@@ -49,8 +47,7 @@ is_deeply([ grep(/^x-r3: /, @$hdr) ],
 
 SKIP: {
 	eval { require JSON::PP } or skip "JSON::PP missing: $@", 1;
-	$c = tcp_connect($srv);
-	print $c "GET /env_dump\r\n" or die $!;
+	my $c = start_req($srv, 'GET /env_dump');
 	my $json = do { local $/; readline($c) };
 	unlike($json, qr/^Connection: /smi, 'no connection header for 0.9');
 	unlike($json, qr!\AHTTP/!s, 'no HTTP/1.x prefix for 0.9');
@@ -60,20 +57,17 @@ SKIP: {
 }
 
 # cf. <CAO47=rJa=zRcLn_Xm4v2cHPr6c0UswaFC_omYFEH+baSxHOWKQ@mail.gmail.com>
-$c = tcp_connect($srv);
-print $c "GET /nil-header-value HTTP/1.0\r\n\r\n" or die $!;
+$c = start_req($srv, 'GET /nil-header-value HTTP/1.0');
 ($status, $hdr) = slurp_hdr($c);
 is_deeply([grep(/^X-Nil:/, @$hdr)], ['X-Nil: '],
 	'nil header value accepted for broken apps') or diag(explain($hdr));
 
 if ('TODO: ensure Rack::Utils::HTTP_STATUS_CODES is available') {
-	$c = tcp_connect($srv);
-	print $c "POST /tweak-status-code HTTP/1.0\r\n\r\n" or die $!;
+	$c = start_req($srv, 'POST /tweak-status-code HTTP/1.0');
 	($status, $hdr) = slurp_hdr($c);
 	like($status, qr!\AHTTP/1\.[01] 200 HI\b!, 'status tweaked');
 
-	$c = tcp_connect($srv);
-	print $c "POST /restore-status-code HTTP/1.0\r\n\r\n" or die $!;
+	$c = start_req($srv, 'POST /restore-status-code HTTP/1.0');
 	($status, $hdr) = slurp_hdr($c);
 	is($status, $orig_200_status, 'original status restored');
 }
