@@ -23,6 +23,7 @@ run(lambda do |env|
   when 'GET'
     case env['PATH_INFO']
     when '/rack-2-newline-headers'; [ 200, { 'X-R2' => "a\nb\nc" }, [] ]
+    when '/rack-3-array-headers'; [ 200, { 'x-r3' => %w(a b c) }, [] ]
     when '/nil-header-value'; [ 200, { 'X-Nil' => nil }, [] ]
     when '/unknown-status-pass-through'; [ '666 I AM THE BEAST', {}, [] ]
     end # case PATH_INFO (GET)

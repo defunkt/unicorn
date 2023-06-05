@@ -38,6 +38,15 @@ SKIP: { # Date header check
 		diag(explain([$t, $!, \@d]));
 };
 
+
+$c = tcp_connect($srv);
+print $c "GET /rack-3-array-headers HTTP/1.0\r\n\r\n" or die $!;
+($status, $hdr) = slurp_hdr($c);
+is_deeply([ grep(/^x-r3: /, @$hdr) ],
+	[ 'x-r3: a', 'x-r3: b', 'x-r3: c' ],
+	'rack 3 array headers supported') or diag(explain($hdr));
+
+
 # cf. <CAO47=rJa=zRcLn_Xm4v2cHPr6c0UswaFC_omYFEH+baSxHOWKQ@mail.gmail.com>
 $c = tcp_connect($srv);
 print $c "GET /nil-header-value HTTP/1.0\r\n\r\n" or die $!;
