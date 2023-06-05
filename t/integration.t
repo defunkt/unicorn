@@ -246,11 +246,8 @@ EOM
 
 
 undef $ar;
-my @log = slurp("$tmpdir/err.log");
-diag("@log") if $ENV{V};
-my @err = grep(!/NameError.*Unicorn::Waiter/, grep(/error/i, @log));
-is_deeply(\@err, [], 'no unexpected errors in stderr');
-is_deeply([grep(/SIGKILL/, @log)], [], 'no SIGKILL in stderr');
+
+check_stderr;
 
 undef $tmpdir;
 done_testing;

@@ -20,7 +20,7 @@ my $unix_req = sub {
 	print $fh <<EOM;
 pid "$tmpdir/u.pid"
 listen "$u1"
-stderr_path "$tmpdir/err1.log"
+stderr_path "$tmpdir/err.log"
 EOM
 	close $fh;
 
@@ -113,6 +113,5 @@ is($pidf, $to_kill{u1}, 'pid file contents unchanged after 2nd start failure');
 	ok(-S $u1, 'socket stays after SIGTERM');
 }
 
-my @log = slurp("$tmpdir/err.log");
-diag("@log") if $ENV{V};
+check_stderr;
 done_testing;

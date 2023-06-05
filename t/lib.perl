@@ -11,11 +11,19 @@ use POSIX qw(dup2 _exit setpgid :signal_h SEEK_SET F_SETFD);
 use File::Temp 0.19 (); # 0.19 for ->newdir
 our ($tmpdir, $errfh);
 our @EXPORT = qw(unicorn slurp tcp_server tcp_connect unicorn $tmpdir $errfh
-	SEEK_SET tcp_host_port start_req which spawn);
+	SEEK_SET tcp_host_port start_req which spawn check_stderr);
 
 my ($base) = ($0 =~ m!\b([^/]+)\.[^\.]+\z!);
 $tmpdir = File::Temp->newdir("unicorn-$base-XXXX", TMPDIR => 1);
 open($errfh, '>>', "$tmpdir/err.log");
+
+sub check_stderr () {
+	my @log = slurp("$tmpdir/err.log");
+	diag("@log") if $ENV{V};
+	my @err = grep(!/NameError.*Unicorn::Waiter/, grep(/error/i, @log));
+	is_deeply(\@err, [], 'no unexpected errors in stderr');
+	is_deeply([grep(/SIGKILL/, @log)], [], 'no SIGKILL in stderr');
+}
 
 sub tcp_server {
 	my %opt = (
