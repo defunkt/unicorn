@@ -32,6 +32,21 @@ def write_on_close
   [ 200, { 'transfer-encoding' => 'chunked' }, WriteOnClose.new ]
 end
 
+def env_dump(env)
+  require 'json'
+  h = {}
+  env.each do |k,v|
+    case v
+    when String, Integer, true, false; h[k] = v
+    else
+      case k
+      when 'rack.version', 'rack.after_reply'; h[k] = v
+      end
+    end
+  end
+  h.to_json
+end
+
 run(lambda do |env|
   case env['REQUEST_METHOD']
   when 'GET'
@@ -40,6 +55,7 @@ run(lambda do |env|
     when '/rack-3-array-headers'; [ 200, { 'x-r3' => %w(a b c) }, [] ]
     when '/nil-header-value'; [ 200, { 'X-Nil' => nil }, [] ]
     when '/unknown-status-pass-through'; [ '666 I AM THE BEAST', {}, [] ]
+    when '/env_dump'; [ 200, {}, [ env_dump(env) ] ]
     when '/write_on_close'; write_on_close
     end # case PATH_INFO (GET)
   when 'POST'

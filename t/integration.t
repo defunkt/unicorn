@@ -47,6 +47,17 @@ is_deeply([ grep(/^x-r3: /, @$hdr) ],
 	[ 'x-r3: a', 'x-r3: b', 'x-r3: c' ],
 	'rack 3 array headers supported') or diag(explain($hdr));
 
+SKIP: {
+	eval { require JSON::PP } or skip "JSON::PP missing: $@", 1;
+	$c = tcp_connect($srv);
+	print $c "GET /env_dump\r\n" or die $!;
+	my $json = do { local $/; readline($c) };
+	unlike($json, qr/^Connection: /smi, 'no connection header for 0.9');
+	unlike($json, qr!\AHTTP/!s, 'no HTTP/1.x prefix for 0.9');
+	my $env = JSON::PP->new->decode($json);
+	is(ref($env), 'HASH', 'JSON decoded body to hashref');
+	is($env->{SERVER_PROTOCOL}, 'HTTP/0.9', 'SERVER_PROTOCOL is 0.9');
+}
 
 # cf. <CAO47=rJa=zRcLn_Xm4v2cHPr6c0UswaFC_omYFEH+baSxHOWKQ@mail.gmail.com>
 $c = tcp_connect($srv);
