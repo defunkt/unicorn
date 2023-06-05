@@ -15,16 +15,6 @@ open my $conf_fh, '>', $conf;
 $conf_fh->autoflush(1);
 my $ar = unicorn(qw(-E none t/integration.ru -c), $conf, { 3 => $srv });
 my $curl = which('curl');
-END { diag slurp("$tmpdir/err.log") if $tmpdir };
-sub slurp_hdr {
-	my ($c) = @_;
-	local $/ = "\r\n\r\n"; # affects both readline+chomp
-	chomp(my $hdr = readline($c));
-	my ($status, @hdr) = split(/\r\n/, $hdr);
-	diag explain([ $status, \@hdr ]) if $ENV{V};
-	($status, \@hdr);
-}
-
 my %PUT = (
 	chunked_md5 => sub {
 		my ($in, $out, $path, %opt) = @_;

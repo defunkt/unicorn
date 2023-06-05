@@ -109,4 +109,5 @@ is($pidf, $to_kill{u1}, 'pid file contents unchanged after 2nd start failure');
 }
 
 check_stderr;
+undef $tmpdir;
 done_testing;

@@ -11,11 +11,12 @@ use POSIX qw(dup2 _exit setpgid :signal_h SEEK_SET F_SETFD);
 use File::Temp 0.19 (); # 0.19 for ->newdir
 our ($tmpdir, $errfh);
 our @EXPORT = qw(unicorn slurp tcp_server tcp_start unicorn $tmpdir $errfh
-	SEEK_SET tcp_host_port which spawn check_stderr unix_start);
+	SEEK_SET tcp_host_port which spawn check_stderr unix_start slurp_hdr);
 
 my ($base) = ($0 =~ m!\b([^/]+)\.[^\.]+\z!);
 $tmpdir = File::Temp->newdir("unicorn-$base-XXXX", TMPDIR => 1);
 open($errfh, '>>', "$tmpdir/err.log");
+END { diag slurp("$tmpdir/err.log") if $tmpdir };
 
 sub check_stderr () {
 	my @log = slurp("$tmpdir/err.log");
@@ -23,6 +24,15 @@ sub check_stderr () {
 	my @err = grep(!/NameError.*Unicorn::Waiter/, grep(/error/i, @log));
 	is_deeply(\@err, [], 'no unexpected errors in stderr');
 	is_deeply([grep(/SIGKILL/, @log)], [], 'no SIGKILL in stderr');
+}
+
+sub slurp_hdr {
+	my ($c) = @_;
+	local $/ = "\r\n\r\n"; # affects both readline+chomp
+	chomp(my $hdr = readline($c));
+	my ($status, @hdr) = split(/\r\n/, $hdr);
+	diag explain([ $status, \@hdr ]) if $ENV{V};
+	($status, \@hdr);
 }
 
 sub tcp_server {

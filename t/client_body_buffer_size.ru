@@ -1,6 +1,4 @@
 #\ -E none
-use Rack::ContentLength
-use Rack::ContentType, 'text/plain'
 app = lambda do |env|
   input = env['rack.input']
   case env["PATH_INFO"]
