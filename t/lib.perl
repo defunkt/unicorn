@@ -79,7 +79,7 @@ sub tcp_start ($@) {
 
 sub slurp {
 	open my $fh, '<', $_[0];
-	local $/;
+	local $/ if !wantarray;
 	readline($fh);
 }
 

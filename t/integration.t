@@ -7,8 +7,8 @@
 
 use v5.14; BEGIN { require './t/lib.perl' };
 use autodie;
-my $srv = tcp_server();
-my $host_port = tcp_host_port($srv);
+our $srv = tcp_server();
+our $host_port = tcp_host_port($srv);
 my $t0 = time;
 my $conf = "$tmpdir/u.conf.rb";
 open my $conf_fh, '>', $conf;
@@ -209,8 +209,34 @@ SKIP: {
 	seek($rh, 0, SEEK_SET);
 	$copt->{0} = $rh;
 	$do_curl->('-T-');
-}
 
+	diag 'testing Unicorn::PrereadInput...';
+	local $srv = tcp_server();
+	local $host_port = tcp_host_port($srv);
+	check_stderr;
+	truncate($errfh, 0);
+
+	my $pri = unicorn(qw(-E none t/preread_input.ru), { 3 => $srv });
+	$url = "http://$host_port/";
+
+	$do_curl->(qw(-T t/random_blob));
+	seek($rh, 0, SEEK_SET);
+	$copt->{0} = $rh;
+	$do_curl->('-T-');
+
+	my @pr_err = slurp("$tmpdir/err.log");
+	is(scalar(grep(/app dispatch:/, @pr_err)), 2, 'app dispatched twice');
+
+	# abort a chunked request by blocking curl on a FIFO:
+	$c = tcp_start($srv, "PUT / HTTP/1.1\r\nTransfer-Encoding: chunked");
+	close $c;
+	@pr_err = slurp("$tmpdir/err.log");
+	is(scalar(grep(/app dispatch:/, @pr_err)), 2,
+			'app did not dispatch on aborted request');
+	undef $pri;
+	check_stderr;
+	diag 'Unicorn::PrereadInput middleware tests done';
+}
 
 # ... more stuff here
 
