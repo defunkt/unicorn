@@ -22,6 +22,8 @@ sub check_stderr () {
 	my @log = slurp("$tmpdir/err.log");
 	diag("@log") if $ENV{V};
 	my @err = grep(!/NameError.*Unicorn::Waiter/, grep(/error/i, @log));
+	@err = grep(!/failed to set accept_filter=/, @err);
+	@err = grep(!/perhaps accf_.*? needs to be loaded/, @err);
 	is_deeply(\@err, [], 'no unexpected errors in stderr');
 	is_deeply([grep(/SIGKILL/, @log)], [], 'no SIGKILL in stderr');
 }
