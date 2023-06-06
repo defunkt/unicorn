@@ -6,7 +6,8 @@ require 'unicorn'
 
 class TestStreamInput < Test::Unit::TestCase
   def setup
-    @rs = $/
+    @rs = "\n"
+    $/ == "\n" or abort %q{test broken if \$/ != "\\n"}
     @env = {}
     @rd, @wr = Kgio::UNIXSocket.pair
     @rd.sync = @wr.sync = true
@@ -15,7 +16,6 @@ class TestStreamInput < Test::Unit::TestCase
 
   def teardown
     return if $$ != @start_pid
-    $/ = @rs
     @rd.close rescue nil
     @wr.close rescue nil
     Process.waitall
@@ -54,11 +54,18 @@ class TestStreamInput < Test::Unit::TestCase
   end
 
   def test_gets_empty_rs
-    $/ = nil
     r = init_request("a\nb\n\n")
     si = Unicorn::StreamInput.new(@rd, r)
-    assert_equal "a\nb\n\n", si.gets
-    assert_nil si.gets
+    pid = fork do # to avoid $/ warning (hopefully)
+      $/ = nil
+      @rd.close
+      @wr.write(si.gets)
+      @wr.close
+    end
+    @wr.close
+    assert_equal "a\nb\n\n", @rd.read
+    pid, status = Process.waitpid2(pid)
+    assert_predicate status, :success?
   end
 
   def test_read_with_equal_len
@@ -90,21 +97,21 @@ class TestStreamInput < Test::Unit::TestCase
   end
 
   def test_gets_long
-    r = init_request("hello", 5 + (4096 * 4 * 3) + "#$/foo#$/".size)
+    r = init_request("hello", 5 + (4096 * 4 * 3) + "#{@rs}foo#{@rs}".size)
     si = Unicorn::StreamInput.new(@rd, r)
     status = line = nil
     pid = fork {
       @rd.close
       3.times { @wr.write("ffff" * 4096) }
-      @wr.write "#$/foo#$/"
+      @wr.write "#{@rs}foo#{@rs}"
       @wr.close
     }
     @wr.close
     line = si.gets
     assert_equal(4096 * 4 * 3 + 5 + $/.size, line.size)
-    assert_equal("hello" << ("ffff" * 4096 * 3) << "#$/", line)
+    assert_equal("hello" << ("ffff" * 4096 * 3) << "#{@rs}", line)
     line = si.gets
-    assert_equal "foo#$/", line
+    assert_equal "foo#{@rs}", line
     assert_nil si.gets
     pid, status = Process.waitpid2(pid)
     assert status.success?

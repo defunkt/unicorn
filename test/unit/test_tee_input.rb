@@ -9,17 +9,16 @@ class TeeInput < Unicorn::TeeInput
 end
 
 class TestTeeInput < Test::Unit::TestCase
-
   def setup
-    @rs = $/
     @rd, @wr = Kgio::UNIXSocket.pair
     @rd.sync = @wr.sync = true
     @start_pid = $$
+    @rs = "\n"
+    $/ == "\n" or abort %q{test broken if \$/ != "\\n"}
   end
 
   def teardown
     return if $$ != @start_pid
-    $/ = @rs
     @rd.close rescue nil
     @wr.close rescue nil
     begin
@@ -37,38 +36,38 @@ class TestTeeInput < Test::Unit::TestCase
   end
 
   def test_gets_long
-    r = init_request("hello", 5 + (4096 * 4 * 3) + "#$/foo#$/".size)
+    r = init_request("hello", 5 + (4096 * 4 * 3) + "#{@rs}foo#{@rs}".size)
     ti = TeeInput.new(@rd, r)
     status = line = nil
     pid = fork {
       @rd.close
       3.times { @wr.write("ffff" * 4096) }
-      @wr.write "#$/foo#$/"
+      @wr.write "#{@rs}foo#{@rs}"
       @wr.close
     }
     @wr.close
     line = ti.gets
     assert_equal(4096 * 4 * 3 + 5 + $/.size, line.size)
-    assert_equal("hello" << ("ffff" * 4096 * 3) << "#$/", line)
+    assert_equal("hello" << ("ffff" * 4096 * 3) << "#{@rs}", line)
     line = ti.gets
-    assert_equal "foo#$/", line
+    assert_equal "foo#{@rs}", line
     assert_nil ti.gets
     pid, status = Process.waitpid2(pid)
     assert status.success?
   end
 
   def test_gets_short
-    r = init_request("hello", 5 + "#$/foo".size)
+    r = init_request("hello", 5 + "#{@rs}foo".size)
     ti = TeeInput.new(@rd, r)
     status = line = nil
     pid = fork {
       @rd.close
-      @wr.write "#$/foo"
+      @wr.write "#{@rs}foo"
       @wr.close
     }
     @wr.close
     line = ti.gets
-    assert_equal("hello#$/", line)
+    assert_equal("hello#{@rs}", line)
     line = ti.gets
     assert_equal "foo", line
     assert_nil ti.gets
