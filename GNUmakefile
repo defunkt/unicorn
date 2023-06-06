@@ -11,6 +11,7 @@ RSYNC = rsync
 OLDDOC = olddoc
 RDOC = rdoc
 INSTALL = install
+PROVE = prove
 
 GIT-VERSION-FILE: .FORCE-GIT-VERSION-FILE
 	@./GIT-VERSION-GEN
@@ -141,8 +142,8 @@ t/random_blob:
 
 test-integration: $(T_sh)
 
-test-prove:
-	prove -vw
+test-prove: t/random_blob
+	$(PROVE) -vw
 
 check: test-require test test-integration
 test-all: check
