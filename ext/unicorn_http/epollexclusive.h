@@ -22,6 +22,18 @@
 #endif
 
 #if USE_EPOLL
+#if defined(HAVE_RB_IO_DESCRIPTOR) /* Ruby 3.1+ */
+#	define my_fileno(io) rb_io_descriptor(io)
+#else /* Ruby <3.1 */
+static int my_fileno(VALUE io)
+{
+	rb_io_t *fptr;
+	GetOpenFile(io, fptr);
+	rb_io_check_closed(fptr);
+	return fptr->fd;
+}
+#endif /* Ruby <3.1 */
+
 /*
  * :nodoc:
  * returns IO object if EPOLLEXCLUSIVE works and arms readers
@@ -38,9 +50,8 @@ static VALUE prep_readers(VALUE cls, VALUE readers)
 
 	Check_Type(readers, T_ARRAY);
 	for (i = 0; i < RARRAY_LEN(readers); i++) {
-		int rc;
+		int rc, fd;
 		struct epoll_event e;
-		rb_io_t *fptr;
 		VALUE io = rb_ary_entry(readers, i);
 
 		e.data.u64 = i; /* the reason readers shouldn't change */
@@ -53,9 +64,8 @@ static VALUE prep_readers(VALUE cls, VALUE readers)
 		 * cycles on maintaining level-triggering.
 		 */
 		e.events = EPOLLEXCLUSIVE | EPOLLIN;
-		io = rb_io_get_io(io);
-		GetOpenFile(io, fptr);
-		rc = epoll_ctl(epfd, EPOLL_CTL_ADD, fptr->fd, &e);
+		fd = my_fileno(rb_io_get_io(io));
+		rc = epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &e);
 		if (rc < 0) rb_sys_fail("epoll_ctl");
 	}
 	return epio;
@@ -65,7 +75,7 @@ static VALUE prep_readers(VALUE cls, VALUE readers)
 #if USE_EPOLL
 struct ep_wait {
 	struct epoll_event event;
-	rb_io_t *fptr;
+	int epfd;
 	int timeout_msec;
 };
 
@@ -78,7 +88,7 @@ static void *do_wait(void *ptr) /* runs w/o GVL */
 	 * at-a-time (c.f. fs/eventpoll.c in linux.git, it's quite
 	 * easy-to-understand for anybody familiar with Ruby C).
 	 */
-	return (void *)(long)epoll_wait(epw->fptr->fd, &epw->event, 1,
+	return (void *)(long)epoll_wait(epw->epfd, &epw->event, 1,
 					epw->timeout_msec);
 }
 
@@ -92,9 +102,8 @@ get_readers(VALUE epio, VALUE ready, VALUE readers, VALUE timeout_msec)
 
 	Check_Type(ready, T_ARRAY);
 	Check_Type(readers, T_ARRAY);
-	epio = rb_io_get_io(epio);
-	GetOpenFile(epio, epw.fptr);
 
+	epw.epfd = my_fileno(epio);
 	epw.timeout_msec = NUM2INT(timeout_msec);
 	n = (long)rb_thread_call_without_gvl(do_wait, &epw, RUBY_UBF_IO, NULL);
 	if (n < 0) {

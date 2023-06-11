@@ -33,5 +33,7 @@ else
   message("no, needs Ruby 2.6+\n")
 end
 
-have_func('epoll_create1', %w(sys/epoll.h))
+if have_func('epoll_create1', %w(sys/epoll.h))
+  have_func('rb_io_descriptor') # Ruby 3.1+
+end
 create_makefile("unicorn_http")
