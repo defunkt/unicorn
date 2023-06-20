@@ -4,7 +4,7 @@
 
 #### HTTP PROTOCOL GRAMMAR
 # line endings
-  CRLF = ("\r\n" | "\n");
+  CRLF = ("\r\n" | "\n");
 
 # character types
   CTL = (cntrl | 127);
