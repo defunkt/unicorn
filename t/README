@@ -14,7 +14,7 @@ Old tests are in Bourne shell and slowly being ported to Perl 5.
 
 == Requirements
 
-* {Ruby 2.0.0+}[https://www.ruby-lang.org/en/]
+* {Ruby 2.5.0+}[https://www.ruby-lang.org/en/]
 * {Perl 5.14+}[https://www.perl.org/] # your distro should have it
 * {GNU make}[https://www.gnu.org/software/make/]
 * {curl}[https://curl.haxx.se/]
