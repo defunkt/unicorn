@@ -61,7 +61,7 @@ class Unicorn::HttpParser
   # returns an environment hash suitable for Rack if successful
   # This does minimal exception trapping and it is up to the caller
   # to handle any socket errors (e.g. user aborted upload).
-  def read(socket)
+  def read_headers(socket, ai)
     e = env
 
     # From https://www.ietf.org/rfc/rfc3875:
@@ -71,7 +71,7 @@ class Unicorn::HttpParser
     #  identify the client for the immediate request to the server;
     #  that client may be a proxy, gateway, or other intermediary
     #  acting on behalf of the actual source client."
-    e['REMOTE_ADDR'] = socket.kgio_addr
+    e['REMOTE_ADDR'] = ai.unix? ? '127.0.0.1' : ai.ip_address
 
     # short circuit the common case with small GET requests first
     socket.readpartial(16384, buf)
@@ -81,7 +81,7 @@ class Unicorn::HttpParser
       false until add_parse(socket.readpartial(16384))
     end
 
-    check_client_connection(socket) if @@check_client_connection
+    check_client_connection(socket, ai) if @@check_client_connection
 
     e['rack.input'] = 0 == content_length ?
                       NULL_IO : @@input_class.new(socket, self)
@@ -107,8 +107,8 @@ class Unicorn::HttpParser
   if Raindrops.const_defined?(:TCP_Info)
     TCPI = Raindrops::TCP_Info.allocate
 
-    def check_client_connection(socket) # :nodoc:
-      if Unicorn::TCPClient === socket
+    def check_client_connection(socket, ai) # :nodoc:
+      if ai.ip?
         # Raindrops::TCP_Info#get!, #state (reads struct tcp_info#tcpi_state)
         raise Errno::EPIPE, "client closed connection".freeze,
               EMPTY_ARRAY if closed_state?(TCPI.get!(socket).state)
@@ -152,8 +152,8 @@ class Unicorn::HttpParser
     # Ruby 2.2+ can show struct tcp_info as a string Socket::Option#inspect.
     # Not that efficient, but probably still better than doing unnecessary
     # work after a client gives up.
-    def check_client_connection(socket) # :nodoc:
-      if Unicorn::TCPClient === socket && @@tcpi_inspect_ok
+    def check_client_connection(socket, ai) # :nodoc:
+      if @@tcpi_inspect_ok && ai.ip?
         opt = socket.getsockopt(Socket::IPPROTO_TCP, Socket::TCP_INFO).inspect
         if opt =~ /\bstate=(\S+)/
           raise Errno::EPIPE, "client closed connection".freeze,

@@ -9,7 +9,7 @@ class TestStreamInput < Test::Unit::TestCase
     @rs = "\n"
     $/ == "\n" or abort %q{test broken if \$/ != "\\n"}
     @env = {}
-    @rd, @wr = Kgio::UNIXSocket.pair
+    @rd, @wr = UNIXSocket.pair
     @rd.sync = @wr.sync = true
     @start_pid = $$
   end

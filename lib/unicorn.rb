@@ -1,7 +1,6 @@
 # -*- encoding: binary -*-
 require 'etc'
 require 'stringio'
-require 'kgio'
 require 'raindrops'
 require 'io/wait'
 
@@ -112,7 +111,7 @@ module Unicorn
   F_SETPIPE_SZ = 1031 if RUBY_PLATFORM =~ /linux/
 
   def self.pipe # :nodoc:
-    Kgio::Pipe.new.each do |io|
+    IO.pipe.each do |io|
       # shrink pipes to minimize impact on /proc/sys/fs/pipe-user-pages-soft
       # limits.
       if defined?(F_SETPIPE_SZ)

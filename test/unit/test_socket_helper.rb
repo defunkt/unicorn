@@ -24,7 +24,8 @@ class TestSocketHelper < Test::Unit::TestCase
     port = unused_port @test_addr
     @tcp_listener_name = "#@test_addr:#{port}"
     @tcp_listener = bind_listen(@tcp_listener_name)
-    assert TCPServer === @tcp_listener
+    assert Socket === @tcp_listener
+    assert @tcp_listener.local_address.ip?
     assert_equal @tcp_listener_name, sock_name(@tcp_listener)
   end
 
@@ -38,10 +39,10 @@ class TestSocketHelper < Test::Unit::TestCase
       { :backlog => 16, :rcvbuf => 4096, :sndbuf => 4096 }
     ].each do |opts|
       tcp_listener = bind_listen(tcp_listener_name, opts)
-      assert TCPServer === tcp_listener
+      assert tcp_listener.local_address.ip?
       tcp_listener.close
       unix_listener = bind_listen(unix_listener_name, opts)
-      assert UNIXServer === unix_listener
+      assert unix_listener.local_address.unix?
       unix_listener.close
     end
   end
@@ -52,11 +53,13 @@ class TestSocketHelper < Test::Unit::TestCase
     @unix_listener_path = tmp.path
     File.unlink(@unix_listener_path)
     @unix_listener = bind_listen(@unix_listener_path)
-    assert UNIXServer === @unix_listener
+    assert Socket === @unix_listener
+    assert @unix_listener.local_address.unix?
     assert_equal @unix_listener_path, sock_name(@unix_listener)
     assert File.readable?(@unix_listener_path), "not readable"
     assert File.writable?(@unix_listener_path), "not writable"
     assert_equal 0777, File.umask
+    assert_equal @unix_listener, bind_listen(@unix_listener)
   ensure
     File.umask(old_umask)
   end
@@ -67,34 +70,11 @@ class TestSocketHelper < Test::Unit::TestCase
     @unix_listener_path = tmp.path
     File.unlink(@unix_listener_path)
     @unix_listener = bind_listen(@unix_listener_path, :umask => 077)
-    assert UNIXServer === @unix_listener
     assert_equal @unix_listener_path, sock_name(@unix_listener)
     assert_equal 0140700, File.stat(@unix_listener_path).mode
     assert_equal 0777, File.umask
   ensure
     File.umask(old_umask)
-  end
-
-  def test_bind_listen_unix_idempotent
-    test_bind_listen_unix
-    a = bind_listen(@unix_listener)
-    assert_equal a.fileno, @unix_listener.fileno
-    unix_server = server_cast(@unix_listener)
-    assert UNIXServer === unix_server
-    a = bind_listen(unix_server)
-    assert_equal a.fileno, unix_server.fileno
-    assert_equal a.fileno, @unix_listener.fileno
-  end
-
-  def test_bind_listen_tcp_idempotent
-    test_bind_listen_tcp
-    a = bind_listen(@tcp_listener)
-    assert_equal a.fileno, @tcp_listener.fileno
-    tcp_server = server_cast(@tcp_listener)
-    assert TCPServer === tcp_server
-    a = bind_listen(tcp_server)
-    assert_equal a.fileno, tcp_server.fileno
-    assert_equal a.fileno, @tcp_listener.fileno
   end
 
   def test_bind_listen_unix_rebind
@@ -107,46 +87,24 @@ class TestSocketHelper < Test::Unit::TestCase
     File.unlink(@unix_listener_path)
     new_listener = bind_listen(@unix_listener_path)
 
-    assert UNIXServer === new_listener
     assert new_listener.fileno != @unix_listener.fileno
     assert_equal sock_name(new_listener), sock_name(@unix_listener)
     assert_equal @unix_listener_path, sock_name(new_listener)
     pid = fork do
-      client = server_cast(new_listener).accept
-      client.syswrite('abcde')
-      exit 0
+      begin
+        client, _ = new_listener.accept
+        client.syswrite('abcde')
+        exit 0
+      rescue => e
+        warn "#{e.message} (#{e.class})"
+        exit 1
+      end
     end
     s = unix_socket(@unix_listener_path)
     IO.select([s])
     assert_equal 'abcde', s.sysread(5)
     pid, status = Process.waitpid2(pid)
     assert status.success?
-  end
-
-  def test_server_cast
-    test_bind_listen_unix
-    test_bind_listen_tcp
-    unix_listener_socket = Socket.for_fd(@unix_listener.fileno)
-    assert Socket === unix_listener_socket
-    @unix_server = server_cast(unix_listener_socket)
-    assert_equal @unix_listener.fileno, @unix_server.fileno
-    assert UNIXServer === @unix_server
-    assert_equal(@unix_server.path, @unix_listener.path,
-                 "##{@unix_server.path} != #{@unix_listener.path}")
-    assert File.socket?(@unix_server.path)
-    assert_equal @unix_listener_path, sock_name(@unix_server)
-
-    tcp_listener_socket = Socket.for_fd(@tcp_listener.fileno)
-    assert Socket === tcp_listener_socket
-    @tcp_server = server_cast(tcp_listener_socket)
-    assert_equal @tcp_listener.fileno, @tcp_server.fileno
-    assert TCPServer === @tcp_server
-    assert_equal @tcp_listener_name, sock_name(@tcp_server)
-  end
-
-  def test_sock_name
-    test_server_cast
-    sock_name(@unix_server)
   end
 
   def test_tcp_defer_accept_default

@@ -65,8 +65,8 @@ module Unicorn::OobGC
   end
 
   #:stopdoc:
-  def process_client(client)
-    super(client) # Unicorn::HttpServer#process_client
+  def process_client(*args)
+    super(*args) # Unicorn::HttpServer#process_client
     env = instance_variable_get(:@request).env
     if OOBGC_PATH =~ env['PATH_INFO'] && ((@@nr -= 1) <= 0)
       @@nr = OOBGC_INTERVAL

@@ -36,7 +36,6 @@ Gem::Specification.new do |s|
   # won't have descriptive text, only the numeric status.
   s.add_development_dependency(%q<rack>)
 
-  s.add_dependency(%q<kgio>, '~> 2.6')
   s.add_dependency(%q<raindrops>, '~> 0.7')
 
   s.add_development_dependency('test-unit', '~> 3.0')

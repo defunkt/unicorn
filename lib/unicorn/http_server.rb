@@ -111,9 +111,7 @@ class Unicorn::HttpServer
 
     @worker_data = if worker_data = ENV['UNICORN_WORKER']
       worker_data = worker_data.split(',').map!(&:to_i)
-      worker_data[1] = worker_data.slice!(1..2).map do |i|
-        Kgio::Pipe.for_fd(i)
-      end
+      worker_data[1] = worker_data.slice!(1..2).map { |i| IO.for_fd(i) }
       worker_data
     end
   end
@@ -243,10 +241,6 @@ class Unicorn::HttpServer
     tries = opt[:tries] || 5
     begin
       io = bind_listen(address, opt)
-      unless Kgio::TCPServer === io || Kgio::UNIXServer === io
-        io.autoclose = false
-        io = server_cast(io)
-      end
       logger.info "listening on addr=#{sock_name(io)} fd=#{io.fileno}"
       LISTENERS << io
       io
@@ -594,9 +588,9 @@ class Unicorn::HttpServer
 
   # once a client is accepted, it is processed in its entirety here
   # in 3 easy steps: read request, call app, write app response
-  def process_client(client)
+  def process_client(client, ai)
     @request = Unicorn::HttpRequest.new
-    env = @request.read(client)
+    env = @request.read_headers(client, ai)
 
     if early_hints
       env["rack.early_hints"] = lambda do |headers|
@@ -708,10 +702,9 @@ class Unicorn::HttpServer
       reopen = reopen_worker_logs(worker.nr) if reopen
       worker.tick = time_now.to_i
       while sock = ready.shift
-        # Unicorn::Worker#kgio_tryaccept is not like accept(2) at all,
-        # but that will return false
-        if client = sock.kgio_tryaccept
-          process_client(client)
+        client_ai = sock.accept_nonblock(exception: false)
+        if client_ai != :wait_readable
+          process_client(*client_ai)
           worker.tick = time_now.to_i
         end
         break if reopen
@@ -809,7 +802,6 @@ class Unicorn::HttpServer
 
   def inherit_listeners!
     # inherit sockets from parents, they need to be plain Socket objects
-    # before they become Kgio::UNIXServer or Kgio::TCPServer
     inherited = ENV['UNICORN_FD'].to_s.split(',')
     immortal = []
 
@@ -825,8 +817,6 @@ class Unicorn::HttpServer
     inherited.map! do |fd|
       io = Socket.for_fd(fd.to_i)
       @immortal << io if immortal.include?(fd)
-      io.autoclose = false
-      io = server_cast(io)
       set_server_sockopt(io, listener_opts[sock_name(io)])
       logger.info "inherited addr=#{sock_name(io)} fd=#{io.fileno}"
       io
@@ -835,11 +825,9 @@ class Unicorn::HttpServer
     config_listeners = config[:listeners].dup
     LISTENERS.replace(inherited)
 
-    # we start out with generic Socket objects that get cast to either
-    # Kgio::TCPServer or Kgio::UNIXServer objects; but since the Socket
-    # objects share the same OS-level file descriptor as the higher-level
-    # *Server objects; we need to prevent Socket objects from being
-    # garbage-collected
+    # we only use generic Socket objects for aggregate Socket#accept_nonblock
+    # return value [ Socket, Addrinfo ].  This allows us to avoid having to
+    # make getpeername(2) syscalls later on to fill in env['REMOTE_ADDR']
     config_listeners -= listener_names
     if config_listeners.empty? && LISTENERS.empty?
       config_listeners << Unicorn::Const::DEFAULT_LISTEN

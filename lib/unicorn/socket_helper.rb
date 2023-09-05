@@ -3,32 +3,6 @@
 require 'socket'
 
 module Unicorn
-
-  # Instead of using a generic Kgio::Socket for everything,
-  # tag TCP sockets so we can use TCP_INFO under Linux without
-  # incurring extra syscalls for Unix domain sockets.
-  # TODO: remove these when we remove kgio
-  TCPClient = Class.new(Kgio::Socket) # :nodoc:
-  class TCPSrv < Kgio::TCPServer # :nodoc:
-    def kgio_tryaccept # :nodoc:
-      super(TCPClient)
-    end
-  end
-
-  if IO.instance_method(:write).arity == 1 # Ruby <= 2.4
-    require 'unicorn/write_splat'
-    UNIXClient = Class.new(Kgio::Socket) # :nodoc:
-    class UNIXSrv < Kgio::UNIXServer # :nodoc:
-      include Unicorn::WriteSplat
-      def kgio_tryaccept # :nodoc:
-        super(UNIXClient)
-      end
-    end
-    TCPClient.__send__(:include, Unicorn::WriteSplat)
-  else # Ruby 2.5+
-    UNIXSrv = Kgio::UNIXServer
-  end
-
   module SocketHelper
 
     # internal interface
@@ -105,7 +79,7 @@ module Unicorn
     def set_server_sockopt(sock, opt)
       opt = DEFAULTS.merge(opt || {})
 
-      TCPSocket === sock and set_tcp_sockopt(sock, opt)
+      set_tcp_sockopt(sock, opt) if sock.local_address.ip?
 
       rcvbuf, sndbuf = opt.values_at(:rcvbuf, :sndbuf)
       if rcvbuf || sndbuf
@@ -149,7 +123,9 @@ module Unicorn
         end
         old_umask = File.umask(opt[:umask] || 0)
         begin
-          UNIXSrv.new(address)
+          s = Socket.new(:UNIX, :STREAM)
+          s.bind(Socket.sockaddr_un(address))
+          s
         ensure
           File.umask(old_umask)
         end
@@ -177,8 +153,7 @@ module Unicorn
         sock.setsockopt(:SOL_SOCKET, :SO_REUSEPORT, 1)
       end
       sock.bind(Socket.pack_sockaddr_in(port, addr))
-      sock.autoclose = false
-      TCPSrv.for_fd(sock.fileno)
+      sock
     end
 
     # returns rfc2732-style (e.g. "[::1]:666") addresses for IPv6
@@ -194,10 +169,6 @@ module Unicorn
     def sock_name(sock)
       case sock
       when String then sock
-      when UNIXServer
-        Socket.unpack_sockaddr_un(sock.getsockname)
-      when TCPServer
-        tcp_name(sock)
       when Socket
         begin
           tcp_name(sock)
@@ -210,16 +181,5 @@ module Unicorn
     end
 
     module_function :sock_name
-
-    # casts a given Socket to be a TCPServer or UNIXServer
-    def server_cast(sock)
-      begin
-        Socket.unpack_sockaddr_in(sock.getsockname)
-        TCPSrv.for_fd(sock.fileno)
-      rescue ArgumentError
-        UNIXSrv.for_fd(sock.fileno)
-      end
-    end
-
   end # module SocketHelper
 end # module Unicorn

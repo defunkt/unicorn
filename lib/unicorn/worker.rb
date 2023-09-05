@@ -71,8 +71,8 @@ class Unicorn::Worker
   end
 
   # this only runs when the Rack app.call is not running
-  # act like a listener
-  def kgio_tryaccept # :nodoc:
+  # act like Socket#accept_nonblock(exception: false)
+  def accept_nonblock(*_unused) # :nodoc:
     case buf = @to_io.read_nonblock(4, exception: false)
     when String
       # unpack the buffer and trigger the signal handler
@@ -82,7 +82,7 @@ class Unicorn::Worker
     when nil # EOF: master died, but we are at a safe place to exit
       fake_sig(:QUIT)
     when :wait_readable # keep waiting
-      return false
+      return :wait_readable
     end while true # loop, as multiple signals may be sent
   end
 
