@@ -7,6 +7,6 @@ run lambda { |env|
     sleep # in case STOP signal is not received in time
     [ 500, headers, [ "Should never get here\n" ] ]
   else
-    [ 200, headers, [ "#$$\n" ] ]
+    [ 200, headers, [ "#$$" ] ]
   end
 }
