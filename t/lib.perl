@@ -9,17 +9,19 @@ use Test::More;
 use IO::Socket::INET;
 use POSIX qw(dup2 _exit setpgid :signal_h SEEK_SET F_SETFD);
 use File::Temp 0.19 (); # 0.19 for ->newdir
-our ($tmpdir, $errfh);
-our @EXPORT = qw(unicorn slurp tcp_server tcp_start unicorn $tmpdir $errfh
+our ($tmpdir, $errfh, $err_log);
+our @EXPORT = qw(unicorn slurp tcp_server tcp_start unicorn
+	$tmpdir $errfh $err_log
 	SEEK_SET tcp_host_port which spawn check_stderr unix_start slurp_hdr);
 
 my ($base) = ($0 =~ m!\b([^/]+)\.[^\.]+\z!);
 $tmpdir = File::Temp->newdir("unicorn-$base-XXXX", TMPDIR => 1);
-open($errfh, '>>', "$tmpdir/err.log");
-END { diag slurp("$tmpdir/err.log") if $tmpdir };
+$err_log = "$tmpdir/err.log";
+open($errfh, '>>', $err_log);
+END { diag slurp($err_log) if $tmpdir };
 
 sub check_stderr () {
-	my @log = slurp("$tmpdir/err.log");
+	my @log = slurp($err_log);
 	diag("@log") if $ENV{V};
 	my @err = grep(!/NameError.*Unicorn::Waiter/, grep(/error/i, @log));
 	@err = grep(!/failed to set accept_filter=/, @err);
