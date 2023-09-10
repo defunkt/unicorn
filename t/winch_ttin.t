@@ -1,0 +1,72 @@
+#!perl -w
+# Copyright (C) unicorn hackers <unicorn-public@yhbt.net>
+# License: GPL-3.0+ <https://www.gnu.org/licenses/gpl-3.0.txt>
+use v5.14; BEGIN { require './t/lib.perl' };
+use autodie;
+use POSIX qw(mkfifo);
+my $u_conf = "$tmpdir/u.conf.rb";
+my $u_sock = "$tmpdir/u.sock";
+my $fifo = "$tmpdir/fifo";
+mkfifo($fifo, 0666) or die "mkfifo($fifo): $!";
+
+open my $fh, '>', $u_conf;
+print $fh <<EOM;
+pid "$tmpdir/pid"
+listen "$u_sock"
+stderr_path "$err_log"
+after_fork do |server, worker|
+  # test script will block while reading from $fifo,
+  File.open("$fifo", "wb") { |fp| fp.syswrite worker.nr.to_s }
+end
+EOM
+close $fh;
+
+unicorn('-D', '-c', $u_conf, 't/integration.ru')->join;
+is($?, 0, 'daemonized properly');
+open $fh, '<', "$tmpdir/pid";
+chomp(my $pid = <$fh>);
+ok(kill(0, $pid), 'daemonized PID works');
+my $quit = sub { kill('QUIT', $pid) if $pid; $pid = undef };
+END { $quit->() };
+
+open $fh, '<', $fifo;
+my $worker_nr = <$fh>;
+close $fh;
+is($worker_nr, '0', 'initial worker spawned');
+
+my $c = unix_start($u_sock, 'GET /pid HTTP/1.0');
+my ($status, $hdr) = slurp_hdr($c);
+like($status, qr/ 200\b/, 'got 200 response');
+my $worker_pid = do { local $/; <$c> };
+like($worker_pid, qr/\A[0-9]+\n\z/s, 'PID in response');
+chomp $worker_pid;
+ok(kill(0, $worker_pid), 'worker_pid is valid');
+
+ok(kill('WINCH', $pid), 'SIGWINCH can be sent');
+
+my $tries = 1000;
+while (CORE::kill(0, $worker_pid) && --$tries) {
+	select undef, undef, undef, 0.01;
+}
+ok(!CORE::kill(0, $worker_pid), 'worker not running');
+
+ok(kill('TTIN', $pid), 'SIGTTIN to restart worker');
+
+open $fh, '<', $fifo;
+$worker_nr = <$fh>;
+close $fh;
+is($worker_nr, '0', 'worker restarted');
+
+$c = unix_start($u_sock, 'GET /pid HTTP/1.0');
+($status, $hdr) = slurp_hdr($c);
+like($status, qr/ 200\b/, 'got 200 response');
+chomp(my $new_worker_pid = do { local $/; <$c> });
+like($new_worker_pid, qr/\A[0-9]+\z/, 'got new worker PID');
+ok(kill(0, $new_worker_pid), 'got a valid worker PID');
+isnt($worker_pid, $new_worker_pid, 'worker PID changed');
+
+$quit->();
+
+check_stderr;
+undef $tmpdir;
+done_testing;
