@@ -7,8 +7,16 @@
 
 use v5.14; BEGIN { require './t/lib.perl' };
 use autodie;
+use Socket qw(SOL_SOCKET SO_KEEPALIVE);
 our $srv = tcp_server();
 our $host_port = tcp_host_port($srv);
+
+if ('ensure Perl does not set SO_KEEPALIVE by default') {
+	my $val = getsockopt($srv, SOL_SOCKET, SO_KEEPALIVE);
+	unpack('i', $val) == 0 or
+		setsockopt($srv, SOL_SOCKET, SO_KEEPALIVE, pack('i', 0));
+	$val = getsockopt($srv, SOL_SOCKET, SO_KEEPALIVE);
+}
 my $t0 = time;
 open my $conf_fh, '>', $u_conf;
 $conf_fh->autoflush(1);
@@ -70,6 +78,11 @@ my $orig_200_status = $status;
 is_deeply([ grep(/^X-R2: /, @$hdr) ],
 	[ 'X-R2: a', 'X-R2: b', 'X-R2: c' ],
 	'rack 2 LF-delimited headers supported') or diag(explain($hdr));
+
+{
+	my $val = getsockopt($srv, SOL_SOCKET, SO_KEEPALIVE);
+	is(unpack('i', $val), 1, 'SO_KEEPALIVE set on inherited socket');
+}
 
 SKIP: { # Date header check
 	my @d = grep(/^Date: /i, @$hdr);

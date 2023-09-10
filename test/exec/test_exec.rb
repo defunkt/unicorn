@@ -1,6 +1,5 @@
 # -*- encoding: binary -*-
-
-# Copyright (c) 2009 Eric Wong
+# Don't add to this file, new tests are in Perl 5. See t/README
 FLOCK_PATH = File.expand_path(__FILE__)
 require './test/test_helper'
 
@@ -95,26 +94,6 @@ run lambda { |env|
         break
       end
     end
-  end
-
-  def test_inherit_listener_unspecified
-    File.open("config.ru", "wb") { |fp| fp.write(HI) }
-    sock = TCPServer.new(@addr, @port)
-    sock.setsockopt(:SOL_SOCKET, :SO_KEEPALIVE, 0)
-
-    pid = xfork do
-      redirect_test_io do
-        ENV['UNICORN_FD'] = sock.fileno.to_s
-        exec($unicorn_bin, sock.fileno => sock.fileno)
-      end
-    end
-    res = hit(["http://#@addr:#@port/"])
-    assert_equal [ "HI\n" ], res
-    assert_shutdown(pid)
-    assert sock.getsockopt(:SOL_SOCKET, :SO_KEEPALIVE).bool,
-                'unicorn should always set SO_KEEPALIVE on inherited sockets'
-  ensure
-    sock.close if sock
   end
 
   def test_working_directory_rel_path_config_file
