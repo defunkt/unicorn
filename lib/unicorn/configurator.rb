@@ -216,7 +216,12 @@ class Unicorn::Configurator
     set_hook(:before_exec, block_given? ? block : args[0], 1)
   end
 
-  # sets the timeout of worker processes to +seconds+.  Workers
+  # Strongly consider using link:/Application_Timeouts.html instead
+  # of this misfeature.  This misfeature has done decades of damage
+  # to Ruby since it demotivates the use of fine-grained timeout
+  # mechanisms.
+  #
+  # Sets the timeout of worker processes to +seconds+.  Workers
   # handling the request/app.call/response cycle taking longer than
   # this time period will be forcibly killed (via SIGKILL).  This
   # timeout is enforced by the master process itself and not subject

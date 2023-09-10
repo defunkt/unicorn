@@ -1,5 +1,9 @@
 == Design
 
+Unicorn was designed to support poorly-written codebases back in 2008.
+Its unfortunate popularity has only proliferated the existence of
+poorly-written code ever since...
+
 * Simplicity: Unicorn is a traditional UNIX prefork web server.
   No threads are used at all, this makes applications easier to debug
   and fix.  When your application goes awry, a BOFH can just

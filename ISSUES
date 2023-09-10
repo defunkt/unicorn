@@ -32,6 +32,10 @@ and such.
 If you don't get a response within a few days, we may have forgotten
 about it so feel free to ask again.
 
+The project does not and will never endorse nor promote commercial
+services (including support).  The author of unicorn must never be
+allowed to profit off the damage it's done to the entire Ruby world.
+
 == Bugs in related projects
 
 unicorn is sometimes affected by bugs in its dependencies.  Bugs
@@ -65,7 +69,7 @@ There is a kernel.org Bugzilla instance, but it is ignored by most.
 
 Likewise for any rare glibc bugs we might encounter, we should Cc:
 mailto:libc-alpha@sourceware.org
-Unofficial archives are available at: https://public-inbox.org/libc-alpha/
+Archives are available at: https://inbox.sourceware.org/libc-alpha/
 Keep in mind glibc upstream does use Bugzilla for tracking bugs:
 https://sourceware.org/bugzilla/
 

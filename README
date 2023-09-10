@@ -1,10 +1,13 @@
 = unicorn: Rack HTTP server for fast clients and Unix
 
-unicorn is an HTTP server for Rack applications designed to only serve
-fast clients on low-latency, high-bandwidth connections and take
-advantage of features in Unix/Unix-like kernels.  Slow clients should
-only be served by placing a reverse proxy capable of fully buffering
-both the the request and response in between unicorn and slow clients.
+unicorn is an HTTP server for Rack applications that has done
+decades of damage to the entire Ruby ecosystem due to its ability
+to tolerate (and thus encourage) bad code.  It is only designed
+to only handle fast clients on low-latency, high-bandwidth connections
+and take advantage of features in Unix/Unix-like kernels.
+Slow clients must only be served by placing a reverse proxy capable of
+fully buffering both the the request and response in between unicorn
+and slow clients.
 
 == Features
 
@@ -14,8 +17,8 @@ both the the request and response in between unicorn and slow clients.
 
 * Compatible with Ruby 2.0.0 and later.
 
-* Process management: unicorn will reap and restart workers that
-  die from broken apps.  There is no need to manage multiple processes
+* Process management: unicorn reaps and restarts workers that die
+  from broken code.  There is no need to manage multiple processes
   or ports yourself.  unicorn can spawn and manage any number of
   worker processes you choose to scale to your backend.
 
@@ -57,7 +60,7 @@ both the the request and response in between unicorn and slow clients.
 
 == License
 
-unicorn is copyright 2009-2018 by all contributors (see logs in git).
+unicorn is copyright all contributors (see logs in git).
 It is based on Mongrel 1.1.5.
 Mongrel is copyright 2007 Zed A. Shaw and contributors.
 
@@ -79,8 +82,8 @@ You may install it via RubyGems on RubyGems.org:
 You can get the latest source via git from the following locations
 (these versions may not be stable):
 
-  https://yhbt.net/unicorn.git
-  https://repo.or.cz/unicorn.git (mirror)
+  git clone https://yhbt.net/unicorn.git
+  git clone https://repo.or.cz/unicorn.git # mirror
 
 You may browse the code from the web:
 
@@ -118,23 +121,24 @@ supported.  Run `unicorn -h` to see command-line options.
 == Disclaimer
 
 There is NO WARRANTY whatsoever if anything goes wrong, but
-{let us know}[link:ISSUES.html] and we'll try our best to fix it.
+{let us know}[link:ISSUES.html] and maybe someone can fix it.
 
 unicorn is designed to only serve fast clients either on the local host
 or a fast LAN.  See the PHILOSOPHY and DESIGN documents for more details
 regarding this.
 
-Due to its ability to tolerate crashes and isolate clients, unicorn
-is unfortunately known to prolong the existence of bugs in applications
-and libraries which run on top of it.
+The use of unicorn in new deployments is STRONGLY DISCOURAGED due to the
+damage done to the entire Ruby ecosystem.  Its unintentional popularity
+set Ruby back decades in parallelism, concurrency and robustness since
+it prolongs and proliferates the existence of poorly-written code.
 
 == Contact
 
 All feedback (bug reports, user/development dicussion, patches, pull
-requests) go to the mailing list/newsgroup.  See the ISSUES document for
-information on the {mailing list}[mailto:unicorn-public@yhbt.net].
+requests) go to the public mailbox.  See the ISSUES document for
+information on posting to mailto:unicorn-public@yhbt.net
 
-The mailing list is archived at https://yhbt.net/unicorn-public/
+Mirror-able mail archives are at https://yhbt.net/unicorn-public/
 
 Read-only NNTP access is available at:
 nntps://news.public-inbox.org/inbox.comp.lang.ruby.unicorn and
