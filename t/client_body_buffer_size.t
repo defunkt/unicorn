@@ -4,16 +4,14 @@
 
 use v5.14; BEGIN { require './t/lib.perl' };
 use autodie;
-my $uconf = "$tmpdir/u.conf.rb";
-
-open my $conf_fh, '>', $uconf;
+open my $conf_fh, '>', $u_conf;
 $conf_fh->autoflush(1);
 print $conf_fh <<EOM;
 client_body_buffer_size 0
 EOM
 my $srv = tcp_server();
 my $host_port = tcp_host_port($srv);
-my @uarg = (qw(-E none t/client_body_buffer_size.ru -c), $uconf);
+my @uarg = (qw(-E none t/client_body_buffer_size.ru -c), $u_conf);
 my $ar = unicorn(@uarg, { 3 => $srv });
 my ($c, $status, $hdr);
 my $mem_class = 'StringIO';

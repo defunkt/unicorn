@@ -10,15 +10,14 @@ use autodie;
 our $srv = tcp_server();
 our $host_port = tcp_host_port($srv);
 my $t0 = time;
-my $conf = "$tmpdir/u.conf.rb";
-open my $conf_fh, '>', $conf;
+open my $conf_fh, '>', $u_conf;
 $conf_fh->autoflush(1);
 my $u1 = "$tmpdir/u1";
 print $conf_fh <<EOM;
 early_hints true
 listen "$u1"
 EOM
-my $ar = unicorn(qw(-E none t/integration.ru -c), $conf, { 3 => $srv });
+my $ar = unicorn(qw(-E none t/integration.ru -c), $u_conf, { 3 => $srv });
 my $curl = which('curl');
 my $fifo = "$tmpdir/fifo";
 POSIX::mkfifo($fifo, 0600) or die "mkfifo: $!";

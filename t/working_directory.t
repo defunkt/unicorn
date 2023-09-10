@@ -4,12 +4,10 @@
 use v5.14; BEGIN { require './t/lib.perl' };
 use autodie;
 mkdir "$tmpdir/alt";
-my $u_sock = "$tmpdir/u.sock";
 my $ru = "$tmpdir/alt/config.ru";
-my $u_conf = "$tmpdir/u.conf.rb";
 open my $fh, '>', $u_conf;
 print $fh <<EOM;
-pid "$tmpdir/pid"
+pid "$pid_file"
 preload_app true
 stderr_path "$err_log"
 working_directory "$tmpdir/alt" # the whole point of this test
@@ -30,32 +28,13 @@ $common_ru
 EOM
 close $fh;
 
-my $pid;
-my $stop_daemon = sub {
-	my ($is_END) = @_;
-	kill('TERM', $pid);
-	my $tries = 1000;
-	while (CORE::kill(0, $pid) && --$tries) {
-		select undef, undef, undef, 0.01;
-	}
-	if ($is_END && CORE::kill(0, $pid)) {
-		CORE::kill('KILL', $pid);
-		die "daemonized PID=$pid did not die";
-	} else {
-		ok(!CORE::kill(0, $pid), 'daemonized unicorn gone');
-		undef $pid;
-	}
-};
-
-END { $stop_daemon->(1) if defined $pid };
-
 unicorn('-c', $u_conf)->join; # will daemonize
-chomp($pid = slurp("$tmpdir/pid"));
+chomp($daemon_pid = slurp($pid_file));
 
 my ($status, $hdr, $bdy) = do_req($u_sock, 'GET / HTTP/1.0');
 is($bdy, "1\n", 'got expected $master_ppid');
 
-$stop_daemon->();
+stop_daemon;
 check_stderr;
 
 if ('test without CLI switches in config.ru') {
@@ -65,12 +44,12 @@ if ('test without CLI switches in config.ru') {
 	close $fh;
 
 	unicorn('-D', '-l', $u_sock, '-c', $u_conf)->join; # will daemonize
-	chomp($pid = slurp("$tmpdir/pid"));
+	chomp($daemon_pid = slurp($pid_file));
 
 	($status, $hdr, $bdy) = do_req($u_sock, 'GET / HTTP/1.0');
 	is($bdy, "1\n", 'got expected $master_ppid');
 
-	$stop_daemon->();
+	stop_daemon;
 	check_stderr;
 }
 

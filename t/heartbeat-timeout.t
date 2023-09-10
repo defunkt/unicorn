@@ -6,7 +6,6 @@ use autodie;
 use Time::HiRes qw(clock_gettime CLOCK_MONOTONIC);
 mkdir "$tmpdir/alt";
 my $srv = tcp_server();
-my $u_conf = "$tmpdir/u.conf.rb";
 open my $fh, '>', $u_conf;
 print $fh <<EOM;
 pid "$tmpdir/pid"
@@ -23,7 +22,7 @@ like($status, qr!\AHTTP/1\.[01] 200\b!, 'PID request succeeds');
 like($wpid, qr/\A[0-9]+\z/, 'worker is running');
 
 my $t0 = clock_gettime(CLOCK_MONOTONIC);
-$c = tcp_start($srv, 'GET /block-forever HTTP/1.0');
+my $c = tcp_start($srv, 'GET /block-forever HTTP/1.0');
 vec(my $rvec = '', fileno($c), 1) = 1;
 is(select($rvec, undef, undef, 6), 1, 'got readiness');
 $c->blocking(0);

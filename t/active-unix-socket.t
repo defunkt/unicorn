@@ -15,7 +15,7 @@ my $u2 = "$tmpdir/u2.sock";
 	print $fh <<EOM;
 pid "$tmpdir/u.pid"
 listen "$u1"
-stderr_path "$tmpdir/err.log"
+stderr_path "$err_log"
 EOM
 	close $fh;
 

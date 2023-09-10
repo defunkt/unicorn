@@ -6,20 +6,43 @@ use v5.14;
 use parent qw(Exporter);
 use autodie;
 use Test::More;
+use Time::HiRes qw(sleep);
 use IO::Socket::INET;
 use POSIX qw(dup2 _exit setpgid :signal_h SEEK_SET F_SETFD);
 use File::Temp 0.19 (); # 0.19 for ->newdir
-our ($tmpdir, $errfh, $err_log);
+our ($tmpdir, $errfh, $err_log, $u_sock, $u_conf, $daemon_pid,
+	$pid_file);
 our @EXPORT = qw(unicorn slurp tcp_server tcp_start unicorn
-	$tmpdir $errfh $err_log
+	$tmpdir $errfh $err_log $u_sock $u_conf $daemon_pid $pid_file
 	SEEK_SET tcp_host_port which spawn check_stderr unix_start slurp_hdr
-	do_req);
+	do_req stop_daemon);
 
 my ($base) = ($0 =~ m!\b([^/]+)\.[^\.]+\z!);
 $tmpdir = File::Temp->newdir("unicorn-$base-XXXX", TMPDIR => 1);
 $err_log = "$tmpdir/err.log";
+$pid_file = "$tmpdir/pid";
+$u_sock = "$tmpdir/u.sock";
+$u_conf = "$tmpdir/u.conf.rb";
 open($errfh, '>>', $err_log);
-END { diag slurp($err_log) if $tmpdir };
+
+sub stop_daemon (;$) {
+	my ($is_END) = @_;
+	kill('TERM', $daemon_pid);
+	my $tries = 1000;
+	while (CORE::kill(0, $daemon_pid) && --$tries) { sleep(0.01) }
+	if ($is_END && CORE::kill(0, $daemon_pid)) { # after done_testing
+		CORE::kill('KILL', $daemon_pid);
+		die "daemon_pid=$daemon_pid did not die";
+	} else {
+		ok(!CORE::kill(0, $daemon_pid), 'daemonized unicorn gone');
+		undef $daemon_pid;
+	}
+};
+
+END {
+	diag slurp($err_log) if $tmpdir;
+	stop_daemon(1) if defined $daemon_pid;
+};
 
 sub check_stderr () {
 	my @log = slurp($err_log);
