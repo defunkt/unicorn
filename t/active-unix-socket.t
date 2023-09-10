@@ -86,7 +86,7 @@ is($pidf, $to_kill{u1}, 'pid file contents unchanged after 2nd start failure');
 		'fail to connect to u1');
 	for (1..50) { # wait for init process to reap worker
 		kill(0, $worker_pid) or last;
-		select(undef, undef, undef, 0.011);
+		sleep 0.011;
 	}
 	ok(!kill(0, $worker_pid), 'worker gone after parent dies');
 }

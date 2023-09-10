@@ -38,7 +38,7 @@ my @l;
 for (1..1000) {
 	@l = grep(/(?:done|error) reloading/, slurp($err_log)) and
 		last;
-	select undef, undef, undef, 0.011;
+	sleep 0.011;
 }
 diag slurp($err_log) if $ENV{V};
 ok(grep(/error reloading/, @l), 'got error reloading');

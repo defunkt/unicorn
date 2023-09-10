@@ -6,7 +6,7 @@ use v5.14;
 use parent qw(Exporter);
 use autodie;
 use Test::More;
-use Time::HiRes qw(sleep);
+use Time::HiRes qw(sleep time);
 use IO::Socket::INET;
 use POSIX qw(dup2 _exit setpgid :signal_h SEEK_SET F_SETFD);
 use File::Temp 0.19 (); # 0.19 for ->newdir
@@ -15,7 +15,7 @@ our ($tmpdir, $errfh, $err_log, $u_sock, $u_conf, $daemon_pid,
 our @EXPORT = qw(unicorn slurp tcp_server tcp_start unicorn
 	$tmpdir $errfh $err_log $u_sock $u_conf $daemon_pid $pid_file
 	SEEK_SET tcp_host_port which spawn check_stderr unix_start slurp_hdr
-	do_req stop_daemon);
+	do_req stop_daemon sleep time);
 
 my ($base) = ($0 =~ m!\b([^/]+)\.[^\.]+\z!);
 $tmpdir = File::Temp->newdir("unicorn-$base-XXXX", TMPDIR => 1);

@@ -43,9 +43,7 @@ ok(kill(0, $worker_pid), 'worker_pid is valid');
 ok(kill('WINCH', $pid), 'SIGWINCH can be sent');
 
 my $tries = 1000;
-while (CORE::kill(0, $worker_pid) && --$tries) {
-	select undef, undef, undef, 0.01;
-}
+while (CORE::kill(0, $worker_pid) && --$tries) { sleep 0.01 }
 ok(!CORE::kill(0, $worker_pid), 'worker not running');
 
 ok(kill('TTIN', $pid), 'SIGTTIN to restart worker');

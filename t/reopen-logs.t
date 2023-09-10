@@ -23,8 +23,8 @@ rename($out_log, "$out_log.rot");
 $auto_reap->do_kill('USR1');
 
 my $tries = 1000;
-while (!-f $err_log && --$tries) { select undef, undef, undef, 0.01 };
-while (!-f $out_log && --$tries) { select undef, undef, undef, 0.01 };
+while (!-f $err_log && --$tries) { sleep 0.01 };
+while (!-f $out_log && --$tries) { sleep 0.01 };
 
 ok(-f $out_log, 'stdout_path recreated after USR1');
 ok(-f $err_log, 'stderr_path recreated after USR1');

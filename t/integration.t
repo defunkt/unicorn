@@ -77,8 +77,9 @@ SKIP: { # Date header check
 	eval { require HTTP::Date } or skip "HTTP::Date missing: $@", 1;
 	$d[0] =~ s/^Date: //i or die 'BUG: did not strip date: prefix';
 	my $t = HTTP::Date::str2time($d[0]);
-	ok($t >= $t0 && $t > 0 && $t <= time, 'valid date') or
-		diag(explain([$t, $!, \@d]));
+	my $now = time;
+	ok($t >= ($t0 - 1) && $t > 0 && $t <= ($now + 1), 'valid date') or
+		diag(explain(["t=$t t0=$t0 now=$now", $!, \@d]));
 };
 
 
