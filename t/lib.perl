@@ -12,7 +12,8 @@ use File::Temp 0.19 (); # 0.19 for ->newdir
 our ($tmpdir, $errfh, $err_log);
 our @EXPORT = qw(unicorn slurp tcp_server tcp_start unicorn
 	$tmpdir $errfh $err_log
-	SEEK_SET tcp_host_port which spawn check_stderr unix_start slurp_hdr);
+	SEEK_SET tcp_host_port which spawn check_stderr unix_start slurp_hdr
+	do_req);
 
 my ($base) = ($0 =~ m!\b([^/]+)\.[^\.]+\z!);
 $tmpdir = File::Temp->newdir("unicorn-$base-XXXX", TMPDIR => 1);
@@ -180,6 +181,19 @@ sub unicorn {
 	state $exe = File::Spec->rel2abs('bin/unicorn');
 	my $pid = spawn(\%env, $ruby, '-I', $lib, '-I', $ext, $exe, @args);
 	UnicornTest::AutoReap->new($pid);
+}
+
+sub do_req ($@) {
+	my ($dst, @req) = @_;
+	my $c = ref($dst) ? tcp_start($dst, @req) : unix_start($dst, @req);
+	return $c if !wantarray;
+	my ($status, $hdr);
+	# read headers iff HTTP/1.x request, HTTP/0.9 remains supported
+	my ($first) = (join('', @req) =~ m!\A([^\r\n]+)!);
+	($status, $hdr) = slurp_hdr($c) if $first =~ m{\s*HTTP/\S+$};
+	my $bdy = do { local $/; <$c> };
+	close $c;
+	($status, $hdr, $bdy);
 }
 
 # automatically kill + reap children when this goes out-of-scope

@@ -25,9 +25,7 @@ EOM
 close $fh;
 
 my $ar = unicorn(qw(-E none -c), $u_conf, $ru, { 3 => $srv });
-my $c = tcp_start($srv, 'GET / HTTP/1.0');
-my ($status, $hdr) = slurp_hdr($c);
-my $bdy = do { local $/; <$c> };
+my ($status, $hdr, $bdy) = do_req($srv, 'GET / HTTP/1.0');
 like($status, qr!\AHTTP/1\.[01] 200\b!, 'status line valid at start');
 is($bdy, "hello world\n", 'body matches expected');
 
@@ -47,9 +45,7 @@ ok(grep(/error reloading/, @l), 'got error reloading');
 open $fh, '>', $err_log;
 close $fh;
 
-$c = tcp_start($srv, 'GET / HTTP/1.0');
-($status, $hdr) = slurp_hdr($c);
-$bdy = do { local $/; <$c> };
+($status, $hdr, $bdy) = do_req($srv, 'GET / HTTP/1.0');
 like($status, qr!\AHTTP/1\.[01] 200\b!, 'status line valid afte reload');
 is($bdy, "hello world\n", 'body matches expected after reload');
 

@@ -52,10 +52,8 @@ END { $stop_daemon->(1) if defined $pid };
 unicorn('-c', $u_conf)->join; # will daemonize
 chomp($pid = slurp("$tmpdir/pid"));
 
-my $c = unix_start($u_sock, 'GET / HTTP/1.0');
-my ($status, $hdr) = slurp_hdr($c);
-chomp(my $bdy = do { local $/; <$c> });
-is($bdy, 1, 'got expected $master_ppid');
+my ($status, $hdr, $bdy) = do_req($u_sock, 'GET / HTTP/1.0');
+is($bdy, "1\n", 'got expected $master_ppid');
 
 $stop_daemon->();
 check_stderr;
@@ -69,10 +67,8 @@ if ('test without CLI switches in config.ru') {
 	unicorn('-D', '-l', $u_sock, '-c', $u_conf)->join; # will daemonize
 	chomp($pid = slurp("$tmpdir/pid"));
 
-	$c = unix_start($u_sock, 'GET / HTTP/1.0');
-	($status, $hdr) = slurp_hdr($c);
-	chomp($bdy = do { local $/; <$c> });
-	is($bdy, 1, 'got expected $master_ppid');
+	($status, $hdr, $bdy) = do_req($u_sock, 'GET / HTTP/1.0');
+	is($bdy, "1\n", 'got expected $master_ppid');
 
 	$stop_daemon->();
 	check_stderr;
@@ -107,12 +103,9 @@ EOM
 	my $srv = tcp_server;
 	my $auto_reap = unicorn(qw(-c), $u_conf, qw(-I. fooapp.rb),
 				{ -C => '/', 3 => $srv });
-	$c = tcp_start($srv, 'GET / HTTP/1.0');
-	($status, $hdr) = slurp_hdr($c);
-	chomp($bdy = do { local $/; <$c> });
+	($status, $hdr, $bdy) = do_req($srv, 'GET / HTTP/1.0');
 	is($bdy, "dir=$tmpdir/alt",
 		'fooapp.rb (w/o config.ru) w/ working_directory');
-	close $c;
 	$auto_reap->join('TERM');
 	is($?, 0, 'fooapp.rb process exited');
 	check_stderr;

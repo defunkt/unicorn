@@ -34,10 +34,8 @@ my $worker_nr = <$fh>;
 close $fh;
 is($worker_nr, '0', 'initial worker spawned');
 
-my $c = unix_start($u_sock, 'GET /pid HTTP/1.0');
-my ($status, $hdr) = slurp_hdr($c);
+my ($status, $hdr, $worker_pid) = do_req($u_sock, 'GET /pid HTTP/1.0');
 like($status, qr/ 200\b/, 'got 200 response');
-my $worker_pid = do { local $/; <$c> };
 like($worker_pid, qr/\A[0-9]+\n\z/s, 'PID in response');
 chomp $worker_pid;
 ok(kill(0, $worker_pid), 'worker_pid is valid');
@@ -57,11 +55,10 @@ $worker_nr = <$fh>;
 close $fh;
 is($worker_nr, '0', 'worker restarted');
 
-$c = unix_start($u_sock, 'GET /pid HTTP/1.0');
-($status, $hdr) = slurp_hdr($c);
+($status, $hdr, my $new_worker_pid) = do_req($u_sock, 'GET /pid HTTP/1.0');
 like($status, qr/ 200\b/, 'got 200 response');
-chomp(my $new_worker_pid = do { local $/; <$c> });
-like($new_worker_pid, qr/\A[0-9]+\z/, 'got new worker PID');
+like($new_worker_pid, qr/\A[0-9]+\n\z/, 'got new worker PID');
+chomp $new_worker_pid;
 ok(kill(0, $new_worker_pid), 'got a valid worker PID');
 isnt($worker_pid, $new_worker_pid, 'worker PID changed');
 

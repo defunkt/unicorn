@@ -14,9 +14,7 @@ EOM
 close $fh;
 
 my $auto_reap = unicorn('-c', $u_conf, 't/reopen-logs.ru', { 3 => $srv } );
-my $c = tcp_start($srv, 'GET / HTTP/1.0');
-my ($status, $hdr) = slurp_hdr($c);
-my $bdy = do { local $/; <$c> };
+my ($status, $hdr, $bdy) = do_req($srv, 'GET / HTTP/1.0');
 is($bdy, "true\n", 'logs opened');
 
 rename($err_log, "$err_log.rot");
@@ -31,9 +29,7 @@ while (!-f $out_log && --$tries) { select undef, undef, undef, 0.01 };
 ok(-f $out_log, 'stdout_path recreated after USR1');
 ok(-f $err_log, 'stderr_path recreated after USR1');
 
-$c = tcp_start($srv, 'GET / HTTP/1.0');
-($status, $hdr) = slurp_hdr($c);
-$bdy = do { local $/; <$c> };
+($status, $hdr, $bdy) = do_req($srv, 'GET / HTTP/1.0');
 is($bdy, "true\n", 'logs reopened with sync==true');
 
 $auto_reap->join('QUIT');

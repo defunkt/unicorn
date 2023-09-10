@@ -18,10 +18,8 @@ close $fh;
 
 my $ar = unicorn(qw(-E none t/heartbeat-timeout.ru -c), $u_conf, { 3 => $srv });
 
-my $c = tcp_start($srv, 'GET /pid HTTP/1.0');
-my ($status, $hdr) = slurp_hdr($c);
+my ($status, $hdr, $wpid) = do_req($srv, 'GET /pid HTTP/1.0');
 like($status, qr!\AHTTP/1\.[01] 200\b!, 'PID request succeeds');
-my $wpid = do { local $/; <$c> };
 like($wpid, qr/\A[0-9]+\z/, 'worker is running');
 
 my $t0 = clock_gettime(CLOCK_MONOTONIC);
@@ -39,10 +37,8 @@ is(grep(/timeout \(\d+s > 3s\), killing/, @timeout_err), 1,
     'noted timeout error') or diag explain(\@timeout_err);
 
 # did it respawn?
-$c = tcp_start($srv, 'GET /pid HTTP/1.0');
-($status, $hdr) = slurp_hdr($c);
+($status, $hdr, my $new_pid) = do_req($srv, 'GET /pid HTTP/1.0');
 like($status, qr!\AHTTP/1\.[01] 200\b!, 'PID request succeeds');
-my $new_pid = do { local $/; <$c> };
 isnt($new_pid, $wpid, 'spawned new worker');
 
 diag 'SIGSTOP for 4 seconds...';
@@ -50,11 +46,9 @@ $ar->do_kill('STOP');
 sleep 4;
 $ar->do_kill('CONT');
 for my $i (1..2) {
-	$c = tcp_start($srv, 'GET /pid HTTP/1.0');
-	($status, $hdr) = slurp_hdr($c);
+	($status, $hdr, my $spid) = do_req($srv, 'GET /pid HTTP/1.0');
 	like($status, qr!\AHTTP/1\.[01] 200\b!,
 		"PID request succeeds #$i after STOP+CONT");
-	my $spid = do { local $/; <$c> };
 	is($new_pid, $spid, "worker pid unchanged after STOP+CONT #$i");
 	if ($i == 1) {
 		diag 'sleeping 2s to ensure timeout is not delayed';

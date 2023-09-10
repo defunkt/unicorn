@@ -62,11 +62,10 @@ EOM
 	},
 );
 
-my ($c, $status, $hdr);
+my ($c, $status, $hdr, $bdy);
 
 # response header tests
-$c = tcp_start($srv, 'GET /rack-2-newline-headers HTTP/1.0');
-($status, $hdr) = slurp_hdr($c);
+($status, $hdr) = do_req($srv, 'GET /rack-2-newline-headers HTTP/1.0');
 like($status, qr!\AHTTP/1\.[01] 200\b!, 'status line valid');
 my $orig_200_status = $status;
 is_deeply([ grep(/^X-R2: /, @$hdr) ],
@@ -84,16 +83,16 @@ SKIP: { # Date header check
 };
 
 
-$c = tcp_start($srv, 'GET /rack-3-array-headers HTTP/1.0');
-($status, $hdr) = slurp_hdr($c);
+($status, $hdr) = do_req($srv, 'GET /rack-3-array-headers HTTP/1.0');
 is_deeply([ grep(/^x-r3: /, @$hdr) ],
 	[ 'x-r3: a', 'x-r3: b', 'x-r3: c' ],
 	'rack 3 array headers supported') or diag(explain($hdr));
 
 SKIP: {
 	eval { require JSON::PP } or skip "JSON::PP missing: $@", 1;
-	my $c = tcp_start($srv, 'GET /env_dump');
-	my $json = do { local $/; readline($c) };
+	($status, $hdr, my $json) = do_req $srv, 'GET /env_dump';
+	is($status, undef, 'no status for HTTP/0.9');
+	is($hdr, undef, 'no header for HTTP/0.9');
 	unlike($json, qr/^Connection: /smi, 'no connection header for 0.9');
 	unlike($json, qr!\AHTTP/!s, 'no HTTP/1.x prefix for 0.9');
 	my $env = JSON::PP->new->decode($json);
@@ -102,8 +101,7 @@ SKIP: {
 }
 
 # cf. <CAO47=rJa=zRcLn_Xm4v2cHPr6c0UswaFC_omYFEH+baSxHOWKQ@mail.gmail.com>
-$c = tcp_start($srv, 'GET /nil-header-value HTTP/1.0');
-($status, $hdr) = slurp_hdr($c);
+($status, $hdr) = do_req($srv, 'GET /nil-header-value HTTP/1.0');
 is_deeply([grep(/^X-Nil:/, @$hdr)], ['X-Nil: '],
 	'nil header value accepted for broken apps') or diag(explain($hdr));
 
@@ -128,12 +126,10 @@ my $ck_early_hints = sub {
 $ck_early_hints->('ccc off'); # we'll retest later
 
 if ('TODO: ensure Rack::Utils::HTTP_STATUS_CODES is available') {
-	$c = tcp_start($srv, 'POST /tweak-status-code HTTP/1.0');
-	($status, $hdr) = slurp_hdr($c);
+	($status, $hdr) = do_req $srv, 'POST /tweak-status-code HTTP/1.0';
 	like($status, qr!\AHTTP/1\.[01] 200 HI\b!, 'status tweaked');
 
-	$c = tcp_start($srv, 'POST /restore-status-code HTTP/1.0');
-	($status, $hdr) = slurp_hdr($c);
+	($status, $hdr) = do_req $srv, 'POST /restore-status-code HTTP/1.0';
 	is($status, $orig_200_status, 'original status restored');
 }
 
@@ -145,12 +141,11 @@ SKIP: {
 }
 
 if ('bad requests') {
-	$c = tcp_start($srv, 'GET /env_dump HTTP/1/1');
-	($status, $hdr) = slurp_hdr($c);
+	($status, $hdr) = do_req $srv, 'GET /env_dump HTTP/1/1';
 	like($status, qr!\AHTTP/1\.[01] 400 \b!, 'got 400 on bad request');
 
 	$c = tcp_start($srv);
-	print $c 'GET /';;
+	print $c 'GET /';
 	my $buf = join('', (0..9), 'ab');
 	for (0..1023) { print $c $buf }
 	print $c " HTTP/1.0\r\n\r\n";
@@ -308,12 +303,10 @@ EOM
 	$wpid =~ s/\Apid=// or die;
 	ok(CORE::kill(0, $wpid), 'worker PID retrieved');
 
-	$c = tcp_start($srv, $req);
-	($status, $hdr) = slurp_hdr($c);
+	($status, $hdr) = do_req($srv, $req);
 	like($status, qr!\AHTTP/1\.[01] 200\b!, 'minimal request succeeds');
 
-	$c = tcp_start($srv, 'GET /xxxxxx HTTP/1.0');
-	($status, $hdr) = slurp_hdr($c);
+	($status, $hdr) = do_req($srv, 'GET /xxxxxx HTTP/1.0');
 	like($status, qr!\AHTTP/1\.[01] 413\b!, 'big request fails');
 }
 
