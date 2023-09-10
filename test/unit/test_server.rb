@@ -127,20 +127,6 @@ class WebServerTest < Test::Unit::TestCase
     sock.close
   end
 
-  def test_broken_app
-    teardown
-    app = lambda { |env| raise RuntimeError, "hello" }
-    # [200, {}, []] }
-    redirect_test_io do
-      @server = HttpServer.new(app, :listeners => [ "127.0.0.1:#@port"] )
-      @server.start
-    end
-    sock = tcp_socket('127.0.0.1', @port)
-    sock.syswrite("GET / HTTP/1.0\r\n\r\n")
-    assert_match %r{\AHTTP/1.[01] 500\b}, sock.sysread(4096)
-    assert_nil sock.close
-  end
-
   def test_simple_server
     results = hit(["http://localhost:#{@port}/test"])
     assert_equal 'hello!\n', results[0], "Handler didn't really run"

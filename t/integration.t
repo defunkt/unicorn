@@ -118,6 +118,12 @@ SKIP: {
 is_deeply([grep(/^X-Nil:/, @$hdr)], ['X-Nil: '],
 	'nil header value accepted for broken apps') or diag(explain($hdr));
 
+check_stderr;
+($status, $hdr, $bdy) = do_req($srv, 'GET /broken_app HTTP/1.0');
+like($status, qr!\AHTTP/1\.[0-1] 500\b!, 'got 500 error on broken endpoint');
+is($bdy, undef, 'no response body after exception');
+truncate($errfh, 0);
+
 my $ck_early_hints = sub {
 	my ($note) = @_;
 	$c = unix_start($u1, 'GET /early_hints_rack2 HTTP/1.0');
