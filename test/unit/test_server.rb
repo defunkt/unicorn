@@ -132,59 +132,6 @@ class WebServerTest < Test::Unit::TestCase
     assert_equal 'hello!\n', results[0], "Handler didn't really run"
   end
 
-  def test_client_shutdown_writes
-    bs = 15609315 * rand
-    sock = tcp_socket('127.0.0.1', @port)
-    sock.syswrite("PUT /hello HTTP/1.1\r\n")
-    sock.syswrite("Host: example.com\r\n")
-    sock.syswrite("Transfer-Encoding: chunked\r\n")
-    sock.syswrite("Trailer: X-Foo\r\n")
-    sock.syswrite("\r\n")
-    sock.syswrite("%x\r\n" % [ bs ])
-    sock.syswrite("F" * bs)
-    sock.syswrite("\r\n0\r\nX-")
-    "Foo: bar\r\n\r\n".each_byte do |x|
-      sock.syswrite x.chr
-      sleep 0.05
-    end
-    # we wrote the entire request before shutting down, server should
-    # continue to process our request and never hit EOFError on our sock
-    sock.shutdown(Socket::SHUT_WR)
-    buf = sock.read
-    assert_match %r{\bhello!\\n\b}, buf.split(/\r\n\r\n/, 2).last
-    next_client = Net::HTTP.get(URI.parse("http://127.0.0.1:#@port/"))
-    assert_equal 'hello!\n', next_client
-    lines = File.readlines("test_stderr.#$$.log")
-    assert lines.grep(/^Unicorn::ClientShutdown: /).empty?
-    assert_nil sock.close
-  end
-
-  def test_client_shutdown_write_truncates
-    bs = 15609315 * rand
-    sock = tcp_socket('127.0.0.1', @port)
-    sock.syswrite("PUT /hello HTTP/1.1\r\n")
-    sock.syswrite("Host: example.com\r\n")
-    sock.syswrite("Transfer-Encoding: chunked\r\n")
-    sock.syswrite("Trailer: X-Foo\r\n")
-    sock.syswrite("\r\n")
-    sock.syswrite("%x\r\n" % [ bs ])
-    sock.syswrite("F" * (bs / 2.0))
-
-    # shutdown prematurely, this will force the server to abort
-    # processing on us even during app dispatch
-    sock.shutdown(Socket::SHUT_WR)
-    IO.select([sock], nil, nil, 60) or raise "Timed out"
-    buf = sock.read
-    assert_equal "", buf
-    next_client = Net::HTTP.get(URI.parse("http://127.0.0.1:#@port/"))
-    assert_equal 'hello!\n', next_client
-    lines = File.readlines("test_stderr.#$$.log")
-    lines = lines.grep(/^Unicorn::ClientShutdown: bytes_read=\d+/)
-    assert_equal 1, lines.size
-    assert_match %r{\AUnicorn::ClientShutdown: bytes_read=\d+ true$}, lines[0]
-    assert_nil sock.close
-  end
-
   def test_client_malformed_body
     bs = 15653984
     sock = tcp_socket('127.0.0.1', @port)

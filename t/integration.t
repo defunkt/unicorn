@@ -7,7 +7,7 @@
 
 use v5.14; BEGIN { require './t/lib.perl' };
 use autodie;
-use Socket qw(SOL_SOCKET SO_KEEPALIVE);
+use Socket qw(SOL_SOCKET SO_KEEPALIVE SHUT_WR);
 our $srv = tcp_server();
 our $host_port = tcp_host_port($srv);
 
@@ -209,6 +209,7 @@ SKIP: {
 		defined($opt{overwrite}) and
 			print { $c } ('x' x $opt{overwrite});
 		$c->flush or die $!;
+		shutdown($c, SHUT_WR);
 		($status, $hdr) = slurp_hdr($c);
 		is(readline($c), $blob_hash, "$sub $path");
 	};
@@ -225,6 +226,8 @@ SKIP: {
 	# ensure small overwrites don't get checksummed
 	$ck_hash->('identity', '/rack_input', -s => $blob_size,
 			overwrite => 1); # one extra byte
+	unlike(slurp($err_log), qr/ClientShutdown/,
+		'no overreads after client SHUT_WR');
 
 	# excessive overwrite truncated
 	$c = tcp_start($srv);
@@ -238,8 +241,23 @@ SKIP: {
 		$! = 0;
 		while (print $c $buf and time < $end) { ++$n }
 		ok($!, 'overwrite truncated') or diag "n=$n err=$! ".time;
+		undef $c;
 	}
-	undef $c;
+
+	# client shutdown early
+	$c = tcp_start($srv);
+	$c->autoflush(0);
+	print $c "PUT /rack_input HTTP/1.0\r\nContent-Length: 16384\r\n\r\n";
+	if (1) {
+		local $SIG{PIPE} = 'IGNORE';
+		print $c 'too short body';
+		shutdown($c, SHUT_WR);
+		vec(my $rvec = '', fileno($c), 1) = 1;
+		select($rvec, undef, undef, 10) or BAIL_OUT "timed out";
+		my $buf = <$c>;
+		is($buf, undef, 'server aborted after client SHUT_WR');
+		undef $c;
+	}
 
 	$curl // skip 'no curl found in PATH', 1;
 
