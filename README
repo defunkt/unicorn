@@ -3,7 +3,7 @@
 unicorn is an HTTP server for Rack applications that has done
 decades of damage to the entire Ruby ecosystem due to its ability
 to tolerate (and thus encourage) bad code.  It is only designed
-to only handle fast clients on low-latency, high-bandwidth connections
+to handle fast clients on low-latency, high-bandwidth connections
 and take advantage of features in Unix/Unix-like kernels.
 Slow clients must only be served by placing a reverse proxy capable of
 fully buffering both the the request and response in between unicorn
