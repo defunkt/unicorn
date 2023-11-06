@@ -6,30 +6,58 @@ use v5.14;
 use parent qw(Exporter);
 use autodie;
 use Test::More;
+use Socket qw(SOMAXCONN);
 use Time::HiRes qw(sleep time);
 use IO::Socket::INET;
+use IO::Socket::UNIX;
+use Carp qw(croak);
 use POSIX qw(dup2 _exit setpgid :signal_h SEEK_SET F_SETFD);
 use File::Temp 0.19 (); # 0.19 for ->newdir
 our ($tmpdir, $errfh, $err_log, $u_sock, $u_conf, $daemon_pid,
-	$pid_file);
+	$pid_file, $wtest_sock, $fifo);
 our @EXPORT = qw(unicorn slurp tcp_server tcp_start unicorn
 	$tmpdir $errfh $err_log $u_sock $u_conf $daemon_pid $pid_file
+	$wtest_sock $fifo
 	SEEK_SET tcp_host_port which spawn check_stderr unix_start slurp_hdr
-	do_req stop_daemon sleep time);
+	do_req stop_daemon sleep time mkfifo_die kill_until_dead write_file);
 
 my ($base) = ($0 =~ m!\b([^/]+)\.[^\.]+\z!);
 $tmpdir = File::Temp->newdir("unicorn-$base-XXXX", TMPDIR => 1);
+
+$wtest_sock = "$tmpdir/wtest.sock";
 $err_log = "$tmpdir/err.log";
 $pid_file = "$tmpdir/pid";
+$fifo = "$tmpdir/fifo";
 $u_sock = "$tmpdir/u.sock";
 $u_conf = "$tmpdir/u.conf.rb";
 open($errfh, '>>', $err_log);
 
+if (my $t = $ENV{TAIL}) {
+	my @tail = $t =~ /tail/ ? split(/\s+/, $t) : (qw(tail -F));
+	push @tail, $err_log;
+	my $pid = fork;
+	if ($pid == 0) {
+		open STDOUT, '>&', \*STDERR;
+		exec @tail;
+		die "exec(@tail): $!";
+	}
+	say "# @tail";
+	sleep 0.2;
+	UnicornTest::AutoReap->new($pid);
+}
+
+sub kill_until_dead ($;%) {
+	my ($pid, %opt) = @_;
+	my $tries = $opt{tries} // 1000;
+	my $sig = $opt{sig} // 0;
+	while (CORE::kill($sig, $pid) && --$tries) { sleep(0.01) }
+	$tries or croak "PID: $pid died after signal ($sig)";
+}
+
 sub stop_daemon (;$) {
 	my ($is_END) = @_;
 	kill('TERM', $daemon_pid);
-	my $tries = 1000;
-	while (CORE::kill(0, $daemon_pid) && --$tries) { sleep(0.01) }
+	kill_until_dead $daemon_pid;
 	if ($is_END && CORE::kill(0, $daemon_pid)) { # after done_testing
 		CORE::kill('KILL', $daemon_pid);
 		die "daemon_pid=$daemon_pid did not die";
@@ -44,8 +72,9 @@ END {
 	stop_daemon(1) if defined $daemon_pid;
 };
 
-sub check_stderr () {
-	my @log = slurp($err_log);
+sub check_stderr (@) {
+	my @log = @_;
+	slurp($err_log) if !@log;
 	diag("@log") if $ENV{V};
 	my @err = grep(!/NameError.*Unicorn::Waiter/, grep(/error/i, @log));
 	@err = grep(!/failed to set accept_filter=/, @err);
@@ -61,6 +90,16 @@ sub slurp_hdr {
 	my ($status, @hdr) = split(/\r\n/, $hdr);
 	diag explain([ $status, \@hdr ]) if $ENV{V};
 	($status, \@hdr);
+}
+
+sub unix_server (;$@) {
+	my $l = shift // $u_sock;
+	IO::Socket::UNIX->new(Listen => SOMAXCONN, Local => $l, Blocking => 0,
+				Type => SOCK_STREAM, @_);
+}
+
+sub unix_connect ($) {
+	IO::Socket::UNIX->new(Peer => $_[0], Type => SOCK_STREAM);
 }
 
 sub tcp_server {
@@ -95,8 +134,7 @@ sub tcp_host_port {
 
 sub unix_start ($@) {
 	my ($dst, @req) = @_;
-	my $s = IO::Socket::UNIX->new(Peer => $dst, Type => SOCK_STREAM) or
-		BAIL_OUT "unix connect $dst: $!";
+	my $s = unix_connect($dst) or BAIL_OUT "unix connect $dst: $!";
 	$s->autoflush(1);
 	print $s @req, "\r\n\r\n" if @req;
 	$s;
@@ -201,7 +239,7 @@ sub unicorn {
 	state $ver = $ENV{TEST_RUBY_VERSION} // `$ruby -e 'print RUBY_VERSION'`;
 	state $eng = $ENV{TEST_RUBY_ENGINE} // `$ruby -e 'print RUBY_ENGINE'`;
 	state $ext = File::Spec->rel2abs("test/$eng-$ver/ext/unicorn_http");
-	state $exe = File::Spec->rel2abs('bin/unicorn');
+	state $exe = File::Spec->rel2abs("test/$eng-$ver/bin/unicorn");
 	my $pid = spawn(\%env, $ruby, '-I', $lib, '-I', $ext, $exe, @args);
 	UnicornTest::AutoReap->new($pid);
 }
@@ -217,6 +255,17 @@ sub do_req ($@) {
 	my $bdy = do { local $/; <$c> };
 	close $c;
 	($status, $hdr, $bdy);
+}
+
+sub mkfifo_die ($;$) {
+	POSIX::mkfifo($_[0], $_[1] // 0600) or croak "mkfifo: $!";
+}
+
+sub write_file ($$@) { # mode, filename, LIST (for print)
+	open(my $fh, shift, shift);
+	print $fh @_;
+	# return $fh for futher writes if user wants it:
+	defined(wantarray) && !wantarray ? $fh : close $fh;
 }
 
 # automatically kill + reap children when this goes out-of-scope
