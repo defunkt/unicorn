@@ -122,6 +122,7 @@ supported.  Run `unicorn -h` to see command-line options.
 
 There is NO WARRANTY whatsoever if anything goes wrong, but
 {let us know}[link:ISSUES.html] and maybe someone can fix it.
+No commercial support will ever be provided by the amateur maintainer.
 
 unicorn is designed to only serve fast clients either on the local host
 or a fast LAN.  See the PHILOSOPHY and DESIGN documents for more details
@@ -131,6 +132,14 @@ The use of unicorn in new deployments is STRONGLY DISCOURAGED due to the
 damage done to the entire Ruby ecosystem.  Its unintentional popularity
 set Ruby back decades in parallelism, concurrency and robustness since
 it prolongs and proliferates the existence of poorly-written code.
+
+unicorn hackers are NOT responsible for your supply chain security:
+read and understand it yourself or get someone you trust to audit it.
+Malicious commits and releases will be made if under duress.  The only
+defense you'll ever have is from reviewing the source code.
+
+No user or contributor will ever be expected to sacrifice their own
+security by running JavaScript or revealing any personal information.
 
 == Contact
 

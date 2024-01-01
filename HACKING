@@ -6,6 +6,8 @@ Like Mongrel, we use Ruby where it makes sense, and Ragel with C where
 it helps performance.  All of the code that actually runs your Rack
 application is written Ruby, Ragel or C.
 
+Ragel may be dropped in favor of a picohttpparser-based one in the future.
+
 As far as tests and documentation goes, we're not afraid to embrace Unix
 and use traditional Unix tools where they make sense and get the job
 done.
@@ -15,6 +17,9 @@ done.
 Tests are good, but slow tests make development slow, so we make tests
 faster (in parallel) with GNU make (instead of Rake) and avoiding
 RubyGems.
+
+New tests are written in Perl 5 and use TAP <https://testanything.org/>
+to ensure stability and immunity from Ruby incompatibilities.
 
 Users of GNU-based systems (such as GNU/Linux) usually have GNU make
 installed as "make" instead of "gmake".
@@ -69,10 +74,10 @@ supported by the versions of Ruby we target.
 
 === Ragel Compatibility
 
-We target the latest released version of Ragel and will update our code
-to keep up with new releases.  Packaged tarballs and gems include the
-generated source code so they will remain usable if compatibility is
-broken.
+We target the latest released version of Ragel in Debian and will update
+our code to keep up with new releases.  Packaged tarballs and gems
+include the generated source code so they will remain usable if
+compatibility is broken.
 
 == Contributing
 
