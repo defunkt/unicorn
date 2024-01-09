@@ -27,6 +27,7 @@ listen "$u1"
 EOM
 my $ar = unicorn(qw(-E none t/integration.ru -c), $u_conf, { 3 => $srv });
 my $curl = which('curl');
+local $ENV{NO_PROXY} = '*'; # for curl
 my $fifo = "$tmpdir/fifo";
 POSIX::mkfifo($fifo, 0600) or die "mkfifo: $!";
 my %PUT = (
