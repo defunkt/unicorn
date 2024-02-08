@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 
 # This is the process manager of Unicorn. This manages worker
 # processes which in turn handle the I/O and application process.

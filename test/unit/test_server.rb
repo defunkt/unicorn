@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 
 # Copyright (c) 2005 Zed A. Shaw
 # You can redistribute it and/or modify it under the same terms as Ruby 1.8 or

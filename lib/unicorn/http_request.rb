@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 # :enddoc:
 # no stable API here
 require 'unicorn_http'

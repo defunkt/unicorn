@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 
 # When processing uploads, unicorn may expose a StreamInput object under
 # "rack.input" of the Rack environment when

@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 require 'logger'
 
 # Implements a simple DSL for configuring a unicorn server.

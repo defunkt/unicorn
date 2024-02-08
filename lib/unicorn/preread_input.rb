@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 
 module Unicorn
 # This middleware is used to ensure input is buffered to memory

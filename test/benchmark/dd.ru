@@ -1,3 +1,4 @@
+# frozen_string_literal: false
 # This benchmark is the simplest test of the I/O facilities in
 # unicorn.  It is meant to return a fixed-sized blob to test
 # the performance of things in Unicorn, _NOT_ the app.

@@ -1,4 +1,5 @@
 #\-N --debug
+# frozen_string_literal: false
 run(lambda do |env|
   case env['PATH_INFO']
   when '/vars'

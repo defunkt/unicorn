@@ -1,3 +1,4 @@
+# frozen_string_literal: false
 # Multi-Processing-safe monkey patch for Logger
 #
 # This monkey patch fixes the case where "preload_app true" is used and

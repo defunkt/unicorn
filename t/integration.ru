@@ -1,4 +1,5 @@
 #!ruby
+# frozen_string_literal: false
 # Copyright (C) unicorn hackers <unicorn-public@80x24.org>
 # License: GPL-3.0+ <https://www.gnu.org/licenses/gpl-3.0.txt>
 

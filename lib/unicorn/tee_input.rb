@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 
 # Acts like tee(1) on an input input to provide a input-like stream
 # while providing rewindable semantics through a File/StringIO backing

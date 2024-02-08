@@ -1,4 +1,5 @@
 #\-E none
+# frozen_string_literal: false
 require 'digest/md5'
 require 'unicorn/preread_input'
 use Unicorn::PrereadInput

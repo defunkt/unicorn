@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 require 'mkmf'
 
 have_func("rb_hash_clear", "ruby.h") or abort 'Ruby 2.0+ required'

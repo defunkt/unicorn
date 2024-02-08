@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 
 module Unicorn::Const # :nodoc:
   # default TCP listen host address (0.0.0.0, all interfaces)

@@ -1,3 +1,4 @@
+# frozen_string_literal: false
 # optional rake-compiler support in case somebody needs to cross compile
 begin
   mk = "ext/unicorn_http/Makefile"

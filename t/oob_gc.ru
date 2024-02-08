@@ -1,4 +1,5 @@
 #\-E none
+# frozen_string_literal: false
 require 'unicorn/oob_gc'
 use Rack::ContentLength
 use Rack::ContentType, "text/plain"

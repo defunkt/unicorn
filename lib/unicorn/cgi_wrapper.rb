@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 
 # :enddoc:
 # This code is based on the original CGIWrapper from Mongrel

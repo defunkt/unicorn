@@ -1,3 +1,4 @@
+# frozen_string_literal: false
 # fallback for non-Linux and Linux <4.5 systems w/o EPOLLEXCLUSIVE
 class Unicorn::SelectWaiter # :nodoc:
   def get_readers(ready, readers, timeout) # :nodoc:

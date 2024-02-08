@@ -1,3 +1,4 @@
+# frozen_string_literal: false
 # Minimal sample configuration file for Unicorn (not Rack) when used
 # with daemonization (unicorn -D) started in your working directory.
 #

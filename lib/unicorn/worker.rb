@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 require "raindrops"
 
 # This class and its members can be considered a stable interface

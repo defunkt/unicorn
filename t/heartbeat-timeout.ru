@@ -1,3 +1,4 @@
+# frozen_string_literal: false
 use Rack::ContentLength
 headers = { 'content-type' => 'text/plain' }
 run lambda { |env|

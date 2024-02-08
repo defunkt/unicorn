@@ -1,3 +1,4 @@
+# frozen_string_literal: false
 # This app is intended to test large HTTP responses with or without
 # a fully-buffering reverse proxy such as nginx. Without a fully-buffering
 # reverse proxy, unicorn will be unresponsive when client count exceeds

@@ -1,3 +1,4 @@
+# frozen_string_literal: false
 use Rack::ContentType, "text/plain"
 fifo_path = ENV["TEST_FIFO"] or abort "TEST_FIFO not set"
 run lambda { |env|

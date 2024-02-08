@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 manifest = File.exist?('.manifest') ?
   IO.readlines('.manifest').map!(&:chomp!) : `git ls-files`.split("\n")
 

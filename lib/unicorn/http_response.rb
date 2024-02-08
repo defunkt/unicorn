@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 # :enddoc:
 # Writes a Rack response to your client using the HTTP/1.1 specification.
 # You use it by simply doing:

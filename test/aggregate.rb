@@ -1,5 +1,6 @@
 #!/usr/bin/ruby -n
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 
 BEGIN { $tests = $assertions = $failures = $errors = 0 }
 

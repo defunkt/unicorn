@@ -1,5 +1,6 @@
 #!/this/will/be/overwritten/or/wrapped/anyways/do/not/worry/ruby
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 require 'unicorn/launcher'
 require 'optparse'
 

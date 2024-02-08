@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 
 require 'fcntl'
 module Unicorn::Util # :nodoc:

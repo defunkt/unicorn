@@ -1,3 +1,4 @@
+# frozen_string_literal: false
 run(lambda { |env|
   body = "#{caller.size}\n"
   h = {

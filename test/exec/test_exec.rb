@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 # Don't add to this file, new tests are in Perl 5. See t/README
 FLOCK_PATH = File.expand_path(__FILE__)
 require './test/test_helper'

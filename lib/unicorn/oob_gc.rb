@@ -1,4 +1,5 @@
 # -*- encoding: binary -*-
+# frozen_string_literal: false
 
 # Strongly consider https://github.com/tmm1/gctools if using Ruby 2.1+
 # It is built on new APIs in Ruby 2.1, so it is more intelligent than

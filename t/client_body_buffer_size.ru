@@ -1,4 +1,5 @@
 #\ -E none
+# frozen_string_literal: false
 app = lambda do |env|
   input = env['rack.input']
   case env["PATH_INFO"]
