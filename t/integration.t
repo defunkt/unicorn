@@ -122,7 +122,23 @@ check_stderr;
 ($status, $hdr, $bdy) = do_req($srv, 'GET /broken_app HTTP/1.0');
 like($status, qr!\AHTTP/1\.[0-1] 500\b!, 'got 500 error on broken endpoint');
 is($bdy, undef, 'no response body after exception');
-truncate($errfh, 0);
+seek $errfh, 0, SEEK_SET;
+{
+	my $nxt;
+	while (!defined($nxt) && defined($_ = <$errfh>)) {
+		$nxt = <$errfh> if /app error/;
+	}
+	ok $nxt, 'got app error' and
+		like $nxt, qr/\bintegration\.ru/, 'got backtrace';
+}
+seek $errfh, 0, SEEK_SET;
+truncate $errfh, 0;
+
+($status, $hdr, $bdy) = do_req($srv, 'GET /nil HTTP/1.0');
+like($status, qr!\AHTTP/1\.[0-1] 500\b!, 'got 500 error on nil endpoint');
+like slurp($err_log), qr/app error/, 'exception logged for nil';
+seek $errfh, 0, SEEK_SET;
+truncate $errfh, 0;
 
 my $ck_early_hints = sub {
 	my ($note) = @_;

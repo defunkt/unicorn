@@ -30,7 +30,7 @@ $pid_file = "$tmpdir/pid";
 $fifo = "$tmpdir/fifo";
 $u_sock = "$tmpdir/u.sock";
 $u_conf = "$tmpdir/u.conf.rb";
-open($errfh, '>>', $err_log);
+open($errfh, '+>>', $err_log);
 
 if (my $t = $ENV{TAIL}) {
 	my @tail = $t =~ /tail/ ? split(/\s+/, $t) : (qw(tail -F));

@@ -100,6 +100,7 @@ run(lambda do |env|
     when '/early_hints_rack2'; early_hints(env, "r\n2")
     when '/early_hints_rack3'; early_hints(env, %w(r 3))
     when '/broken_app'; raise RuntimeError, 'hello'
+    when '/nil'; nil
     else '/'; [ 200, {}, [ env_dump(env) ] ]
     end # case PATH_INFO (GET)
   when 'POST'
