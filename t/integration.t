@@ -103,14 +103,75 @@ is_deeply([ grep(/^x-r3: /, @$hdr) ],
 
 SKIP: {
 	eval { require JSON::PP } or skip "JSON::PP missing: $@", 1;
-	($status, $hdr, my $json) = do_req $srv, 'GET /env_dump';
+	my $get_json = sub {
+		my (@req) = @_;
+		my @r = do_req $srv, @req;
+		my $env = eval { JSON::PP->new->decode($r[2]) };
+		diag "$@ (r[2]=$r[2])" if $@;
+		is ref($env), 'HASH', "@req response body is JSON";
+		(@r, $env)
+	};
+	($status, $hdr, my $json, my $env) = $get_json->('GET /env_dump');
 	is($status, undef, 'no status for HTTP/0.9');
 	is($hdr, undef, 'no header for HTTP/0.9');
 	unlike($json, qr/^Connection: /smi, 'no connection header for 0.9');
 	unlike($json, qr!\AHTTP/!s, 'no HTTP/1.x prefix for 0.9');
-	my $env = JSON::PP->new->decode($json);
-	is(ref($env), 'HASH', 'JSON decoded body to hashref');
 	is($env->{SERVER_PROTOCOL}, 'HTTP/0.9', 'SERVER_PROTOCOL is 0.9');
+	is $env->{'rack.url_scheme'}, 'http', 'rack.url_scheme default';
+	is $env->{'rack.input'}, 'StringIO', 'StringIO for no content';
+
+	my $req = 'OPTIONS *';
+	($status, $hdr, $json, $env) = $get_json->("$req HTTP/1.0");
+	is $env->{REQUEST_PATH}, '', "$req => REQUEST_PATH";
+	is $env->{PATH_INFO}, '', "$req => PATH_INFO";
+	is $env->{REQUEST_URI}, '*', "$req => REQUEST_URI";
+
+	$req = 'GET http://e:3/env_dump?y=z';
+	($status, $hdr, $json, $env) = $get_json->("$req HTTP/1.0");
+	is $env->{REQUEST_PATH}, '/env_dump', "$req => REQUEST_PATH";
+	is $env->{PATH_INFO}, '/env_dump', "$req => PATH_INFO";
+	is $env->{QUERY_STRING}, 'y=z', "$req => QUERY_STRING";
+
+	$req = 'GET http://e:3/env_dump#frag';
+	($status, $hdr, $json, $env) = $get_json->("$req HTTP/1.0");
+	is $env->{REQUEST_PATH}, '/env_dump', "$req => REQUEST_PATH";
+	is $env->{PATH_INFO}, '/env_dump', "$req => PATH_INFO";
+	is $env->{QUERY_STRING}, '', "$req => QUERY_STRING";
+	is $env->{FRAGMENT}, 'frag', "$req => FRAGMENT";
+
+	$req = 'GET http://e:3/env_dump?a=b#frag';
+	($status, $hdr, $json, $env) = $get_json->("$req HTTP/1.0");
+	is $env->{REQUEST_PATH}, '/env_dump', "$req => REQUEST_PATH";
+	is $env->{PATH_INFO}, '/env_dump', "$req => PATH_INFO";
+	is $env->{QUERY_STRING}, 'a=b', "$req => QUERY_STRING";
+	is $env->{FRAGMENT}, 'frag', "$req => FRAGMENT";
+
+	for my $proto (qw(https http)) {
+		$req = "X-Forwarded-Proto: $proto";
+		($status, $hdr, $json, $env) = $get_json->(
+						"GET /env_dump HTTP/1.0\r\n".
+						"X-Forwarded-Proto: $proto");
+		is $env->{REQUEST_PATH}, '/env_dump', "$req => REQUEST_PATH";
+		is $env->{PATH_INFO}, '/env_dump', "$req => PATH_INFO";
+		is $env->{'rack.url_scheme'}, $proto, "$req => rack.url_scheme";
+	}
+
+	$req = 'X-Forwarded-Proto: ftp'; # invalid proto
+	($status, $hdr, $json, $env) = $get_json->(
+					"GET /env_dump HTTP/1.0\r\n".
+					"X-Forwarded-Proto: ftp");
+	is $env->{REQUEST_PATH}, '/env_dump', "$req => REQUEST_PATH";
+	is $env->{PATH_INFO}, '/env_dump', "$req => PATH_INFO";
+	is $env->{'rack.url_scheme'}, 'http', "$req => rack.url_scheme";
+
+	($status, $hdr, $json, $env) = $get_json->("PUT /env_dump HTTP/1.0\r\n".
+						'Content-Length: 0');
+	is $env->{'rack.input'}, 'StringIO', 'content-length: 0 uses StringIO';
+
+	($status, $hdr, $json, $env) = $get_json->("PUT /env_dump HTTP/1.0\r\n".
+						'Content-Length: 1');
+	is $env->{'rack.input'}, 'Unicorn::TeeInput',
+		'content-length: 1 uses TeeInput';
 }
 
 # cf. <CAO47=rJa=zRcLn_Xm4v2cHPr6c0UswaFC_omYFEH+baSxHOWKQ@mail.gmail.com>
@@ -178,6 +239,11 @@ SKIP: {
 if ('bad requests') {
 	($status, $hdr) = do_req $srv, 'GET /env_dump HTTP/1/1';
 	like($status, qr!\AHTTP/1\.[01] 400 \b!, 'got 400 on bad request');
+
+	for my $abs_uri (qw(ssh+http://e/ ftp://e/x http+ssh://e/x)) {
+		($status, $hdr) = do_req $srv, "GET $abs_uri HTTP/1.0";
+		like $status, qr!\AHTTP/1\.[01] 400 \b!, "400 on $abs_uri";
+	}
 
 	$c = tcp_start($srv);
 	print $c 'GET /';

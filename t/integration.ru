@@ -47,6 +47,7 @@ def env_dump(env)
     else
       case k
       when 'rack.version', 'rack.after_reply'; h[k] = v
+      when 'rack.input'; h[k] = v.class.to_s
       end
     end
   end
@@ -112,6 +113,11 @@ run(lambda do |env|
   when 'PUT'
     case env['PATH_INFO']
     when %r{\A/rack_input}; rack_input_tests(env)
+    when '/env_dump'; [ 200, {}, [ env_dump(env) ] ]
+    end
+  when 'OPTIONS'
+    case env['REQUEST_URI']
+    when '*'; [ 200, {}, [ env_dump(env) ] ]
     end
   end # case REQUEST_METHOD
 end) # run
