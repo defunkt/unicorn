@@ -78,6 +78,7 @@ man1_bins := $(addsuffix .1, $(base_bins))
 man1_paths := $(addprefix man/man1/, $(man1_bins))
 tmp_bins = $(addprefix $(tmp_bin)/, unicorn unicorn_rails)
 pid := $(shell echo $$PPID)
+build: $(tmp_bins)
 
 $(tmp_bin)/%: bin/% | $(tmp_bin)
 	$(INSTALL) -m 755 $< $@.$(pid)
