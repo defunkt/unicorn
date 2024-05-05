@@ -87,6 +87,7 @@ def rack_input_tests(env)
   [ 200, h, [ dig.hexdigest ] ]
 end
 
+$nr_aborts = 0
 run(lambda do |env|
   case env['REQUEST_METHOD']
   when 'GET'
@@ -101,7 +102,10 @@ run(lambda do |env|
     when '/early_hints_rack2'; early_hints(env, "r\n2")
     when '/early_hints_rack3'; early_hints(env, %w(r 3))
     when '/broken_app'; raise RuntimeError, 'hello'
+    when '/aborted'; $nr_aborts += 1; [ 200, {}, [] ]
+    when '/nr_aborts'; [ 200, { 'nr-aborts' => "#$nr_aborts" }, [] ]
     when '/nil'; nil
+    when '/read_fifo'; [ 200, {}, [ File.read(env['HTTP_READ_FIFO']) ] ]
     else '/'; [ 200, {}, [ env_dump(env) ] ]
     end # case PATH_INFO (GET)
   when 'POST'

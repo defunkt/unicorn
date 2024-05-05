@@ -405,6 +405,39 @@ EOM
 	my $wpid = readline($fifo_fh);
 	like($wpid, qr/\Apid=\d+\z/a , 'new worker ready');
 	$ck_early_hints->('ccc on');
+
+	$c = tcp_start $srv, 'GET /env_dump HTTP/1.0';
+	vec(my $rvec = '', fileno($c), 1) = 1;
+	select($rvec, undef, undef, 10) or BAIL_OUT 'timed out env_dump';
+	($status, $hdr) = slurp_hdr($c);
+	like $status, qr!\AHTTP/1\.[01] 200!, 'got part of first response';
+	ok $hdr, 'got all headers';
+
+	# start a slow TCP request
+	my $rfifo = "$tmpdir/rfifo";
+	mkfifo_die $rfifo;
+	$c = tcp_start $srv, "GET /read_fifo HTTP/1.0\r\nRead-FIFO: $rfifo";
+	tcp_start $srv, 'GET /aborted HTTP/1.0' for (1..100);
+	write_file '>', $rfifo, 'TFIN';
+	($status, $hdr) = slurp_hdr($c);
+	like $status, qr!\AHTTP/1\.[01] 200!, 'got part of first response';
+	$bdy = <$c>;
+	is $bdy, 'TFIN', 'got slow response from TCP socket';
+
+	# slow Unix socket request
+	$c = unix_start $u1, "GET /read_fifo HTTP/1.0\r\nRead-FIFO: $rfifo";
+	vec($rvec = '', fileno($c), 1) = 1;
+	select($rvec, undef, undef, 10) or BAIL_OUT 'timed out Unix CCC';
+	unix_start $u1, 'GET /aborted HTTP/1.0' for (1..100);
+	write_file '>', $rfifo, 'UFIN';
+	($status, $hdr) = slurp_hdr($c);
+	like $status, qr!\AHTTP/1\.[01] 200!, 'got part of first response';
+	$bdy = <$c>;
+	is $bdy, 'UFIN', 'got slow response from Unix socket';
+
+	($status, $hdr, $bdy) = do_req $srv, 'GET /nr_aborts HTTP/1.0';
+	like "@$hdr", qr/nr-aborts: 0\b/,
+		'aborted connections unseen by Rack app';
 }
 
 if ('max_header_len internal API') {
