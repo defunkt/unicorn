@@ -4,13 +4,11 @@
 use v5.14; BEGIN { require './t/lib.perl' };
 use autodie;
 use POSIX qw(mkfifo);
-my $u_conf = "$tmpdir/u.conf.rb";
 my $u_sock = "$tmpdir/u.sock";
 my $fifo = "$tmpdir/fifo";
 mkfifo($fifo, 0666) or die "mkfifo($fifo): $!";
 
-open my $fh, '>', $u_conf;
-print $fh <<EOM;
+write_file '>', $u_conf, <<EOM;
 pid "$tmpdir/pid"
 listen "$u_sock"
 stderr_path "$err_log"
@@ -19,11 +17,10 @@ after_fork do |server, worker|
   File.open("$fifo", "wb") { |fp| fp.syswrite worker.nr.to_s }
 end
 EOM
-close $fh;
 
 unicorn('-D', '-c', $u_conf, 't/integration.ru')->join;
 is($?, 0, 'daemonized properly');
-open $fh, '<', "$tmpdir/pid";
+open my $fh, '<', "$tmpdir/pid";
 chomp(my $pid = <$fh>);
 ok(kill(0, $pid), 'daemonized PID works');
 my $quit = sub { kill('QUIT', $pid) if $pid; $pid = undef };

@@ -11,29 +11,22 @@ END { kill('TERM', values(%to_kill)) if keys %to_kill }
 my $u1 = "$tmpdir/u1.sock";
 my $u2 = "$tmpdir/u2.sock";
 {
-	open my $fh, '>', "$tmpdir/u1.conf.rb";
-	print $fh <<EOM;
+	write_file '>', "$tmpdir/u1.conf.rb", <<EOM;
 pid "$tmpdir/u.pid"
 listen "$u1"
 stderr_path "$err_log"
 EOM
-	close $fh;
-
-	open $fh, '>', "$tmpdir/u2.conf.rb";
-	print $fh <<EOM;
+	write_file '>', "$tmpdir/u2.conf.rb", <<EOM;
 pid "$tmpdir/u.pid"
 listen "$u2"
 stderr_path "$tmpdir/err2.log"
 EOM
-	close $fh;
 
-	open $fh, '>', "$tmpdir/u3.conf.rb";
-	print $fh <<EOM;
+	write_file '>', "$tmpdir/u3.conf.rb", <<EOM;
 pid "$tmpdir/u3.pid"
 listen "$u1"
 stderr_path "$tmpdir/err3.log"
 EOM
-	close $fh;
 }
 
 my @uarg = qw(-D -E none t/integration.ru);

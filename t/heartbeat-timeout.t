@@ -6,14 +6,12 @@ use autodie;
 use Time::HiRes qw(clock_gettime CLOCK_MONOTONIC);
 mkdir "$tmpdir/alt";
 my $srv = tcp_server();
-open my $fh, '>', $u_conf;
-print $fh <<EOM;
+write_file '>', $u_conf, <<EOM;
 pid "$tmpdir/pid"
 preload_app true
 stderr_path "$err_log"
 timeout 3 # WORST FEATURE EVER
 EOM
-close $fh;
 
 my $ar = unicorn(qw(-E none t/heartbeat-timeout.ru -c), $u_conf, { 3 => $srv });
 

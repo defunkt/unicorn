@@ -4,14 +4,11 @@
 use v5.14; BEGIN { require './t/lib.perl' };
 use autodie;
 my $srv = tcp_server();
-my $u_conf = "$tmpdir/u.conf.rb";
 my $out_log = "$tmpdir/out.log";
-open my $fh, '>', $u_conf;
-print $fh <<EOM;
+write_file '>', $u_conf, <<EOM;
 stderr_path "$err_log"
 stdout_path "$out_log"
 EOM
-close $fh;
 
 my $auto_reap = unicorn('-c', $u_conf, 't/reopen-logs.ru', { 3 => $srv } );
 my ($status, $hdr, $bdy) = do_req($srv, 'GET / HTTP/1.0');

@@ -4,11 +4,10 @@
 
 use v5.14; BEGIN { require './t/lib.perl' };
 use autodie;
-open my $conf_fh, '>', $u_conf;
-$conf_fh->autoflush(1);
-print $conf_fh <<EOM;
+my $conf_fh = write_file '>', $u_conf, <<EOM;
 client_body_buffer_size 0
 EOM
+$conf_fh->autoflush(1);
 my $srv = tcp_server();
 my $host_port = tcp_host_port($srv);
 my @uarg = (qw(-E none t/client_body_buffer_size.ru -c), $u_conf);

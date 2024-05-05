@@ -5,15 +5,13 @@ use v5.14; BEGIN { require './t/lib.perl' };
 use autodie;
 mkdir "$tmpdir/alt";
 my $ru = "$tmpdir/alt/config.ru";
-open my $fh, '>', $u_conf;
-print $fh <<EOM;
+write_file '>', $u_conf, <<EOM;
 pid "$pid_file"
 preload_app true
 stderr_path "$err_log"
 working_directory "$tmpdir/alt" # the whole point of this test
 before_fork { |_,_| \$master_ppid = Process.ppid }
 EOM
-close $fh;
 
 my $common_ru = <<'EOM';
 use Rack::ContentLength
@@ -21,12 +19,10 @@ use Rack::ContentType, 'text/plain'
 run lambda { |env| [ 200, {}, [ "#{$master_ppid}\n" ] ] }
 EOM
 
-open $fh, '>', $ru;
-print $fh <<EOM;
+write_file '>', $ru, <<EOM;
 #\\--daemonize --listen $u_sock
 $common_ru
 EOM
-close $fh;
 
 unicorn('-c', $u_conf)->join; # will daemonize
 chomp($daemon_pid = slurp($pid_file));
@@ -39,9 +35,7 @@ check_stderr;
 
 if ('test without CLI switches in config.ru') {
 	truncate $err_log, 0;
-	open $fh, '>', $ru;
-	print $fh $common_ru;
-	close $fh;
+	write_file '>', $ru, $common_ru;
 
 	unicorn('-D', '-l', $u_sock, '-c', $u_conf)->join; # will daemonize
 	chomp($daemon_pid = slurp($pid_file));
@@ -68,8 +62,7 @@ if ('ensures broken working_directory (missing config.ru) is OK') {
 if ('fooapp.rb (not config.ru) works with working_directory') {
 	truncate $err_log, 0;
 	my $fooapp = "$tmpdir/alt/fooapp.rb";
-	open $fh, '>', $fooapp;
-	print $fh <<EOM;
+	write_file '>', $fooapp, <<EOM;
 class Fooapp
   def self.call(env)
     b = "dir=#{Dir.pwd}"
@@ -78,7 +71,6 @@ class Fooapp
   end
 end
 EOM
-	close $fh;
 	my $srv = tcp_server;
 	my $auto_reap = unicorn(qw(-c), $u_conf, qw(-I. fooapp.rb),
 				{ -C => '/', 3 => $srv });

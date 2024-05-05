@@ -18,13 +18,12 @@ if ('ensure Perl does not set SO_KEEPALIVE by default') {
 	$val = getsockopt($srv, SOL_SOCKET, SO_KEEPALIVE);
 }
 my $t0 = time;
-open my $conf_fh, '>', $u_conf;
-$conf_fh->autoflush(1);
 my $u1 = "$tmpdir/u1";
-print $conf_fh <<EOM;
+my $conf_fh = write_file '>', $u_conf, <<EOM;
 early_hints true
 listen "$u1"
 EOM
+$conf_fh->autoflush(1);
 my $ar = unicorn(qw(-E none t/integration.ru -c), $u_conf, { 3 => $srv });
 my $curl = which('curl');
 local $ENV{NO_PROXY} = '*'; # for curl
