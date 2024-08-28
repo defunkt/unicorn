@@ -74,6 +74,7 @@ module Unicorn::HttpResponse
         buf << "Transfer-Encoding: chunked\r\n".freeze
       end
       socket.write(buf << "\r\n".freeze)
+      buf.clear # remove this line if C Ruby gets escape analysis
     end
 
     if hijack
