@@ -232,13 +232,27 @@ static int is_chunked(VALUE v)
   return rb_funcall(cHttpParser, id_is_chunked_p, 1, v) != Qfalse;
 }
 
-static void write_value(struct http_parser *hp,
-                        const char *buffer, const char *p)
+static void write_value(struct http_parser *hp, char *buffer, const char *p)
 {
-  VALUE f = find_common_field(PTR_TO(start.field), hp->s.field_len);
-  VALUE v;
-  VALUE e;
+  VALUE f, v, e;
+  char *tip = PTR_TO(start.field);
+  size_t i;
+  static const size_t cl_len = sizeof("CONTENT_LENGTH") - 1;
+  static const size_t tl_len = sizeof("TRANSFER_ENCODING") - 1;
 
+  /* avoid confusion + smuggling attacks from `_' */
+  if (hp->s.field_len == cl_len && !memcmp(tip, "CONTENT_LENGTH", cl_len))
+        parser_raise(eHttpParserError, "invalid Content-Length");
+  else if (hp->s.field_len == tl_len &&
+           !memcmp(tip, "TRANSFER_ENCODING", tl_len))
+        parser_raise(eHttpParserError, "invalid Transfer-Encoding");
+
+  /* .tr('-', '_') since Rack expects it */
+  for (i = 0; i < hp->s.field_len; i++)
+	if (tip[i] == '-')
+		tip[i] = '_';
+
+  f = find_common_field(tip, hp->s.field_len);
   VALIDATE_MAX_LENGTH(LEN(mark, p), FIELD_VALUE);
   v = LEN(mark, p) == 0 ? rb_str_buf_new(128) : STRIPPED_STR_NEW(mark, p);
   if (NIL_P(f)) {
@@ -325,7 +339,7 @@ static void write_value(struct http_parser *hp,
   action mark {MARK(mark, fpc); }
 
   action start_field { MARK(start.field, fpc); }
-  action snake_upcase_field { snake_upcase_char(deconst(fpc)); }
+  action upcase_field { upcase_char(deconst(fpc)); }
   action downcase_char { downcase_char(deconst(fpc)); }
   action write_field { hp->s.field_len = LEN(start.field, fpc); }
   action start_value { MARK(mark, fpc); }

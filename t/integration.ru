@@ -38,7 +38,7 @@ def write_on_close
   [ 200, { 'transfer-encoding' => 'chunked' }, WriteOnClose.new ]
 end
 
-def env_dump(env)
+def env_dump(env, dump_body = false)
   require 'json'
   h = {}
   env.each do |k,v|
@@ -51,6 +51,7 @@ def env_dump(env)
       end
     end
   end
+  h['unicorn_test.body'] = env['rack.input'].read if dump_body
   h.to_json
 end
 
@@ -112,6 +113,7 @@ run(lambda do |env|
     case env['PATH_INFO']
     when '/tweak-status-code'; tweak_status_code
     when '/restore-status-code'; restore_status_code
+    when '/env_dump'; [ 200, {}, [ env_dump(env, true) ] ]
     end # case PATH_INFO (POST)
     # ...
   when 'PUT'

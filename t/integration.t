@@ -101,12 +101,14 @@ is_deeply([ grep(/^x-r3: /, @$hdr) ],
 	[ 'x-r3: a', 'x-r3: b', 'x-r3: c' ],
 	'rack 3 array headers supported') or diag(explain($hdr));
 
+my $JSON_PP;
 SKIP: {
 	eval { require JSON::PP } or skip "JSON::PP missing: $@", 1;
+	$JSON_PP = JSON::PP->new;
 	my $get_json = sub {
 		my (@req) = @_;
 		my @r = do_req $srv, @req;
-		my $env = eval { JSON::PP->new->decode($r[2]) };
+		my $env = eval { $JSON_PP->decode($r[2]) };
 		diag "$@ (r[2]=$r[2])" if $@;
 		is ref($env), 'HASH', "@req response body is JSON";
 		(@r, $env)
@@ -389,6 +391,43 @@ SKIP: {
 	undef $pri;
 	check_stderr;
 	diag 'Unicorn::PrereadInput middleware tests done';
+}
+
+# disallow /content_length/i and /transfer_encoding/i due to confusion+
+# smuggling attacks
+# cf. <CAB6pCSb=vE1My6pHcwO672JNeeDaOYNJ4ykkB_vq9LCqR7pYFw@mail.gmail.com>
+SKIP: {
+	$JSON_PP or skip "JSON::PP missing: $@", 1;
+	my $body = "1\r\nZ\r\n0\r\n\r\n";
+	my $blen = length $body;
+	my $post = "POST /env_dump HTTP/1.0\r\n";
+
+	for my $x (["Content-Length: $blen", $body],
+			[ "Transfer-Encoding: chunked", 'Z']) {
+		($status, $hdr, $bdy) = do_req $srv, $post,
+					$x->[0], "\r\n\r\n", $body;
+		like $status, qr!\AHTTP/1\.[01] 200!, 'Content-Length POST';
+		my $env = $JSON_PP->decode($bdy);
+		is $env->{'unicorn_test.body'}, $x->[1], "$x->[0]-only";
+	}
+
+	for my $cl (qw(Content-Length Content_Length)) {
+		for my $te (qw(Transfer-Encoding Transfer_Encoding)) {
+			($status, $hdr, $bdy) = do_req $srv, $post,
+				"$te: chunked\r\n",
+				"$cl: $blen\r\n", "\r\n", $body;
+			if ("$cl$te" =~ /_/) {
+				like $status, qr!\AHTTP/1\.[01] 400 \b!,
+					"got 400 on bad request w/ $cl + $te";
+			} else { # RFC 7230 favors Transfer-Encoding :<
+				like $status, qr!\AHTTP/1\.[01] 200 \b!,
+					"got 200 w/ both $cl + $te";
+				my $env = $JSON_PP->decode($bdy);
+				is $env->{'unicorn_test.body'}, 'Z',
+'Transfer-Encoding favored over Content-Length (RFC 7230 3.3.3#3)';
+			}
+		}
+	}
 }
 
 # ... more stuff here
