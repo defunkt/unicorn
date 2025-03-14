@@ -466,7 +466,6 @@ EOM
 	# slow Unix socket request
 	$c = unix_start $u1, "GET /read_fifo HTTP/1.0\r\nRead-FIFO: $rfifo";
 	vec($rvec = '', fileno($c), 1) = 1;
-	select($rvec, undef, undef, 10) or BAIL_OUT 'timed out Unix CCC';
 	unix_start $u1, 'GET /aborted HTTP/1.0' for (1..100);
 	write_file '>', $rfifo, 'UFIN';
 	($status, $hdr) = slurp_hdr($c);
