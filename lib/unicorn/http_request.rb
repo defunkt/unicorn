@@ -124,28 +124,14 @@ class Unicorn::HttpParser
       # generate an opt_case_dispatch instruction
       eval <<-EOS
       def closed_state?(state) # :nodoc:
-        case state
-        when #{Raindrops::TCP[:ESTABLISHED]}
-          false
-        when #{Raindrops::TCP.values_at(
-              :CLOSE_WAIT, :TIME_WAIT, :CLOSE, :LAST_ACK, :CLOSING).join(',')}
-          true
-        else
-          false
-        end
+        state == #{Raindrops::TCP[:ESTABLISHED]} ? false : true
       end
       EOS
     else
       # raindrops before 0.18 only supported TCP_INFO under Linux
       def closed_state?(state) # :nodoc:
-        case state
-        when 1 # ESTABLISHED
-          false
-        when 8, 6, 7, 9, 11 # CLOSE_WAIT, TIME_WAIT, CLOSE, LAST_ACK, CLOSING
-          true
-        else
-          false
-        end
+        # TCP_ESTABLISHED == 1 on Linux
+        state == 1 ? false : true
       end
     end
   else
@@ -170,15 +156,7 @@ class Unicorn::HttpParser
     end
 
     def closed_state_str?(state)
-      case state
-      when 'ESTABLISHED'
-        false
-      # not a typo, ruby maps TCP_CLOSE (no 'D') to state=CLOSED (w/ 'D')
-      when 'CLOSE_WAIT', 'TIME_WAIT', 'CLOSED', 'LAST_ACK', 'CLOSING'
-        true
-      else
-        false
-      end
+      state == 'ESTABLISHED' ? false : true
     end
   end
 
